@@ -12,7 +12,7 @@ import { db, type AutorizacionFacturacion } from '../../lib/db'
 import { fechaConAnio } from '../../lib/mantenimientos'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { eliminarRegistro } from '../../lib/repositorio'
-import { motivoDeRevision, numerosRestantes, tieneConsecutivoLeido } from './autorizacion'
+import { evidenciaValida, motivoDeRevision, numerosRestantes, tieneConsecutivoLeido } from './autorizacion'
 import { PastillaEstadoAutorizacion } from './PresentacionAutorizacion'
 
 // UNA AUTORIZACIÓN DE FACTURACIÓN (tarea 321): consultarla. Se llega desde
@@ -65,7 +65,8 @@ export function AutorizacionPage() {
 
   const motivo = motivoDeRevision(autorizacion)
   const aqui = conOrigen(`/facturacion/${autorizacionId}`, `Autorización ${autorizacion.prefijo}`)
-  const evidenciaVigente = evidencia && !evidencia.eliminadoEn ? evidencia : null
+  // Solo un documento vivo de uno de sus POS: nunca el de un POS que ya no la usa.
+  const evidenciaVigente = evidencia && evidenciaValida(evidencia, autorizacion.dispositivoIds ?? []) ? evidencia : null
   const posDeEvidencia = evidenciaVigente ? pos?.find((d) => d.id === evidenciaVigente.entidadId) : undefined
 
   return (

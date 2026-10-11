@@ -12,6 +12,7 @@ import {
   datosDesdeAutorizacion,
   errorDeAutorizacion,
   esCategoriaPos,
+  evidenciaValida,
   leerEntero,
   motivoDeRevision,
   numerosRestantes,
@@ -136,7 +137,52 @@ describe('los cuatro estados', () => {
         errorDeAutorizacion(datos({ estado, observaciones: 'x', vencimientoConfirmado: dia(100) }), HOY)?.campo,
       ).toBe('vencimientoConfirmado')
     }
-    expect(errorDeAutorizacion(datos({ estado: 'reemplazada', vencimientoConfirmado: dia(-100) }), HOY)).toBeNull()
+  })
+
+  // Revisión del 2026-10-10: un vencimiento confirmado lleva la
+  // verificación que lo confirmó. Una reemplazada lo conserva solo con
+  // ella; sin vencimiento confirmado, no la necesita.
+  it('una reemplazada conserva el vencimiento confirmado solo con su verificación', () => {
+    expect(errorDeAutorizacion(datos({ estado: 'reemplazada', vencimientoConfirmado: dia(-100) }), HOY)).toEqual({
+      campo: 'verificadoEn',
+      mensaje: 'Un vencimiento confirmado necesita la verificación que lo confirmó: su día y su fuente.',
+    })
+    expect(
+      errorDeAutorizacion(
+        datos({ estado: 'reemplazada', vencimientoConfirmado: dia(-100), verificadoEn: dia(-200), verificacionFuente: 'Consulta' }),
+        HOY,
+      ),
+    ).toBeNull()
+    expect(errorDeAutorizacion(datos({ estado: 'reemplazada' }), HOY)).toBeNull()
+  })
+})
+
+describe('la verificación: su día y su fuente van juntos', () => {
+  it.each([
+    ['documentada', {}],
+    ['conflicto', { observaciones: 'Dos fechas distintas' }],
+    ['reemplazada', {}],
+  ] as const)('ambos vacíos es válido en una %s', (estado, cambios) => {
+    expect(errorDeAutorizacion(datos({ estado, ...cambios }), HOY)).toBeNull()
+  })
+
+  it('solo la fecha, o solo la fuente, se rechaza en cualquier estado', () => {
+    const mensaje = 'Una verificación lleva su día y su fuente, los dos (o ninguno).'
+    expect(errorDeAutorizacion(datos({ verificadoEn: dia(-1) }), HOY)).toEqual({ campo: 'verificacionFuente', mensaje })
+    expect(errorDeAutorizacion(datos({ verificacionFuente: 'Consulta' }), HOY)).toEqual({ campo: 'verificadoEn', mensaje })
+    expect(errorDeAutorizacion(datos({ estado: 'reemplazada', verificadoEn: dia(-1) }), HOY)?.mensaje).toBe(mensaje)
+  })
+
+  it('los dos: válido', () => {
+    expect(errorDeAutorizacion(datos({ verificadoEn: dia(-1), verificacionFuente: 'Consulta' }), HOY)).toBeNull()
+  })
+
+  it('una confirmada sin los dos: inválida', () => {
+    for (const cambios of [{}, { verificadoEn: dia(-1) }, { verificacionFuente: 'Consulta' }]) {
+      expect(errorDeAutorizacion(datos({ estado: 'confirmada', ...cambios }), HOY)?.mensaje).toBe(
+        'Para confirmarla, di cuándo y con qué fuente actual se comprobó.',
+      )
+    }
   })
 })
 
@@ -190,6 +236,19 @@ describe('el consecutivo actual: un dato medido, nunca estimado', () => {
     expect(errorDeAutorizacion(conLectura('10', { rangoDesde: '', rangoHasta: '' }), HOY)?.mensaje).toBe(
       'Sin el rango no se puede registrar el consecutivo.',
     )
+  })
+
+  // Los tres o ninguno, igual que el CHECK del esquema (revisión del
+  // 2026-10-10).
+  it.each([
+    ['los tres vacíos', {}, null],
+    ['solo la fuente', { consecutivoFuente: 'Lectura' }, 'consecutivoActual'],
+    ['solo la fecha', { consecutivoLeidoEn: dia(-1) }, 'consecutivoActual'],
+    ['solo el número', { consecutivoActual: '3500' }, 'consecutivoLeidoEn'],
+    ['número y fecha sin fuente', { consecutivoActual: '3500', consecutivoLeidoEn: dia(-1) }, 'consecutivoFuente'],
+    ['los tres completos', { consecutivoActual: '3500', consecutivoLeidoEn: dia(-1), consecutivoFuente: 'Lectura' }, null],
+  ] as const)('%s', (_caso, cambios, campo) => {
+    expect(errorDeAutorizacion(datos(cambios), HOY)?.campo ?? null).toBe(campo)
   })
 
   it('pide los tres: número, día de lectura y dónde se leyó', () => {
@@ -421,5 +480,21 @@ describe('seguridad: la autorización no tiene donde guardar un secreto', () => 
   it('ninguna de sus columnas es un usuario, contraseña, token, PIN o clave', () => {
     const columnas = Object.values(configTablas.autorizaciones_facturacion.campos).join(' ')
     expect(columnas).not.toMatch(/usuario|contrasena|password|token|pin\b|clave|secreto|cifrad/i)
+  })
+})
+
+describe('el documento: un adjunto de uno de sus POS', () => {
+  const adjunto = { entidadTipo: 'dispositivo' as const, entidadId: 'pos-1', eliminadoEn: null }
+
+  it('vale si existe, está vivo, cuelga de un equipo y ese equipo es uno de sus POS', () => {
+    expect(evidenciaValida(adjunto, ['pos-1', 'pos-2'])).toBe(true)
+  })
+
+  it('no vale si no existe, está eliminado, no es de un equipo o su POS ya no está asociado', () => {
+    expect(evidenciaValida(undefined, ['pos-1'])).toBe(false)
+    expect(evidenciaValida({ ...adjunto, eliminadoEn: '2026-10-01T00:00:00.000Z' }, ['pos-1'])).toBe(false)
+    expect(evidenciaValida({ ...adjunto, entidadTipo: 'historial' }, ['pos-1'])).toBe(false)
+    expect(evidenciaValida(adjunto, ['pos-2'])).toBe(false)
+    expect(evidenciaValida(adjunto, [])).toBe(false)
   })
 })

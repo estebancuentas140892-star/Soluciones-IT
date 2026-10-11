@@ -1,4 +1,4 @@
-import type { AutorizacionFacturacion, Dispositivo, EstadoAutorizacion } from '../../lib/db'
+import type { Adjunto, AutorizacionFacturacion, Dispositivo, EstadoAutorizacion } from '../../lib/db'
 import { formatearNumero, necesitaRevision } from '../../lib/autorizaciones'
 import { diasDeCalendario, DIAS_AVISO_VENCIMIENTO, fechaCorta, textoVencimiento } from '../../lib/vencimiento'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
@@ -25,11 +25,11 @@ import type { ItemPendiente } from '../inicio/pendientes'
 // "en conflicto"). Una sin POS (PNTE) tampoco: no se sabe a qué punto
 // avisar.
 //
-// "POR AGOTARSE" NO EXISTE TODAVÍA, A PROPÓSITO: hace falta un umbral
-// (cuántos números o qué porcentaje del rango) que nadie ha decidido, y
-// no se inventa. Mientras tanto la ficha enseña cuántos números quedan
-// según la última lectura, sin avisar. Decisión pendiente del usuario
-// (TAREAS.md, tarea 321).
+// "POR AGOTARSE" NO EXISTE, A PROPÓSITO (decisión de la revisión del
+// 2026-10-10, AD-076): sin una velocidad real de consumo, un umbral de
+// números o de porcentaje sería arbitrario. Solo existe "agotado". La
+// ficha enseña cuántos números quedan según la última lectura, sin
+// avisar.
 
 type AutorizacionDeAgenda = Pick<
   AutorizacionFacturacion,
@@ -312,20 +312,37 @@ export function errorDeAutorizacion(datos: DatosAutorizacion, hoy: Date = new Da
   }
   if (!datos.fuente.trim()) return { campo: 'fuente', mensaje: 'Di de dónde sale: el documento o archivo que lo dice.' }
 
-  // Lo confirmado.
-  if (datos.estado === 'confirmada' && (!datos.verificadoEn || !datos.verificacionFuente.trim())) {
+  // Lo confirmado. Una verificación es UNA: su día y su fuente, los dos o
+  // ninguno, en cualquier estado; una confirmada la exige.
+  const verificacionCompleta = Boolean(datos.verificadoEn) && datos.verificacionFuente.trim() !== ''
+  const verificacionVacia = !datos.verificadoEn && datos.verificacionFuente.trim() === ''
+  if (datos.estado === 'confirmada' && !verificacionCompleta) {
     return {
       campo: datos.verificadoEn ? 'verificacionFuente' : 'verificadoEn',
       mensaje: 'Para confirmarla, di cuándo y con qué fuente actual se comprobó.',
     }
   }
+  if (!verificacionCompleta && !verificacionVacia) {
+    return {
+      campo: datos.verificadoEn ? 'verificacionFuente' : 'verificadoEn',
+      mensaje: 'Una verificación lleva su día y su fuente, los dos (o ninguno).',
+    }
+  }
   if (datos.verificadoEn && (diasDeCalendario(datos.verificadoEn, hoy) as number) > 0) {
     return { campo: 'verificadoEn', mensaje: 'La verificación no puede ser de una fecha futura.' }
   }
+  // Un vencimiento confirmado lleva la verificación que lo confirmó: una
+  // reemplazada lo conserva solo si conserva también esa verificación.
   if (datos.vencimientoConfirmado && datos.estado !== 'confirmada' && datos.estado !== 'reemplazada') {
     return {
       campo: 'vencimientoConfirmado',
       mensaje: 'Un vencimiento confirmado solo cabe en una autorización confirmada.',
+    }
+  }
+  if (datos.vencimientoConfirmado && !verificacionCompleta) {
+    return {
+      campo: 'verificadoEn',
+      mensaje: 'Un vencimiento confirmado necesita la verificación que lo confirmó: su día y su fuente.',
     }
   }
   if (datos.estado === 'conflicto' && !datos.observaciones.trim()) {
@@ -360,6 +377,19 @@ export function errorDeAutorizacion(datos: DatosAutorizacion, hoy: Date = new Da
     }
   }
   return null
+}
+
+/**
+ * Si un adjunto puede ser el documento de una autorización con estos POS:
+ * existe, no está eliminado, cuelga de un equipo y ese equipo es uno de
+ * sus POS. Si no, el id quedaría huérfano (el archivo de un POS que ya no
+ * la usa) y no se guarda.
+ */
+export function evidenciaValida(
+  adjunto: Pick<Adjunto, 'entidadTipo' | 'entidadId' | 'eliminadoEn'> | null | undefined,
+  dispositivoIds: string[],
+): boolean {
+  return Boolean(adjunto) && !adjunto?.eliminadoEn && adjunto?.entidadTipo === 'dispositivo' && dispositivoIds.includes(adjunto.entidadId)
 }
 
 export type AutorizacionGuardable = Omit<AutorizacionFacturacion, 'updatedAt' | 'updatedBy' | 'eliminadoEn'>

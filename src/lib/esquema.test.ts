@@ -470,6 +470,7 @@ describe('autorizaciones_facturacion: contrato del esquema', () => {
       .replace(/\bis not null\b/g, '!== null')
       .replace(/\bis null\b/g, '=== null')
       .replace(/<>/g, '!==')
+      .replace(/ = /g, ' === ')
       .replace(/\bor\b/g, '||')
       .replace(/\band\b/g, '&&')
     const btrim = (texto: string) => texto.replace(/^ +| +$/g, '')
@@ -497,6 +498,7 @@ describe('autorizaciones_facturacion: contrato del esquema', () => {
     'autorizaciones_rango_valido',
     'autorizaciones_consecutivo_leido',
     'autorizaciones_confirmada_verificada',
+    'autorizaciones_verificacion_completa',
     'autorizaciones_vencimiento_confirmado',
     'autorizaciones_conflicto_explicado',
   ]
@@ -531,15 +533,23 @@ describe('autorizaciones_facturacion: contrato del esquema', () => {
 
   const LECTURA: Fila = { consecutivo_actual: 3500, consecutivo_leido_en: '2026-10-09', consecutivo_fuente: 'Lectura' }
 
+  // Los tres o ninguno (revisión del 2026-10-10): antes la rama "ninguno"
+  // no miraba la fuente y dejaba pasar una fuente sola.
   it.each([
-    ['dentro del rango, con día y fuente', LECTURA, true],
+    ['los tres vacíos', {}, true],
+    ['solo la fuente', { consecutivo_fuente: 'Lectura' }, false],
+    ['solo la fuente en blanco, que cuenta como vacía', { consecutivo_fuente: '  ' }, true],
+    ['solo la fecha', { consecutivo_leido_en: '2026-10-09' }, false],
+    ['solo el número', { consecutivo_actual: 3500 }, false],
+    ['número y fecha sin fuente', { ...LECTURA, consecutivo_fuente: '' }, false],
+    ['número y fecha con la fuente en blanco', { ...LECTURA, consecutivo_fuente: ' ' }, false],
+    ['número y fuente sin fecha', { ...LECTURA, consecutivo_leido_en: null }, false],
+    ['fecha y fuente sin número', { ...LECTURA, consecutivo_actual: null }, false],
+    ['los tres completos, dentro del rango', LECTURA, true],
     ['en el último número del rango', { ...LECTURA, consecutivo_actual: 8000 }, true],
     ['por debajo del rango', { ...LECTURA, consecutivo_actual: 2999 }, false],
     ['por encima del rango', { ...LECTURA, consecutivo_actual: 8001 }, false],
-    ['sin día de lectura', { ...LECTURA, consecutivo_leido_en: null }, false],
-    ['sin fuente de lectura', { ...LECTURA, consecutivo_fuente: ' ' }, false],
     ['sin rango', { ...LECTURA, rango_desde: null, rango_hasta: null }, false],
-    ['un día de lectura sin número', { consecutivo_leido_en: '2026-10-09' }, false],
   ])('consecutivo: %s', (_caso, cambios, valido) => {
     expect(cumple('autorizaciones_consecutivo_leido', { ...BASE, ...cambios })).toBe(valido)
   })
@@ -550,12 +560,47 @@ describe('autorizaciones_facturacion: contrato del esquema', () => {
     expect(todas({ estado: 'confirmada', verificado_en: '2026-10-09', verificacion_fuente: 'Consulta' })).toBe(true)
   })
 
-  it('el vencimiento confirmado solo cabe en una confirmada o una reemplazada', () => {
+  // Una verificación es UNA: día y fuente, los dos o ninguno, en
+  // cualquier estado (revisión del 2026-10-10).
+  const VERIFICACION: Fila = { verificado_en: '2026-10-09', verificacion_fuente: 'Consulta' }
+
+  it.each([
+    ['documentada', {}],
+    ['conflicto', { observaciones: 'Dos fechas distintas' }],
+    ['reemplazada', {}],
+  ])('verificación: ambos vacíos es válido en una %s', (estado, cambios) => {
+    expect(todas({ estado, ...cambios })).toBe(true)
+  })
+
+  it.each([
+    ['solo la fecha', { verificado_en: '2026-10-09' }, false],
+    ['solo la fuente', { verificacion_fuente: 'Consulta' }, false],
+    ['la fecha con la fuente en blanco', { verificado_en: '2026-10-09', verificacion_fuente: '  ' }, false],
+    ['los dos', VERIFICACION, true],
+  ])('verificación: %s', (_caso, cambios, valido) => {
+    expect(cumple('autorizaciones_verificacion_completa', { ...BASE, ...cambios })).toBe(valido)
+    expect(todas(cambios)).toBe(valido)
+  })
+
+  it('verificación: una confirmada sin los dos es inválida', () => {
+    expect(todas({ estado: 'confirmada' })).toBe(false)
+    expect(todas({ estado: 'confirmada', verificado_en: '2026-10-09' })).toBe(false)
+    expect(todas({ estado: 'confirmada', verificacion_fuente: 'Consulta' })).toBe(false)
+    expect(todas({ estado: 'confirmada', ...VERIFICACION })).toBe(true)
+  })
+
+  it('el vencimiento confirmado solo cabe en una confirmada o una reemplazada, y con su verificación', () => {
     const vence = { vencimiento_confirmado: '2028-05-14' }
     expect(todas({ ...vence })).toBe(false)
-    expect(todas({ ...vence, estado: 'conflicto', observaciones: 'x' })).toBe(false)
-    expect(todas({ ...vence, estado: 'reemplazada' })).toBe(true)
-    expect(todas({ ...vence, estado: 'confirmada', verificado_en: '2026-10-09', verificacion_fuente: 'Consulta' })).toBe(true)
+    expect(todas({ ...vence, ...VERIFICACION })).toBe(false)
+    expect(todas({ ...vence, estado: 'conflicto', observaciones: 'x', ...VERIFICACION })).toBe(false)
+    expect(todas({ ...vence, estado: 'confirmada', ...VERIFICACION })).toBe(true)
+    // Una reemplazada lo conserva solo con la verificación que lo confirmó.
+    expect(cumple('autorizaciones_vencimiento_confirmado', { ...BASE, ...vence, estado: 'reemplazada' })).toBe(false)
+    expect(todas({ ...vence, estado: 'reemplazada' })).toBe(false)
+    expect(todas({ ...vence, estado: 'reemplazada', ...VERIFICACION })).toBe(true)
+    // Y una reemplazada sin vencimiento confirmado no necesita verificación.
+    expect(todas({ estado: 'reemplazada' })).toBe(true)
   })
 
   it('conflicto: exige observaciones; los demás estados no', () => {

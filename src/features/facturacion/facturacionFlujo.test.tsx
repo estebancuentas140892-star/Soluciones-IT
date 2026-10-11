@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db, type AutorizacionFacturacion } from '../../lib/db'
 import { conOrigen, leerOrigen } from '../../lib/origenNavegacion'
@@ -11,6 +12,7 @@ import {
   limpiarBase,
   montar,
   navegarA,
+  pausa,
   sembrarEquipo,
   sembrarPerfil,
   textoPantalla,
@@ -115,6 +117,44 @@ function opcion(inicio: string): HTMLElement {
   )
   if (!encontrada) throw new Error(`No está la opción "${inicio}".`)
   return encontrada
+}
+
+/** Un adjunto inventado colgado de un equipo. */
+async function sembrarAdjunto(id: string, entidadId: string, nombre: string): Promise<void> {
+  await db.adjuntos.put({
+    id,
+    entidadTipo: 'dispositivo',
+    entidadId,
+    nombre,
+    tipo: 'application/pdf',
+    referencia: `pruebas/${id}.pdf`,
+    updatedAt: AHORA,
+    updatedBy: null,
+    eliminadoEn: null,
+  })
+}
+
+function casilla(nombre: string): HTMLElement {
+  const encontrada = Array.from(document.body.querySelectorAll<HTMLElement>('[role="checkbox"]')).find((c) =>
+    (c.textContent ?? '').includes(nombre),
+  )
+  if (!encontrada) throw new Error(`No está la casilla "${nombre}".`)
+  return encontrada
+}
+
+function selectorDocumento(): HTMLSelectElement | null {
+  const rotulo = Array.from(document.body.querySelectorAll('label')).find((l) =>
+    (l.textContent ?? '').trim().startsWith('Documento adjunto'),
+  )
+  return rotulo?.querySelector('select') ?? null
+}
+
+async function elegir(selector: HTMLSelectElement, valor: string): Promise<void> {
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')?.set?.call(selector, valor)
+    selector.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await pausa()
 }
 
 async function llenarLoDocumentado(): Promise<void> {
@@ -288,6 +328,70 @@ describe('el formulario', () => {
     await esperar(() => textoPantalla().includes('Quedan 4.500 números según esa lectura.'), 'la ficha con la lectura')
     const entrada = (await db.historial.toArray()).find((e) => e.campo === 'autorizacion_facturacion')
     expect(entrada).toMatchObject({ entidadId: 'pos-a' })
+  })
+})
+
+// EL DOCUMENTO ES DE UNO DE SUS POS (revisión del 2026-10-10). El
+// formulario solo ofrece los adjuntos de los POS marcados, pero un id
+// elegido antes podía quedarse al desmarcar su POS.
+describe('el documento adjunto', () => {
+  it('desmarcar el POS del documento elegido lo quita, lo dice y no se guarda', async () => {
+    await sembrarBase()
+    await sembrarAdjunto('adj-a', 'pos-a', 'acta-prueba-a.pdf')
+    await montar(RUTAS, '/facturacion/nueva?equipo=pos-a')
+    await esperar(() => textoPantalla().includes('Lo que dice el documento'), 'el formulario')
+    await llenarLoDocumentado()
+    const selector = await esperar(() => selectorDocumento(), 'el selector de documento')
+    await elegir(selector, 'adj-a')
+    expect(selectorDocumento()?.value).toBe('adj-a')
+
+    await tocar(casilla('POS de prueba B'))
+    await tocar(casilla('POS de prueba A'))
+    await esperar(
+      () => textoPantalla().includes('Se quitó el documento «acta-prueba-a.pdf»: es de POS de prueba A, que ya no está marcado.'),
+      'el aviso visible',
+    )
+    // POS B no tiene adjuntos: ya no hay documento que elegir.
+    expect(selectorDocumento()).toBeNull()
+
+    await tocar(control('Guardar autorización') as HTMLElement)
+    await esperarQue(async () => (await db.autorizaciones_facturacion.count()) === 1, 'se guarda')
+    const [guardada] = await db.autorizaciones_facturacion.toArray()
+    expect(guardada).toMatchObject({ dispositivoIds: ['pos-b'], evidenciaAdjuntoId: null })
+  })
+
+  it('con su POS marcado, el documento elegido se guarda', async () => {
+    await sembrarBase()
+    await sembrarAdjunto('adj-a', 'pos-a', 'acta-prueba-a.pdf')
+    await montar(RUTAS, '/facturacion/nueva?equipo=pos-a')
+    await esperar(() => textoPantalla().includes('Lo que dice el documento'), 'el formulario')
+    await llenarLoDocumentado()
+    await elegir(await esperar(() => selectorDocumento(), 'el selector de documento'), 'adj-a')
+    await tocar(control('Guardar autorización') as HTMLElement)
+    await esperarQue(async () => (await db.autorizaciones_facturacion.count()) === 1, 'se guarda')
+    expect((await db.autorizaciones_facturacion.toArray())[0].evidenciaAdjuntoId).toBe('adj-a')
+  })
+
+  it('al guardar, el documento de un POS que no está asociado no queda como referencia huérfana', async () => {
+    await sembrarBase()
+    // Como podría llegar de una carga directa: el documento es de POS B
+    // y la autorización solo usa POS A.
+    await sembrarAdjunto('adj-b', 'pos-b', 'acta-prueba-b.pdf')
+    await sembrarAutorizacion({ id: 'huerfana', evidenciaAdjuntoId: 'adj-b' })
+
+    await montar(RUTAS, '/facturacion/huerfana')
+    await esperar(() => textoPantalla().includes('Lo documentado'), 'la ficha')
+    await pausa(100)
+    expect(textoPantalla()).not.toContain('acta-prueba-b.pdf')
+
+    await navegarA('/facturacion/huerfana/editar')
+    await esperar(() => campoDe('Prefijo').value === 'PRB', 'el formulario')
+    await tocar(control('Guardar autorización') as HTMLElement)
+    await esperarQue(
+      async () => (await db.autorizaciones_facturacion.get('huerfana'))?.evidenciaAdjuntoId === null,
+      'el documento ajeno se suelta',
+    )
+    expect((await db.autorizaciones_facturacion.get('huerfana'))?.dispositivoIds).toEqual(['pos-a'])
   })
 })
 

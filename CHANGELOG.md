@@ -8,6 +8,20 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-10
 
+### Corregido (facturación, tarea 321, revisión): el contrato de la autorización, sin huecos
+
+**Área modificada:** `supabase/schema.sql` (bloque 1.t: `autorizaciones_consecutivo_leido`, `autorizaciones_verificacion_completa` nuevo y `autorizaciones_vencimiento_confirmado`), `src/features/facturacion/autorizacion.ts` (`errorDeAutorizacion`, `evidenciaValida` nuevo), `AutorizacionForm.tsx` y `AutorizacionPage.tsx`, `src/lib/tablas.ts` (comentario), pruebas en `esquema.test.ts` (+15), `autorizacion.test.ts` (+15) y `facturacionFlujo.test.tsx` (+3); ARQUITECTURA, ARQUITECTURA_FUNCIONAL RN-074, DECISIONES AD-076, DOCUMENTACION_FUNCIONAL 6.12, COMPONENTES_UI, `supabase/INSTRUCCIONES.md` y TAREAS 321.
+**Tipo:** Corregido (integridad del esquema y del formulario).
+**Motivo:** revisión de la rama `feat/autorizaciones-facturacion`.
+**Qué cambia:**
+- **Consecutivo, los tres o ninguno:** la rama "ninguno" del CHECK dejaba pasar una fuente de lectura sola; ahora exige también `btrim(consecutivo_fuente) = ''`.
+- **Una verificación es su día y su fuente juntos:** CHECK nuevo `autorizaciones_verificacion_completa` (los dos o ninguno, en cualquier estado); una confirmada los sigue exigiendo. El formulario dice "Una verificación lleva su día y su fuente, los dos (o ninguno)."
+- **Un vencimiento confirmado lleva su verificación:** además de ser de una confirmada o una reemplazada, exige `verificado_en` y `verificacion_fuente`. Una reemplazada lo conserva solo con la verificación que lo confirmó; sin vencimiento confirmado, no la necesita.
+- **El documento es de uno de sus POS:** desmarcar el POS del documento elegido lo suelta y lo dice; al guardar se descarta uno que no exista, esté eliminado o sea de un POS no asociado, y la ficha tampoco lo enseña.
+- **Decisiones de la revisión** (AD-076, decisión 8): "por agotarse" no se implementa todavía; PN10 a PN13 no avisan por su fecha documental; la ventana de 30 días se conserva; las claves `DIAN - ...` se conservan también en la carga inicial.
+**Estructura de datos:** un CHECK nuevo y dos cambiados en `autorizaciones_facturacion`. **No se ha aplicado en Supabase.**
+**Verificación:** 206 archivos y 3278 pruebas (+33); `tsc -b`, lint, build y la prueba sin conexión real (80 de 80) en verde; las pruebas nuevas fallan sin la corrección. Medida del recorrido del documento a 320, 375, 390 y 1280 px.
+
 ### Agregado (facturación, tarea 321): las autorizaciones de facturación de los POS, con estado y avisos fiables
 
 **Área modificada:** `src/lib/db.ts` (versión 22), `src/lib/tablas.ts`, `supabase/schema.sql` (bloque 1.t), `src/lib/autorizaciones.ts` (nuevo), `src/lib/repositorio.ts`, `src/features/facturacion/` (nuevo), la Agenda (`pendientes.ts`, `usePendientes.ts`, `SeccionesAgenda.tsx`), la ficha del equipo (`DispositivoPage.tsx`), Más (`PantallaMas.tsx`), `textoHistorial.ts`, las rutas (`App.tsx`, `navegacion.ts`), el respaldo (`scripts/respaldo-supabase.sh`, `supabase/RESPALDO.md`), `src/pruebas/montaje.ts` y la prueba sin conexión.

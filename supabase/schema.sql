@@ -881,11 +881,12 @@ create index if not exists idx_mantenimientos_dispositivo on public.mantenimient
 --       - LO DOCUMENTADO: formulario, prefijo, rango, formalizacion,
 --         vigencia reportada y el vencimiento segun la fuente
 --         (`vencimiento_documentado`). Lleva su `fuente` y nunca avisa.
---       - LO CONFIRMADO: 'confirmada' exige `verificado_en` y
---         `verificacion_fuente` (una fuente ACTUAL: la configuracion en
---         ICG/HKA o la consulta en la DIAN). Un PDF por si solo no
---         confirma. Solo una confirmada (o una reemplazada que lo estuvo)
---         lleva `vencimiento_confirmado`.
+--       - LO CONFIRMADO: una verificacion es su dia y su fuente, los
+--         dos o ninguno; 'confirmada' la exige (una fuente ACTUAL: la
+--         configuracion en ICG/HKA o la consulta en la DIAN). Un PDF por
+--         si solo no confirma. Solo una confirmada (o una reemplazada que
+--         lo estuvo) lleva `vencimiento_confirmado`, y siempre con la
+--         verificacion que lo confirmo.
 --       - EL DATO ACTUAL MEDIDO: `consecutivo_actual` con su dia de
 --         lectura y donde se leyo, los tres o ninguno, dentro del rango.
 --         Nunca se estima: sin lectura no hay consecutivo.
@@ -952,13 +953,22 @@ alter table public.autorizaciones_facturacion add constraint autorizaciones_rang
   check ((rango_desde is null and rango_hasta is null) or (rango_desde is not null and rango_hasta is not null and rango_desde > 0 and rango_desde <= rango_hasta));
 alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_consecutivo_leido;
 alter table public.autorizaciones_facturacion add constraint autorizaciones_consecutivo_leido
-  check ((consecutivo_actual is null and consecutivo_leido_en is null) or (consecutivo_actual is not null and consecutivo_leido_en is not null and btrim(consecutivo_fuente) <> '' and rango_desde is not null and rango_hasta is not null and consecutivo_actual >= rango_desde and consecutivo_actual <= rango_hasta));
+  check ((consecutivo_actual is null and consecutivo_leido_en is null and btrim(consecutivo_fuente) = '') or (consecutivo_actual is not null and consecutivo_leido_en is not null and btrim(consecutivo_fuente) <> '' and rango_desde is not null and rango_hasta is not null and consecutivo_actual >= rango_desde and consecutivo_actual <= rango_hasta));
 alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_confirmada_verificada;
 alter table public.autorizaciones_facturacion add constraint autorizaciones_confirmada_verificada
   check (estado <> 'confirmada' or (verificado_en is not null and btrim(verificacion_fuente) <> ''));
+-- Una verificacion es UNA: su dia y su fuente, los dos o ninguno, en
+-- cualquier estado (revision del 2026-10-10).
+alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_verificacion_completa;
+alter table public.autorizaciones_facturacion add constraint autorizaciones_verificacion_completa
+  check ((verificado_en is null and btrim(verificacion_fuente) = '') or (verificado_en is not null and btrim(verificacion_fuente) <> ''));
 alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_vencimiento_confirmado;
+-- Un vencimiento confirmado lleva la verificacion que lo confirmo: una
+-- reemplazada lo conserva solo si conserva tambien esa verificacion
+-- (revision del 2026-10-10). Una reemplazada sin vencimiento confirmado
+-- no necesita verificacion.
 alter table public.autorizaciones_facturacion add constraint autorizaciones_vencimiento_confirmado
-  check (vencimiento_confirmado is null or estado in ('confirmada', 'reemplazada'));
+  check (vencimiento_confirmado is null or (estado in ('confirmada', 'reemplazada') and verificado_en is not null and btrim(verificacion_fuente) <> ''));
 alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_conflicto_explicado;
 alter table public.autorizaciones_facturacion add constraint autorizaciones_conflicto_explicado
   check (estado <> 'conflicto' or btrim(observaciones) <> '');

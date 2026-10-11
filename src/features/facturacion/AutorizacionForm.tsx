@@ -18,6 +18,7 @@ import {
   datosDesdeAutorizacion,
   errorDeAutorizacion,
   esCategoriaPos,
+  evidenciaValida,
   type DatosAutorizacion,
 } from './autorizacion'
 
@@ -79,6 +80,8 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
   const [cargado, setCargado] = useState(!esEdicion)
   const [intentado, setIntentado] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  // Lo que se dice cuando desmarcar un POS se lleva el documento elegido.
+  const [avisoEvidencia, setAvisoEvidencia] = useState<string | null>(null)
 
   useEffect(() => {
     if (!autorizacion || cargado) return
@@ -117,18 +120,29 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
   const mostrarError = intentado ? error : null
   const permiteVencimientoConfirmado =
     datos.estado === 'confirmada' || datos.estado === 'reemplazada' || Boolean(datos.vencimientoConfirmado)
+  // La verificación es obligatoria en una confirmada y donde haya un
+  // vencimiento confirmado (una reemplazada lo conserva con ella).
+  const pideVerificacion = datos.estado === 'confirmada' || Boolean(datos.vencimientoConfirmado)
 
   function cambiar<K extends keyof DatosAutorizacion>(campo: K, valor: DatosAutorizacion[K]) {
     setDatos((actual) => ({ ...actual, [campo]: valor }))
   }
 
+  // Desmarcar el POS del que cuelga el documento elegido lo quita de la
+  // autorización, y se dice: el documento tiene que ser de uno de sus POS.
   function alternarPos(dispositivoId: string) {
-    setDatos((actual) => {
-      const marcados = actual.dispositivoIds.includes(dispositivoId)
-        ? actual.dispositivoIds.filter((x) => x !== dispositivoId)
-        : [...actual.dispositivoIds, dispositivoId]
-      return { ...actual, dispositivoIds: marcados }
-    })
+    const quitando = datos.dispositivoIds.includes(dispositivoId)
+    const marcados = quitando
+      ? datos.dispositivoIds.filter((x) => x !== dispositivoId)
+      : [...datos.dispositivoIds, dispositivoId]
+    let evidencia = datos.evidenciaAdjuntoId
+    const documento = adjuntos.find((a) => a.id === evidencia)
+    if (quitando && documento && documento.entidadId === dispositivoId) {
+      evidencia = ''
+      const pos = candidatos.find((d) => d.id === dispositivoId)?.nombre ?? 'ese POS'
+      setAvisoEvidencia(`Se quitó el documento «${documento.nombre}»: es de ${pos}, que ya no está marcado.`)
+    }
+    setDatos({ ...datos, dispositivoIds: marcados, evidenciaAdjuntoId: evidencia })
   }
 
   function invalido(campo: keyof DatosAutorizacion): boolean {
@@ -140,7 +154,14 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
     setIntentado(true)
     if (error || guardando) return
     setGuardando(true)
-    await guardarRegistro('autorizaciones_facturacion', autorizacionDesdeDatos(id, datos), motivo.trim())
+    const fila = autorizacionDesdeDatos(id, datos)
+    // Nunca un id huérfano: el documento tiene que existir, seguir vivo y
+    // colgar de uno de sus POS (aunque la base no tenga una FK que lo
+    // impida, por el modelo offline primero).
+    if (fila.evidenciaAdjuntoId && !evidenciaValida(await db.adjuntos.get(fila.evidenciaAdjuntoId), fila.dispositivoIds)) {
+      fila.evidenciaAdjuntoId = null
+    }
+    await guardarRegistro('autorizaciones_facturacion', fila, motivo.trim())
     // Editar se abre desde la ficha de la autorización: se vuelve atrás a
     // ella, que conserva su propio origen (el POS, la Agenda o la lista).
     // Con un enlace directo no hay a dónde volver ('default'), y se va a
@@ -256,11 +277,19 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
               marcados={datos.dispositivoIds}
               alAlternar={alternarPos}
             />
+            {avisoEvidencia && (
+              <p role="status" className="text-[12.5px] leading-[1.45] text-noct-precaucion [overflow-wrap:anywhere]">
+                {avisoEvidencia}
+              </p>
+            )}
             {adjuntos.length > 0 && (
               <Campo etiqueta="Documento adjunto (opcional)" ayuda="Uno de los adjuntos de sus POS: el archivo existe una sola vez.">
                 <select
                   value={datos.evidenciaAdjuntoId}
-                  onChange={(e) => cambiar('evidenciaAdjuntoId', e.target.value)}
+                  onChange={(e) => {
+                    cambiar('evidenciaAdjuntoId', e.target.value)
+                    setAvisoEvidencia(null)
+                  }}
                   className={`min-h-11 ${CLASE_CAMPO}`}
                 >
                   <option value="">Ninguno</option>
@@ -276,7 +305,10 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
 
           <Grupo titulo="Confirmación">
             <SelectorEstado valor={datos.estado} alCambiar={(estado) => cambiar('estado', estado)} />
-            <Campo etiqueta={datos.estado === 'confirmada' ? <Obligatorio>Verificada el</Obligatorio> : 'Verificada el (opcional)'}>
+            <Campo
+              etiqueta={pideVerificacion ? <Obligatorio>Verificada el</Obligatorio> : 'Verificada el (opcional)'}
+              ayuda="El día y la fuente van juntos: los dos o ninguno."
+            >
               <input
                 type="date"
                 max={hoyIso()}
@@ -288,7 +320,7 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
             </Campo>
             <Campo
               etiqueta={
-                datos.estado === 'confirmada' ? <Obligatorio>Con qué fuente actual</Obligatorio> : 'Con qué fuente actual (opcional)'
+                pideVerificacion ? <Obligatorio>Con qué fuente actual</Obligatorio> : 'Con qué fuente actual (opcional)'
               }
               ayuda="La configuración en ICG/HKA o la consulta en la DIAN. Un PDF por sí solo no confirma."
             >
@@ -301,7 +333,10 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
               />
             </Campo>
             {permiteVencimientoConfirmado && (
-              <Campo etiqueta="Vencimiento confirmado (opcional)" ayuda="Este sí avisa en la Agenda, desde 30 días antes.">
+              <Campo
+                etiqueta="Vencimiento confirmado (opcional)"
+                ayuda="Lleva la verificación que lo confirmó. En una confirmada, avisa en la Agenda desde 30 días antes."
+              >
                 <input
                   type="date"
                   value={datos.vencimientoConfirmado}

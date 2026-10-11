@@ -529,7 +529,7 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
     },
   },
   // Autorizaciones de facturacion de los POS (tarea 321), al final por el
-  // mismo criterio: si el bloque 1.w de schema.sql aun no se aplico, su
+  // mismo criterio: si el bloque 1.t de schema.sql aun no se aplico, su
   // fallo no impide descargar las demas. Los numeros, las fechas y la
   // evidencia son nullables y NO van en `camposOpcionales`: se pueden
   // vaciar desde el formulario (quitar un vencimiento confirmado que no
