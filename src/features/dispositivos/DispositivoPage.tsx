@@ -45,6 +45,7 @@ import {
   ShareNetwork,
   TrashSimple,
   TreeStructure,
+  Storefront,
   WarningOctagon,
   Wrench,
   XCircle,
@@ -78,6 +79,8 @@ import { esDeBaja, responsablePorValidar } from '../personas/cicloPersona'
 import { useResponsablesAnteriores } from '../personas/useAsignaciones'
 import { conteoDeMantenimientos } from '../mantenimientos/mantenimiento'
 import { MantenimientosDelEquipo } from '../mantenimientos/MantenimientosDelEquipo'
+import { conteoDeFacturacion, esCategoriaPos } from '../facturacion/autorizacion'
+import { AutorizacionesDelPos } from '../facturacion/AutorizacionesDelPos'
 
 // Las anclas que viven dentro de "Más del equipo": llegar a una abre el
 // pliegue (si no, el salto no encontraría su destino).
@@ -230,6 +233,14 @@ export function DispositivoPage() {
         .equals(dispositivoId)
         .filter((m) => !m.eliminadoEn)
         .toArray(),
+    [dispositivoId],
+    [],
+  )
+  // "Facturación" (tarea 321): las autorizaciones que usa este POS. La
+  // fila plegada dice sus prefijos en uso o "Ninguna", en precaución si
+  // alguna pide revisión.
+  const autorizaciones = useLiveQuery(
+    () => db.autorizaciones_facturacion.where('dispositivoIds').equals(dispositivoId).toArray(),
     [dispositivoId],
     [],
   )
@@ -398,6 +409,11 @@ export function DispositivoPage() {
 
   // Completitud de la ficha (fase J3): guia, nunca bloquea. Solo se
   // muestra cuando falta algo.
+  // Tarea 321: "Facturación" sale en un POS, o en un equipo de otra
+  // categoría que ya use alguna autorización (no se esconde una relación
+  // que existe).
+  const facturacion = conteoDeFacturacion(autorizaciones)
+  const tieneFacturacion = esCategoriaPos(categoria?.nombre) || autorizaciones.some((a) => !a.eliminadoEn)
   const completitud = completitudDispositivo(dispositivo, esRed)
 
   // Pasos del bloque "Que sigue" (`recienCreado` ya capturado arriba):
@@ -757,6 +773,7 @@ export function DispositivoPage() {
                       perfil?.puedeVerBoveda ? 'datos protegidos' : null,
                       'adjuntos',
                       'mantenimiento',
+                      tieneFacturacion ? 'facturación' : null,
                       'intervenciones',
                     ].filter((parte): parte is string => parte !== null),
                   ).replace(/^./, (letra) => letra.toUpperCase())}
@@ -889,6 +906,20 @@ export function DispositivoPage() {
             >
               <MantenimientosDelEquipo dispositivoId={dispositivoId} />
             </SeccionPlegable>
+
+            {/* Las autorizaciones de facturación de un POS (tarea 321):
+                solo en un POS o en un equipo que ya tenga alguna. */}
+            {tieneFacturacion && (
+              <SeccionPlegable
+                id="facturacion"
+                titulo="Facturación"
+                Icono={Storefront}
+                tono={facturacion.revisar ? 'precaucion' : 'neutro'}
+                conteo={facturacion.texto}
+              >
+                <AutorizacionesDelPos dispositivoId={dispositivoId} nombre={dispositivo.nombre} />
+              </SeccionPlegable>
+            )}
 
             <SeccionPlegable
               titulo="Intervenciones"

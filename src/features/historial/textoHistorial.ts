@@ -97,6 +97,15 @@ export function descripcionEntrada(entrada: EntradaDescriptible): string {
     if (!entrada.valorNuevo) return `Se quitó el mantenimiento: ${entrada.valorAnterior}`
     return `Mantenimiento: ${entrada.valorAnterior} → ${entrada.valorNuevo}`
   }
+  // Tarea 321: una autorización de facturación queda en el historial de
+  // cada POS que la usa (src/lib/autorizaciones.ts). Sin resumen
+  // anterior, se le asoció a este equipo (al registrarla o al sumarle el
+  // POS); sin resumen nuevo, se le quitó (o se eliminó).
+  if (entrada.campo === 'autorizacion_facturacion') {
+    if (!entrada.valorAnterior) return `Se asoció la autorización de facturación: ${entrada.valorNuevo}`
+    if (!entrada.valorNuevo) return `Se quitó la autorización de facturación: ${entrada.valorAnterior}`
+    return `Autorización de facturación: ${entrada.valorAnterior} → ${entrada.valorNuevo}`
+  }
   if (entrada.campo === 'procedimiento') return 'Se actualizó el procedimiento'
   if (entrada.campo === 'detalles') return 'Se actualizaron los campos adicionales'
   if (entrada.campo === 'conexion') {

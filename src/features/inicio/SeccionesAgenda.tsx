@@ -10,6 +10,7 @@ import {
   LockSimple,
   Monitor,
   PencilSimple,
+  Storefront,
   User,
   Wrench,
 } from '../../components/iconos'
@@ -354,6 +355,8 @@ const ICONO_PENDIENTE: Record<ItemPendiente['categoria'], (props: IconoProps) =>
   equipo_liberado: Monitor,
   // Tarea 320: un mantenimiento programado de un equipo.
   mantenimiento: Wrench,
+  // Tarea 321: el aviso de una autorización de facturación de un POS.
+  facturacion: Storefront,
 }
 const TONO_PENDIENTE: Record<ItemPendiente['tono'], string> = {
   neutro: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]',

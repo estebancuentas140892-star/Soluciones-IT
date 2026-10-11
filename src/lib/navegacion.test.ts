@@ -119,6 +119,15 @@ describe('padreDe', () => {
         etiqueta: 'Volver',
       })
     })
+
+    // Tarea 321: la lista cuelga de Más; registrar y la ficha, de la
+    // lista; editar, de la ficha (regla 13).
+    it('las autorizaciones de facturación: lista, registrar, ficha y editar', () => {
+      expect(padreDe('/facturacion')).toEqual({ to: '/mas', etiqueta: 'Más' })
+      expect(padreDe('/facturacion/nueva')).toEqual({ to: '/facturacion', etiqueta: 'Autorizaciones' })
+      expect(padreDe('/facturacion/a-1')).toEqual({ to: '/facturacion', etiqueta: 'Autorizaciones' })
+      expect(padreDe('/facturacion/a-1/editar')).toEqual({ to: '/facturacion/a-1', etiqueta: 'Volver' })
+    })
   })
 
   describe('Ubicaciones (se alcanza desde "Más", tarea 182)', () => {

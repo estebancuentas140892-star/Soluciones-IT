@@ -117,7 +117,9 @@ describe('Más en cinco grupos', () => {
     expect(grupos[1].filas).toEqual(['Personas', 'Ubicaciones'])
     expect(grupos[2].filas).toEqual(['Red'])
     // Diagnóstico salió en la tarea 269: su puerta es Guías.
-    expect(grupos[3].filas).toEqual(['Herramientas de inventario'])
+    // La tarea 321 suma las autorizaciones de facturación de los POS.
+    expect(grupos[3].filas).toEqual(['Herramientas de inventario', 'Autorizaciones de facturación'])
+    expect(filaDeMas('Autorizaciones de facturación')?.getAttribute('href')).toBe('/facturacion')
     expect(filaDeMas('Diagnóstico')).toBeNull()
     // Mi cuenta, Bloqueo y seguridad y Buscar actualización son una sola
     // puerta, y su subtítulo dice lo que hay dentro.

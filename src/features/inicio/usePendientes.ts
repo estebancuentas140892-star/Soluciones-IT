@@ -74,6 +74,13 @@ export function usePendientes(): EstadoPendientes {
     () => db.mantenimientos.filter((m) => !m.eliminadoEn && estaAbierto(m)).toArray(),
     [],
   )
+  // Tarea 321: solo las autorizaciones confirmadas pueden avisar;
+  // `calcularPendientes` decide cuáles (con un POS que existe y un dato
+  // confiable).
+  const autorizacionesConfirmadas = useLiveQuery(
+    () => db.autorizaciones_facturacion.filter((a) => !a.eliminadoEn && a.estado === 'confirmada').toArray(),
+    [],
+  )
 
   // `perfil` es `undefined` mientras carga y `null` sin sesión: solo lo
   // primero es cargar. Sin perfil no hay agenda (no se sabe de quién son
@@ -88,7 +95,8 @@ export function usePendientes(): EstadoPendientes {
     liberaciones === undefined ||
     ejecucionesConSugerencia === undefined ||
     articulosDeSugerencia === undefined ||
-    mantenimientosAbiertos === undefined
+    mantenimientosAbiertos === undefined ||
+    autorizacionesConfirmadas === undefined
 
   const items = useMemo(
     () =>
@@ -104,6 +112,7 @@ export function usePendientes(): EstadoPendientes {
             dispositivos: dispositivos ?? [],
             liberaciones: liberaciones ?? [],
             mantenimientos: mantenimientosAbiertos ?? [],
+            autorizaciones: autorizacionesConfirmadas ?? [],
             usuarioId: perfil.id,
             puedeVerBoveda: perfil.puedeVerBoveda,
             limite: Infinity,
@@ -121,6 +130,7 @@ export function usePendientes(): EstadoPendientes {
       ejecucionesConSugerencia,
       articulosDeSugerencia,
       mantenimientosAbiertos,
+      autorizacionesConfirmadas,
     ],
   )
 

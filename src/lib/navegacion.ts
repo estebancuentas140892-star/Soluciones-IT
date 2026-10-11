@@ -120,6 +120,9 @@ const RAICES_NO_TAB: Record<string, Padre> = {
   // Herramientas de inventario (tarea 268): Importar, Etiquetas QR y los
   // datos por ordenar, en una sola puerta de Más.
   '/inventario': { to: '/mas', etiqueta: 'Más' },
+  // Autorizaciones de facturación de los POS (tarea 321), en Más >
+  // Inventario.
+  '/facturacion': { to: '/mas', etiqueta: 'Más' },
 }
 
 // Devuelve la pantalla superior de `pathname`, o null si es una raíz
@@ -225,6 +228,12 @@ export function padreDe(pathname: string): Padre | null {
     case 'inventario':
       // /inventario/estados -> la puerta de inventario (tarea 268).
       return PUERTA_INVENTARIO
+    case 'facturacion':
+      // Tarea 321: editar sube a la ficha de la autorización; registrar
+      // y la ficha, a la lista (regla 13). Quien llega desde la ficha de
+      // un POS o desde la Agenda vuelve ahí por su origen (M-R2).
+      if (b === 'editar') return { to: `/facturacion/${a}`, etiqueta: 'Volver' }
+      return { to: '/facturacion', etiqueta: 'Autorizaciones' }
     default:
       return { to: '/', etiqueta: 'Resolver' }
   }

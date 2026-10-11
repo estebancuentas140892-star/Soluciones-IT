@@ -91,6 +91,16 @@ export async function navegarAtras(): Promise<void> {
   await pausa()
 }
 
+/** Navega dentro del router montado a otra ruta, sin desmontar nada (como un enlace). */
+export async function navegarA(ruta: string): Promise<void> {
+  const ir = navegar
+  if (!ir) throw new Error('No hay nada montado.')
+  await act(async () => {
+    await ir(ruta)
+  })
+  await pausa()
+}
+
 export interface RutaPrueba {
   ruta: string
   elemento: ReactNode

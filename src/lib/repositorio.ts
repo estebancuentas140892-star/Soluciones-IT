@@ -3,12 +3,14 @@ import {
   storeDe,
   type AccesoBoveda,
   type Adjunto,
+  type AutorizacionFacturacion,
   type Conexion,
   type EjecucionDiagnostico,
   type HistorialEntrada,
   type Mantenimiento,
   type TipoEntidadHistorial,
 } from './db'
+import { resumenAutorizacion } from './autorizaciones'
 import { resumenConexion } from './conexiones'
 import { estaAbierto, resumenMantenimiento, textoIntervencionDeMantenimiento } from './mantenimientos'
 import { leerSesionGuardada } from './sesionGuardada'
@@ -361,6 +363,16 @@ function construirHistorial(
     ]
   }
 
+  if (tabla === 'autorizaciones_facturacion') {
+    return entradasDeAutorizacion(
+      anterior as unknown as AutorizacionFacturacion | undefined,
+      nueva as unknown as AutorizacionFacturacion,
+      usuario,
+      ahora,
+      motivo,
+    )
+  }
+
   // Los adjuntos se registran sobre la ficha a la que pertenecen,
   // como una sola entrada (se agregan o se quitan, no se editan). Una
   // foto colgada de una intervencion manual (entidadTipo 'historial')
@@ -439,7 +451,7 @@ function crearEntrada(
 // filtraria el nombre del dato protegido y quien lo cambio en el "Ver
 // historial" normal de la ficha, que es publico para el equipo.
 const TIPO_POR_TABLA: Record<
-  Exclude<TablaEditable, 'adjuntos' | 'conexiones' | 'mantenimientos'>,
+  Exclude<TablaEditable, 'adjuntos' | 'conexiones' | 'mantenimientos' | 'autorizaciones_facturacion'>,
   TipoEntidadHistorial
 > =
   {
@@ -458,10 +470,47 @@ const TIPO_POR_TABLA: Record<
 // (ver ambas llamadas) porque puede apuntar a 'historial', que no es
 // un TipoEntidadHistorial valido y ahi no genera entrada propia.
 function destinoHistorial(
-  tabla: Exclude<TablaEditable, 'conexiones' | 'adjuntos' | 'mantenimientos'>,
+  tabla: Exclude<TablaEditable, 'conexiones' | 'adjuntos' | 'mantenimientos' | 'autorizaciones_facturacion'>,
   entidad: EntidadPorTabla[TablaEditable],
 ): { tipo: TipoEntidadHistorial; id: string } {
   return { tipo: TIPO_POR_TABLA[tabla], id: entidad.id }
+}
+
+// Una autorizacion de facturacion (tarea 321) se registra en el
+// historial de CADA POS que la usa, como una conexion en sus dos
+// extremos: al abrir la ficha de un POS se ve que se le asocio, que
+// cambio (se confirmo, se leyo el consecutivo) o que se le quito. Una
+// entrada por POS y guardado, con el resumen de antes y el de ahora:
+//   - un POS que la recibe ahora: sin resumen anterior ("se asocio");
+//   - un POS que la deja: sin resumen nuevo ("se quito");
+//   - un POS que la sigue usando: solo si el resumen cambio.
+// Una autorizacion sin POS (PNTE) no deja historial en ningun equipo:
+// no se cuelga de uno que la fuente no identifica.
+function entradasDeAutorizacion(
+  anterior: AutorizacionFacturacion | undefined,
+  nueva: AutorizacionFacturacion,
+  usuario: UsuarioActual,
+  ahora: string,
+  motivo: string,
+): HistorialEntrada[] {
+  const antes = new Set(anterior && !anterior.eliminadoEn ? (anterior.dispositivoIds ?? []) : [])
+  const despues = new Set(nueva.eliminadoEn ? [] : (nueva.dispositivoIds ?? []))
+  const resumenAnterior = anterior ? resumenAutorizacion(anterior) : ''
+  const resumen = resumenAutorizacion(nueva)
+  const entradas: HistorialEntrada[] = []
+  for (const dispositivoId of new Set([...antes, ...despues])) {
+    const valorAnterior = antes.has(dispositivoId) ? resumenAnterior : ''
+    const valorNuevo = despues.has(dispositivoId) ? resumen : ''
+    if (valorAnterior === valorNuevo) continue
+    entradas.push(
+      crearEntrada({ tipo: 'dispositivo', id: dispositivoId }, usuario, ahora, motivo, {
+        campo: 'autorizacion_facturacion',
+        valorAnterior,
+        valorNuevo,
+      }),
+    )
+  }
+  return entradas
 }
 
 // Los dos dispositivos que toca una conexion (uno solo si por error
@@ -501,6 +550,10 @@ function entradasEliminacion(
         valorNuevo: '',
       }),
     ]
+  }
+  if (tabla === 'autorizaciones_facturacion') {
+    const autorizacion = eliminada as unknown as AutorizacionFacturacion
+    return entradasDeAutorizacion({ ...autorizacion, eliminadoEn: null }, autorizacion, usuario, ahora, motivo)
   }
   // Mismo criterio que al crear: una foto colgada de una intervencion
   // (entidadTipo 'historial') no deja su propia entrada al borrarse.

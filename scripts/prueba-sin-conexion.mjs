@@ -13,7 +13,9 @@
 //      red: lo reutilizado en el sitio, su "Como hacerlo" (tarea 303) y la
 //      imagen de "Debes ver" desde la copia sin conexion (tarea 307);
 //      y un mantenimiento atrasado sale en la Agenda y se cierra sin red,
-//      dejando la intervencion y el cambio en la cola (tarea 320);
+//      dejando la intervencion y el cambio en la cola (tarea 320); y una
+//      autorizacion de facturacion confirmada avisa de su vencimiento en
+//      la Agenda y guarda sin red una lectura del consecutivo (tarea 321);
 //   5. desbloqueo del dispositivo (tarea 278) con el autenticador virtual
 //      de Chromium: se activa sobre la contrasena, abre la app sin red con
 //      una credencial y una firma reales, y sin verificar al usuario o con
@@ -410,6 +412,63 @@ const LEER_CIERRE_SIN_RED = `
     enCola: cola.filter((c) => c.entidadId === 'mant-sin-red' || c.entidadId === mantenimiento?.historialId).map((c) => c.tabla).sort(),
   }
 `
+// Tarea 321: una autorizacion de facturacion CONFIRMADA del equipo A que
+// vence en 3 dias, inventada (prefijo y rango de prueba). La Agenda tiene
+// que avisarla sin red, y una lectura del consecutivo hecha sin red tiene
+// que quedar en la cola.
+const AUTORIZACION_SIN_RED = { id: 'aut-sin-red', dispositivoIds: ['eq-sin-red-a'], prefijo: 'PRUEBA', formulario: '', rangoDesde: 3000, rangoHasta: 8000, fechaFormalizacion: null, vigenciaReportada: '', vencimientoDocumentado: null, vencimientoConfirmado: fechaRelativa(3), consecutivoActual: null, consecutivoLeidoEn: null, consecutivoFuente: '', estado: 'confirmada', fuente: 'Documento de prueba sin red', verificadoEn: fechaRelativa(-1), verificacionFuente: 'Consulta de prueba', observaciones: '', evidenciaAdjuntoId: null, updatedAt: AHORA, updatedBy: null, eliminadoEn: null }
+const SEMBRAR_AUTORIZACION = `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  await new Promise((ok, mal) => {
+    const t = base.transaction(['autorizaciones_facturacion'], 'readwrite')
+    t.objectStore('autorizaciones_facturacion').put(${JSON.stringify(AUTORIZACION_SIN_RED)})
+    t.oncomplete = () => ok()
+    t.onerror = () => mal(t.error)
+  })
+  base.close()
+  return true
+`
+// Escribe en los tres campos del consecutivo (por su rotulo) como lo
+// haria el teclado: React escucha el evento input.
+const LECTURA_SIN_RED = `
+  const campo = (rotulo) => [...document.querySelectorAll('label')].find((l) => (l.textContent || '').trim().startsWith(rotulo))?.querySelector('input')
+  const escribir = (rotulo, valor) => {
+    const c = campo(rotulo)
+    if (!c) return false
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(c, valor)
+    c.dispatchEvent(new Event('input', { bubbles: true }))
+    return true
+  }
+  const ok = escribir('Último consecutivo emitido', '3500') && escribir('Leído el', ${JSON.stringify(fechaRelativa(0))}) && escribir('Dónde se leyó', 'Lectura de prueba sin red')
+  await new Promise((r) => setTimeout(r, 300))
+  return ok
+`
+const LEER_AUTORIZACION_SIN_RED = `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  const leer = (tabla, consulta) =>
+    new Promise((ok, mal) => {
+      const r = base.transaction([tabla], 'readonly').objectStore(tabla)[consulta.tipo](consulta.clave)
+      r.onsuccess = () => ok(r.result)
+      r.onerror = () => mal(r.error)
+    })
+  const autorizacion = await leer('autorizaciones_facturacion', { tipo: 'get', clave: 'aut-sin-red' })
+  const cola = await leer('cambiosPendientes', { tipo: 'getAll' })
+  const historial = await leer('historial', { tipo: 'getAll' })
+  base.close()
+  return {
+    consecutivo: autorizacion?.consecutivoActual,
+    enCola: cola.filter((c) => c.tabla === 'autorizaciones_facturacion' && c.entidadId === 'aut-sin-red').length,
+    historialEnCola: cola.some((c) => c.tabla === 'historial' && historial.some((h) => h.id === c.entidadId && h.campo === 'autorizacion_facturacion')),
+  }
+`
 const AVISO_DISPOSITIVO = 'No se pudo usar el desbloqueo del dispositivo.'
 
 async function main() {
@@ -717,6 +776,41 @@ async function main() {
     comprobar(
       JSON.stringify(cierre?.enCola) === JSON.stringify(['historial', 'mantenimientos']),
       `el mantenimiento y la intervención esperan en la cola para subir (${JSON.stringify(cierre?.enCola)})`,
+    )
+
+    // Tarea 321: la Agenda avisa sin red del vencimiento confirmado de una
+    // autorizacion de facturacion, y una lectura del consecutivo hecha sin
+    // red queda guardada y en la cola, con su entrada en el historial del
+    // equipo.
+    paso('4e. Una autorización de facturación sin red: aviso en la Agenda y lectura del consecutivo (tarea 321)')
+    comprobar(Boolean(await s.evaluar(SEMBRAR_AUTORIZACION)), 'autorización inventada escrita en la base local, con la red cortada')
+    await s.enviar('Page.navigate', { url: BASE + '/agenda' })
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `document.body.innerText.includes('Autorización PRUEBA') && document.body.innerText.includes('Vence el')`,
+          'el aviso en la Agenda',
+          45000,
+        ),
+      ),
+      'la Agenda avisa del vencimiento confirmado, sin red',
+    )
+    await s.enviar('Page.navigate', { url: BASE + '/facturacion/aut-sin-red/editar' })
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Dato actual: el consecutivo')`, 'el formulario', 30000)),
+      'el formulario abre sin red',
+    )
+    comprobar(Boolean(await s.evaluar(LECTURA_SIN_RED)), 'se escribe la lectura del consecutivo')
+    await s.tocar('Guardar autorización')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Quedan 4.500 números según esa lectura.')`, 'la ficha con la lectura')),
+      'se guarda sin red y la ficha dice cuántos números quedan',
+    )
+    const autorizacionSinRed = await s.evaluar(LEER_AUTORIZACION_SIN_RED)
+    comprobar(autorizacionSinRed?.consecutivo === 3500, 'la lectura queda en la base local')
+    comprobar(
+      autorizacionSinRed?.enCola > 0 && autorizacionSinRed?.historialEnCola === true,
+      `la autorización y su entrada de historial esperan en la cola (${JSON.stringify(autorizacionSinRed)})`,
     )
 
     // Un autenticador de plataforma VIRTUAL de Chromium (DevTools

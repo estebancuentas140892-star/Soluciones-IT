@@ -874,6 +874,98 @@ create index if not exists idx_mantenimientos_updated on public.mantenimientos (
 create index if not exists idx_mantenimientos_dispositivo on public.mantenimientos (dispositivo_id);
 
 -- ----------------------------------------------------------------
+-- 1.t Autorizaciones de facturacion de los POS (2026-10-10, tarea 321).
+--
+--     Un prefijo con su rango autorizado por la DIAN y lo que se sabe de
+--     el, en tres capas que no se mezclan:
+--       - LO DOCUMENTADO: formulario, prefijo, rango, formalizacion,
+--         vigencia reportada y el vencimiento segun la fuente
+--         (`vencimiento_documentado`). Lleva su `fuente` y nunca avisa.
+--       - LO CONFIRMADO: 'confirmada' exige `verificado_en` y
+--         `verificacion_fuente` (una fuente ACTUAL: la configuracion en
+--         ICG/HKA o la consulta en la DIAN). Un PDF por si solo no
+--         confirma. Solo una confirmada (o una reemplazada que lo estuvo)
+--         lleva `vencimiento_confirmado`.
+--       - EL DATO ACTUAL MEDIDO: `consecutivo_actual` con su dia de
+--         lectura y donde se leyo, los tres o ninguno, dentro del rango.
+--         Nunca se estima: sin lectura no hay consecutivo.
+--     Estados: 'documentada' (por validar), 'confirmada', 'conflicto'
+--     (las fuentes no coinciden: se explica en `observaciones` y no se
+--     elige ninguna) y 'reemplazada'.
+--
+--     `dispositivo_ids` son los POS que la usan: cero (Equipos POS
+--     documenta PNTE sin identificar el equipo, y no se asigna uno a la
+--     fuerza), uno o varios. Referencias blandas (uuid sin FK, como
+--     mantenimientos.dispositivo_id): por el modelo offline primero, la
+--     fila no se rechaza por el estado de otra tabla. Igual
+--     `evidencia_adjunto_id`: el documento ya adjunto a uno de sus POS.
+--
+--     No guarda usuarios, contrasenas, tokens, PIN ni secretos de ICG o
+--     HKA (viven en la Boveda), y no cambia nada de lo que ya existe: las
+--     claves `DIAN - ...` de `detalles` de los POS se conservan.
+--
+--     Del lado de la app, los NOT NULL con default llevan el suyo en
+--     `porDefecto` de src/lib/tablas.ts; `prefijo` no tiene default
+--     porque falta de verdad si no viene. Advertencia de despliegue
+--     (regla 17 de REGLAS.md): aplicar este bloque ANTES de desplegar la
+--     version que lo usa. No carga ningun dato: las autorizaciones
+--     reales las carga despues ChatGPT (regla 26).
+-- ----------------------------------------------------------------
+
+create table if not exists public.autorizaciones_facturacion (
+  id uuid primary key default gen_random_uuid(),
+  dispositivo_ids uuid[] not null default '{}',
+  prefijo text not null,
+  formulario text not null default '',
+  rango_desde bigint,
+  rango_hasta bigint,
+  fecha_formalizacion date,
+  vigencia_reportada text not null default '',
+  vencimiento_documentado date,
+  vencimiento_confirmado date,
+  consecutivo_actual bigint,
+  consecutivo_leido_en date,
+  consecutivo_fuente text not null default '',
+  estado text not null default 'documentada'
+    check (estado in ('documentada', 'confirmada', 'conflicto', 'reemplazada')),
+  fuente text not null default '',
+  verificado_en date,
+  verificacion_fuente text not null default '',
+  observaciones text not null default '',
+  evidencia_adjunto_id uuid,
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+-- Reglas del dato, tambien desde el SQL (una carga directa no puede
+-- saltarselas). Antes de aplicarlas en una base con datos, comprobar
+-- que ninguna fila las incumple (la tabla es nueva: hoy no hay filas).
+alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_prefijo_con_texto;
+alter table public.autorizaciones_facturacion add constraint autorizaciones_prefijo_con_texto
+  check (btrim(prefijo) <> '');
+alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_con_fuente;
+alter table public.autorizaciones_facturacion add constraint autorizaciones_con_fuente
+  check (btrim(fuente) <> '');
+alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_rango_valido;
+alter table public.autorizaciones_facturacion add constraint autorizaciones_rango_valido
+  check ((rango_desde is null and rango_hasta is null) or (rango_desde is not null and rango_hasta is not null and rango_desde > 0 and rango_desde <= rango_hasta));
+alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_consecutivo_leido;
+alter table public.autorizaciones_facturacion add constraint autorizaciones_consecutivo_leido
+  check ((consecutivo_actual is null and consecutivo_leido_en is null) or (consecutivo_actual is not null and consecutivo_leido_en is not null and btrim(consecutivo_fuente) <> '' and rango_desde is not null and rango_hasta is not null and consecutivo_actual >= rango_desde and consecutivo_actual <= rango_hasta));
+alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_confirmada_verificada;
+alter table public.autorizaciones_facturacion add constraint autorizaciones_confirmada_verificada
+  check (estado <> 'confirmada' or (verificado_en is not null and btrim(verificacion_fuente) <> ''));
+alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_vencimiento_confirmado;
+alter table public.autorizaciones_facturacion add constraint autorizaciones_vencimiento_confirmado
+  check (vencimiento_confirmado is null or estado in ('confirmada', 'reemplazada'));
+alter table public.autorizaciones_facturacion drop constraint if exists autorizaciones_conflicto_explicado;
+alter table public.autorizaciones_facturacion add constraint autorizaciones_conflicto_explicado
+  check (estado <> 'conflicto' or btrim(observaciones) <> '');
+
+create index if not exists idx_autorizaciones_facturacion_updated on public.autorizaciones_facturacion (updated_at);
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 
@@ -968,6 +1060,11 @@ create trigger trg_referencias_modificacion
 drop trigger if exists trg_mantenimientos_modificacion on public.mantenimientos;
 create trigger trg_mantenimientos_modificacion
   before insert or update on public.mantenimientos
+  for each row execute function public.registrar_modificacion();
+
+drop trigger if exists trg_autorizaciones_facturacion_modificacion on public.autorizaciones_facturacion;
+create trigger trg_autorizaciones_facturacion_modificacion
+  before insert or update on public.autorizaciones_facturacion
   for each row execute function public.registrar_modificacion();
 
 -- Crea el perfil automaticamente cuando se da de alta un usuario
@@ -1089,6 +1186,7 @@ alter table public.campos_protegidos enable row level security;
 alter table public.personas enable row level security;
 alter table public.referencias enable row level security;
 alter table public.mantenimientos enable row level security;
+alter table public.autorizaciones_facturacion enable row level security;
 
 -- Perfiles: todos los tecnicos autenticados pueden ver los nombres
 -- del equipo. Nadie puede editar perfiles desde la app; el permiso
@@ -1212,6 +1310,14 @@ create policy referencias_acceso on public.referencias
 -- boveda). No guarda secretos: un acceso protegido sigue en la Boveda.
 drop policy if exists mantenimientos_acceso on public.mantenimientos;
 create policy mantenimientos_acceso on public.mantenimientos
+  for all to authenticated using (true) with check (true);
+
+-- Autorizaciones de facturacion (tarea 321): mismo criterio que
+-- mantenimientos y dispositivos. Un prefijo, un rango o un formulario
+-- DIAN no son secretos (salen impresos en cada factura); las claves de
+-- ICG/HKA siguen en la Boveda y esta tabla no tiene donde guardarlas.
+drop policy if exists autorizaciones_facturacion_acceso on public.autorizaciones_facturacion;
+create policy autorizaciones_facturacion_acceso on public.autorizaciones_facturacion
   for all to authenticated using (true) with check (true);
 
 -- Ejecuciones de diagnostico: se pueden leer y agregar, nunca editar
@@ -1751,7 +1857,8 @@ declare
     'categorias', 'articulos', 'dispositivos', 'credenciales', 'adjuntos',
     'historial', 'conexiones', 'diagnosticos', 'ejecuciones_diagnostico',
     'accesos_boveda', 'perfiles', 'boveda_meta', 'ubicaciones',
-    'campos_protegidos', 'personas', 'referencias', 'mantenimientos'
+    'campos_protegidos', 'personas', 'referencias', 'mantenimientos',
+    'autorizaciones_facturacion'
   ];
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then

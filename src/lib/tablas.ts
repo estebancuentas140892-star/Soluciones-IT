@@ -7,6 +7,7 @@ import type {
   AccesoBoveda,
   Adjunto,
   Articulo,
+  AutorizacionFacturacion,
   CampoProtegido,
   Categoria,
   Conexion,
@@ -41,6 +42,7 @@ export const TABLAS_SINCRONIZADAS = [
   'personas',
   'referencias',
   'mantenimientos',
+  'autorizaciones_facturacion',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
@@ -69,6 +71,7 @@ export interface EntidadPorTabla {
   personas: Persona
   referencias: Referencia
   mantenimientos: Mantenimiento
+  autorizaciones_facturacion: AutorizacionFacturacion
 }
 
 interface ConfigTabla {
@@ -523,6 +526,48 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       observaciones: '',
       fuente: '',
       validacion: 'confirmado',
+    },
+  },
+  // Autorizaciones de facturacion de los POS (tarea 321), al final por el
+  // mismo criterio: si el bloque 1.w de schema.sql aun no se aplico, su
+  // fallo no impide descargar las demas. Los numeros, las fechas y la
+  // evidencia son nullables y NO van en `camposOpcionales`: se pueden
+  // vaciar desde el formulario (quitar un vencimiento confirmado que no
+  // lo era), asi que el null tiene que poder viajar. `prefijo` es NOT
+  // NULL sin default: no lleva relleno, si falta es un error de verdad.
+  autorizaciones_facturacion: {
+    columnaCursor: 'updated_at',
+    soloInsercion: false,
+    campos: {
+      ...camposComunes,
+      dispositivoIds: 'dispositivo_ids',
+      prefijo: 'prefijo',
+      formulario: 'formulario',
+      rangoDesde: 'rango_desde',
+      rangoHasta: 'rango_hasta',
+      fechaFormalizacion: 'fecha_formalizacion',
+      vigenciaReportada: 'vigencia_reportada',
+      vencimientoDocumentado: 'vencimiento_documentado',
+      vencimientoConfirmado: 'vencimiento_confirmado',
+      consecutivoActual: 'consecutivo_actual',
+      consecutivoLeidoEn: 'consecutivo_leido_en',
+      consecutivoFuente: 'consecutivo_fuente',
+      estado: 'estado',
+      fuente: 'fuente',
+      verificadoEn: 'verificado_en',
+      verificacionFuente: 'verificacion_fuente',
+      observaciones: 'observaciones',
+      evidenciaAdjuntoId: 'evidencia_adjunto_id',
+    },
+    porDefecto: {
+      dispositivoIds: [],
+      formulario: '',
+      vigenciaReportada: '',
+      consecutivoFuente: '',
+      estado: 'documentada',
+      fuente: '',
+      verificacionFuente: '',
+      observaciones: '',
     },
   },
 }

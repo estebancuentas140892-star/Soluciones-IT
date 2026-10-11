@@ -433,3 +433,172 @@ describe('mantenimientos: uno confirmado y realizado lleva el id de su intervenc
     expect(cumple({ estado, historial_id: null })).toBe(true)
   })
 })
+
+// CONTRATO DE `autorizaciones_facturacion` (tarea 321, encargo del
+// 2026-10-10, fase C). Lo documentado, lo confirmado y el dato medido no
+// se mezclan tampoco en una carga directa: una confirmada dice cuándo y
+// con qué fuente actual se comprobó; solo ella (o una reemplazada) lleva
+// vencimiento confirmado; el consecutivo es número, día y fuente de su
+// lectura, dentro del rango; un conflicto se explica. Mismo método que el
+// de mantenimientos: se lee el CHECK del SQL real y se evalúa sobre filas
+// de prueba, sin ejecutar nada contra Supabase.
+describe('autorizaciones_facturacion: contrato del esquema', () => {
+  const TABLA = 'autorizaciones_facturacion'
+  const COLUMNAS = [
+    'dispositivo_ids',
+    'prefijo',
+    'formulario',
+    'rango_desde',
+    'rango_hasta',
+    'vencimiento_confirmado',
+    'consecutivo_actual',
+    'consecutivo_leido_en',
+    'consecutivo_fuente',
+    'estado',
+    'fuente',
+    'verificado_en',
+    'verificacion_fuente',
+    'observaciones',
+  ]
+  type Fila = Record<string, string | number | null>
+
+  /** Evalúa un CHECK con la semántica de Postgres que usa: btrim, is [not] null, in (...), comparaciones. */
+  function cumple(constraint: string, fila: Fila): boolean {
+    const js = expresionDe(constraint)
+      .replace(new RegExp(`\\b(${COLUMNAS.join('|')})\\b`, 'g'), 'fila.$1')
+      .replace(/(fila\.\w+) in \(([^)]*)\)/g, '[$2].includes($1)')
+      .replace(/\bis not null\b/g, '!== null')
+      .replace(/\bis null\b/g, '=== null')
+      .replace(/<>/g, '!==')
+      .replace(/\bor\b/g, '||')
+      .replace(/\band\b/g, '&&')
+    const btrim = (texto: string) => texto.replace(/^ +| +$/g, '')
+    return new Function('fila', 'btrim', `return ${js}`)(fila, btrim) as boolean
+  }
+
+  const BASE: Fila = {
+    prefijo: 'PRB',
+    formulario: '',
+    rango_desde: 3000,
+    rango_hasta: 8000,
+    vencimiento_confirmado: null,
+    consecutivo_actual: null,
+    consecutivo_leido_en: null,
+    consecutivo_fuente: '',
+    estado: 'documentada',
+    fuente: 'Documento de prueba',
+    verificado_en: null,
+    verificacion_fuente: '',
+    observaciones: '',
+  }
+  const NOMBRES = [
+    'autorizaciones_prefijo_con_texto',
+    'autorizaciones_con_fuente',
+    'autorizaciones_rango_valido',
+    'autorizaciones_consecutivo_leido',
+    'autorizaciones_confirmada_verificada',
+    'autorizaciones_vencimiento_confirmado',
+    'autorizaciones_conflicto_explicado',
+  ]
+  const todas = (cambios: Fila) => NOMBRES.every((n) => cumple(n, { ...BASE, ...cambios }))
+
+  it.each(NOMBRES)('%s se declara idempotente: se borra si existe antes de crearse', (nombre) => {
+    const borra = esquema.indexOf(`alter table public.${TABLA} drop constraint if exists ${nombre};`)
+    const crea = esquema.indexOf(`alter table public.${TABLA} add constraint ${nombre}`)
+    expect(borra).toBeGreaterThan(-1)
+    expect(crea).toBeGreaterThan(borra)
+  })
+
+  it('una documentada con su fuente, sin verificación ni consecutivo: válida', () => {
+    expect(todas({})).toBe(true)
+  })
+
+  it('sin prefijo o sin fuente (vacíos o en blanco): inválida', () => {
+    expect(todas({ prefijo: '  ' })).toBe(false)
+    expect(todas({ fuente: '' })).toBe(false)
+  })
+
+  it.each([
+    ['sin rango', { rango_desde: null, rango_hasta: null }, true],
+    ['rango de un solo número', { rango_desde: 5, rango_hasta: 5 }, true],
+    ['solo el inicio', { rango_hasta: null }, false],
+    ['solo el final', { rango_desde: null }, false],
+    ['inicio mayor que el final', { rango_desde: 9000 }, false],
+    ['empieza en cero', { rango_desde: 0 }, false],
+  ])('rango: %s', (_caso, cambios, valido) => {
+    expect(cumple('autorizaciones_rango_valido', { ...BASE, ...cambios })).toBe(valido)
+  })
+
+  const LECTURA: Fila = { consecutivo_actual: 3500, consecutivo_leido_en: '2026-10-09', consecutivo_fuente: 'Lectura' }
+
+  it.each([
+    ['dentro del rango, con día y fuente', LECTURA, true],
+    ['en el último número del rango', { ...LECTURA, consecutivo_actual: 8000 }, true],
+    ['por debajo del rango', { ...LECTURA, consecutivo_actual: 2999 }, false],
+    ['por encima del rango', { ...LECTURA, consecutivo_actual: 8001 }, false],
+    ['sin día de lectura', { ...LECTURA, consecutivo_leido_en: null }, false],
+    ['sin fuente de lectura', { ...LECTURA, consecutivo_fuente: ' ' }, false],
+    ['sin rango', { ...LECTURA, rango_desde: null, rango_hasta: null }, false],
+    ['un día de lectura sin número', { consecutivo_leido_en: '2026-10-09' }, false],
+  ])('consecutivo: %s', (_caso, cambios, valido) => {
+    expect(cumple('autorizaciones_consecutivo_leido', { ...BASE, ...cambios })).toBe(valido)
+  })
+
+  it('confirmada: exige el día y la fuente actual de la verificación', () => {
+    expect(todas({ estado: 'confirmada' })).toBe(false)
+    expect(todas({ estado: 'confirmada', verificado_en: '2026-10-09' })).toBe(false)
+    expect(todas({ estado: 'confirmada', verificado_en: '2026-10-09', verificacion_fuente: 'Consulta' })).toBe(true)
+  })
+
+  it('el vencimiento confirmado solo cabe en una confirmada o una reemplazada', () => {
+    const vence = { vencimiento_confirmado: '2028-05-14' }
+    expect(todas({ ...vence })).toBe(false)
+    expect(todas({ ...vence, estado: 'conflicto', observaciones: 'x' })).toBe(false)
+    expect(todas({ ...vence, estado: 'reemplazada' })).toBe(true)
+    expect(todas({ ...vence, estado: 'confirmada', verificado_en: '2026-10-09', verificacion_fuente: 'Consulta' })).toBe(true)
+  })
+
+  it('conflicto: exige observaciones; los demás estados no', () => {
+    expect(todas({ estado: 'conflicto' })).toBe(false)
+    expect(todas({ estado: 'conflicto', observaciones: 'Dos fechas distintas' })).toBe(true)
+    expect(todas({ estado: 'reemplazada' })).toBe(true)
+  })
+
+  it('PNTE: sin POS y sin rango, documentada, es válida', () => {
+    expect(todas({ rango_desde: null, rango_hasta: null })).toBe(true)
+    expect(bloqueCreateTable(TABLA)).toMatch(/^\s+dispositivo_ids uuid\[\] not null default '\{\}',$/m)
+  })
+
+  it('el estado admite solo la taxonomía de la tarea, con documentada por defecto', () => {
+    expect(bloqueCreateTable(TABLA)).toContain("estado text not null default 'documentada'")
+    expect(esquema).toContain("check (estado in ('documentada', 'confirmada', 'conflicto', 'reemplazada'))")
+  })
+
+  it('el prefijo no tiene valor por defecto: si falta es un error de verdad', () => {
+    expect(bloqueCreateTable(TABLA)).toMatch(/^\s+prefijo text not null,$/m)
+  })
+
+  it('sin FK a dispositivos ni a adjuntos (referencias blandas, offline primero)', () => {
+    const create = bloqueCreateTable(TABLA) ?? ''
+    expect(create).not.toMatch(/dispositivo_ids[^\n,]*references/i)
+    expect(create).not.toMatch(/evidencia_adjunto_id[^\n,]*references/i)
+  })
+
+  it('no tiene columnas para secretos de ICG o HKA', () => {
+    const create = bloqueCreateTable(TABLA) ?? ''
+    expect(create).not.toMatch(/usuario|contrasena|password|token|\bpin\b|clave|cifrad/i)
+  })
+
+  it('trigger de modificación, RLS para authenticated y tiempo real', () => {
+    expect(esquema).toContain(
+      `create trigger trg_${TABLA}_modificacion\n  before insert or update on public.${TABLA}\n  for each row execute function public.registrar_modificacion();`,
+    )
+    expect(esquema).toContain(`alter table public.${TABLA} enable row level security;`)
+    expect(esquema).toContain(`drop policy if exists ${TABLA}_acceso on public.${TABLA};`)
+    expect(esquema).toContain(
+      `create policy ${TABLA}_acceso on public.${TABLA}\n  for all to authenticated using (true) with check (true);`,
+    )
+    const realtime = /tablas text\[\] := array\[([\s\S]*?)\];/.exec(esquema)?.[1] ?? ''
+    expect(realtime).toContain(`'${TABLA}'`)
+  })
+})

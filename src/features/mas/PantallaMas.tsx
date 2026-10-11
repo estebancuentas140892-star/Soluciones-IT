@@ -10,6 +10,7 @@ import {
   Package,
   PlugsConnected,
   Star,
+  Storefront,
   UserCircle,
   UsersThree,
 } from '../../components/iconos'
@@ -63,6 +64,11 @@ export function PantallaMas() {
   )
   const referencias = useLiveQuery(
     () => db.referencias.filter((r) => !r.eliminadoEn).count(),
+    [],
+  )
+  // Tarea 321: cuántas autorizaciones de facturación hay registradas.
+  const autorizaciones = useLiveQuery(
+    () => db.autorizaciones_facturacion.filter((a) => !a.eliminadoEn).count(),
     [],
   )
   // Mis favoritos solo aparece si hay alguno: una fila vacía sería un
@@ -152,6 +158,15 @@ export function PantallaMas() {
                 Icono={Package}
                 titulo="Herramientas de inventario"
                 subtitulo="Importar, etiquetas QR y datos por ordenar"
+              />
+              {/* Tarea 321: todas las autorizaciones, también las que no
+                  tienen POS (no cuelgan de ninguna ficha). */}
+              <Fila
+                to="/facturacion"
+                Icono={Storefront}
+                titulo="Autorizaciones de facturación"
+                subtitulo="Prefijos y rangos DIAN de los POS"
+                conteo={autorizaciones ?? null}
               />
             </div>
           </section>

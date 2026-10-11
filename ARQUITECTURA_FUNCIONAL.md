@@ -389,6 +389,20 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: Mantenimiento, Dispositivo, HistorialEntrada, Adjunto. Dura en el código: `src/lib/mantenimientos.ts`, `src/lib/repositorio.ts` (`cerrarMantenimiento` y la rama `mantenimientos` del historial), `src/features/mantenimientos/` (`mantenimiento.ts`, `antecedentes.ts`, `MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`), `src/features/inicio/pendientes.ts`.
 - Impacto: una tabla nueva sincronizada (`mantenimientos`, bloque 1.u de `schema.sql`, que se aplica antes de desplegar, regla 17); ningún dato real cambia.
 
+**RN-074. Una autorización de facturación separa lo documentado, lo confirmado y el dato actual medido; la Agenda solo avisa de lo confiable, nunca de lo documentado ni de lo estimado.**
+- Motivo: tarea 321 (encargo del 2026-10-10, fase C; [DECISIONES.md](DECISIONES.md) AD-076). La facturación vivía en claves sueltas de `detalles` de los POS (`DIAN - ...`, `Facturación - vencimiento fuente`), sin estado ni avisos fiables. Esas claves se conservan como trazabilidad de la conciliación.
+- Estados: `documentada` (la dice una fuente y nadie la comprobó; se lee "Documentada, por validar"), `confirmada` (comprobada con una fuente ACTUAL: la configuración en ICG/HKA o la consulta en la DIAN; exige el día y la fuente de la verificación, y un PDF por sí solo no la confirma), `conflicto` (las fuentes no coinciden; se explica en las observaciones y no se elige ninguna) y `reemplazada` (ya no se usa). Ciclo en la sección 4.4c. Piden revisión la documentada y la de conflicto.
+- Lo documentado: prefijo (obligatorio), formulario, rango (los dos extremos o ninguno, enteros mayores que cero y en orden), formalización, vigencia reportada, el vencimiento según la fuente y la fuente (obligatoria). El vencimiento según la fuente se enseña "sin confirmar" y nunca avisa.
+- Lo confirmado: la última verificación (día, no futuro, y fuente) y el vencimiento confirmado, que solo cabe en una confirmada o una reemplazada.
+- El dato actual medido: el último consecutivo emitido, el día en que se leyó (no futuro) y dónde se leyó, los tres o ninguno, y dentro del rango. Nunca se estima por fechas ni por consumo.
+- POS: cero, uno o varios (`dispositivo_ids`). Una fila de una fuente que no identifica el equipo (PNTE) se conserva sin POS ("Sin POS asociado") y no se asigna uno a la fuerza.
+- Agenda (vista derivada): solo de una **confirmada**, sin eliminar y con al menos un POS que exista. (a) **Vencimiento**: con su vencimiento confirmado, ya pasado o dentro del aviso de 30 días (`DIAS_AVISO_VENCIMIENTO`, el de los accesos): "Vence el 12 nov", "Vence hoy", "Venció hace 3 días"; precaución si falta y error si venció. (b) **Rango agotado**: con rango y una lectura completa del consecutivo igual o mayor que el final del rango: "Rango agotado (leído el 3 oct)", error, fechado el día de la lectura. El título son los POS y el origen "Autorización PNC"; lleva a la ficha de la autorización. **"Por agotarse" no existe:** su umbral no está decidido y no se inventa (decisión pendiente del usuario, tarea 321). Una documentada, en conflicto o reemplazada no avisa de nada, ni por su vencimiento según la fuente.
+- Ficha del POS: "Más del equipo" > "Facturación" en un POS (categoría "POS") o en un equipo que ya tenga alguna; la fila plegada dice el prefijo en uso, "N en uso" o "Ninguna", en precaución si alguna pide revisión. Cada autorización dice prefijo, rango, estado, el vencimiento si está confirmado y, si pide revisión, por qué.
+- Historial: guardar deja una entrada `autorizacion_facturacion` en cada POS que la usa (solo si su resumen cambió), que la recibe ("Se asoció…") o que la deja ("Se quitó…"). Una sin POS no deja historial en ningún equipo.
+- Seguridad: no tiene dónde guardar usuarios, contraseñas, tokens, PIN ni secretos de ICG/HKA; esos van en la Bóveda. RLS de contenido general (cualquier técnico autenticado), como `dispositivos`.
+- Entidades: AutorizacionFacturacion, Dispositivo, HistorialEntrada, Adjunto. Dura en el código: `src/lib/autorizaciones.ts`, `src/lib/repositorio.ts` (`entradasDeAutorizacion`), `src/features/facturacion/` (`autorizacion.ts`, `AutorizacionesDelPos.tsx`, `AutorizacionesPage.tsx`, `AutorizacionPage.tsx`, `AutorizacionForm.tsx`, `PresentacionAutorizacion.tsx`), `src/features/inicio/pendientes.ts`.
+- Impacto: una tabla nueva sincronizada (`autorizaciones_facturacion`, bloque 1.t de `schema.sql`, que se aplica antes de desplegar, regla 17); ningún dato real cambia ni se carga.
+
 ---
 
 **RN-042. El buscador prioriza la intención de resolver: una guía que coincide en el título va primero, publicada o no.**
@@ -565,6 +579,7 @@ erDiagram
 | Dispositivo | reemplaza | Dispositivo | 1 : 0..1 | FK `reemplaza_a` (autorreferencia, fija una vez) |
 | Dispositivo | contiene | Campo protegido | 1 : N | `dispositivo_id` (nullable, sin FK) |
 | Dispositivo | se le programa | Mantenimiento | 1 : N | `mantenimientos.dispositivo_id` (sin FK). Cerrado como realizado, `historial_id` apunta a la intervención del historial del equipo (0..1), de la que cuelga la evidencia (RN-073) |
+| Autorización de facturación | la usa | Dispositivo (POS) | N : M | lista `autorizaciones_facturacion.dispositivo_ids` (`uuid[]` sin FK); puede estar vacía (una fuente que no identifica el equipo). Su documento, `evidencia_adjunto_id` (un adjunto de uno de sus POS, sin FK) (RN-074) |
 | Dispositivo | conexión | Dispositivo | N : M | tabla puente `conexiones` (dos FK duras) con atributos |
 | Credencial | da acceso | Dispositivo | N : M | JSON `credenciales.dispositivos` `{id,nombre}[]` |
 | Artículo | afecta a | Dispositivo | N : M | JSON `dispositivos_afectados` `{id,nombre}[]` |
@@ -583,7 +598,7 @@ Notas:
 
 ### 3.3 Referencias sin FK (a propósito)
 
-Por el modelo offline primero, varias referencias son "blandas" (uuid sin FK, para que una fila no se rechace por el estado de otra tabla que quizá aún no sincronizó): `campos_protegidos.dispositivo_id`, `historial.entidad_id` (polimórfico), `ejecuciones_diagnostico.diagnostico_id`, `accesos_boveda.credencial_id` (polimórfico), `articulos.origen_sugerencia_id`, `adjuntos.entidad_id` (polimórfico), `mantenimientos.dispositivo_id` y `mantenimientos.historial_id` (tarea 320).
+Por el modelo offline primero, varias referencias son "blandas" (uuid sin FK, para que una fila no se rechace por el estado de otra tabla que quizá aún no sincronizó): `campos_protegidos.dispositivo_id`, `historial.entidad_id` (polimórfico), `ejecuciones_diagnostico.diagnostico_id`, `accesos_boveda.credencial_id` (polimórfico), `articulos.origen_sugerencia_id`, `adjuntos.entidad_id` (polimórfico), `mantenimientos.dispositivo_id` y `mantenimientos.historial_id` (tarea 320), `autorizaciones_facturacion.dispositivo_ids` y `autorizaciones_facturacion.evidencia_adjunto_id` (tarea 321).
 
 Catálogo de campos entidad por entidad (tipos, nulabilidad, defaults): [ARQUITECTURA.md](ARQUITECTURA.md), sección 5.
 
@@ -591,7 +606,7 @@ Catálogo de campos entidad por entidad (tipos, nulabilidad, defaults): [ARQUITE
 
 ## 4. Ciclos de vida y máquinas de estado
 
-Distinción importante: solo cuatro entidades tienen un campo de estado persistido (`Articulo.estado`, enum real; `Persona.estado`, enum real desde el 2026-09-23; `Mantenimiento.estado`, enum real desde el 2026-10-10, sección 4.4b; `Dispositivo.estado`, texto libre). Las demás tienen un ciclo de vida simple (alta, edición, borrado lógico). Además existen dos máquinas de estado de **ejecución** (diagnóstico y procedimiento) que viven en tablas locales.
+Distinción importante: solo cinco entidades tienen un campo de estado persistido (`Articulo.estado`, enum real; `Persona.estado`, enum real desde el 2026-09-23; `Mantenimiento.estado`, enum real desde el 2026-10-10, sección 4.4b; `AutorizacionFacturacion.estado`, enum real desde el 2026-10-10, sección 4.4c; `Dispositivo.estado`, texto libre). Las demás tienen un ciclo de vida simple (alta, edición, borrado lógico). Además existen dos máquinas de estado de **ejecución** (diagnóstico y procedimiento) que viven en tablas locales.
 
 ### 4.1 Dispositivo
 
@@ -671,6 +686,22 @@ stateDiagram-v2
   Pospuesto --> Cancelado : cancelar
   Realizado --> [*]
   Cancelado --> [*]
+```
+
+### 4.4c Autorización de facturación (tarea 321, RN-074)
+
+`estado` es un enum real con check en la base. Ningún paso es automático: cada uno lo hace una persona desde el formulario, con su fuente. Solo la confirmada puede avisar en la Agenda.
+
+```mermaid
+stateDiagram-v2
+  [*] --> Documentada : registrar con su fuente
+  Documentada --> Confirmada : verificar con una fuente actual (día y fuente)
+  Documentada --> Conflicto : las fuentes no coinciden (se explica)
+  Conflicto --> Confirmada : se comprueba cuál vale
+  Confirmada --> Conflicto : una fuente nueva la contradice
+  Confirmada --> Reemplazada : la sustituye otra
+  Documentada --> Reemplazada : la sustituye otra
+  Reemplazada --> [*]
 ```
 
 ### 4.5 Máquina de estado: ejecución de un diagnóstico
@@ -899,7 +930,7 @@ Vista funcional; el mecanismo técnico (motor de sync, canal de Realtime, cursor
 
 ### 8.2 Qué es local y qué se sincroniza
 
-- **Sincronizadas (15 tablas, `referencias` y, desde la tarea 320, `mantenimientos` incluidas)** por el motor genérico, más `perfiles` y `boveda_meta` con un mecanismo propio de un solo sentido.
+- **Sincronizadas (16 tablas, `referencias`, desde la tarea 320 `mantenimientos` y desde la tarea 321 `autorizaciones_facturacion` incluidas)** por el motor genérico, más `perfiles` y `boveda_meta` con un mecanismo propio de un solo sentido.
 - **Locales puras (8):** `syncMeta` (cursores), `cambiosPendientes` (cola), `archivosPendientes` (cola de archivos), `seguridadApp` (bloqueo del dispositivo), `progresoDiagnostico`, `progresoPasos`, `recientes`, `favoritos`.
 
 ---
@@ -921,7 +952,7 @@ En la práctica, como cada dato vive una sola vez y los vínculos se resuelven p
 
 ### 10.1 Qué genera qué
 
-- **Historial** (`historial`): toda creación, edición y eliminación de las 10 entidades editables, más las conexiones (una entrada por extremo) y las intervenciones manuales. Guarda usuario, fecha, campo, valor anterior y nuevo, y motivo opcional. Los valores cifrados nunca entran en claro: se guardan como `"(cifrado)"`. Desde el 2026-09-23 un cambio de responsable deja además una entrada técnica `responsableId` con los dos ids de persona, que no se enseña y de la que se derivan las asignaciones pasadas (RN-049).
+- **Historial** (`historial`): toda creación, edición y eliminación de las 10 entidades editables, más las conexiones (una entrada por extremo), las autorizaciones de facturación (una entrada por POS, desde la tarea 321) y las intervenciones manuales. Guarda usuario, fecha, campo, valor anterior y nuevo, y motivo opcional. Los valores cifrados nunca entran en claro: se guardan como `"(cifrado)"`. Desde el 2026-09-23 un cambio de responsable deja además una entrada técnica `responsableId` con los dos ids de persona, que no se enseña y de la que se derivan las asignaciones pasadas (RN-049).
 - **Ejecuciones de diagnóstico** (`ejecuciones_diagnostico`): cada corrida terminada o abandonada del asistente (camino, artículos ejecutados, resultado, duración, motivo).
 - **Asistencia remota** (`asistencia_eventos`, desde el 2026-09-24): creación, conexión, código incorrecto, bloqueo por intentos, envío (solo cuántos bloques), envío rechazado (solo el motivo: `secreto`, `estructura`, `url`, `tamano`), cierre y vencimiento, con la sesión y el técnico. **Sin contenido ni secretos.** No tiene políticas: se consulta desde el panel de Supabase.
 - **Accesos de bóveda** (`accesos_boveda`): cada consulta, copia, muestra, modificación, eliminación o descarga de una credencial o campo protegido. Desde el 2026-09-16 también las de la vista rápida del buscador, con las mismas acciones que la ficha (RN-034).

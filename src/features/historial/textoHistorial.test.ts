@@ -71,6 +71,21 @@ describe('descripcionEntrada', () => {
     ).toBe('Se registró un antecedente de mantenimiento: Preventivo para el 12 mar 2025 (documentado, por validar)')
   })
 
+  // Tarea 321: una autorización de facturación en el historial de su POS.
+  it('describe una autorización asociada, cambiada y quitada', () => {
+    const antes = 'PRB · 3.000 a 8.000 · Documentada, por validar'
+    const despues = 'PRB · 3.000 a 8.000 · Confirmada'
+    expect(descripcionEntrada({ campo: 'autorizacion_facturacion', valorAnterior: '', valorNuevo: antes })).toBe(
+      `Se asoció la autorización de facturación: ${antes}`,
+    )
+    expect(descripcionEntrada({ campo: 'autorizacion_facturacion', valorAnterior: antes, valorNuevo: despues })).toBe(
+      `Autorización de facturación: ${antes} → ${despues}`,
+    )
+    expect(descripcionEntrada({ campo: 'autorizacion_facturacion', valorAnterior: despues, valorNuevo: '' })).toBe(
+      `Se quitó la autorización de facturación: ${despues}`,
+    )
+  })
+
   it('con los dos valores describe la inversión, no un alta', () => {
     expect(
       descripcionEntrada({

@@ -709,6 +709,83 @@ export interface Mantenimiento {
   eliminadoEn: string | null
 }
 
+// AUTORIZACION DE FACTURACION DE LOS POS (tarea 321, encargo del
+// 2026-10-10, fase C).
+//
+// Un prefijo con su rango autorizado por la DIAN, el documento que lo
+// respalda y lo que se sabe de el, separado en tres capas que nunca se
+// mezclan:
+//   - LO DOCUMENTADO: lo que dice una fuente (el PDF DIAN, Equipos
+//     POS.xlsx): formulario, prefijo, rango, formalizacion, vigencia
+//     reportada y el vencimiento que esa fuente da. No avisa de nada.
+//   - LO CONFIRMADO: el estado 'confirmada' exige cuando y con que
+//     fuente ACTUAL se verifico (la configuracion en ICG/HKA, la consulta
+//     en la DIAN); un PDF por si solo no confirma. Solo una confirmada
+//     puede llevar `vencimientoConfirmado`, y solo ella avisa en la
+//     Agenda.
+//   - EL DATO ACTUAL MEDIDO: el ultimo consecutivo emitido, con la fecha
+//     y el sitio donde se leyo. Sin los tres no existe: nunca se estima
+//     por fechas ni por consumo.
+//
+// Se relaciona con CERO, UNO O VARIOS POS (`dispositivoIds`): una fila
+// de Equipos POS puede documentar un prefijo sin identificar el equipo
+// (PNTE), y una autorizacion no tiene por que ser de un solo punto. Es
+// una lista de referencias blandas (uuid sin FK), como
+// `Credencial.dispositivos`, pero sin copiar el nombre: se lee vivo de
+// `dispositivos`. Las claves `DIAN - ...` de `detalles` de los POS se
+// conservan como trazabilidad de la conciliacion del 2026-10-10.
+//
+// Nunca guarda usuarios, contrasenas, tokens, PIN ni secretos de ICG o
+// HKA: esos viven en la Boveda.
+export type EstadoAutorizacion = 'documentada' | 'confirmada' | 'conflicto' | 'reemplazada'
+
+export interface AutorizacionFacturacion {
+  id: string
+  // Los POS que la usan. Puede estar vacia: no se asigna un POS que la
+  // fuente no identifica.
+  dispositivoIds: string[]
+  // Prefijo de la numeracion ("PNC"). Obligatorio.
+  prefijo: string
+  // Formulario o identificador del documento DIAN. '' si la fuente no
+  // lo da.
+  formulario: string
+  // Rango autorizado, los dos extremos o ninguno.
+  rangoDesde: number | null
+  rangoHasta: number | null
+  // "YYYY-MM-DD" o null: fecha de formalizacion segun el documento.
+  fechaFormalizacion: string | null
+  // Vigencia tal como la reporta la fuente ("24 meses"). '' si no la da.
+  vigenciaReportada: string
+  // Vencimiento segun la fuente documental, sin confirmar. Nunca avisa.
+  vencimientoDocumentado: string | null
+  // Vencimiento confirmado con una fuente actual. Solo en una
+  // autorizacion confirmada (o reemplazada que lo estuvo).
+  vencimientoConfirmado: string | null
+  // Ultimo consecutivo emitido, cuando se ha leido de una fuente
+  // confiable: numero, dia de la lectura y donde se leyo, los tres o
+  // ninguno, y dentro del rango.
+  consecutivoActual: number | null
+  consecutivoLeidoEn: string | null
+  consecutivoFuente: string
+  estado: EstadoAutorizacion
+  // De donde sale lo documentado ("PDF DIAN y Equipos POS.xlsx,
+  // conciliacion del 2026-10-10"). Obligatoria.
+  fuente: string
+  // La ultima verificacion: dia y fuente actual con que se hizo.
+  // Obligatorias en una confirmada.
+  verificadoEn: string | null
+  verificacionFuente: string
+  // Obligatorias en un conflicto: que fuentes no coinciden y en que.
+  observaciones: string
+  // El documento que la respalda, ya adjunto a uno de sus POS
+  // (`adjuntos` con entidadTipo 'dispositivo'), o null. Referencia
+  // blanda: el archivo existe una sola vez.
+  evidenciaAdjuntoId: string | null
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
+}
+
 // Clase de secreto INDEPENDIENTE de la boveda (grupo P1, se usa en la
 // interfaz desde la fase P3). No existe un tipo "equipo" a proposito:
 // un equipo es un dispositivo, y sus datos sensibles son campos
@@ -1487,6 +1564,8 @@ class SolucionesItDatabase extends Dexie {
   personas!: EntityTable<Persona, 'id'>
   conexiones!: EntityTable<Conexion, 'id'>
   mantenimientos!: EntityTable<Mantenimiento, 'id'>
+  // Mismo nombre local y remoto (snake_case), como campos_protegidos.
+  autorizaciones_facturacion!: EntityTable<AutorizacionFacturacion, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
   // Nombre con guion bajo a proposito, como ejecuciones_diagnostico y
   // accesos_boveda: el motor de sincronizacion usa el MISMO nombre en
@@ -1735,6 +1814,15 @@ class SolucionesItDatabase extends Dexie {
     // recorrer la tabla, y `updatedAt` como el resto de sincronizadas.
     this.version(21).stores({
       mantenimientos: 'id, dispositivoId, updatedAt',
+    })
+
+    // Version 22 (2026-10-10, tarea 321): autorizaciones de facturacion
+    // de los POS, tabla sincronizada nueva. Solo `.stores()` de la tabla
+    // nueva, como la 21. `*dispositivoIds` es un indice multiEntry: lista
+    // las autorizaciones de un POS sin recorrer la tabla, aunque una
+    // autorizacion tenga varios.
+    this.version(22).stores({
+      autorizaciones_facturacion: 'id, *dispositivoIds, updatedAt',
     })
   }
 }

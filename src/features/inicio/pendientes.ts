@@ -1,5 +1,6 @@
 import type {
   Articulo,
+  AutorizacionFacturacion,
   CampoProtegido,
   Credencial,
   Dispositivo,
@@ -9,6 +10,7 @@ import type {
   Persona,
 } from '../../lib/db'
 import { diasDeCalendario, estadoVencimiento, textoVencimiento } from '../../lib/vencimiento'
+import { autorizacionesEnAgenda } from '../facturacion/autorizacion'
 import { tiempoRelativo } from '../historial/actividadEquipo'
 import { mantenimientosEnAgenda } from '../mantenimientos/mantenimiento'
 import { equiposLiberadosRecientes, personasPorRecibir, personasRetiradasConEquipos } from './asuntosDePersonas'
@@ -52,6 +54,10 @@ export interface ItemPendiente {
     // Desde la tarea 320: un mantenimiento abierto con fecha programada
     // (ver src/features/mantenimientos/mantenimiento.ts).
     | 'mantenimiento'
+    // Desde la tarea 321: el vencimiento confirmado o el rango agotado de
+    // una autorización de facturación confirmada (ver
+    // src/features/facturacion/autorizacion.ts).
+    | 'facturacion'
   /** Fecha de vencimiento "YYYY-MM-DD", o null si el ítem no tiene una. */
   fecha: string | null
   /**
@@ -199,8 +205,9 @@ export function sugerenciasSinRevisar(
 // Combina las fuentes en un solo bloque. Primero TODO lo que tiene
 // fecha, ordenado globalmente por esa fecha (venga de la Bóveda, de los
 // Datos protegidos de un equipo, desde la tarea 270 del ingreso o el
-// retiro de una persona y desde la tarea 320 de un mantenimiento
-// programado: para quien lo tiene que atender son la misma clase de
+// retiro de una persona, desde la tarea 320 de un mantenimiento
+// programado y desde la tarea 321 de una autorización de facturación
+// confirmada: para quien lo tiene que atender son la misma clase de
 // obligación); después el trabajo sin plazo (borradores
 // propios) y lo que el equipo tiene por revisar (una persona retirada
 // sin fecha que aún tiene equipos, un equipo liberado que espera dueño y
@@ -229,6 +236,8 @@ export function calcularPendientes(datos: {
     Mantenimiento,
     'id' | 'dispositivoId' | 'tipo' | 'fechaProgramada' | 'estado' | 'validacion' | 'eliminadoEn'
   >[]
+  /** Tarea 321: las autorizaciones (la agenda solo avisa de las confirmadas, con un POS y un dato confiable). */
+  autorizaciones?: AutorizacionFacturacion[]
   usuarioId: string
   puedeVerBoveda: boolean
   limite?: number
@@ -245,6 +254,7 @@ export function calcularPendientes(datos: {
     dispositivos = [],
     liberaciones = [],
     mantenimientos = [],
+    autorizaciones = [],
     usuarioId,
     puedeVerBoveda,
     limite = 6,
@@ -259,6 +269,7 @@ export function calcularPendientes(datos: {
     ...personasPorRecibir(personas, dispositivos, hoy),
     ...retiradas.filter((item) => item.fecha !== null),
     ...mantenimientosEnAgenda(mantenimientos, dispositivos, hoy),
+    ...autorizacionesEnAgenda(autorizaciones, dispositivos, hoy),
   ].sort(porFecha)
 
   const items = [

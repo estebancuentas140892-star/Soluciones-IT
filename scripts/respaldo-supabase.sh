@@ -25,7 +25,7 @@ SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-sb_publishable_yHHdmM4xeo34Eq0-FVVo9A_hh
 # Todas las tablas de supabase/schema.sql, en el orden en que se restauran
 # (primero aquellas a las que otras apuntan). src/lib/esquema.test.ts falla
 # si el esquema crea una tabla que esta lista no respalda.
-TABLAS=(categorias ubicaciones personas perfiles articulos dispositivos mantenimientos conexiones credenciales campos_protegidos boveda_meta adjuntos historial diagnosticos ejecuciones_diagnostico accesos_boveda referencias)
+TABLAS=(categorias ubicaciones personas perfiles articulos dispositivos mantenimientos autorizaciones_facturacion conexiones credenciales campos_protegidos boveda_meta adjuntos historial diagnosticos ejecuciones_diagnostico accesos_boveda referencias)
 FILAS_POR_PAGINA=1000
 
 for herramienta in curl jq tar openssl; do

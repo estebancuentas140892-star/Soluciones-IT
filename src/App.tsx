@@ -86,6 +86,15 @@ const ReemplazoPage = lazy(() =>
 const MantenimientoPage = lazy(() =>
   import('./features/mantenimientos/MantenimientoPage').then((m) => ({ default: m.MantenimientoPage })),
 )
+const AutorizacionesPage = lazy(() =>
+  import('./features/facturacion/AutorizacionesPage').then((m) => ({ default: m.AutorizacionesPage })),
+)
+const AutorizacionPage = lazy(() =>
+  import('./features/facturacion/AutorizacionPage').then((m) => ({ default: m.AutorizacionPage })),
+)
+const AutorizacionForm = lazy(() =>
+  import('./features/facturacion/AutorizacionForm').then((m) => ({ default: m.AutorizacionForm })),
+)
 const BovedaGuard = lazy(() =>
   import('./features/boveda/BovedaGuard').then((m) => ({ default: m.BovedaGuard })),
 )
@@ -553,6 +562,40 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <MantenimientoPage />
+                  </Suspense>
+                }
+              />
+              {/* Autorizaciones de facturación de los POS (tarea 321):
+                  la lista (puerta en Más), registrar, su ficha y editar. */}
+              <Route
+                path="facturacion"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <AutorizacionesPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="facturacion/nueva"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <AutorizacionForm />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="facturacion/:autorizacionId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <AutorizacionPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="facturacion/:autorizacionId/editar"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <AutorizacionForm />
                   </Suspense>
                 }
               />
