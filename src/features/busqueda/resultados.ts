@@ -34,13 +34,15 @@ export interface Visual {
 //
 // Desde la propuesta final de Claude Design (2026-10-01) cada tipo de los
 // que se mezclan en una lista tiene su propio tinte, además de su icono
-// y su palabra: la guía en el acento, la guía con preguntas en el azul de
-// la acción, el equipo en verde, la persona en violeta y la ubicación en
-// ámbar. Así una lista mixta se distingue de un vistazo.
+// y su palabra: la guía en el acento, el equipo en verde, la persona en
+// violeta y la ubicación en ámbar. Así una lista mixta se distingue de un
+// vistazo. La guía con preguntas tenía el azul de la acción; con el
+// rediseño móvil "1b Pulgar" (2026-10-13) ese azul se retiró y comparte
+// el acento con la guía: las separan su glifo y su palabra.
 export const VISUAL_POR_TIPO: Record<TipoResultado, Visual> = {
   articulo: { Icono: BookOpen, tono: 'text-noct-accent-300 bg-noct-accent/[.12]' },
   categoria: { Icono: BookOpen, tono: 'text-noct-accent-300 bg-noct-accent/[.12]' },
-  diagnostico: { Icono: TreeStructure, tono: 'text-noct-accion bg-noct-accion/[.12]' },
+  diagnostico: { Icono: TreeStructure, tono: 'text-noct-accent-300 bg-noct-accent/[.12]' },
   adjunto: { Icono: BookOpen, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
   dispositivo: { Icono: Monitor, tono: 'text-noct-exito bg-noct-exito/[.12]' },
   credencial: { Icono: LockSimple, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },

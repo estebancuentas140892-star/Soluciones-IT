@@ -67,6 +67,13 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
     - **Dónde rige hoy:** las filas de Resolver: los resultados (`FilaResultado`, en todas sus formas: "Mejor coincidencia", "Otras coincidencias", "Mejores resultados", los grupos y el modo consulta), los borradores que coinciden, Recientes y Atención (`FilaAgenda`). La prueba `nombresSinRecorte.test.tsx` lo vigila, con un título largo de verdad. Criterio técnico en [DECISIONES.md](DECISIONES.md) AD-062.
     - **En la ficha, el dato principal de una fila (regla acordada con el usuario el 2026-10-09, tarea 316):** en espacios móviles, un dato principal puede crecer en altura antes que perder su identidad mediante un truncado prematuro. Comparte la fila con un icono, una flecha o una acción, así que no es ilimitado: ocupa hasta dos líneas (`line-clamp-2 break-words`) y solo después se recorta; nunca `truncate` de una línea, ni se arregla bajando la letra, quitando la acción o la flecha o con desplazamiento horizontal. Hoy rige en el responsable de la ficha del equipo (`ResponsableDelEquipo`, vigilado por `responsableDelEquipo.test.tsx`).
 
+30. **Una sola acción rellena por pantalla, y solo la que hace avanzar o ejecutar** (regla del rediseño móvil "1b Pulgar" de Claude Design, 2026-10-13, tarea 327; el porqué técnico en [DECISIONES.md](DECISIONES.md) AD-077). Sustituye a la regla de Nocturne "el primario nunca va relleno".
+    - **Relleno (`BTN_PRIMARIO_RELLENO`):** como mucho una vez por pantalla, para la acción que avanza o ejecuta: Completar y seguir, Resolver un problema, Empezar, Guardar, Desbloquear, Terminar.
+    - **Delineado (`BTN_PRIMARIO`):** las acciones de la pantalla que no hacen avanzar (Editar, Programar, Registrar lectura).
+    - **Texto en acento:** los verbos de fila y los enlaces (Abrir, Ver, Asignar).
+    - **Lo destructivo** (Eliminar, Dar de baja) vive solo en el menú "···", separado del resto por espacio y una línea; nunca junto a Editar.
+    - **El acento es el único color interactivo** (el cian del icono de la app): dice "esto se toca" y nada más. Los estados nunca decoran y van siempre con su icono y su palabra.
+
 ## Navegación
 
 13. Comportamiento unificado de "Cancelar" y "Volver" (regla registrada al corregir la tarea 75 y consolidada en la tarea 76, 2026-07-18):

@@ -52,6 +52,31 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | G | Presentación de Datáfonos | 325 | Pendiente |
 | (hallazgo de la B) | El autor de un guardado sin red no espera 25 s | 326 | Hecha (archivada) |
 
+**ENCARGO DEL 2026-10-13: REDISEÑO MÓVIL "1b PULGAR" (handoff de Claude Design).** Proyecto "Preguntas sobre identidad visual" (`https://claude.ai/design/p/b04b5170-6bf4-4148-a1ec-092b8cdec708`, exportado en `Preguntas sobre identidad visual-handoff.zip`): `Auditoria y direcciones.dc.html` (auditoría de las pantallas actuales y tres direcciones; se eligió la 1b Pulgar), `Prototipo Soluciones IT.dc.html` (prototipo móvil de la dirección elegida), `Sistema visual movil.dc.html` (tokens, componentes, lenguaje de la guía y tres formas de dato) y `NOTAS_CLAUDE_CODE.md` (alcance, cambios por pantalla y criterios de aceptación). **Alcance:** solo por debajo de 768 px; escritorio, tableta y el rail no cambian; no cambia la arquitectura funcional, el esquema de Supabase, Dexie, la sincronización ni las reglas de negocio; no se elimina ni se añade ninguna función (lo que lo exigiría es una recomendación de producto y espera decisión del usuario). Por la regla 15 se implementa toda la carpeta, una pantalla o grupo por tarea, una "En proceso" a la vez. **Se trabaja en la rama `feat/movil-pulgar` (worktree `C:\Users\USUARIO\dev\sit-movil-pulgar`) y nada se integra a `main` sin la aprobación del usuario**, como el encargo del 2026-10-10. Existe además una rama local `feat/redesign-movil-pulgar` (creada el 2026-10-13 a las 14:40 en otro equipo, sin commits ni push): el usuario decidió empezar de cero en `feat/movil-pulgar` y no tocarla. **Criterios de aceptación de todo el encargo:** a 320 x 568, 375 x 812 y 390 x 844 ningún dato técnico recortado, ningún verbo de acción por debajo de 14 px, ningún texto por debajo de 12 px, objetivos de 44 px como mínimo; una sola acción rellena por pantalla; `npm test`, `npm run lint` y `npm run build` en verde.
+
+| Paso | Tarea del encargo | Tarea del tablero | Estado |
+|---|---|---|---|
+| 1 | Tokens, IBM Plex Mono local y `BTN_PRIMARIO_RELLENO` | 327 | Hecha en `feat/movil-pulgar`, pendiente de revisión visual del usuario y de aprobación para integrar |
+| 2 | Ejecución de guía | 328 | Pendiente |
+| 3 | Ficha de equipo | 329 | Pendiente |
+| 4 | Dock de búsqueda, búsqueda y cabeceras de raíz | 330 | Pendiente |
+| 5 | Mantenimiento y autorización (tres formas de dato) | 331 | Pendiente |
+| 6 | Agenda y Más | 332 | Pendiente |
+| 7 | Tema claro | 333 | Bloqueada: contradice la regla 12 y depende de RP-3 |
+| (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Pendiente de decisión |
+| (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | Pendiente de decisión |
+
+### 327. Rediseño móvil, paso 1: tokens cian, IBM Plex Mono local y botón primario relleno
+
+- **Título:** el acento pasa al cian del icono, los datos técnicos a IBM Plex Mono y existe una acción rellena por pantalla, sin cambiar todavía ninguna pantalla.
+- **Descripción:** `src/index.css` (`@theme`): `--color-noct-accent` de `#9184d9` a `oklch(0.82 0.11 200)`; rampa `--color-noct-accent-100…900` regenerada en oklch con matiz 200 (`-300`, el texto de acento, `oklch(0.87 0.08 200)`; `-400` igual al acento); nuevo `--color-noct-on-accent: #08191e`; `--color-noct-tipo-configuracion` de matiz 195 a 175; se retira `--color-noct-accion` y sus cinco usos pasan al acento (`ModoFoco.tsx` líneas ~1114 y ~1457, `RutaProcedimiento.tsx` ~45, ~59 y ~115, `VistaContenidoAsistencia.tsx` ~81, `DiagnosticoRunPage.tsx` ~337 y `busqueda/resultados.ts` ~45); nuevo `--font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace`, con tres `@font-face` locales (`src/assets/ibm-plex-mono-latin-{400,500,600}-normal.woff2`, licencia en `src/assets/LICENSE-IBM-Plex-Mono.txt`). `VALOR_TECNICO` y `VALOR_TECNICO_COMPACTO` (`src/components/FilaDato.tsx`) ya usaban `font-mono`, así que pasan a Plex Mono sin cambiar. `src/components/nocturne.tsx`: nueva `BTN_PRIMARIO_RELLENO`. Regla 30 nueva en REGLAS.md.
+- **Motivo:** encargo del 2026-10-13, paso 1 de `NOTAS_CLAUDE_CODE.md`.
+- **Impacto:** alto y visible en toda la app: todo lo que era lavanda pasa a cian. Ninguna pantalla cambia de estructura.
+- **Prioridad:** Alta. **Estado:** Hecha en la rama `feat/movil-pulgar`, pendiente de la revisión visual del usuario y de su aprobación para integrar a `main`; no se archiva hasta entonces.
+- **Verificación:** suite completa 207 archivos y 3285 pruebas (+1 archivo y +7 pruebas: `src/components/sistemaVisual.test.ts`, que vigila los tokens, la fuente local y `BTN_PRIMARIO_RELLENO`, y falla sin el cambio), `npm run lint` y `npm run build` (`tsc -b` incluido) en verde; `scripts/verificar-precache.mjs` correcto; los tres woff2 entran al precache. En el navegador a 375 px con el banco de pruebas local: el acento computado es `oklch(0.82 0.11 200)`, la IP de la lista de Equipos se pinta en IBM Plex Mono y el woff2 de 400 se carga desde el bundle.
+- **Área afectada:** `src/index.css`, `src/assets/`, `src/components/nocturne.tsx`, los cinco archivos de `noct-accion`, `src/components/sistemaVisual.test.ts` (nuevo); documentación en REGLAS.md (regla 30), DECISIONES.md (AD-077), ARQUITECTURA.md, ARQUITECTURA_FUNCIONAL.md (lenguaje de la guía), DOCUMENTACION_FUNCIONAL.md (sección 9.1), COMPONENTES_UI.md (1.1) y CHANGELOG.md.
+- **Dependencias:** ninguna. Las 328 a 332 dependen de esta.
+
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.
@@ -508,6 +533,86 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 328. Rediseño móvil, paso 2: ejecución de guía
+
+- **Título:** la ejecución de una guía con cabecera compacta, bloques con forma propia y la acción principal rellena.
+- **Descripción:** `src/features/soluciones/ModoFoco.tsx`, `SenalesDePaso.tsx`, `PantallaAdvertencia.tsx` y `src/components/BarraTarea.tsx`. Cabecera compacta sobre superficie: X, "Guía · equipo" y título corto, lupa de consulta y contador `2/4` en mono como botón que abre el índice; debajo, un segmento por paso más el final. Rótulos: "Qué hacer" en acento, "Comprueba" en verde, "Decide" en neutro. Bloques: Cómo hacerlo (lista numerada con números en caja mono), Dato técnico (mono con copiar), Credencial (fila con borde que abre `CredencialEnPaso` como hoja), Información (icono y texto sin caja), Nota (fondo tenue), Imagen ("Debes ver" plegado); la advertencia previa sigue en su pantalla. Pie: Anterior 62 x 62 delineado y `BOTON_PRINCIPAL` relleno (alto 62, radio 18); "Tengo un problema" en una línea. La comprobación final (`verificacionFinal`) como casillas de 64 px; "Terminar" se activa al marcarlas todas. Referencia: `Prototipo Soluciones IT.dc.html` (ejecución) y `Sistema visual movil.dc.html` (lenguaje de la guía).
+- **Motivo:** encargo del 2026-10-13, paso 2 (el de mayor impacto y el más contenido).
+- **Impacto:** alto: es la pantalla donde se trabaja. Criterio: la acción principal siempre en el tercio inferior; la credencial se consulta sin perder el paso ni el avance. Respeta las reglas 27 y 28.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** las cuatro piezas citadas y sus pruebas (`ejecucionMinima.test.tsx`, `comoHacerlo.test.tsx` y las que fijan `text-[26px]` o `BOTON_PRINCIPAL`).
+- **Dependencias:** 327.
+
+### 329. Rediseño móvil, paso 3: ficha de equipo
+
+- **Título:** la ficha de equipo con carnet, avisos, datos para trabajar sin tarjeta, índice de un nivel y hojas.
+- **Descripción:** `src/features/dispositivos/DispositivoPage.tsx`. Carnet (icono 52, nombre 28/650, tipo, pastilla de estado). **Avisos del equipo** debajo (presentación nueva, sin datos nuevos): autorización en conflicto o por validar (`conteoDeFacturacion`), responsable por validar (`responsablePorValidar`), conflicto de IP si existe en `detalles`; cada aviso, una fila tintada con su verbo. IP (mono 20, copiar de 48 px), Ubicación, Responsable y Conectado a sin tarjeta. "Resolver con este equipo": hasta tres filas (problemas frecuentes primero) y "Ver N" que abre la hoja completa con el diagnóstico de la categoría al final; se retira `IniciarDiagnosticoBoton` del cuerpo (duplicado con el pie). "Más del equipo" en un solo nivel de filas índice con su valor (sustituye a `SeccionPlegable` aquí): Más datos, Conexiones, Credenciales, Adjuntos e Intervenciones abren hoja inferior (galón `CaretUp`); Mantenimiento y Facturación abren pantalla (`CaretRight`); una hoja a la vez. Cabecera de documento: regreso, contexto ("Equipos") y "···" con Favorito y Compartir; el nombre aparece en la cabecera solo al desplazarse. La barra de pestañas se oculta al bajar y vuelve al subir; queda la barra fija con "Resolver un problema" relleno y el botón de credenciales del equipo.
+- **Motivo:** encargo del 2026-10-13, paso 3.
+- **Impacto:** alto. Criterio: a 375 px se ven sin desplazar el carnet, los avisos, la IP, la ubicación, el responsable y "conectado a". Respeta las reglas 22 y 23.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `DispositivoPage.tsx`, `FilaDato.tsx`, `SeccionPlegable.tsx` (deja de usarse ahí), `PastillaEstado.tsx`, el chasis (`src/app/Chasis.tsx`, ocultar pestañas al desplazar) y sus pruebas.
+- **Dependencias:** 327. Usa la pantalla de mantenimiento de la 331 (hoy es un pliegue: hasta la 331, la fila abre lo que hay).
+
+### 330. Rediseño móvil, paso 4: dock de búsqueda, búsqueda y cabeceras de raíz
+
+- **Título:** buscar desde abajo en las raíces, con el campo pegado al teclado, y cabeceras de raíz de una fila.
+- **Descripción:** dock de búsqueda abajo en Resolver, Equipos y Bóveda (desbloqueada): campo de 52 px y botón QR de 52 px encima de la barra de pestañas; abre la búsqueda global con el campo sobre el teclado (`visualViewport`). Sustituye al campo en línea de Resolver y a la lupa de la cabecera en esas raíces (M-R8: un buscador por pantalla). Cabecera de raíz de una fila: título 25 px, `PastillaSync` y avatar; desaparecen "¿Qué necesitas resolver?" y la línea de ayuda. Búsqueda (`src/features/busqueda/BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx`): cabecera con regreso, chips de alcance con conteo (Todo, Equipos, Red, Guías, Personas, Lugares, Claves, Facturación) que solo filtran la vista, resultados agrupados por tipo, IP en mono a la derecha; desplazar la lista cierra el teclado; `PuenteBoveda` se conserva como estado vacío con la Bóveda bloqueada. Resolver (`src/features/inicio/ResolverPage.tsx`): Necesita atención (contadores vencidos, para hoy y próximos que abren la Agenda), filas de Atención (`FilaAgenda` con barra lateral de 4 px del estado, icono neutro, verbo 14 px seminegrita), Seguir donde ibas (tarjeta con segmentos), Guías por categoría y el dock. Sin cambios en `asuntosDeAtencion`, `guiasRecientes` ni `accesosRapidos`.
+- **Motivo:** encargo del 2026-10-13, paso 4 (navegación, puntos 1 y 2; pantallas Resolver y Búsqueda).
+- **Impacto:** alto: cambia el gesto principal de buscar. Respeta BUSCADOR.md (no cambia qué se indexa ni el ranking) y la regla 23.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `src/components/CampoBusqueda.tsx`, `ResolverPage.tsx`, `SeccionesAgenda.tsx` (`FilaAgenda`), `BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx`, las raíces de Equipos y Bóveda y sus pruebas (`nombresSinRecorte.test.tsx` incluida).
+- **Dependencias:** 327.
+
+### 331. Rediseño móvil, paso 5: mantenimiento y autorización con tres formas de dato
+
+- **Título:** documentado, confirmado y dato actual con tres formas que no se confunden.
+- **Descripción:** Mantenimiento (`src/features/mantenimientos/MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`): pantalla propia desde la ficha (hoy es un pliegue dentro de un pliegue) con Programado (tarjeta con "Cerrar mantenimiento"), Realizado y confirmado (superficie sólida, barra verde, sello, técnico y evidencia) y Documentado, por validar (borde punteado, sin relleno, "Según {fuente}", pastilla "Por validar"); estado vacío que explica qué aparecerá; cerrar en hoja con Realizado o Pospuesto, fecha y "Qué se hizo" (obligatorio si es Realizado, error en línea). Autorización (`src/features/facturacion/AutorizacionPage.tsx`, `PresentacionAutorizacion.tsx`): prefijo en mono 30 px y pastilla de estado; "1 · Lo documentado" (una caja punteada por fuente; en conflicto, el campo que choca en rojo con "No coincide" en las dos fuentes); "2 · Lo confirmado" (superficie sólida con barra verde, o "Sin verificar con una fuente actual" y "Registrar verificación", que abre el formulario actual); "3 · Dato actual" (número grande en mono, barra de rango, "leído el … en …"; sin lectura, guion y "No se estima por fechas ni por consumo"). Reemplazada al 62 % de opacidad; Editar abajo delineado; Eliminar al menú "···".
+- **Motivo:** encargo del 2026-10-13, paso 5.
+- **Impacto:** medio y alto: hace legible la confianza del dato (AD-075, AD-076). Ningún cambio en `src/lib/autorizaciones.ts` ni en el modelo.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** los archivos citados y sus pruebas (`facturacionFlujo.test.tsx`, las de mantenimiento).
+- **Dependencias:** 327; la ficha de la 329 enlaza a la pantalla de mantenimiento.
+
+### 332. Rediseño móvil, paso 6: Agenda y Más
+
+- **Título:** la Agenda agrupada por fecha y Más con rótulos legibles.
+- **Descripción:** Agenda (`src/features/inicio/AgendaPage.tsx`, `SeccionesAgenda.tsx`): contadores arriba; grupos con fecha (Vencidos, Para hoy, Próximos); "En curso" y "Por revisar del equipo" se agrupan en una fila plegada "Sin fecha" al final. `agruparAgenda` no cambia, solo dónde se pintan. Más (`src/features/mas/PantallaMas.tsx`, `FilasMas.tsx`): misma estructura; rótulos de grupo de 11 px en mayúsculas a 13.5/650 en minúsculas; filas de 60 px.
+- **Motivo:** encargo del 2026-10-13, paso 6.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** los archivos citados y sus pruebas (`masInfraestructura.test.tsx` y las de la Agenda).
+- **Dependencias:** 327.
+
+### 333. Rediseño móvil, paso 7: tema claro (bloqueada)
+
+- **Título:** tema claro "a pleno sol, taquilla" del handoff.
+- **Descripción:** valores en `Sistema visual movil.dc.html` (bloque `[data-tema="claro"]`), como variables bajo `[data-tema="claro"]` en el contenedor `.nocturne`.
+- **Motivo:** handoff del 2026-10-13, paso 7.
+- **Impacto:** medio (legibilidad al sol).
+- **Prioridad:** Baja. **Estado:** Bloqueada: contradice la regla 12 (la app es de tema oscuro únicamente) y requiere la recomendación de producto RP-3 (preferencia de tema oscuro, claro o automático en Ajustes). No se implementa sin decisión del usuario.
+- **Área afectada:** `src/index.css`, Ajustes.
+- **Dependencias:** decisión del usuario sobre RP-3 y la regla 12; 327.
+
+### 334. El color de categoría 6 coincide con el acento cian
+
+- **Título:** decidir si `noct-cat-6` se mueve para no leerse como "esto se toca".
+- **Descripción:** `src/index.css`: `--color-noct-cat-6: oklch(0.75 0.11 200)` tiene el mismo matiz que el acento nuevo (`oklch(0.82 0.11 200)`, tarea 327). El handoff movió el tipo "configuración" de 195 a 175 por el mismo motivo, pero no dice nada de las categorías. Opciones: dejarlo (la categoría tiñe chips y cabeceras de grupo, que también se tocan), o mover el 6 a otro matiz sin chocar con el 5 (170) ni el 7 (235).
+- **Motivo:** hallazgo de la tarea 327.
+- **Impacto:** bajo: solo la sexta categoría y las que repiten el ciclo.
+- **Prioridad:** Baja. **Estado:** Pendiente de decisión del usuario.
+- **Área afectada:** `src/index.css` (`--color-noct-cat-6`).
+- **Dependencias:** 327.
+
+### 335. Recomendaciones de producto del rediseño móvil (RP-1, RP-2 y RP-4)
+
+- **Título:** tres funciones nuevas que el handoff recomienda y no se implementan sin decisión del usuario.
+- **Descripción:** **RP-1:** al terminar una guía abierta desde un equipo, ofrecer "Registrar intervención" con la guía precargada. **RP-2:** atajo "Registrar lectura" del consecutivo desde la autorización, sin abrir el formulario completo. **RP-4:** que el escáner devuelva el código al buscador del dock cuando no coincide con ningún equipo. (RP-3, la preferencia de tema, está en la 333.)
+- **Motivo:** `NOTAS_CLAUDE_CODE.md`, "Recomendaciones de producto".
+- **Impacto:** medio cada una.
+- **Prioridad:** Media. **Estado:** Pendiente de decisión del usuario.
+- **Área afectada:** RP-1, `ModoFoco.tsx` y el registro de intervenciones; RP-2, `AutorizacionPage.tsx`; RP-4, `EscanerPage` y el dock de la 330.
+- **Dependencias:** RP-1 de la 328, RP-2 de la 331 y RP-4 de la 330.
 
 ### 319. Casos de datos y conflictos de la conciliación que no se resuelven por código (usuario y ChatGPT)
 

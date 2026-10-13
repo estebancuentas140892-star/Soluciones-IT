@@ -1111,7 +1111,7 @@ export function ModoFoco({
           {ruta
             ? ruta
             : !enFlujo && (
-                <p className="text-[13.5px] font-semibold uppercase leading-snug tracking-[.06em] text-noct-accion">
+                <p className="text-[13.5px] font-semibold uppercase leading-snug tracking-[.06em] text-noct-accent-300">
                   Paso {numeroPaso}
                   {totalPasos !== null && ` de ${totalPasos}`}
                 </p>
@@ -1454,7 +1454,7 @@ function EtiquetaDeAccion({
       ? { Icono: SealCheck, palabra: 'Comprueba', color: 'text-noct-exito' }
       : clase === 'decision'
         ? { Icono: Question, palabra: 'Decide', color: 'text-noct-neutral-300' }
-        : { Icono: CursorClick, palabra: 'Qué hacer', color: 'text-noct-accion' }
+        : { Icono: CursorClick, palabra: 'Qué hacer', color: 'text-noct-accent-300' }
   return (
     <p className="flex items-center gap-2 text-[12px] leading-snug">
       <span className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-[.06em] ${color}`}>

@@ -25,6 +25,7 @@ Constantes de clase (para interpolar en `className`, no son componentes):
 | Constante | Aspecto |
 |---|---|
 | `BTN_PRIMARIO` | delineado en acento |
+| `BTN_PRIMARIO_RELLENO` | relleno de acento, texto `noct-on-accent`, 16 px seminegrita, radio 15, alto mínimo 54 (tarea 327) |
 | `BTN_SECUNDARIO` | delineado en el divisor |
 | `BTN_PRIMARIO_PELIGRO` | delineado en rojo (ejecuta eliminación) |
 | `BTN_GHOST` | sin borde, tinte al pasar |
@@ -33,6 +34,8 @@ Constantes de clase (para interpolar en `className`, no son componentes):
 | `BTN_GHOST_TENUE` | fantasma atenuado (descarte) |
 | `BTN_ICONO_SECUNDARIO` | cuadrado 44x44 delineado (34x34 hasta la tarea 262) |
 | `BTN_ICONO_PELIGRO` | cuadrado 44x44 sin borde, rojo (34x34 hasta la tarea 262) |
+
+**Una sola acción rellena por pantalla (tarea 327, regla 30, AD-077).** `BTN_PRIMARIO_RELLENO` es solo para la acción que hace avanzar o ejecutar (Completar y seguir, Resolver un problema, Empezar, Guardar, Desbloquear, Terminar), y como mucho una por pantalla. Lo que no avanza (Editar, Programar, Registrar lectura) sigue con `BTN_PRIMARIO` delineado. No hereda la base de los demás botones: lleva su propio tamaño de letra, radio y alto. Hover en `noct-accent-300`, pulsado en `noct-accent-500`, deshabilitado al 45 %. Las pantallas lo adoptan en las tareas del rediseño móvil (328 en adelante).
 
 **Toque de 44 en los botones de icono (tarea 262, regla R6).**
 - **Caja y dibujo:** la caja entera es el objetivo y mide 44x44. El dibujo lo pone cada consumidor, de 16 a 18 px, y no crece.

@@ -6,6 +6,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-13
+
+### Cambiado (sistema visual, tarea 327): el acento pasa al cian del icono, los datos técnicos a IBM Plex Mono y existe una acción rellena por pantalla
+
+**Área modificada:** `src/index.css` (`@theme` y `@font-face`), `src/assets/` (tres woff2 de IBM Plex Mono y su licencia), `src/components/nocturne.tsx` (`BTN_PRIMARIO_RELLENO`), y los usos de `noct-accion` en `ModoFoco.tsx`, `RutaProcedimiento.tsx`, `VistaContenidoAsistencia.tsx`, `DiagnosticoRunPage.tsx` y `busqueda/resultados.ts`.
+**Tipo:** Modificado y Agregado; Documentación (REGLAS regla 30, DECISIONES AD-077, ARQUITECTURA, ARQUITECTURA_FUNCIONAL lenguaje de la guía, DOCUMENTACION_FUNCIONAL 9.1, COMPONENTES_UI 1.1, TAREAS 327 a 335).
+**Motivo:** encargo del 2026-10-13, paso 1 del rediseño móvil "1b Pulgar" (handoff de Claude Design "Preguntas sobre identidad visual").
+**Qué cambia:**
+- **Acento:** de lavanda `#9184d9` a `oklch(0.82 0.11 200)`, el cian del escudo del icono. Rampa 100 a 900 regenerada en oklch con matiz 200; texto de acento (`noct-accent-300`) `oklch(0.87 0.08 200)`. Nuevo `noct-on-accent` (`#08191e`), el texto sobre el relleno.
+- **La acción de la guía usa el acento:** se retira `noct-accion` (azul, matiz 240); "Qué hacer", "Paso N de M", el nodo actual de la ruta, el número de una acción en la asistencia remota, el enlace a una guía en el diagnóstico y el tinte de la guía con preguntas en el buscador pasan al acento.
+- **Tipo "configuración":** de matiz 195 a 175, para no confundirse con el acento.
+- **IBM Plex Mono** (400, 500 y 600, subconjunto latino, OFL 1.1) servida desde el bundle y al precache; `--font-mono` la pone en toda utilidad `font-mono` (IP, serial, prefijo y demás datos técnicos).
+- **`BTN_PRIMARIO_RELLENO`:** relleno de acento, 54 px de alto como mínimo, para la única acción que avanza o ejecuta en una pantalla (regla 30, que sustituye a "el primario nunca va relleno"). Ninguna pantalla lo usa todavía: lo adoptan en las tareas 328 en adelante.
+**Estructura de datos:** sin cambios.
+**Verificación:** 207 archivos y 3285 pruebas (+7, `src/components/sistemaVisual.test.ts` nuevo: tokens, fuente local y `BTN_PRIMARIO_RELLENO`), lint y build en verde; `scripts/verificar-precache.mjs` correcto. En el navegador a 375 px con el banco de pruebas local: acento computado `oklch(0.82 0.11 200)` y la IP de la lista de Equipos en IBM Plex Mono cargada desde el bundle.
+**Impacto esperado:** la app entera cambia de lavanda a cian y los datos que se copian se leen igual en todos los teléfonos. En la rama `feat/movil-pulgar`, sin integrar a `main` hasta la aprobación del usuario.
+
 ## 2026-10-10
 
 ### Corregido (facturación, tarea 321, revisión): el contrato de la autorización, sin huecos

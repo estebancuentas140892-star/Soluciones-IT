@@ -18,14 +18,58 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* IBM Plex Mono (rediseño móvil "1b Pulgar", 2026-10-13): la letra de
+   todo lo que se copia o se compara (IP, serial, puerto, prefijo,
+   consecutivo). Mismo criterio que Inter: servida desde el bundle, nunca
+   desde Google Fonts, y al precache por el patrón woff2 de
+   vite.config.ts. Tres pesos estáticos (400, 500 y 600), subconjunto
+   latino de @fontsource/ibm-plex-mono 5.3.0; licencia SIL OFL 1.1 en
+   assets/LICENSE-IBM-Plex-Mono.txt. */
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('./assets/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url('./assets/ibm-plex-mono-latin-500-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('./assets/ibm-plex-mono-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* Tokens del sistema de diseño Nocturne (rediseño IT Brain, handoff
    "Herramienta IT para técnicos", 08_ESTILO.md). Declarados en @theme
    para que Tailwind genere las utilidades (bg-noct-bg, text-noct-accent,
    border-noct-divider...). Regla del sistema: todo valor sale de estos
    tokens; nunca hex sueltos en las pantallas Nocturne. El acento se usa
-   delineado (borde y texto), nunca como relleno grande. */
+   delineado (borde y texto), salvo UNA acción rellena por pantalla: la
+   que hace avanzar o ejecutar (BTN_PRIMARIO_RELLENO, regla 30 de
+   REGLAS.md). */
 @theme {
   --font-inter: 'Inter Variable', system-ui, -apple-system, sans-serif;
+  /* Sustituye la pila monoespaciada del sistema que trae Tailwind: toda
+     utilidad `font-mono` (VALOR_TECNICO, VALOR_TECNICO_COMPACTO y el
+     resto) pasa a IBM Plex Mono sin tocar cada pantalla. */
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 
   /* Cuarto punto de quiebre del chasis (tarea 191, turno 5 del handoff,
      regla R30). Los cuatro anchos con composición propia son 768 (`md`),
@@ -59,16 +103,23 @@
   --color-noct-neutral-800: #3f424d;
   --color-noct-neutral-900: #292b31;
 
-  --color-noct-accent: #9184d9;
-  --color-noct-accent-100: #f5f4ff;
-  --color-noct-accent-200: #e7e5fe;
-  --color-noct-accent-300: #d2cefd;
-  --color-noct-accent-400: #b5abfc;
-  --color-noct-accent-500: #968ae0;
-  --color-noct-accent-600: #796cbf;
-  --color-noct-accent-700: #5d5294;
-  --color-noct-accent-800: #423a6a;
-  --color-noct-accent-900: #2b2741;
+  /* Acento: el cian del escudo del icono de la app (rediseño móvil "1b
+     Pulgar", 2026-10-13; antes lavanda #9184d9). Es el único color
+     interactivo: dice "esto se toca" y nada más. La rampa se regeneró en
+     oklch con el mismo matiz (200); el 300 es el acento como texto y el
+     400 coincide con el acento. `on-accent` es el texto sobre el relleno
+     de acento (el único relleno, BTN_PRIMARIO_RELLENO). */
+  --color-noct-accent: oklch(0.82 0.11 200);
+  --color-noct-accent-100: oklch(0.96 0.025 200);
+  --color-noct-accent-200: oklch(0.92 0.05 200);
+  --color-noct-accent-300: oklch(0.87 0.08 200);
+  --color-noct-accent-400: oklch(0.82 0.11 200);
+  --color-noct-accent-500: oklch(0.72 0.105 200);
+  --color-noct-accent-600: oklch(0.6 0.095 200);
+  --color-noct-accent-700: oklch(0.49 0.08 200);
+  --color-noct-accent-800: oklch(0.38 0.06 200);
+  --color-noct-accent-900: oklch(0.28 0.04 200);
+  --color-noct-on-accent: #08191e;
 
   /* Estados (literales exactos de 08_ESTILO.md, identicos en todas
      las pantallas): exito/consejo, precaucion, error/importante. El
@@ -81,7 +132,7 @@
      la ejecucion de una guia cada color tiene UN significado, y ninguno
      va sin su icono y su palabra:
        verde  (exito)   inicio, accion completada, "Debes ver"
-       azul   (accion)  la accion en curso: entrar, abrir, seleccionar
+       acento (cian)    la accion en curso: entrar, abrir, seleccionar
        rojo   (error)   riesgo real, detenerse ("Cuidado", "Importante")
      "Donde" ya no forma parte de la ejecucion (tarea 307); su amarillo
      propio, `noct-lugar`, se habia retirado en la tarea 303 porque se leia
@@ -89,9 +140,10 @@
      precaucion sigue significando "requiere atencion" fuera de las guias
      (vencimientos, equipos en mantenimiento), y dentro de una guia la
      precaucion no lo usa: es un riesgo, asi que va en rojo.
-     El azul de accion (matiz 245) se separa del acento lavanda (el de los
-     controles de la app), que queda para botones y enlaces. */
-  --color-noct-accion: oklch(0.76 0.12 240);
+     Hasta el rediseño movil "1b Pulgar" (2026-10-13) la accion tenia su
+     propio azul (`noct-accion`, matiz 240) para separarse del acento
+     lavanda. Con el acento en cian ya no compiten: el token se retiro y
+     la accion en curso usa el acento (texto en `noct-accent-300`). */
 
   /* Color de identidad de cada tipo de documento (Soluciones): antes
      instalacion, configuracion y conexion compartian el acento (todo se
@@ -101,9 +153,12 @@
      ambar, exito verde) y el neutro, que ya los distinguian. Los tres
      colores nuevos comparten la banda de luminosidad/chroma de los
      estados (L ~0.7-0.8, C ~0.1-0.14) para convivir sin desentonar, con
-     matices bien separados en el circulo (rosa 330, cian 195, azul 255). */
+     matices bien separados en el circulo (rosa 330, verde azulado 175,
+     azul 255). Configuracion estaba en 195 y paso a 175 con el rediseño
+     movil "1b Pulgar" (2026-10-13), para no confundirse con el acento
+     cian (200). */
   --color-noct-tipo-instalacion: oklch(0.72 0.14 330);
-  --color-noct-tipo-configuracion: oklch(0.78 0.1 195);
+  --color-noct-tipo-configuracion: oklch(0.78 0.1 175);
   --color-noct-tipo-conexion: oklch(0.7 0.13 255);
 
   /* Color de IDENTIDAD de cada categoria (fase 0b de

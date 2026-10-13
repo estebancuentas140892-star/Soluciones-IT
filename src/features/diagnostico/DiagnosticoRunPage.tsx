@@ -334,7 +334,7 @@ function Sesion({
               >
                 <span className="text-[16px] font-medium leading-snug text-pretty">{opcion.etiqueta}</span>
                 {opcion.articuloId && (
-                  <span className="flex items-start gap-1.5 text-[12.5px] leading-snug text-noct-accion">
+                  <span className="flex items-start gap-1.5 text-[12.5px] leading-snug text-noct-accent-300">
                     <BookOpen size={13} className="mt-px shrink-0" aria-hidden />
                     <span className="min-w-0 text-pretty">Te lleva a «{opcion.articuloTitulo || 'una guía'}»</span>
                   </span>

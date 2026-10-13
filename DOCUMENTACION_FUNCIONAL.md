@@ -61,7 +61,7 @@ Cuatro pilares, más un motor de diagnóstico:
 - **Bóveda de credenciales** cifradas (sección Bóveda): usuarios, contraseñas, llaves, archivos.
 - **Diagnóstico Inteligente**: del problema a la solución mediante un árbol de preguntas.
 
-La app es de **tema oscuro únicamente** (sistema de diseño "Nocturne": fondo `#161826`, un solo color de acento `#9184d9` siempre delineado, tipografía Inter). No hay modo claro ni conmutador de tema.
+La app es de **tema oscuro únicamente** (sistema de diseño "Nocturne": fondo `#161826`, un solo color de acento, el cian del icono de la app, delineado salvo una acción rellena por pantalla; tipografía Inter para leer e IBM Plex Mono para los datos técnicos). No hay modo claro ni conmutador de tema. Hasta la tarea 327 (2026-10-13) el acento era el lavanda `#9184d9` y ningún botón iba relleno.
 
 ---
 
@@ -1300,11 +1300,12 @@ La app usa **modales** (centrados, `src/components/Modal.tsx`, renderizados con 
 
 ### 9.1 Variantes de botón (`src/components/nocturne.tsx`)
 
-Regla del sistema Nocturne: los botones van **delineados**, nunca rellenos.
+Regla del sistema Nocturne: los botones van **delineados**, salvo **una sola acción rellena por pantalla**, la que hace avanzar o ejecutar (regla 30 de REGLAS.md, tarea 327). Hasta el 2026-10-13 ningún botón iba relleno. Lo destructivo (Eliminar, Dar de baja) no va nunca junto a Editar.
 
 | Constante | Aspecto | Uso |
 |-----------|---------|-----|
-| `BTN_PRIMARIO` | Delineado en acento | Acción principal (Guardar, Ingresar, Ejecutar) |
+| `BTN_PRIMARIO_RELLENO` | Relleno de acento, 54 px de alto como mínimo | La única acción que avanza o ejecuta en la pantalla (Completar y seguir, Resolver un problema, Empezar, Guardar, Desbloquear, Terminar). Las pantallas lo adoptan con las tareas 328 en adelante |
+| `BTN_PRIMARIO` | Delineado en acento | Acción principal que no avanza (Editar, Programar, Registrar lectura) y, hasta que cada pantalla se rediseñe, la principal de siempre (Guardar, Ingresar, Ejecutar) |
 | `BTN_SECUNDARIO` | Delineado en el divisor | Acción secundaria (Crear, Editar, Cancelar) |
 | `BTN_PRIMARIO_PELIGRO` | Delineado en rojo | La acción que ejecuta una eliminación |
 | `BTN_GHOST` | Sin borde, tinte al pasar | Acciones ligeras (Volver, Cancelar) |

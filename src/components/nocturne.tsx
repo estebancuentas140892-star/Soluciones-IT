@@ -48,11 +48,22 @@ export function TagNeutral({ children, className = '' }: { children: ReactNode; 
 // hueco del aviso (`huecoAvisoActualizacion`), o una taparía a la otra.
 export const PEGADA_SOBRE_PESTANAS = 'bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0'
 
-// Botones .btn del sistema: el primario va delineado en el acento
-// (nunca relleno, regla de Nocturne) y el secundario con el divisor.
+// Botones .btn del sistema: el primario va delineado en el acento y el
+// secundario con el divisor. Delineado es lo normal: Editar, Programar,
+// Registrar lectura y cualquier acción que no hace avanzar.
 const BTN_BASE =
   'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border text-[13px] font-medium leading-tight'
 export const BTN_PRIMARIO = `${BTN_BASE} border-noct-accent px-2.5 py-[7px] text-noct-accent hover:bg-noct-accent/10 active:bg-noct-accent/20`
+// La ÚNICA acción rellena de una pantalla (regla 30 de REGLAS.md,
+// rediseño móvil "1b Pulgar", 2026-10-13): la que hace avanzar o ejecutar
+// (Completar y seguir, Resolver un problema, Empezar, Guardar,
+// Desbloquear, Terminar). Hasta entonces Nocturne decía "el primario nunca
+// va relleno"; ahora el relleno existe, pero una sola vez por pantalla.
+// Alto mínimo de 54 (la acción va al pulgar) y texto en `on-accent`, el
+// casi negro que se lee sobre el cian. No hereda de BTN_BASE: su tamaño
+// de letra, radio y alto son otros, y no lleva borde visible.
+export const BTN_PRIMARIO_RELLENO =
+  'inline-flex min-h-[54px] cursor-pointer items-center justify-center gap-2 rounded-[15px] border border-transparent bg-noct-accent px-4 text-[16px] font-semibold leading-tight text-noct-on-accent hover:bg-noct-accent-300 active:bg-noct-accent-500 disabled:cursor-not-allowed disabled:opacity-45'
 export const BTN_SECUNDARIO = `${BTN_BASE} border-noct-divider px-2.5 py-[7px] text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`
 // Variante destructiva del primario (.btn-danger): para la accion que
 // SI ejecuta la eliminacion (a diferencia de BTN_GHOST_PELIGRO, pensado
