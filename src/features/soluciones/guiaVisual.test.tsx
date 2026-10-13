@@ -133,7 +133,8 @@ describe('qué hacer, sin los textos heredados del paso (tarea 307)', () => {
     await esperar(() => textoPantalla().includes('Presiona Windows + R'), 'la primera acción')
 
     expect(textoPantalla()).toContain('Qué hacer')
-    expect(textoPantalla()).toContain('Credencial necesaria')
+    // La credencial, como fila que abre su hoja (tarea 328).
+    expect(textoPantalla()).toContain('Se abre aquí, sin salir de la guía')
     expect(textoPantalla()).toContain('Acceso de prueba al equipo')
     for (const retirado of ['Dónde', 'Escritorio de Windows', 'Más información', 'Para qué', 'Llegar a la lista de impresoras de prueba']) {
       expect(textoPantalla()).not.toContain(retirado)

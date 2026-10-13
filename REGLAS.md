@@ -92,7 +92,7 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
 ## Bóveda
 
 29. **La Bóveda no obliga al técnico a abandonar el contexto ni para consultar un secreto ni para volver a protegerlo** (regla acordada con el usuario el 2026-10-08, tarea 312; el porqué técnico en [DECISIONES.md](DECISIONES.md) AD-073):
-    - **Si se puede desbloquear y consultar desde donde se trabaja, también se puede bloquear ahí.** Con la Bóveda abierta, el bloque "Credencial necesaria" de una guía ofrece **"Bloquear Bóveda"** (candado cerrado y su palabra), sin salir a la sección Bóveda.
+    - **Si se puede desbloquear y consultar desde donde se trabaja, también se puede bloquear ahí.** Con la Bóveda abierta, el bloque "Credencial necesaria" de una guía (en la acción a la vez, dentro de la hoja que abre su fila desde la tarea 328) ofrece **"Bloquear Bóveda"** (candado cerrado y su palabra), sin salir a la sección Bóveda.
     - **Es el bloqueo central de siempre** (`bloquear()`, el del candado de la sección Bóveda): cierra **toda** la sesión protegida del dispositivo, no solo ese dato, y todo lo descifrado desaparece al momento de cualquier pantalla. **"Ocultar" solo pliega ese dato**; la interfaz los dice distinto ("Bóveda abierta en este dispositivo" junto a "Bloquear Bóveda").
     - **Bloquear no mueve nada:** la guía sigue en la misma pantalla, la acción no se completa, el avance no cambia y no se navega a ninguna parte. Volver a "Mostrar" pide otra vez la contraseña maestra. No se registra como una consulta.
     - Solo lo ve quien tiene permiso de Bóveda y con la Bóveda abierta; bloqueada, sigue el desbloqueo en línea de siempre. No cambia el cifrado, la contraseña maestra, el autobloqueo ni los permisos.

@@ -235,6 +235,15 @@ export async function tocar(elemento: HTMLElement): Promise<void> {
   await pausa()
 }
 
+/**
+ * Abre la hoja de la credencial de una acción (tarea 328): en la ejecución,
+ * la credencial es una fila "Ver la credencial: X" que abre el bloque
+ * protegido en una hoja. Sin nombre, la primera que haya.
+ */
+export async function abrirCredencial(nombre?: string): Promise<void> {
+  await tocar(await esperarControl(nombre === undefined ? /^Ver la credencial: / : `Ver la credencial: ${nombre}`))
+}
+
 /** Escribe en un campo como lo haría el teclado (React escucha `input`). */
 export async function escribir(campo: HTMLInputElement, texto: string): Promise<void> {
   await act(async () => {

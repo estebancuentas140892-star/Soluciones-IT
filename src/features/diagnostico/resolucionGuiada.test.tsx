@@ -5,6 +5,7 @@ import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import { raizDelProcedimiento } from '../../lib/progresoDiagnostico'
 import { bloquear } from '../boveda/sesionBoveda'
 import {
+  abrirCredencial,
   anclarMaestra,
   campoBuscador,
   control,
@@ -426,6 +427,8 @@ describe('el procedimiento dentro del recorrido no se pierde', () => {
     await montar(RUTAS, '/diagnostico/rec-impresora')
 
     await tocar(await esperar(() => respuesta('No'), 'la respuesta No'))
+    // La credencial, en la fila que abre su hoja (tarea 328).
+    await abrirCredencial()
     await esperar(() => textoPantalla().includes('Credencial necesaria'), 'la credencial del paso')
     // Tapada: nada protegido en pantalla hasta pedirlo.
     expect(textoPantalla()).not.toContain('impresion.prueba')

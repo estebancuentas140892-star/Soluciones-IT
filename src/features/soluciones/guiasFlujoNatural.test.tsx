@@ -534,7 +534,7 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     await empezarGuia()
     await completarHasta('Abre el programa de caja e ingresa su contraseña')
     // La credencial va con la acción que la usa, sin salir del flujo.
-    await esperar(() => textoPantalla().includes('Credencial necesaria'), 'la credencial de la acción')
+    await esperar(() => textoPantalla().includes('Se abre aquí, sin salir de la guía'), 'la credencial de la acción')
     expect(textoPantalla()).toContain('Acceso de prueba al programa de caja')
     // El "Debes ver" de texto heredado del paso ya no se enseña (tarea 307).
     expect(textoPantalla()).not.toContain('El programa de caja queda abierto y listo para trabajar.')

@@ -17,7 +17,7 @@ import {
   Warning,
   X,
 } from '../../components/iconos'
-import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
+import { CredencialEnHoja } from '../boveda/CredencialEnHoja'
 import { ChipReferencia } from '../referencia/ChipReferencia'
 import { fichasEnlazadasDelPaso } from '../referencia/comandosEnTexto'
 import { QueHaceEnTexto } from '../referencia/QueHaceEnTexto'
@@ -1213,8 +1213,8 @@ export function ModoFoco({
           <BloqueVista key={imagen.id} bloque={imagen} marcada={false} onAlternar={() => {}} />
         ))}
 
-        {credencialPrestada && <CredencialEnPaso vinculo={credencialPrestada} variante="bloque" />}
-        {vinculoProtegido && <CredencialEnPaso vinculo={vinculoProtegido} variante="bloque" />}
+        {credencialPrestada && <CredencialEnHoja vinculo={credencialPrestada} />}
+        {vinculoProtegido && <CredencialEnHoja vinculo={vinculoProtegido} />}
 
         {archivosALaVista.length > 0 && <AdjuntosPaso adjuntos={archivosALaVista} titulo={paso.titulo} />}
 

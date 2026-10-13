@@ -442,6 +442,14 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Desbloqueo en línea a 44 px (2026-09-22, tarea 263):** el campo de la contraseña maestra y "Desbloquear" medían 38 px; se desbloquea de pie, en medio de una guía (regla R6).
 - **La credencial del equipo (2026-10-03, tarea 290, AD-064).** `VinculoProtegido` es ahora la unión del fijo y del **del equipo** (`{ tipo: 'equipo', finalidad, titulo }`). `CredencialEnPaso` reparte: el fijo va a `CredencialFijaEnPaso` (el comportamiento de siempre, sin cambios, `vinculoFijo.test.tsx`) y el del equipo a `CredencialDelEquipoEnPaso`, que toma el equipo de `ContextoEjecucion` (o uno local fuera de una ejecución), lo resuelve con `resolverCredencialDelEquipo` y, resuelto, pinta la misma fila y el mismo cuerpo sobre la credencial resuelta (`MarcoProtegido` compartido, `DatosDescifrados` con `key` de la credencial). Debajo de la fila, solo con permiso: "Equipo: «nombre»" y "Cambiar" (o "Sin equipo elegido." y "Elegir equipo"), 44 px, que abren `SelectorEquipo` (una `HojaVinculo` con `sinRecortar`) sin abrir la consulta; cambiar de equipo recoge la consulta abierta. Sin resolver, un párrafo neutro (`mensajeSinResolver`). Ver `credencialDelEquipoFlujo.test.tsx`.
 
+### 3.3b `boveda/CredencialEnHoja` y `boveda/useTituloDelVinculo` (2026-10-13, tarea 328, AD-078)
+
+- **Propósito:** la credencial de una acción en la ejecución, como fila que abre su hoja (rediseño móvil "1b Pulgar"): se consulta sin que el bloque empuje la acción.
+- **Props:** `{ vinculo: VinculoProtegido }`. Rótulo "Credencial"; un botón de 58 px con borde (`aria-haspopup="dialog"`, nombre accesible "Ver la credencial: {nombre}") con la llave, el nombre entero (regla 23), "Se abre aquí, sin salir de la guía" y "Ver". Abre `Modal` con el título, "Cerrar y volver a la guía" (44 px) y `CredencialEnPaso` variante `bloque`, sin cambios.
+- **El nombre:** `useTituloDelVinculo(vinculo)`, el título vivo de la credencial o del campo si existe y no se eliminó, y si no, la copia de referencia (la regla de `CredencialFijaEnPaso`). La credencial del equipo, su título de referencia; el equipo se resuelve dentro.
+- **Dónde:** `ModoFoco` (la credencial de la acción y la que trae lo reutilizado). El paso entero, la lectura y "Probar" siguen con `CredencialEnPaso` en línea.
+- **Pruebas:** `credencialEnHoja.test.tsx`; las de la Bóveda dentro de la ejecución abren antes la hoja con `abrirCredencial()` (`src/pruebas/montaje.ts`).
+
 ### 3.4 `boveda/IndicadorVencimiento`
 - **Propósito:** aviso de vencimiento de una credencial (ámbar si se acerca, rojo si venció); nada si no hay fecha o falta mucho. La lógica de cálculo vive en `src/lib/vencimiento.ts`.
 - **Props:** `{ venceEn: string | null, variante?: 'claro' | 'nocturne' = 'claro' }`.

@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type PasoProcedimiento, type VinculoProtegido } from '../../lib/db'
 import {
+  abrirCredencial,
   anclarMaestra,
   campoBuscador,
   control,
@@ -197,6 +198,20 @@ function sinSecretosSalvo(...permitidos: string[]): void {
   }
 }
 
+/**
+ * El "Mostrar" del dato protegido. En la ejecución de una acción la
+ * credencial es una fila que abre su hoja (tarea 328): si eso es lo que hay,
+ * se abre antes.
+ */
+async function datoProtegido(nombre: string): Promise<HTMLElement> {
+  const primero = await esperar(
+    () => control(`Dato protegido: ${nombre}`) ?? control(/^Ver la credencial: /),
+    `la credencial ${nombre}`,
+  )
+  if (primero !== control(`Dato protegido: ${nombre}`)) await abrirCredencial()
+  return esperarControl(`Dato protegido: ${nombre}`)
+}
+
 async function desbloquearEnLinea(): Promise<void> {
   const campo = await esperar(
     () => document.body.querySelector<HTMLInputElement>('input[placeholder="Contraseña maestra"]'),
@@ -211,8 +226,8 @@ describe('el caso representativo: la misma guía para varias impresoras', () => 
     bloquear()
     await montar(RUTAS, `${RUTA_GUIA}?equipo=imp-a`)
 
-    await esperar(() => textoPantalla().includes('Credencial necesaria'), 'la credencial de la acción')
-    const fila = await esperarControl('Dato protegido: Acceso de prueba A')
+    const fila = await datoProtegido('Acceso de prueba A')
+    expect(textoPantalla()).toContain('Credencial necesaria')
     expect(fila.getAttribute('aria-expanded')).toBe('false')
     expect(textoPantalla()).toContain('Equipo: Impresora de prueba A')
     sinSecretosSalvo()
@@ -232,7 +247,7 @@ describe('el caso representativo: la misma guía para varias impresoras', () => 
 
   it('impresora B: la misma guía resuelve la credencial B', async () => {
     await montar(RUTAS, `${RUTA_GUIA}?equipo=imp-b`)
-    const fila = await esperarControl('Dato protegido: Acceso de prueba B')
+    const fila = await datoProtegido('Acceso de prueba B')
     await tocar(fila)
     await esperar(() => textoPantalla().includes('usuario.prueba.b'), 'el usuario de B')
     sinSecretosSalvo('usuario.prueba.b')
@@ -241,7 +256,7 @@ describe('el caso representativo: la misma guía para varias impresoras', () => 
 
   it('impresora C, sin credencial: un estado neutro, sin inventar ni sugerir otra', async () => {
     await montar(RUTAS, `${RUTA_GUIA}?equipo=imp-c`)
-    const fila = await esperarControl('Dato protegido: Credencial del equipo')
+    const fila = await datoProtegido('Credencial del equipo')
     await tocar(fila)
     await esperar(
       () => textoPantalla().includes('No hay una credencial configurada para este equipo.'),
@@ -255,7 +270,7 @@ describe('el caso representativo: la misma guía para varias impresoras', () => 
 
   it('impresora D, con dos credenciales de la misma finalidad: no se elige ninguna', async () => {
     await montar(RUTAS, `${RUTA_GUIA}?equipo=imp-d`)
-    await tocar(await esperarControl('Dato protegido: Credencial del equipo'))
+    await tocar(await datoProtegido('Credencial del equipo'))
     await esperar(
       () => textoPantalla().includes('Este equipo tiene varias credenciales y no se puede saber cuál corresponde a esta acción.'),
       'el estado ambiguo',
@@ -273,7 +288,7 @@ describe('el caso representativo: la misma guía para varias impresoras', () => 
       pasos: [pasoConVinculo('srv-p1', 'Conectarse', ['Conéctate por escritorio remoto'], DEL_EQUIPO_REMOTO)],
     })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-srv?equipo=srv-e')
-    await tocar(await esperarControl('Dato protegido: Acceso de prueba E remoto'))
+    await tocar(await datoProtegido('Acceso de prueba E remoto'))
     await esperar(() => textoPantalla().includes('usuario.prueba.e.remoto'), 'el acceso de escritorio remoto')
     sinSecretosSalvo('usuario.prueba.e.remoto')
   })
@@ -282,13 +297,13 @@ describe('el caso representativo: la misma guía para varias impresoras', () => 
 describe('el equipo con el que se trabaja', () => {
   it('sin equipo, se elige en la propia acción; cambiarlo recoge lo abierto y resuelve el nuevo', async () => {
     await montar(RUTAS, RUTA_GUIA)
-    await esperarControl('Dato protegido: Credencial del equipo')
+    await datoProtegido('Credencial del equipo')
     expect(textoPantalla()).toContain('Sin equipo elegido.')
 
     await tocar(await esperarControl('Elegir el equipo'))
     await esperar(() => textoPantalla().includes('¿Con qué equipo trabajas?'), 'la hoja de equipos')
     await tocar(await esperarControl('Impresora de prueba A · Oficina A'))
-    const filaA = await esperarControl('Dato protegido: Acceso de prueba A')
+    const filaA = await datoProtegido('Acceso de prueba A')
     // Queda en la dirección: recargar no lo pierde. Y elegir no es avanzar.
     expect(ubicacionActual().search).toBe('?equipo=imp-a')
     expect(await db.progresoPasos.get('guia-imp')).toBeUndefined()
@@ -298,7 +313,7 @@ describe('el equipo con el que se trabaja', () => {
 
     await tocar(await esperarControl('Cambiar el equipo (ahora Impresora de prueba A)'))
     await tocar(await esperarControl('Impresora de prueba B · Oficina B'))
-    const filaB = await esperarControl('Dato protegido: Acceso de prueba B')
+    const filaB = await datoProtegido('Acceso de prueba B')
     // Lo de A ya no está, y ver B es otro gesto (y otro registro).
     expect(filaB.getAttribute('aria-expanded')).toBe('false')
     sinSecretosSalvo()
@@ -308,7 +323,7 @@ describe('el equipo con el que se trabaja', () => {
 
   it('retomar sigue con el equipo guardado, y marcar avance lo guarda en la ejecución', async () => {
     await montar(RUTAS, `${RUTA_GUIA}?equipo=imp-b`)
-    await esperarControl('Dato protegido: Acceso de prueba B')
+    await datoProtegido('Acceso de prueba B')
     await tocar(await esperarControl('Completar y seguir'))
     await esperarQue(async () => (await db.progresoPasos.get('guia-imp'))?.equipoId === 'imp-b', 'el equipo en la fila')
     await desmontarTodo()
@@ -318,7 +333,7 @@ describe('el equipo con el que se trabaja', () => {
     await esperar(() => textoPantalla().includes('Revisa la lista de usuarios de impresión'), 'la acción donde iba')
     expect(textoPantalla()).toContain('Retomando')
     await tocar(await esperarControl(/^Anterior/))
-    await esperarControl('Dato protegido: Acceso de prueba B')
+    await datoProtegido('Acceso de prueba B')
     expect(textoPantalla()).toContain('Equipo: Impresora de prueba B')
     expect(ubicacionActual().search).toBe('')
   })
@@ -334,7 +349,7 @@ describe('el equipo con el que se trabaja', () => {
     })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-padre?equipo=imp-a')
     await esperar(() => textoPantalla().includes('Entra al panel web de la impresora'), 'la acción reutilizada')
-    await esperarControl('Dato protegido: Acceso de prueba A')
+    await datoProtegido('Acceso de prueba A')
     expect(textoPantalla()).toContain('Equipo: Impresora de prueba A')
   })
 
@@ -351,13 +366,13 @@ describe('el equipo con el que se trabaja', () => {
     await esperar(() => textoPantalla().includes('Comprueba que la impresora enciende'), 'el paso 1')
     await tocar(await esperarControl(/^Paso 2 de 2: Entrar al panel/))
     await esperar(() => textoPantalla().includes('Solo consulta'), 'la consulta del paso 2')
-    await esperarControl('Dato protegido: Acceso de prueba A')
+    await datoProtegido('Acceso de prueba A')
     expect(await db.progresoPasos.get('guia-dos')).toBeUndefined()
   })
 
   it('un equipo que ya no existe no se usa: se dice y se elige otro', async () => {
     await montar(RUTAS, `${RUTA_GUIA}?equipo=equipo-inexistente`)
-    await tocar(await esperarControl('Dato protegido: Credencial del equipo'))
+    await tocar(await datoProtegido('Credencial del equipo'))
     await esperar(() => textoPantalla().includes('El equipo elegido ya no está disponible.'), 'el aviso')
     expect(control('Elegir el equipo')).not.toBeNull()
     expect(await accesos()).toEqual([])
@@ -370,7 +385,7 @@ describe('los controles de la Bóveda no cambian', () => {
     // Sin permiso, RLS no le baja ninguna credencial.
     await db.credenciales.clear()
     await montar(RUTAS, `${RUTA_GUIA}?equipo=imp-a`)
-    const fila = await esperarControl('Dato protegido: Credencial del equipo')
+    const fila = await datoProtegido('Credencial del equipo')
     // Nada le insinúa de qué equipo ni si tiene credencial.
     expect(textoPantalla()).not.toContain('Equipo: Impresora de prueba A')
     expect(control('Elegir el equipo')).toBeNull()
@@ -385,7 +400,7 @@ describe('los controles de la Bóveda no cambian', () => {
   it('una credencial eliminada no se usa: el equipo queda sin credencial', async () => {
     await db.credenciales.update('cred-a', { eliminadoEn: '2026-10-01T00:00:00.000Z' })
     await montar(RUTAS, `${RUTA_GUIA}?equipo=imp-a`)
-    await tocar(await esperarControl('Dato protegido: Credencial del equipo'))
+    await tocar(await datoProtegido('Credencial del equipo'))
     await esperar(() => textoPantalla().includes('No hay una credencial configurada para este equipo.'), 'sin credencial')
     expect(textoPantalla()).not.toContain('Acceso de prueba A')
   })
@@ -403,7 +418,7 @@ describe('los controles de la Bóveda no cambian', () => {
       ],
     })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-fija?equipo=imp-a')
-    await esperarControl('Dato protegido: Acceso de prueba B')
+    await datoProtegido('Acceso de prueba B')
     // El vínculo fijo no dice de qué equipo es ni ofrece cambiarlo.
     expect(textoPantalla()).not.toContain('Equipo: Impresora de prueba A')
     expect(control('Elegir el equipo')).toBeNull()
@@ -416,7 +431,7 @@ describe('los controles de la Bóveda no cambian', () => {
     vi.stubGlobal('fetch', red)
     try {
       await montar(RUTAS, `${RUTA_GUIA}?equipo=imp-a`)
-      await tocar(await esperarControl('Dato protegido: Acceso de prueba A'))
+      await tocar(await datoProtegido('Acceso de prueba A'))
       await esperar(() => textoPantalla().includes('usuario.prueba.a'), 'el usuario de A, sin red')
       expect(red).not.toHaveBeenCalled()
     } finally {
@@ -434,7 +449,7 @@ describe('el equipo llega a la guía desde donde se identificó', () => {
     )
     expect(enlace.getAttribute('href')).toBe('/soluciones/cat-pruebas/guia-imp?equipo=imp-a')
     await tocar(enlace)
-    await esperarControl('Dato protegido: Acceso de prueba A')
+    await datoProtegido('Acceso de prueba A')
   })
 
   it('Resolver lleva el equipo que la consulta identifica, y solo si es uno', async () => {
@@ -469,7 +484,7 @@ describe('el equipo llega a la guía desde donde se identificó', () => {
         'la guía con el equipo',
       ),
     )
-    await tocar(await esperarControl('Dato protegido: Credencial del equipo'))
+    await tocar(await datoProtegido('Credencial del equipo'))
     await esperar(() => textoPantalla().includes('No hay una credencial configurada para este equipo.'), 'sin credencial')
     expect(textoPantalla()).toContain('Equipo: Impresora Mercadeo')
   })

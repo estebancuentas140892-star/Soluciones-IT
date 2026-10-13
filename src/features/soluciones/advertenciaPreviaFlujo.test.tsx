@@ -225,7 +225,8 @@ describe('Precaución: la advertencia previa y después la acción', () => {
     expect(texto).toContain('Lista de carpetas de prueba')
     expect(texto).toContain('Dato técnico')
     expect(texto).toContain(DATO)
-    expect(texto).toContain('Credencial necesaria')
+    // La credencial, como fila que abre su hoja (tarea 328).
+    expect(texto).toContain('Se abre aquí, sin salir de la guía')
     expect(texto).toContain(CREDENCIAL)
     // "Debes ver", plegado como siempre (sin regresión de la tarea 307).
     const debesVer = control('Debes ver')

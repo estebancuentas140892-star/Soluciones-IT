@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../../lib/db'
 import {
+  abrirCredencial,
   anclarMaestra,
   control,
   desmontarTodo,
@@ -78,8 +79,10 @@ describe('el vínculo fijo de hoy (tarea 290, fase 1)', () => {
     bloquear()
     await montar(RUTAS, RUTA)
 
-    await esperar(() => textoPantalla().includes('Credencial necesaria'), 'la credencial de la acción')
-    // El título vivo de la credencial, no la copia de referencia.
+    // El título vivo de la credencial, no la copia de referencia, ya en la
+    // fila que abre su hoja (tarea 328).
+    await abrirCredencial('Acceso de prueba al panel')
+    expect(textoPantalla()).toContain('Credencial necesaria')
     const fila = await esperarControl('Dato protegido: Acceso de prueba al panel')
     expect(fila.getAttribute('aria-expanded')).toBe('false')
     expect(textoPantalla()).not.toContain(USUARIO_FALSO)
@@ -109,6 +112,7 @@ describe('el vínculo fijo de hoy (tarea 290, fase 1)', () => {
     // Sin permiso, RLS no descarga la credencial: no se siembra.
     await montar(RUTAS, RUTA)
 
+    await abrirCredencial('Copia de referencia del acceso')
     const fila = await esperarControl('Dato protegido: Copia de referencia del acceso')
     await tocar(fila)
     await esperar(
@@ -133,6 +137,7 @@ describe('el vínculo fijo de hoy (tarea 290, fase 1)', () => {
     await db.credenciales.update('cred-fija', { eliminadoEn: '2026-10-01T00:00:00.000Z' })
     await montar(RUTAS, RUTA)
 
+    await abrirCredencial('Copia de referencia del acceso')
     const fila = await esperarControl('Dato protegido: Copia de referencia del acceso')
     await tocar(fila)
     await esperar(() => textoPantalla().includes('Los datos vinculados fueron eliminados'), 'el aviso de eliminada')

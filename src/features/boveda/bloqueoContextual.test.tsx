@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type PasoProcedimiento, type VinculoProtegido } from '../../lib/db'
 import {
+  abrirCredencial,
   anclarMaestra,
   control,
   desmontarTodo,
@@ -95,8 +96,14 @@ async function desbloquearEnLinea(): Promise<void> {
   await enviarFormulario(campo)
 }
 
-/** Abre la credencial, desbloquea en línea y enseña también la contraseña. */
+/**
+ * Abre la credencial, desbloquea en línea y enseña también la contraseña. En
+ * la ejecución de una acción, primero abre su hoja (tarea 328); en el paso
+ * entero y en "Probar" la credencial sigue en su sitio.
+ */
 async function abrirYDesbloquear(nombre?: string): Promise<void> {
+  const primero = await esperar(() => fila(nombre) ?? control(/^Ver la credencial: /), 'la credencial')
+  if (primero !== fila(nombre)) await abrirCredencial()
   await tocar(await esperar(() => fila(nombre), 'la fila del dato protegido'))
   await desbloquearEnLinea()
   await esperar(() => textoPantalla().includes(USUARIO), 'el usuario descifrado')
@@ -127,6 +134,7 @@ describe('cuándo aparece', () => {
     await sembrarBoveda()
     await sembrarGuiaConCredencial()
     await montar(RUTAS, RUTA)
+    await abrirCredencial()
     await esperar(() => fila(), 'la credencial de la acción')
     expect(botonBloquear()).toBeNull()
     expect(textoPantalla()).not.toContain('Bóveda abierta en este dispositivo')
@@ -150,6 +158,7 @@ describe('cuándo aparece', () => {
     await anclarMaestra()
     await sembrarGuiaConCredencial()
     await montar(RUTAS, RUTA)
+    await abrirCredencial()
     await esperar(() => fila(), 'la credencial')
     expect(fila()?.getAttribute('aria-expanded')).toBe('false')
     expect(botonBloquear()).not.toBeNull()
@@ -162,6 +171,7 @@ describe('cuándo aparece', () => {
     await anclarMaestra()
     await sembrarGuiaConCredencial()
     await montar(RUTAS, RUTA)
+    await abrirCredencial()
     await esperar(() => fila('Acceso de prueba a escritorio remoto'), 'la credencial')
     expect(botonBloquear()).toBeNull()
     await tocar(fila() as HTMLElement)
@@ -385,7 +395,8 @@ describe('en todas las vistas que la enseñan', () => {
     await sembrarBoveda()
     await sembrarGuiaConCredencial()
     await montar(RUTAS, RUTA)
-    await esperar(() => fila(), 'la credencial')
+    // En la acción, la fila que abre su hoja (tarea 328); en el paso entero, el bloque.
+    await esperarControl(/^Ver la credencial: /)
     await tocar(await esperarControl(/^Paso 1 de 1\. Abrir el índice de pasos$/))
     await tocar(await esperarControl(/^Ver el paso entero$/))
     await esperar(() => document.body.querySelector('button[role="checkbox"]'), 'la vista de paso entero')

@@ -8,9 +8,9 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
-### Cambiado (ejecución de guía, tarea 328, primera parte): cabecera con el equipo y los segmentos, control grande relleno y la comprobación final con forma de acción
+### Cambiado (ejecución de guía, tarea 328): cabecera con el equipo y los segmentos, control grande relleno, la credencial en su hoja y la comprobación final con forma de acción
 
-**Área modificada:** `src/components/BarraTarea.tsx` (`contexto`), `src/app/bandaTarea.tsx` (`BandaBajoTarea`, nueva), `src/app/Chasis.tsx`, `src/features/soluciones/AsistentePage.tsx`, `AsistenteVista.tsx` (contador, segmentos, comprobación final, "Guía terminada"), `EstadoEjecucion.tsx` (`SegmentosDePasos`), `ModoFoco.tsx` (`BOTON_PRINCIPAL`, `BOTON_ANTERIOR`, `TEXTO_INSTRUCCION`, `EtiquetaDeAccion`), `SenalesDePaso.tsx` (`ComoHacerlo`, `DatoTecnico`, `DebesVer`), `PantallaAdvertencia.tsx` y `cierrePaso.ts` (`cierreDeLaComprobacion`).
+**Área modificada:** `src/components/BarraTarea.tsx` (`contexto`), `src/app/bandaTarea.tsx` (`BandaBajoTarea`, nueva), `src/app/Chasis.tsx`, `src/features/soluciones/AsistentePage.tsx`, `AsistenteVista.tsx` (contador, segmentos, comprobación final, "Guía terminada"), `EstadoEjecucion.tsx` (`SegmentosDePasos`), `ModoFoco.tsx` (`BOTON_PRINCIPAL`, `BOTON_ANTERIOR`, `TEXTO_INSTRUCCION`, `EtiquetaDeAccion`), `SenalesDePaso.tsx` (`ComoHacerlo`, `DatoTecnico`, `DebesVer`), `PantallaAdvertencia.tsx`, `cierrePaso.ts` (`cierreDeLaComprobacion`) y, nuevos, `src/features/boveda/CredencialEnHoja.tsx` y `useTituloDelVinculo.ts`; `src/pruebas/montaje.ts` (`abrirCredencial`).
 **Tipo:** Modificado; Documentación (DECISIONES AD-078, REGLAS regla 28, ARQUITECTURA_FUNCIONAL RN-067, DOCUMENTACION_FUNCIONAL ejecución y comprobación final, COMPONENTES_UI 2.10h, 2.10n, 3.8i, 3.8y, 3.8z y `PieDeComprobacion`, TAREAS 328).
 **Motivo:** encargo del 2026-10-13, paso 2 del rediseño móvil "1b Pulgar".
 **Qué cambia:**
@@ -19,10 +19,10 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 - **La acción:** la instrucción a 26 px y a 23 en 320 de ancho; "Qué hacer", "Comprueba" y "Decide" a 12.5 px; los números de "Cómo hacerlo" en su caja; el dato técnico a todo el ancho, en IBM Plex Mono, con "Copiar el dato".
 - **La comprobación final:** "Comprueba" y "¿Quedó resuelto?" (a mitad del flujo, "¿Quedó bien?"), casillas de 64 px y el control "Marca N comprobaciones" / "Terminar" (antes "Faltan N comprobaciones" / "Finalizar"). Los tres gestos de la regla 28 no cambian.
 - **"Guía terminada":** "Salir de la guía" relleno.
+- **La credencial de la acción:** una fila con borde ("Se abre aquí, sin salir de la guía" y "Ver") con el nombre vivo, que abre el bloque protegido de siempre en una hoja inferior. La Bóveda no cambia (regla 29); cerrar la hoja no mueve la guía y saca lo descifrado del documento. En el paso entero, la lectura y "Probar" sigue en su sitio.
 **Estructura de datos:** sin cambios.
-**Verificación:** 207 archivos y 3285 pruebas (las que fijaban clases y rótulos, actualizadas), `tsc -b` y lint en verde. En el navegador con el banco de pruebas a 375 y 320 px: la advertencia, una acción con "Cómo hacerlo" y dato técnico, la comprobación final y "Guía terminada"; sin desbordes ni textos por debajo de 12 px.
+**Verificación:** 208 archivos y 3287 pruebas (`credencialEnHoja.test.tsx` nuevo; las que fijaban clases y rótulos o abrían la credencial en el sitio, actualizadas), `tsc -b`, lint y build en verde. En el navegador con el banco de pruebas a 375 y 320 px: la advertencia, una acción con "Cómo hacerlo" y dato técnico, la comprobación final y "Guía terminada", y la hoja de la credencial (anclada abajo, fila de 58 px, cierre de 44); sin desbordes ni textos por debajo de 12 px.
 **Impacto esperado:** saber de un vistazo en qué guía, con qué equipo y en qué paso se está, y que la acción que avanza pese más que todo lo demás.
-**Pendiente de la misma tarea:** la credencial como fila que abre su hoja.
 
 ### Cambiado (sistema visual, tarea 327): el acento pasa al cian del icono, los datos técnicos a IBM Plex Mono y existe una acción rellena por pantalla
 
