@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Cambiado (ejecución de guía, tarea 328, primera parte): cabecera con el equipo y los segmentos, control grande relleno y la comprobación final con forma de acción
+
+**Área modificada:** `src/components/BarraTarea.tsx` (`contexto`), `src/app/bandaTarea.tsx` (`BandaBajoTarea`, nueva), `src/app/Chasis.tsx`, `src/features/soluciones/AsistentePage.tsx`, `AsistenteVista.tsx` (contador, segmentos, comprobación final, "Guía terminada"), `EstadoEjecucion.tsx` (`SegmentosDePasos`), `ModoFoco.tsx` (`BOTON_PRINCIPAL`, `BOTON_ANTERIOR`, `TEXTO_INSTRUCCION`, `EtiquetaDeAccion`), `SenalesDePaso.tsx` (`ComoHacerlo`, `DatoTecnico`, `DebesVer`), `PantallaAdvertencia.tsx` y `cierrePaso.ts` (`cierreDeLaComprobacion`).
+**Tipo:** Modificado; Documentación (DECISIONES AD-078, REGLAS regla 28, ARQUITECTURA_FUNCIONAL RN-067, DOCUMENTACION_FUNCIONAL ejecución y comprobación final, COMPONENTES_UI 2.10h, 2.10n, 3.8i, 3.8y, 3.8z y `PieDeComprobacion`, TAREAS 328).
+**Motivo:** encargo del 2026-10-13, paso 2 del rediseño móvil "1b Pulgar".
+**Qué cambia:**
+- **Cabecera:** "Guía · {equipo}" sobre el título (o "Guía"); el contador "2/4" es un botón en IBM Plex Mono sobre fondo tenue; los segmentos (4 px) van dentro de la cabecera, con uno más para la comprobación final. En la comprobación, "Final" donde iba el contador.
+- **Pie:** el control grande va relleno de acento, 62 px (la única acción rellena); "Anterior", 62 × 62 delineado; "Tengo un problema" a 14 px.
+- **La acción:** la instrucción a 26 px y a 23 en 320 de ancho; "Qué hacer", "Comprueba" y "Decide" a 12.5 px; los números de "Cómo hacerlo" en su caja; el dato técnico a todo el ancho, en IBM Plex Mono, con "Copiar el dato".
+- **La comprobación final:** "Comprueba" y "¿Quedó resuelto?" (a mitad del flujo, "¿Quedó bien?"), casillas de 64 px y el control "Marca N comprobaciones" / "Terminar" (antes "Faltan N comprobaciones" / "Finalizar"). Los tres gestos de la regla 28 no cambian.
+- **"Guía terminada":** "Salir de la guía" relleno.
+**Estructura de datos:** sin cambios.
+**Verificación:** 207 archivos y 3285 pruebas (las que fijaban clases y rótulos, actualizadas), `tsc -b` y lint en verde. En el navegador con el banco de pruebas a 375 y 320 px: la advertencia, una acción con "Cómo hacerlo" y dato técnico, la comprobación final y "Guía terminada"; sin desbordes ni textos por debajo de 12 px.
+**Impacto esperado:** saber de un vistazo en qué guía, con qué equipo y en qué paso se está, y que la acción que avanza pese más que todo lo demás.
+**Pendiente de la misma tarea:** la credencial como fila que abre su hoja.
+
 ### Cambiado (sistema visual, tarea 327): el acento pasa al cian del icono, los datos técnicos a IBM Plex Mono y existe una acción rellena por pantalla
 
 **Área modificada:** `src/index.css` (`@theme` y `@font-face`), `src/assets/` (tres woff2 de IBM Plex Mono y su licencia), `src/components/nocturne.tsx` (`BTN_PRIMARIO_RELLENO`), y los usos de `noct-accion` en `ModoFoco.tsx`, `RutaProcedimiento.tsx`, `VistaContenidoAsistencia.tsx`, `DiagnosticoRunPage.tsx` y `busqueda/resultados.ts`.

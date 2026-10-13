@@ -57,7 +57,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | Paso | Tarea del encargo | Tarea del tablero | Estado |
 |---|---|---|---|
 | 1 | Tokens, IBM Plex Mono local y `BTN_PRIMARIO_RELLENO` | 327 | Hecha en `feat/movil-pulgar`, pendiente de revisión visual del usuario y de aprobación para integrar |
-| 2 | Ejecución de guía | 328 | Pendiente |
+| 2 | Ejecución de guía | 328 | **En proceso**: primera parte hecha en `feat/movil-pulgar`; falta la credencial como hoja |
 | 3 | Ficha de equipo | 329 | Pendiente |
 | 4 | Dock de búsqueda, búsqueda y cabeceras de raíz | 330 | Pendiente |
 | 5 | Mantenimiento y autorización (tres formas de dato) | 331 | Pendiente |
@@ -76,6 +76,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Verificación:** suite completa 207 archivos y 3285 pruebas (+1 archivo y +7 pruebas: `src/components/sistemaVisual.test.ts`, que vigila los tokens, la fuente local y `BTN_PRIMARIO_RELLENO`, y falla sin el cambio), `npm run lint` y `npm run build` (`tsc -b` incluido) en verde; `scripts/verificar-precache.mjs` correcto; los tres woff2 entran al precache. En el navegador a 375 px con el banco de pruebas local: el acento computado es `oklch(0.82 0.11 200)`, la IP de la lista de Equipos se pinta en IBM Plex Mono y el woff2 de 400 se carga desde el bundle.
 - **Área afectada:** `src/index.css`, `src/assets/`, `src/components/nocturne.tsx`, los cinco archivos de `noct-accion`, `src/components/sistemaVisual.test.ts` (nuevo); documentación en REGLAS.md (regla 30), DECISIONES.md (AD-077), ARQUITECTURA.md, ARQUITECTURA_FUNCIONAL.md (lenguaje de la guía), DOCUMENTACION_FUNCIONAL.md (sección 9.1), COMPONENTES_UI.md (1.1) y CHANGELOG.md.
 - **Dependencias:** ninguna. Las 328 a 332 dependen de esta.
+
+### 328. Rediseño móvil, paso 2: ejecución de guía
+
+- **Título:** la ejecución de una guía con cabecera compacta, bloques con forma propia y la acción principal rellena.
+- **Descripción:** `src/features/soluciones/ModoFoco.tsx`, `SenalesDePaso.tsx`, `PantallaAdvertencia.tsx` y `src/components/BarraTarea.tsx`. Cabecera compacta sobre superficie: X, "Guía · equipo" y título corto, lupa de consulta y contador `2/4` en mono como botón que abre el índice; debajo, un segmento por paso más el final. Rótulos: "Qué hacer" en acento, "Comprueba" en verde, "Decide" en neutro. Bloques: Cómo hacerlo (lista numerada con números en caja mono), Dato técnico (mono con copiar), Credencial (fila con borde que abre `CredencialEnPaso` como hoja), Información (icono y texto sin caja), Nota (fondo tenue), Imagen ("Debes ver" plegado); la advertencia previa sigue en su pantalla. Pie: Anterior 62 x 62 delineado y `BOTON_PRINCIPAL` relleno (alto 62, radio 18); "Tengo un problema" en una línea. La comprobación final (`verificacionFinal`) como casillas de 64 px; "Terminar" se activa al marcarlas todas. Referencia: `Prototipo Soluciones IT.dc.html` (ejecución) y `Sistema visual movil.dc.html` (lenguaje de la guía).
+- **Motivo:** encargo del 2026-10-13, paso 2 (el de mayor impacto y el más contenido).
+- **Impacto:** alto: es la pantalla donde se trabaja. Criterio: la acción principal siempre en el tercio inferior; la credencial se consulta sin perder el paso ni el avance. Respeta las reglas 27 y 28.
+- **Prioridad:** Alta. **Estado:** En progreso. **Primera parte hecha (2026-10-13, en `feat/movil-pulgar`):** cabecera de dos líneas ("Guía · equipo" con `BarraTarea.contexto`, calculado en `src/features/soluciones/AsistentePage.tsx` ~líneas 55 a 65), contador "2/4" como botón en mono (`ContadorPaso`, `AsistenteVista.tsx` ~1590), segmentos de 4 px dentro de la cabecera con uno más para la comprobación final (`SegmentosDePasos` en `EstadoEjecucion.tsx`, portados con la ranura nueva `BandaBajoTarea` de `src/app/bandaTarea.tsx` y `src/app/Chasis.tsx`), control grande relleno de 62 px y "Anterior" de 62 (`BOTON_PRINCIPAL`/`BOTON_ANTERIOR`, `ModoFoco.tsx` ~310), instrucción a 23/26 px (`TEXTO_INSTRUCCION`), rótulos a 12.5 px, "Tengo un problema" a 14 px, números de "Cómo hacerlo" en caja mono y dato técnico con copiar (`SenalesDePaso.tsx`), advertencia previa ajustada (`PantallaAdvertencia.tsx`), comprobación final con forma de acción ("Comprueba", "¿Quedó resuelto?", casillas de 64 px; `AsistenteVista.tsx` ~515) y su control "Marca N comprobaciones" / "Terminar" (`cierreDeLaComprobacion`, `cierrePaso.ts`), "Salir de la guía" relleno en "Guía terminada". Pruebas actualizadas (las que fijaban `h-16`, `text-[26px]`, `list-decimal`, `border-noct-accent` y los rótulos "Finalizar" y "Antes de terminar, comprueba"). Suite 207 archivos y 3285 pruebas, `tsc -b` y lint en verde; medida en el navegador a 375 y 320 px con el banco de pruebas (sin desbordes, ningún texto por debajo de 12 px, instrucción a 23 px en 320). **Falta (segunda parte):** la credencial como fila con borde ("Se abre aquí, sin salir de la guía" y "Ver") que abre `CredencialEnPaso` en una hoja inferior, cumpliendo la regla 29 (bloquear y desbloquear sin salir); toca `ModoFoco.tsx` (~líneas 1218 y 1219) y unas diez pruebas de la Bóveda y de la ejecución. **No se hará:** "Información" y "Nota del equipo" en la ejecución (se retiraron en la tarea 307, regla 27).
+- **Área afectada:** las cuatro piezas citadas y sus pruebas (`ejecucionMinima.test.tsx`, `comoHacerlo.test.tsx` y las que fijan `text-[26px]` o `BOTON_PRINCIPAL`).
+- **Dependencias:** 327.
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
@@ -533,16 +543,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 328. Rediseño móvil, paso 2: ejecución de guía
-
-- **Título:** la ejecución de una guía con cabecera compacta, bloques con forma propia y la acción principal rellena.
-- **Descripción:** `src/features/soluciones/ModoFoco.tsx`, `SenalesDePaso.tsx`, `PantallaAdvertencia.tsx` y `src/components/BarraTarea.tsx`. Cabecera compacta sobre superficie: X, "Guía · equipo" y título corto, lupa de consulta y contador `2/4` en mono como botón que abre el índice; debajo, un segmento por paso más el final. Rótulos: "Qué hacer" en acento, "Comprueba" en verde, "Decide" en neutro. Bloques: Cómo hacerlo (lista numerada con números en caja mono), Dato técnico (mono con copiar), Credencial (fila con borde que abre `CredencialEnPaso` como hoja), Información (icono y texto sin caja), Nota (fondo tenue), Imagen ("Debes ver" plegado); la advertencia previa sigue en su pantalla. Pie: Anterior 62 x 62 delineado y `BOTON_PRINCIPAL` relleno (alto 62, radio 18); "Tengo un problema" en una línea. La comprobación final (`verificacionFinal`) como casillas de 64 px; "Terminar" se activa al marcarlas todas. Referencia: `Prototipo Soluciones IT.dc.html` (ejecución) y `Sistema visual movil.dc.html` (lenguaje de la guía).
-- **Motivo:** encargo del 2026-10-13, paso 2 (el de mayor impacto y el más contenido).
-- **Impacto:** alto: es la pantalla donde se trabaja. Criterio: la acción principal siempre en el tercio inferior; la credencial se consulta sin perder el paso ni el avance. Respeta las reglas 27 y 28.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** las cuatro piezas citadas y sus pruebas (`ejecucionMinima.test.tsx`, `comoHacerlo.test.tsx` y las que fijan `text-[26px]` o `BOTON_PRINCIPAL`).
-- **Dependencias:** 327.
 
 ### 329. Rediseño móvil, paso 3: ficha de equipo
 

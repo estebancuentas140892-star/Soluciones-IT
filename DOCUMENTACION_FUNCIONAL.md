@@ -1532,23 +1532,23 @@ Equipos > Crear
 - **Igual en todas partes:** la acción a la vez, el paso entero, la lectura y "Probar" del editor, lo reutilizado (en el flujo y al leerlo), sin conexión, en el teléfono y en escritorio. El computador atendido no recibe "Cómo hacerlo" cuando es una sola microacción.
 - **El editor no deja guardar una sola microacción** (AD-070 decisión 5): con cero o con dos o más se guarda; con exactamente una lo dice junto a "Cómo hacerlo" y pide llevarla a la instrucción principal o añadir otra (ver el editor de pasos). Su ayuda ya no promete siempre un paso a paso.
 
-**ANTES DE TERMINAR, COMPRUEBA: SE PUEDE VOLVER (desde el 2026-10-07, tarea 308, [DECISIONES.md](DECISIONES.md) AD-069, [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-067, [REGLAS.md](REGLAS.md) regla 28).** Llegar a la comprobación final no termina la guía, y quien pulsó "Siguiente" por error puede volver a revisar sin perder nada. Manda sobre lo que se describe más abajo donde choque (en particular, sobre "Terminar" en la última acción y sobre marcar la última comprobación como cierre):
+**LA COMPROBACIÓN FINAL ("¿QUEDÓ RESUELTO?"; HASTA LA TAREA 328, "ANTES DE TERMINAR, COMPRUEBA"): SE PUEDE VOLVER (desde el 2026-10-07, tarea 308, [DECISIONES.md](DECISIONES.md) AD-069, [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-067, [REGLAS.md](REGLAS.md) regla 28).** Llegar a la comprobación final no termina la guía, y quien pulsó "Siguiente" por error puede volver a revisar sin perder nada. Manda sobre lo que se describe más abajo donde choque (en particular, sobre "Terminar" en la última acción y sobre marcar la última comprobación como cierre):
 
 ```
  última acción ............ [‹] [✓ Completar y seguir]     ← con comprobaciones ya no dice "terminar"
-   → Antes de terminar, comprueba
+   → Comprueba · ¿Quedó resuelto?
       ☐ comprobación 1
       ☐ comprobación 2
-      [‹] [Faltan 2 comprobaciones]   → con todo marcado: [‹] [✓ Finalizar]
+      [‹] [Marca 2 comprobaciones]   → con todo marcado: [‹] [✓ Terminar]
         ‹  vuelve a la última acción recorrida (con su ✓): [‹] [→ Seguir] devuelve aquí
-   → Finalizar → Guía terminada · Salir de la guía · Empezar de nuevo
+   → Terminar → Guía terminada · Salir de la guía · Empezar de nuevo
 ```
 
-- **Tres gestos distintos:** "Siguiente" en la última acción ("Completar y seguir") **entra** a la comprobación; **"Anterior"** **vuelve** a la ejecución; solo **"Finalizar"** **termina**. Entrar no cierra nada, y marcar todas las casillas tampoco: la pantalla sigue ahí hasta "Finalizar".
-- **"Anterior"** es el mismo botón de cada acción (64 × 64, abajo a la izquierda, junto al control grande). Lleva a **la última acción del paso desde el que se llegó**: el último que se recorrió de verdad, por el camino de las respuestas (en una guía con decisión, el último paso del camino elegido, nunca uno del otro camino). La acción se ve como quedó: con su ✓, su advertencia, su ruta rápida, "Ver paso a paso", su dato técnico, su credencial (protegida como siempre) y su "Debes ver". Desde ahí **"Seguir"** devuelve a la comprobación, y "Anterior" sigue hacia atrás por la guía como siempre, sin límite. Volver **no desmarca nada** ni cambia ninguna respuesta.
-- **El control grande** dice **"Falta 1 comprobación"** o **"Faltan N comprobaciones"**, inactivo y legible, mientras quede alguna sin marcar, y **"Finalizar"** con todas marcadas. "Finalizar" lleva a "Guía terminada".
-- **Salir sin finalizar** (con casillas marcadas) no da la guía por terminada: al volver se retoma en la comprobación, con lo marcado, y la tarjeta de la guía sigue diciendo "Faltan las comprobaciones finales". En una guía con preguntas, el recorrido sigue con la pregunta siguiente solo después de "Finalizar".
-- **Lo reutilizado dentro de otra guía** ("Comprueba antes de seguir") tiene el mismo pie con "Anterior", que vuelve a su última acción; al marcar su última comprobación el recorrido sigue solo, como antes, así que su control dice lo que falta.
+- **Tres gestos distintos:** "Siguiente" en la última acción ("Completar y seguir") **entra** a la comprobación; **"Anterior"** **vuelve** a la ejecución; solo **"Terminar"** **termina** ("Finalizar" hasta la tarea 328). Entrar no cierra nada, y marcar todas las casillas tampoco: la pantalla sigue ahí hasta "Terminar".
+- **"Anterior"** es el mismo botón de cada acción (62 × 62 desde la tarea 328, abajo a la izquierda, junto al control grande). Lleva a **la última acción del paso desde el que se llegó**: el último que se recorrió de verdad, por el camino de las respuestas (en una guía con decisión, el último paso del camino elegido, nunca uno del otro camino). La acción se ve como quedó: con su ✓, su advertencia, su ruta rápida, "Ver paso a paso", su dato técnico, su credencial (protegida como siempre) y su "Debes ver". Desde ahí **"Seguir"** devuelve a la comprobación, y "Anterior" sigue hacia atrás por la guía como siempre, sin límite. Volver **no desmarca nada** ni cambia ninguna respuesta.
+- **El control grande** dice **"Marca 1 comprobación"** o **"Marca N comprobaciones"**, inactivo y legible, mientras quede alguna sin marcar, y **"Terminar"** con todas marcadas. "Terminar" lleva a "Guía terminada".
+- **Salir sin finalizar** (con casillas marcadas) no da la guía por terminada: al volver se retoma en la comprobación, con lo marcado, y la tarjeta de la guía sigue diciendo "Faltan las comprobaciones finales". En una guía con preguntas, el recorrido sigue con la pregunta siguiente solo después de "Terminar".
+- **Lo reutilizado dentro de otra guía** ("¿Quedó bien?") tiene el mismo pie con "Anterior", que vuelve a su última acción; al marcar su última comprobación el recorrido sigue solo, como antes, así que su control dice lo que falta.
 - **Sin comprobaciones finales** nada cambia: la última acción dice "Completar y terminar" y termina la guía.
 - **Igual en la vista de paso entero** ("Anterior" vuelve al último paso; su control, "Seguir", devuelve a la comprobación), en escritorio y sin conexión. "Probar" del editor no cambia.
 
@@ -1650,8 +1650,8 @@ Equipos > Crear
    │     acción 1 de 3 · título de la parte, en voz baja
    │     [Dónde] · QUÉ HACER · instrucción · [Credencial necesaria] · [Debes ver] · Más información ▾
    │     [‹] [✓ Completar y seguir]      (nunca "terminar" a mitad del recorrido)
-   │     → "Comprueba antes de seguir" (las comprobaciones de lo reutilizado, si las tiene)
-   ├─ Antes de terminar, comprueba  (solo lo que confirma el objetivo)
+   │     → "¿Quedó bien?" (las comprobaciones de lo reutilizado, si las tiene)
+   ├─ ¿Quedó resuelto?  (solo lo que confirma el objetivo)
    └─ Guía terminada · Salir de la guía · Empezar de nuevo
  Retomar (con avance, también dentro de lo reutilizado): directo a la acción en que iba, con "Retomando · paso N de M".
 ```
@@ -1659,13 +1659,41 @@ Equipos > Crear
 - **Qué vas a hacer** (orientar): el nombre de la guía, cuántos pasos y minutos, **"Cuándo usarla"** (el "¿Cuándo usar este procedimiento?" del editor, sin la fórmula "Usa esta guía cuando") y **"Objetivo"** (el objetivo general). Sin pasos, requisitos, credenciales ni avisos. Su único botón dice a dónde lleva: **"Ver lo que necesitas"** si hay requisitos, **"Empezar"** si no. El lector de pantalla y el teclado empiezan en el nombre de la guía.
 - **Antes de empezar** (preparar): los requisitos reales, juntos, con "Ten esto listo antes de la primera acción.", **"Anterior"** de vuelta a la orientación y **"Todo listo, empezar"**. Son los que escribió el autor de la guía, sin repetidos. **Un requisito de una guía reutilizada NO se convierte automáticamente en requisito de esta**, tampoco el de la guía del paso 1 (así fue del 2026-10-02 al 2026-10-03): puede que Soluciones IT ya lo dé donde se usa, que sea una acción, que sea lo básico del equipo de Sistemas o que solo aplique a la otra guía en otros casos. Una guía sin requisitos propios no tiene esta pantalla, aunque la guía de su paso 1 pida cosas. La ficha (`/detalles`) y la vista previa del editor enseñan la misma lista. **Ya no aparecen junto a la primera acción ni en ningún momento de la ejecución.**
 - **Sin nada que orientar ni preparar**, la guía abre en su primera acción, como antes: nunca hay una pantalla vacía. Leer la preparación no guarda nada; **retomar** (hay avance, aunque sea dentro de lo reutilizado) va directo a donde iba, y **"Empezar de nuevo"** vuelve a orientar. En una guía con preguntas solo sale "Antes de empezar": la guía ya la eligieron sus respuestas.
-- **Lo que un paso reutiliza se hace en el sitio**, como acciones de ese paso, sin tarjeta que abrir ni cambio de guía: el paso que es otra guía entera, la guía que una tarea exige ("necesario", justo antes de esa tarea) y el camino del **"No"** de una decisión ("Si respondes que no, sigues con «X»"; "Anterior" desde su primera acción deshace la respuesta; al terminar sigue la acción que venía después). Durante lo reutilizado, la cabecera, el contador ("1/8") y la ruta siguen siendo los de la guía que se abrió; cada acción lleva el título de su parte en voz baja, sin "Paso 1 de 3"; **no salen sus requisitos**; el botón dice **"Completar y seguir"** y solo dice "Completar y terminar" si con eso termina de verdad la guía que se abrió; sus comprobaciones finales se piden como **"Comprueba antes de seguir"**. **"Anterior"** desde su primera acción vuelve al paso anterior; **"Tengo un problema"** habla del paso de la guía que se abrió ("Algo va mal en el paso 1") y saltar lleva a su paso siguiente.
+- **Lo que un paso reutiliza se hace en el sitio**, como acciones de ese paso, sin tarjeta que abrir ni cambio de guía: el paso que es otra guía entera, la guía que una tarea exige ("necesario", justo antes de esa tarea) y el camino del **"No"** de una decisión ("Si respondes que no, sigues con «X»"; "Anterior" desde su primera acción deshace la respuesta; al terminar sigue la acción que venía después). Durante lo reutilizado, la cabecera, el contador ("1/8") y la ruta siguen siendo los de la guía que se abrió; cada acción lleva el título de su parte en voz baja, sin "Paso 1 de 3"; **no salen sus requisitos**; el botón dice **"Completar y seguir"** y solo dice "Completar y terminar" si con eso termina de verdad la guía que se abrió; sus comprobaciones finales se piden como **"¿Quedó bien?"** ("Comprueba antes de seguir" hasta la tarea 328). **"Anterior"** desde su primera acción vuelve al paso anterior; **"Tengo un problema"** habla del paso de la guía que se abrió ("Algo va mal en el paso 1") y saltar lleva a su paso siguiente.
 - **Lo que el paso traía no se pierde:** su "Dónde", sus avisos, imágenes, archivos, términos y comandos, su "Credencial necesaria" y su "Para qué" acompañan a la **primera** acción reutilizada (cuando la parte de dentro trae su propio "Dónde", se ve el de dentro); su "Debes ver", a la **última**, si con ella se acaba el paso.
 - **Hecho o consultado, se lee:** un paso así, revisado con "Anterior" o abierto desde el índice, dice "Hecha" (o "Qué hacer" en la consulta), su título y lo que pide, parte por parte (título y acciones), sin casillas, sin abrir nada y sin decir de dónde sale.
 - **Lo opcional sigue siendo un desvío**, dicho sin vocabulario interno: una consulta ("Si lo necesitas") o una contingencia ("Si esto falla") se ofrece en una tarjeta con su estado ("Sin empezar", "A medias", "Hecha") y su acción ("Abrir", "Seguir donde ibas", "Ver de nuevo"); al abrirla ocupa el sitio de la acción con su rótulo, su nombre y **"Volver al paso N"**. La hoja de falla dice "Abrir la contingencia" y "Este paso no tiene una contingencia documentada…". Si algo no está en el dispositivo: "«X» no está disponible en este dispositivo… Avisa a quien mantiene la guía."
 - **Ningún texto de la ejecución dice** "guía vinculada", "subguía", "procedimiento vinculado", "subartículo", "guía principal", "Estás realizando", "Abrir guía", "Guía necesaria" ni "Volver a la guía principal".
 - **La vista de paso entero** recorre lo reutilizado dentro del paso, sin su fila propia ni sus requisitos, con el "Debes ver" del paso después de esas acciones; la guía que exige una tarea se recorre ahí mismo (antes era un enlace "se abre aparte" que no cumplía el requisito) y el "No" de una decisión dice **"No, seguir con «X»"** y su fila **"Si la respuesta es no"**. El título del paso recibe el foco al entrar en él.
-- **Foco:** cada pantalla nueva (orientación, requisitos, cada acción, "Comprueba antes de seguir", "Antes de terminar, comprueba" y "Guía terminada") pone el foco del lector de pantalla y del teclado en su encabezado.
+- **Foco:** cada pantalla nueva (orientación, requisitos, cada acción, la comprobación final ("¿Quedó resuelto?" o, a mitad del flujo, "¿Quedó bien?") y "Guía terminada") pone el foco del lector de pantalla y del teclado en su encabezado.
+
+**REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 328, [DECISIONES.md](DECISIONES.md) AD-078, [REGLAS.md](REGLAS.md) regla 30).** Cambia cómo se ve la ejecución, no lo que hace. Manda sobre todo lo que sigue en esta sección donde choquen:
+
+```
+ ✕  Guía · POSPN01                  🔍  [2/4 ▾]   (cabecera de dos líneas; "Guía" sin equipo)
+    Título de la guía…
+ ▬▬▬ ▬▬▬ ▭▭▭ ▭▭▭ ▭▭▭                              (un segmento por paso y uno por la comprobación final)
+ ↺ Retomando · paso 2 de 4      Empezar de nuevo
+ ▬ ▭  acción 1 de 2                               (si el paso tiene varias acciones)
+
+ QUÉ HACER · COMPRUEBA · DECIDE                   (12.5 px, en acento, verde o neutro)
+ INSTRUCCIÓN (26 px; 23 px a 320 de ancho)
+ ↳ CÓMO HACERLO   [1] Abre Archivo.  [2] …        (el número en su caja)
+ </> DATO TÉCNICO  [ chrome://settings   ⧉ ]      (IBM Plex Mono, copiar de 44 px)
+ [‹]  [■ ✓ Completar y seguir ■]                  (62 px; el control grande, relleno)
+          ⚠ Tengo un problema
+```
+
+- **La cabecera dice con qué equipo:** sobre el título, **"Guía · {equipo}"** (el de la dirección o, al retomar, el que guardó el avance) o **"Guía"** sin equipo. El título va en una línea y, entero, en el índice.
+- **El contador "2/4"** es un botón que se ve como tal: IBM Plex Mono sobre fondo tenue, en el color del texto (antes, 13 px en el acento). Abre "Ruta de la guía" como siempre. En la comprobación final dice **"Final"** y no se toca.
+- **Los segmentos van dentro de la cabecera**, bajo su línea, y ya no se desplazan con el paso: 4 px, el hecho en acento, el que se ve en blanco, el resto apagado y, si la guía tiene comprobaciones finales, **uno más al final** para ellas. Consultando otro paso, ese va en ámbar. Solo en el teléfono, y solo en la guía principal; la guía de un diagnóstico guiado (con su cabecera normal) los conserva en el cuerpo.
+- **El control grande va relleno** de acento ("Completar y seguir", "Completar y terminar", "Entiendo, continuar", "Ir al paso N", "Terminar", el "Sí" de una decisión): es la única acción rellena de la pantalla (regla 30). Inactivo ("Elige una opción", "Completa «X»", "Marca 2 comprobaciones") va sobre fondo tenue y se lee. **"Anterior"** sigue delineado, 62 × 62. **"Tengo un problema"**, "Desmarcar" y los controles de la consulta pasan a 14 px.
+- **Cómo hacerlo:** en la acción a la vez, cada número va en su caja de 24 px (IBM Plex Mono, fondo tenue); la frase sigue siendo texto normal. En el paso entero, la lectura y "Probar" no cambia.
+- **El dato técnico** ocupa el ancho, en IBM Plex Mono a 15 px, con **"Copiar el dato"** (44 px) a su derecha, en todas las vistas.
+- **La advertencia previa** conserva su pantalla: barra roja, "Antes de continuar" a 26 px (23 a 320) y "Lo que sigue" a 17 px.
+- **La comprobación final** tiene la forma de una acción: el rótulo verde **"Comprueba"**, la pregunta **"¿Quedó resuelto?"** al tamaño de la instrucción y la línea "Marca lo que comprobaste. Hasta entonces la guía no se da por terminada."; cada comprobación es una casilla de 64 px con borde. A mitad del flujo de otra guía, **"¿Quedó bien?"** y "Marca lo que comprobaste para seguir.". El control dice **"Marca N comprobaciones"** y, con todas, **"Terminar"** (antes "Finalizar"): los tres gestos de la regla 28 no cambian.
+- **"Guía terminada"**: "Salir de la guía" va relleno; "Empezar de nuevo" sigue delineado.
+- **Pendiente de la misma tarea:** la credencial como fila con borde que abre su hoja (hoy sigue en el bloque "Credencial necesaria"). "Información" y "Nota del equipo" del diseño no se añaden: se retiraron de la ejecución en la tarea 307 (regla 27).
 
 **PROPUESTA FINAL DE CLAUDE DESIGN (desde el 2026-10-01, tarea 287, [DECISIONES.md](DECISIONES.md) AD-060).** La pantalla responde "¿qué tengo que hacer ahora?" y la acción manda. Manda sobre todo lo que sigue en esta sección donde choquen:
 
@@ -1743,7 +1771,7 @@ Recientes, etc. ─┘      │
    Más información ▾                               (para qué, consejos, apoyos del paso)
    [‹]  [ Siguiente › ]  /  [ Terminar ✓ ]  /  [ Sí ] [ No ]
             Tengo un problema
- → Antes de terminar, comprueba (si hay comprobaciones finales)
+ → ¿Quedó resuelto? (si hay comprobaciones finales)
  → "Guía terminada": Salir de la guía · Empezar de nuevo
 ```
 

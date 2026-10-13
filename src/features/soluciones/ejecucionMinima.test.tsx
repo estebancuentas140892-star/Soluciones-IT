@@ -191,7 +191,8 @@ describe('una sola instrucción principal', () => {
     expect(instrucciones()).toHaveLength(1)
     const [h2] = instrucciones()
     expect(h2.textContent).toBe(ACCION_1)
-    expect(h2.classList.contains('text-[26px]')).toBe(true)
+    expect(h2.classList.contains('min-[375px]:text-[26px]')).toBe(true)
+    expect(h2.classList.contains('text-[23px]')).toBe(true)
     // Nunca se recorta: parte la línea dentro de su columna (regla 23).
     expect(h2.classList.contains('min-w-0')).toBe(true)
     expect(h2.classList.contains('[overflow-wrap:anywhere]')).toBe(true)
@@ -267,7 +268,7 @@ function conMarcaSinPalabra(palabra: string): void {
   // Secundaria: solo el icono, en verde y del tamaño del rótulo, sin texto.
   expect(marca?.textContent).toBe('')
   expect(marca?.classList.contains('text-noct-exito')).toBe(true)
-  expect(marca?.querySelector('svg')?.getAttribute('width')).toBe('13')
+  expect(marca?.querySelector('svg')?.getAttribute('width')).toBe('14')
   expect(textoPantalla()).not.toMatch(PALABRAS_DE_ESTADO)
 }
 
@@ -440,7 +441,9 @@ describe('"Cómo hacerlo" queda intacto', () => {
     await abrir()
     const valor = elementoCon(DATO)
     expect(valor.classList.contains('font-mono')).toBe(true)
-    expect(Array.from(valor.parentElement?.children ?? []).some((h) => h.textContent === 'Dato técnico')).toBe(true)
+    expect(Array.from(valor.parentElement?.parentElement?.children ?? []).some((h) => h.textContent === 'Dato técnico')).toBe(true)
+    // Se copia con un toque (tarea 328), sin teclearlo.
+    expect(valor.parentElement?.querySelector('button[aria-label="Copiar el dato"]')).not.toBeNull()
   })
 })
 

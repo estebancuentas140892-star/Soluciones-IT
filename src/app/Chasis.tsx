@@ -12,7 +12,7 @@ import { BotonVolver } from '../components/BotonVolver'
 import { Marca } from '../components/Marca'
 import { huecoAvisoActualizacionChasis } from '../components/ranuraAvisoActualizacion'
 import { CapaAtajos } from './CapaAtajos'
-import { ProveedorBandaTarea } from './bandaTarea'
+import { ProveedorBandaBajoTarea, ProveedorBandaTarea } from './bandaTarea'
 import { direccionPara } from './direccionTransicion'
 import { useOrigen } from './useOrigen'
 import { destinoDePestana, useMemoriaPestana } from './memoriaPestana'
@@ -191,6 +191,11 @@ interface PropsTarea extends PropsComunes {
   rotulo: string
   /** Sobre qué. */
   titulo: string
+  /**
+   * Con qué, a 11.5 px sobre el título de la cabecera compacta ("Guía ·
+   * POSPN01", tarea 328). Sin él, el título va solo en su línea.
+   */
+  contexto?: string
   /** Ruta de vuelta escrita ("Guías › Impresoras"). */
   vuelta?: string
   /** Override del destino de la X. */
@@ -283,6 +288,9 @@ export function Chasis(props: Props) {
   // el primer render llegaría con `null` y la banda no aparecería hasta
   // el siguiente cambio de estado del asistente.
   const [ranuraTarea, setRanuraTarea] = useState<HTMLDivElement | null>(null)
+  // La segunda ranura de la cabecera compacta, bajo su línea (tarea 328):
+  // ahí van los segmentos de la guía. En estado por el mismo motivo.
+  const [ranuraBajoTarea, setRanuraBajoTarea] = useState<HTMLDivElement | null>(null)
   // Buscador en capa sobre una tarea (tarea 241). Vive aqui y no dentro
   // de la pantalla porque la cabecera que lo invoca tambien es del
   // chasis; la capa se monta en un portal a <body>, asi que abrirla no
@@ -325,6 +333,7 @@ export function Chasis(props: Props) {
           <BarraTarea
             rotulo={props.rotulo}
             titulo={props.titulo}
+            contexto={props.contexto}
             // El origen manda sobre la vuelta derivada, pero no sobre la
             // que la pantalla escribe a mano: cuando una tarea sabe
             // nombrar su vuelta ("Guías › Impresoras"), sabe más que el
@@ -359,8 +368,13 @@ export function Chasis(props: Props) {
                 momento (el paso actual del asistente): ver
                 src/app/bandaTarea.tsx. */}
             {!props.compacta && <div ref={setRanuraTarea} />}
+            {props.compacta && <div ref={setRanuraBajoTarea} />}
           </BarraTarea>
-          <ProveedorBandaTarea value={ranuraTarea}>{props.children}</ProveedorBandaTarea>
+          <ProveedorBandaTarea value={ranuraTarea}>
+            <ProveedorBandaBajoTarea value={props.compacta ? ranuraBajoTarea : undefined}>
+              {props.children}
+            </ProveedorBandaBajoTarea>
+          </ProveedorBandaTarea>
         </div>
         {/* MODO CONSULTA (encargo del 2026-09-16, secciones 8 a 11): sobre
             una tarea nada de la capa navega. Las fichas se consultan en su

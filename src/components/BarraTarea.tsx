@@ -26,6 +26,13 @@ interface Props {
   /** Sobre qué: el nombre del artículo, del equipo, del secreto. */
   titulo: string
   /**
+   * Con qué se trabaja, en una línea pequeña sobre el título (solo en modo
+   * `compacta`). En la ejecución de una guía, "Guía · POSPN01" o "Guía"
+   * (rediseño móvil "1b Pulgar", tarea 328): la cabecera dice en dos
+   * líneas qué se hace y sobre qué equipo, sin depender del contador.
+   */
+  contexto?: string
+  /**
    * Ruta de vuelta escrita ("Guías › Impresoras"). Si no se pasa, se
    * deriva de la jerarquía central; cuando esta solo sabe decir
    * "Volver" (editar y ejecutar suben a una ficha cuyo nombre depende
@@ -81,6 +88,7 @@ interface Props {
 export function BarraTarea({
   rotulo,
   titulo,
+  contexto,
   vuelta,
   salidaA,
   salidaEstado,
@@ -98,7 +106,7 @@ export function BarraTarea({
   if (compacta) {
     return (
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-surface/[.95] backdrop-blur-[12px]">
-        <div className="flex h-11 items-center gap-1 pl-1 pr-1">
+        <div className={`flex items-center gap-1 pl-1 pr-1 ${contexto ? 'min-h-[50px] py-0.5' : 'h-11'}`}>
           {alSalir ? (
             <button
               type="button"
@@ -120,7 +128,17 @@ export function BarraTarea({
               <X size={19} aria-hidden />
             </Link>
           )}
-          <h1 className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-tight">{titulo}</h1>
+          {contexto ? (
+            // Dos líneas: con qué (12 px, el mínimo de texto) y qué (14 px
+            // seminegrita). El título se recorta en una línea: entero se
+            // lee en el índice de pasos, que abre el contador.
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[12px] leading-[1.3] text-noct-neutral-500">{contexto}</p>
+              <h1 className="truncate text-[14px] font-semibold leading-[1.3]">{titulo}</h1>
+            </div>
+          ) : (
+            <h1 className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-tight">{titulo}</h1>
+          )}
           {onBuscar && (
             <button
               type="button"

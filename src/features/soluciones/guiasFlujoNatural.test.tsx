@@ -542,11 +542,11 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     sinArquitectura()
 
     await tocar(await esperarControl('Completar y seguir'))
-    await esperar(() => textoPantalla().includes('Comprueba antes de seguir'), 'la comprobación de lo reutilizado')
+    await esperar(() => textoPantalla().includes('¿Quedó bien?'), 'la comprobación de lo reutilizado')
     expect(textoPantalla()).not.toContain('Antes de terminar')
     // El lector de pantalla y el teclado siguen en lo que acaba de aparecer.
     await esperar(
-      () => document.activeElement?.textContent?.includes('Comprueba antes de seguir'),
+      () => document.activeElement?.textContent?.includes('¿Quedó bien?'),
       'el foco en la comprobación',
     )
     sinArquitectura()
@@ -563,7 +563,7 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     expect(guia?.procedimiento?.pasos).toHaveLength(7)
   })
 
-  it('desde "Comprueba antes de seguir", "Anterior" vuelve a la última acción reutilizada, sin perder nada ni enseñar la credencial (tarea 308)', async () => {
+  it('desde "¿Quedó bien?", "Anterior" vuelve a la última acción reutilizada, sin perder nada ni enseñar la credencial (tarea 308)', async () => {
     await sembrarCasoAlimentacion()
     await anclarMaestra()
     await sembrarCredencial({
@@ -578,11 +578,11 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     await empezarGuia()
     await completarHasta('Abre el programa de caja e ingresa su contraseña')
     await tocar(await esperarControl('Completar y seguir'))
-    await esperar(() => textoPantalla().includes('Comprueba antes de seguir'), 'la comprobación de lo reutilizado')
+    await esperar(() => textoPantalla().includes('¿Quedó bien?'), 'la comprobación de lo reutilizado')
     // Su pie: "Anterior" y lo que falta, inactivo. Lo de dentro no se
     // "finaliza": sigue solo al marcar su última comprobación.
-    expect(control('Falta 1 comprobación')?.hasAttribute('disabled')).toBe(true)
-    expect(control('Finalizar')).toBeNull()
+    expect(control('Marca 1 comprobación')?.hasAttribute('disabled')).toBe(true)
+    expect(control('Terminar')).toBeNull()
     const antes = await db.progresoPasos.get('guia-alimentacion')
 
     await tocar(await esperarControl(/^Anterior/))
@@ -590,7 +590,7 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
       () => textoPantalla().includes('Abre el programa de caja e ingresa su contraseña'),
       'la última acción reutilizada',
     )
-    expect(textoPantalla()).not.toContain('Comprueba antes de seguir')
+    expect(textoPantalla()).not.toContain('¿Quedó bien?')
     // La credencial sigue con su acción, sin enseñar su valor.
     expect(textoPantalla()).toContain('Acceso de prueba al programa de caja')
     expect(textoPantalla()).not.toContain('Clave-De-Prueba-7')
@@ -600,7 +600,7 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     expect(await db.progresoPasos.get('guia-alimentacion')).toEqual(antes)
 
     await tocar(await esperarControl('Seguir'))
-    await esperar(() => textoPantalla().includes('Comprueba antes de seguir'), 'de vuelta en la comprobación')
+    await esperar(() => textoPantalla().includes('¿Quedó bien?'), 'de vuelta en la comprobación')
     await tocar(await esperar(() => document.body.querySelector<HTMLElement>('[role="checkbox"]'), 'la comprobación'))
     await esperar(() => textoPantalla().includes('Si aparece el aviso inicial, selecciona Salir'), 'el paso 2')
     expect((await db.progresoPasos.get('guia-alimentacion'))?.pasosHechos).toEqual(['ali-p1'])

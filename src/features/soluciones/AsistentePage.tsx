@@ -8,6 +8,7 @@ import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/proc
 import { registrarVisita } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
+import { esIdDeEquipo } from '../boveda/credencialDelEquipo'
 import { AsistenteVista } from './AsistenteVista'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
 
@@ -51,6 +52,16 @@ export function AsistentePage() {
     to: origen?.to ?? padreDe(pathname)?.to ?? '/soluciones',
     estado: estadoDeRegreso(origen),
   }
+
+  // LA CABECERA DICE CON QUÉ EQUIPO SE TRABAJA (rediseño móvil "1b Pulgar",
+  // tarea 328): "Guía · POSPN01" sobre el título, o "Guía" sin equipo. Con
+  // el mismo orden que `ProveedorEjecucion`: el de la dirección (que también
+  // recibe el que se elige dentro de la guía) y, si no hay, el que guardó el
+  // avance al retomar.
+  const filaAvance = useLiveQuery(() => db.progresoPasos.get(articuloId), [articuloId])
+  const idEquipo = esIdDeEquipo(equipoInicial) ? equipoInicial : (filaAvance?.equipoId ?? null)
+  const equipo = useLiveQuery(() => (idEquipo ? db.dispositivos.get(idEquipo) : undefined), [idEquipo])
+  const contexto = equipo && !equipo.eliminadoEn ? `Guía · ${equipo.nombre}` : 'Guía'
 
   const articulo = useLiveQuery(() => db.articulos.get(articuloId), [articuloId])
   const procedimiento = useMemo(() => normalizarProcedimiento(articulo?.procedimiento), [articulo])
@@ -97,6 +108,7 @@ export function AsistentePage() {
       conBusqueda
       rotulo="Ejecutando"
       titulo={articulo.titulo}
+      contexto={contexto}
       salidaEtiqueta="Salir de la guía"
     >
       {/* Sin relleno inferior propio: la acción dominante fija de

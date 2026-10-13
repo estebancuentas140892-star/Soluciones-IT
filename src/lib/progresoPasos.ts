@@ -52,7 +52,7 @@ export interface AvanceProcedimiento {
   // ruta de esta ejecución.
   elecciones?: Record<string, string>
   // La comprobación final se está marcando y todavía no se pulsó
-  // "Finalizar" (tarea 308): ver `ProgresoPasos.cierrePendiente`.
+  // "Terminar" (tarea 308): ver `ProgresoPasos.cierrePendiente`.
   cierrePendiente?: boolean
 }
 
@@ -136,7 +136,7 @@ async function guardarProgreso(
     pasosSaltados: actual?.pasosSaltados,
     // Las respuestas de la ejecucion (tarea 302): marcar avance no las toca.
     elecciones: actual?.elecciones,
-    // La comprobacion final abierta (tarea 308): solo la cierra "Finalizar".
+    // La comprobacion final abierta (tarea 308): solo la cierra "Terminar".
     cierrePendiente: actual?.cierrePendiente,
     // El equipo de la ejecucion (tarea 290): marcar avance no lo toca.
     equipoId: actual?.equipoId,
@@ -444,7 +444,7 @@ export function contarInstruccionesHechas(
 // Alterna una casilla de "Verificacion final" (por indice, igual que
 // las instrucciones de un paso: no tienen id propio).
 //
-// `conFinalizar` (tarea 308): la ejecucion se cierra con "Finalizar", no
+// `conFinalizar` (tarea 308): la ejecucion se cierra con "Terminar", no
 // al marcar la ultima casilla. Marcar deja la comprobacion ABIERTA
 // (`cierrePendiente`), asi que tenerlas todas marcadas todavia no termina
 // la guia: se puede volver atras a revisar sin que nada se de por cerrado.

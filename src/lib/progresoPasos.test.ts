@@ -175,13 +175,13 @@ describe('verificación final', () => {
     expect(verificacionFinalCompleta((await db.progresoPasos.get('articulo-1'))?.verificacionHecha, 2)).toBe(false)
   })
 
-  // Tarea 308: con "Finalizar", marcar deja la comprobacion abierta.
-  it('sin "Finalizar" marcar no deja nada abierto, como siempre', async () => {
+  // Tarea 308: con "Terminar", marcar deja la comprobacion abierta.
+  it('sin "Terminar" marcar no deja nada abierto, como siempre', async () => {
     await alternarVerificacionFinal('articulo-1', 0)
     expect((await db.progresoPasos.get('articulo-1'))?.cierrePendiente).toBeUndefined()
   })
 
-  it('con "Finalizar" marcar deja la comprobacion abierta, y solo finalizarEjecucion la cierra', async () => {
+  it('con "Terminar" marcar deja la comprobacion abierta, y solo finalizarEjecucion la cierra', async () => {
     await establecerPasoHecho('articulo-1', 'paso-a', true)
     await alternarVerificacionFinal('articulo-1', 0, true)
     await alternarVerificacionFinal('articulo-1', 1, true)

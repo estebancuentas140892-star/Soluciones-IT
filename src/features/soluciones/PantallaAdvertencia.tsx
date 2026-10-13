@@ -66,7 +66,7 @@ export function PantallaAdvertencia({
     <div className="flex flex-col gap-7">
       <section
         aria-labelledby={idTitulo}
-        className={`flex flex-col gap-3.5 rounded-r-2xl border-l-4 px-4 py-4 ${tono.claseBarra} ${tono.claseFondo}`}
+        className={`flex flex-col gap-3.5 rounded-r-[18px] border-l-4 px-4 py-4 ${tono.claseBarra} ${tono.claseFondo}`}
       >
         <h2
           id={idTitulo}
@@ -83,7 +83,7 @@ export function PantallaAdvertencia({
             {tono.etiqueta}
             <span className="sr-only">.</span>
           </span>{' '}
-          <span className="text-[26px] font-medium leading-[1.25] tracking-[-.01em] text-noct-text">
+          <span className="text-[23px] font-semibold leading-[1.25] tracking-[-.01em] text-noct-text min-[375px]:text-[26px]">
             Antes de continuar
           </span>
         </h2>
@@ -94,7 +94,7 @@ export function PantallaAdvertencia({
           <ArrowDown size={13} className="shrink-0" aria-hidden />
           Lo que sigue
         </p>
-        <p className="text-[18px] leading-snug text-pretty text-noct-neutral-200 [overflow-wrap:anywhere]">{loQueSigue}</p>
+        <p className="text-[17px] leading-[1.4] text-pretty text-noct-neutral-200 [overflow-wrap:anywhere]">{loQueSigue}</p>
       </div>
     </div>
   )

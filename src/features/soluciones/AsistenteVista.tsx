@@ -34,7 +34,7 @@ import {
 } from '../../lib/preferenciasEjecucion'
 import { registrarIntervencion } from '../../lib/repositorio'
 import { conOrigen } from '../../lib/origenNavegacion'
-import { BandaTarea } from '../../app/bandaTarea'
+import { BandaBajoTarea, BandaTarea } from '../../app/bandaTarea'
 import { Adjuntos } from '../../components/Adjuntos'
 import {
   ArrowRight,
@@ -50,7 +50,7 @@ import {
   Wrench,
   X,
 } from '../../components/iconos'
-import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
@@ -81,7 +81,7 @@ import { estadoVinculo, kickerVinculo } from './estadoVinculo'
 import { TarjetaGuiaVinculada } from './TarjetaGuiaVinculada'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos } from './HojaPasos'
-import { AntesDeEmpezar, BOTON_ANTERIOR, BotonPrincipal, ModoFoco } from './ModoFoco'
+import { AntesDeEmpezar, BOTON_ANTERIOR, BotonPrincipal, ModoFoco, TEXTO_INSTRUCCION } from './ModoFoco'
 import { RutaProcedimiento } from './RutaProcedimiento'
 import { presenciaDeAviso } from './tonos'
 import { HojaFalla } from './HojaFalla'
@@ -329,7 +329,7 @@ export function AsistenteVista({
       // Solo en la guía principal: dentro de una ejecución, una guía
       // vinculada terminada está terminada para ESTE caso.
       // Con la comprobación final abierta (tarea 308) NO está terminada: se
-      // retoma en ella, con lo marcado, y sin "Finalizar" nada se cerró.
+      // retoma en ella, con lo marcado, y sin "Terminar" nada se cerró.
       if (
         nivel === 0 &&
         prog &&
@@ -403,7 +403,7 @@ export function AsistenteVista({
     nivel,
     onCompletado,
     onAvanzar: (destino) => irAPaso(destino),
-    // La guía que se abrió se termina con "Finalizar" (tarea 308). Lo de
+    // La guía que se abrió se termina con "Terminar" (tarea 308). Lo de
     // dentro de ella sigue al marcar su última comprobación: es parte de un
     // flujo que continúa, no el cierre de la ejecución.
     cierreConFinalizar: nivel === 0,
@@ -491,7 +491,7 @@ export function AsistenteVista({
 
   // LA COMPROBACIÓN FINAL ES UN ESTADO DE LA EJECUCIÓN, NO SU FIN (tarea
   // 308). Se llega con "Siguiente" desde la última acción, "Anterior" vuelve
-  // a ella y solo "Finalizar" termina. Por eso la condición es `todoCompletado`
+  // a ella y solo "Terminar" termina. Por eso la condición es `todoCompletado`
   // (que ya cuenta la comprobación abierta) y no las casillas marcadas.
   if (indiceActual === null && pasosCompletados && verificacionFinal.length > 0 && !todoCompletado) {
     const marcadasComprobacion = new Set(progreso?.verificacionHecha ?? [])
@@ -514,50 +514,88 @@ export function AsistenteVista({
     }
     return (
       <div className={`flex flex-col ${conPie ? 'flex-1' : ''}`}>
-        <div className={`flex flex-col gap-4 pt-3 ${conPie ? 'pb-6' : ''}`}>
+        {/* En la guía principal, los segmentos de la cabecera con el último,
+            el de la comprobación, a la vista, y "Final" donde va el contador
+            (rediseño móvil "1b Pulgar", tarea 328). */}
+        {nivel === 0 && (
+          <>
+            <BandaTarea>
+              <span className="flex h-11 shrink-0 items-center px-1">
+                <span className="flex min-h-[34px] items-center rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text">
+                  Final
+                </span>
+              </span>
+            </BandaTarea>
+            <BandaBajoTarea enLineaSinCabecera>
+              {(enCabecera) => (
+                <SegmentosDePasos
+                  resumenes={resumirPasos(pasos, hechos, instruccionesHechas, null, new Set(progreso?.pasosSaltados ?? []))}
+                  total={totalPasos}
+                  indiceVisto={null}
+                  indiceTrabajo={null}
+                  consultando={false}
+                  conComprobacion
+                  enComprobacion
+                  enCabecera={enCabecera}
+                />
+              )}
+            </BandaBajoTarea>
+          </>
+        )}
+        <div className={`flex flex-col gap-[18px] pt-[18px] ${conPie ? 'pb-6' : ''}`}>
           {/* En el flujo de otra guía, su avance es el de esa guía: una barra
-              de esta mediría otra cosa (tarea 289). */}
-          {!integrada && <Encabezado porcentaje={porcentaje} completado={false} />}
+              de esta mediría otra cosa (tarea 289). La guía principal ya lo
+              dice con los segmentos de su cabecera. */}
+          {!integrada && nivel !== 0 && <Encabezado porcentaje={porcentaje} completado={false} />}
           {/* LA COMPROBACIÓN FINAL NO ES UNA ADVERTENCIA (G-23, regla
               M-R11): iba en ámbar, el color de los riesgos. Es el último
-              vistazo antes de dar el trabajo por hecho. */}
-          <div className="rounded-xl border border-noct-divider bg-noct-surface px-4 py-3.5">
-            <EncabezadoConFoco className="flex items-center gap-2 text-[16px] font-medium text-noct-text">
-              <SealCheck size={18} className="shrink-0 text-noct-accent-300" aria-hidden />
+              vistazo antes de dar el trabajo por hecho. Desde la tarea 328
+              tiene la forma de una acción de la guía: el rótulo verde de
+              "Comprueba", la pregunta al tamaño de la instrucción y una
+              casilla de 64 px por comprobación. */}
+          <div className="flex flex-col gap-1.5">
+            <p className="flex items-center gap-1.5 text-[12.5px] font-bold uppercase leading-snug tracking-[.06em] text-noct-exito">
+              <SealCheck size={14} className="shrink-0" aria-hidden />
+              Comprueba
+            </p>
+            <EncabezadoConFoco className={`${TEXTO_INSTRUCCION} text-noct-text`}>
               {/* A mitad del flujo no se termina nada: se comprueba y se sigue. */}
-              {integrada ? 'Comprueba antes de seguir' : 'Antes de terminar, comprueba'}
+              {integrada ? '¿Quedó bien?' : '¿Quedó resuelto?'}
             </EncabezadoConFoco>
-            <ul className="mt-2 flex flex-col gap-0.5">
-              {verificacionFinal.map((item, indice) => {
-                const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
-                return (
-                  <li key={indice}>
-                    <button
-                      type="button"
-                      role="checkbox"
-                      aria-checked={marcada}
-                      onClick={() => void alternarVerificacion(indice)}
-                      className="flex min-h-12 w-full items-start gap-3 rounded-lg px-1 py-2 text-left"
-                    >
-                      <span
-                        aria-hidden
-                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-[1.5px] ${
-                          marcada
-                            ? 'border-noct-exito bg-noct-exito/15 text-noct-exito'
-                            : 'border-noct-neutral-500 text-transparent'
-                        }`}
-                      >
-                        <Check size={14} />
-                      </span>
-                      <span className={`text-[15px] leading-snug ${marcada ? 'text-noct-neutral-400' : 'text-noct-text'}`}>
-                        {item}
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
+            <p className="text-[15px] leading-[1.45] text-noct-neutral-300">
+              {integrada
+                ? 'Marca lo que comprobaste para seguir.'
+                : 'Marca lo que comprobaste. Hasta entonces la guía no se da por terminada.'}
+            </p>
           </div>
+          <ul className="flex flex-col gap-2">
+            {verificacionFinal.map((item, indice) => {
+              const marcada = (progreso?.verificacionHecha ?? []).includes(indice)
+              return (
+                <li key={indice}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={marcada}
+                    onClick={() => void alternarVerificacion(indice)}
+                    className="flex min-h-16 w-full items-center gap-3.5 rounded-[14px] border-[1.5px] border-noct-text/25 bg-noct-surface px-3.5 py-2 text-left active:bg-noct-neutral-800"
+                  >
+                    <span
+                      aria-hidden
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${
+                        marcada ? 'border-noct-exito bg-noct-exito text-noct-bg' : 'border-noct-neutral-500 text-transparent'
+                      }`}
+                    >
+                      <Check size={17} />
+                    </span>
+                    <span className={`text-[15.5px] leading-[1.35] ${marcada ? 'text-noct-neutral-300' : 'text-noct-text'}`}>
+                      {item}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
         </div>
         {conPie && (
           <PieDeComprobacion
@@ -592,7 +630,8 @@ export function AsistenteVista({
             <Link
               to={salida.to}
               state={salida.estado}
-              className="mt-2 flex h-14 w-full max-w-xs items-center justify-center gap-2 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] text-[16px] font-semibold text-noct-accent-300 active:bg-noct-accent/[.3]"
+              // La única acción rellena de la pantalla (regla 30, tarea 328).
+              className={`mt-2 w-full max-w-xs ${BTN_PRIMARIO_RELLENO}`}
             >
               Salir de la guía
             </Link>
@@ -678,8 +717,8 @@ export function AsistenteVista({
   // comprobaciones de esta por delante): a mitad del recorrido nada dice
   // "terminar" (tarea 289, fase 3). Con una decisión sin responder tampoco:
   // lo que sigue depende de la respuesta (tarea 302). Y con comprobaciones
-  // finales tampoco (tarea 308): cerrar el último paso lleva a "Antes de
-  // terminar, comprueba" y lo que termina es "Finalizar", así que el botón
+  // finales tampoco (tarea 308): cerrar el último paso lleva a la
+  // comprobación final y lo que termina es "Terminar", así que el botón
   // dice "Completar y seguir" y no promete terminar.
   const terminaDeVerdad =
     destinoTrasEste === null &&
@@ -884,18 +923,27 @@ export function AsistenteVista({
             ? { tipo: 'borrador' }
             : null
 
-  // Lo que va entre la cabecera y el paso: los segmentos de la guía (solo
-  // en el teléfono) y la línea de estado. Solo en la guía principal.
+  // Lo que orienta en la guía principal: los segmentos (solo en el
+  // teléfono), dentro de la cabecera compacta desde la tarea 328, y entre
+  // la cabecera y el paso, la línea de estado.
   const estadoUI =
     nivel === 0 ? (
       <div className="flex flex-none flex-col">
-        <SegmentosDePasos
-          resumenes={resumenes}
-          total={totalPasos}
-          indiceVisto={indiceActual}
-          indiceTrabajo={trabajo}
-          consultando={consultando}
-        />
+        {/* Sin cabecera compacta (la guía dentro de un diagnóstico guiado),
+            en el cuerpo, donde iban antes. */}
+        <BandaBajoTarea enLineaSinCabecera>
+          {(enCabecera) => (
+            <SegmentosDePasos
+              resumenes={resumenes}
+              total={totalPasos}
+              indiceVisto={indiceActual}
+              indiceTrabajo={trabajo}
+              consultando={consultando}
+              conComprobacion={verificacionFinal.length > 0}
+              enCabecera={enCabecera}
+            />
+          )}
+        </BandaBajoTarea>
         <LineaDeEstado estado={estadoLinea} />
       </div>
     ) : null
@@ -1557,11 +1605,17 @@ function ContadorPaso({
       onClick={onAbrirIndice}
       aria-haspopup="dialog"
       aria-label={nombreDelContador(indice, total)}
-      className="flex h-11 shrink-0 items-center gap-1 rounded-lg px-2 font-mono text-[14px] font-semibold text-noct-accent-300 hover:bg-noct-text/[.07]"
+      // UN BOTÓN QUE SE VE COMO BOTÓN (tarea 328): "2/4" en IBM Plex Mono
+      // a 14.5 px sobre fondo tenue, en el color del texto. Antes era texto
+      // de 13 px en el acento y "dónde estoy" dependía de leer dos líneas
+      // pequeñas (hallazgo 2 de la auditoría móvil). El toque sigue siendo
+      // de 44 px: la caja visible mide 34 dentro de él.
+      className="group flex h-11 shrink-0 items-center px-1"
     >
-      {indice + 1}
-      <span className="text-[12px] font-normal text-noct-neutral-400">/{total ?? '…'}</span>
-      <CaretDown size={12} className="text-noct-neutral-400" aria-hidden />
+      <span className="flex min-h-[34px] items-center gap-1 rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text group-hover:bg-noct-text/[.1]">
+        {indice + 1}/{total ?? '…'}
+        <CaretDown size={12} className="text-noct-neutral-400" aria-hidden />
+      </span>
     </button>
   )
 }
@@ -1573,8 +1627,8 @@ function nombreDelContador(indice: number, total: number | null): string {
 }
 
 // EL ENCABEZADO DE UNA PANTALLA DE CIERRE RECIBE EL FOCO AL APARECER
-// (tarea 289, fase 3). "Comprueba antes de seguir", "Antes de terminar,
-// comprueba" y "Guía terminada" sustituyen a la última acción, y el foco se
+// (tarea 289, fase 3). La comprobación final ("¿Quedó resuelto?" o, a mitad
+// del flujo, "¿Quedó bien?") y "Guía terminada" sustituyen a la última acción, y el foco se
 // quedaba en nada: el lector de pantalla no anunciaba lo nuevo y el teclado
 // volvía a empezar desde arriba. Es el mismo gesto que el encabezado de
 // cada acción (`ModoFoco`) y de la preparación (`PantallaPreparacion`).
@@ -1593,11 +1647,11 @@ function EncabezadoConFoco({ className, children }: { className: string; childre
 
 // EL PIE DE LA COMPROBACIÓN FINAL (tarea 308). Es el mismo de cada acción
 // del modo foco ("Anterior" a la izquierda, el control grande a la derecha,
-// 64 px), así que quien pulsó "Siguiente" por error encuentra la vuelta donde
+// 62 px), así que quien pulsó "Siguiente" por error encuentra la vuelta donde
 // la encuentra siempre. Antes esta pantalla no tenía pie: solo se podía
 // marcar o salir. "Anterior" solo mueve la vista. El control grande dice
-// "Finalizar" cuando todo está marcado y, si falta algo, cuánto, inactivo y
-// legible (`cierreDeLaComprobacion`). Pegajoso como los demás pies, con el
+// "Terminar" (relleno, desde la tarea 328) cuando todo está marcado y, si
+// falta algo, cuántas marcar, inactivo y legible (`cierreDeLaComprobacion`). Pegajoso como los demás pies, con el
 // hueco del aviso de versión nueva encima (tarea 273).
 function PieDeComprobacion({
   onAnterior,

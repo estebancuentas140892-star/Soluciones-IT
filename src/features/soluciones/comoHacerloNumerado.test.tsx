@@ -259,7 +259,8 @@ describe('cuántas microacciones (Modo Foco)', () => {
     expect(lista.tagName).toBe('OL')
     expect(lista.hasAttribute('role')).toBe(false)
     expect(Array.from(lista.children).map((li) => li.tagName)).toEqual(['LI', 'LI', 'LI', 'LI', 'LI', 'LI'])
-    expect(lista.classList.contains('list-decimal')).toBe(true)
+    // El número, en su caja (tarea 328): un contador de CSS, fuera del texto.
+    expect(lista.classList.contains('[counter-reset:micro]')).toBe(true)
     const rotulo = document.getElementById(lista.getAttribute('aria-labelledby') ?? '') as HTMLElement
     expect(rotulo.textContent).toBe('Cómo hacerlo')
     expect(rotulo.compareDocumentPosition(lista) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

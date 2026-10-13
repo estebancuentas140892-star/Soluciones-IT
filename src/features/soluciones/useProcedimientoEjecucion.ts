@@ -127,7 +127,7 @@ export function useProcedimientoEjecucion({
   const pasosCompletados = pasos.length > 0 && ruta.pendiente === null && completados === pasos.length
   const verificacionCompleta = verificacionFinalCompleta(progreso?.verificacionHecha, verificacionFinal.length)
   // Las casillas marcadas no bastan mientras la comprobación siga abierta:
-  // solo "Finalizar" termina (tarea 308, la misma regla que `guiaTerminada`).
+  // solo "Terminar" termina (tarea 308, la misma regla que `guiaTerminada`).
   const comprobacionAbierta = verificacionFinal.length > 0 && progreso?.cierrePendiente === true
   const todoCompletado = pasosCompletados && verificacionCompleta && !comprobacionAbierta
 
@@ -299,7 +299,7 @@ export function useProcedimientoEjecucion({
     }
     const prog = await leerAvance(clave)
     // Con la comprobación final abierta (tarea 308), volver a cerrar el
-    // último paso lleva a ella, no la cierra: eso es de "Finalizar".
+    // último paso lleva a ella, no la cierra: eso es de "Terminar".
     if (
       verificacionFinalCompleta(prog?.verificacionHecha, verificacionFinal.length) &&
       !(verificacionFinal.length > 0 && prog?.cierrePendiente === true)

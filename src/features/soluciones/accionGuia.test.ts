@@ -112,7 +112,7 @@ describe('accionDeGuia con comprobaciones finales', () => {
     expect(accion.estado).toBe('repetir')
   })
 
-  it('con todas marcadas pero la comprobacion abierta, sin "Finalizar", sigue siendo continuar (tarea 308)', () => {
+  it('con todas marcadas pero la comprobacion abierta, sin "Terminar", sigue siendo continuar (tarea 308)', () => {
     const accion = accionDeGuia(
       CON_COMPROBACIONES,
       { pasosHechos: ['p1', 'p2'], verificacionHecha: [0, 1], cierrePendiente: true },

@@ -247,10 +247,12 @@ describe('una acción a la vez (Modo Foco)', () => {
     expect(como.querySelector('button')).toBeNull()
     expect(como.querySelector('[aria-expanded]')).toBeNull()
 
-    // Numerada, sin tarjetas: una lista ordenada con sus elementos.
+    // Numerada, sin tarjetas: una lista ordenada con sus elementos. Desde la
+    // tarea 328 el número va en su caja, dibujada por un contador de CSS.
     expect(lista.tagName).toBe('OL')
     expect(Array.from(lista.children).every((li) => li.tagName === 'LI')).toBe(true)
-    expect(lista.classList.contains('list-decimal')).toBe(true)
+    expect(lista.classList.contains('[counter-reset:micro]')).toBe(true)
+    expect(Array.from(lista.children).every((li) => li.classList.contains('before:content-[counter(micro)]'))).toBe(true)
     expect(clasesDe(lista).filter((c) => /^bg-|^rounded|^shadow|^border/.test(c))).toEqual([])
     // La ubicación vive DENTRO de su número, en una línea propia, más
     // pequeña y en gris; la palabra solo la oye el lector de pantalla.
@@ -297,7 +299,7 @@ describe('una acción a la vez (Modo Foco)', () => {
     // pequeño como el de "Dato técnico".
     expect(clases).toContain('text-[16px]')
     expect(clases.filter((c) => /^text-\[(2[0-9]|[3-9][0-9])px\]$|^text-(xl|[2-9]xl)$/.test(c))).toEqual([])
-    expect(instruccion().classList.contains('text-[26px]')).toBe(true)
+    expect(instruccion().classList.contains('min-[375px]:text-[26px]')).toBe(true)
     const rotulo = como.firstElementChild as HTMLElement
     expect(rotulo.textContent).toBe('Cómo hacerlo')
     expect(rotulo.classList.contains('uppercase')).toBe(true)

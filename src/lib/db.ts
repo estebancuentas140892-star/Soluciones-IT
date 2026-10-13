@@ -1375,10 +1375,10 @@ export interface ProgresoPasos {
   // decisión respondida, que es lo correcto.
   elecciones?: Record<string, string>
   // LA COMPROBACIÓN FINAL SIGUE ABIERTA (tarea 308): se marcaron casillas
-  // de "Antes de terminar, comprueba" y todavía no se pulsó "Finalizar".
+  // de la comprobación final y todavía no se pulsó "Terminar".
   // Mientras valga true la ejecución NO está terminada, aunque estén todas
   // marcadas: entrar a la comprobación, marcarla o volver atrás desde ella
-  // no cierran nada; solo "Finalizar" la cierra (y lo pone en false).
+  // no cierran nada; solo "Terminar" la cierra (y lo pone en false).
   // Opcional: en las filas de antes no existe, y ahí terminar era marcar
   // la última comprobación, que se respeta. Local como el resto.
   cierrePendiente?: boolean

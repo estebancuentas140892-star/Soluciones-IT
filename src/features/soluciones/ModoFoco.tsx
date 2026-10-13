@@ -304,13 +304,27 @@ function adjuntosDe(bloques: BloquePaso[]): PasoAdjunto[] {
   return bloques.flatMap((b) => (b.adjunto ? [b.adjunto] : []))
 }
 
-// Clases compartidas de los controles del pie. 64 px de alto: es lo que
+// Clases compartidas de los controles del pie. 62 px de alto: es lo que
 // se toca sin mirar, de pie frente al equipo. Inactivo NO es transparente:
-// el rótulo dice qué falta y tiene que leerse (borde y texto neutros).
+// el rótulo dice qué falta y tiene que leerse (fondo tenue y texto neutro).
+//
+// RELLENO DESDE EL REDISEÑO MÓVIL "1b PULGAR" (tarea 328, regla 30): el
+// control grande es la única acción rellena de la pantalla, la que hace
+// avanzar. Hasta entonces iba delineado con un tinte del 16 % y de un
+// vistazo pesaba casi como "Anterior" (hallazgo 3 de la auditoría móvil).
+// "Anterior" sigue delineado: solo mueve la vista.
 const BOTON_PRINCIPAL =
-  'flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-accent bg-noct-accent/[.16] px-3.5 text-[17px] font-semibold text-noct-accent-200 active:bg-noct-accent/[.3] disabled:border-noct-neutral-700 disabled:bg-noct-text/[.04] disabled:text-noct-neutral-400'
+  'flex h-[62px] min-w-0 flex-1 items-center justify-center gap-2.5 rounded-[18px] bg-noct-accent px-3.5 text-[17px] font-semibold text-noct-on-accent hover:bg-noct-accent-300 active:bg-noct-accent-500 disabled:bg-noct-text/[.06] disabled:text-noct-neutral-400'
 export const BOTON_ANTERIOR =
-  'flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border-[1.5px] border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-30'
+  'flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-[18px] border-[1.5px] border-noct-text/25 text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-35'
+
+// LA INSTRUCCIÓN, el texto que domina la pantalla (regla 27 a): 26 px desde
+// 375 de ancho y 23 en el teléfono más estrecho (320), donde 26 partía
+// palabras largas en dos líneas de más. Peso 550, la jerarquía la da el
+// tamaño y no el negro. El color lo pone cada uso. Nunca se recorta (regla
+// 23): parte la línea dentro de su columna.
+export const TEXTO_INSTRUCCION =
+  'min-w-0 text-[23px] font-[550] leading-[1.28] tracking-[-.012em] text-pretty [overflow-wrap:anywhere] min-[375px]:text-[26px]'
 
 // EL CONTROL GRANDE DEL PIE, con la gramática de la propuesta final: el
 // icono y el rótulo dicen la consecuencia (la marca cierra, la flecha solo
@@ -1039,7 +1053,7 @@ export function ModoFoco({
               ? `No: seguir con «${tarea.decisionGuiaTitulo || 'la salida'}»`
               : 'No: registrar la respuesta y seguir'
           }
-          className="flex h-16 min-w-0 flex-1 items-center justify-center gap-2.5 rounded-2xl border-2 border-noct-neutral-600 px-3 text-[18px] font-semibold text-noct-neutral-200 active:bg-noct-text/10"
+          className="flex h-[62px] min-w-0 flex-1 items-center justify-center gap-2.5 rounded-[18px] border-[1.5px] border-noct-text/25 px-3 text-[18px] font-semibold text-noct-neutral-200 active:bg-noct-text/10"
         >
           <X size={20} className="shrink-0" aria-hidden />
           No
@@ -1126,7 +1140,7 @@ export function ModoFoco({
             <PantallaAdvertencia alertas={alertasDe(indice)} loQueSigue={textoInstruccion} refTitulo={encabezado} />
           </div>
         ) : (
-        <div className={`flex flex-col gap-4 ${separacionAccion}`}>
+        <div className={`flex flex-col gap-[22px] ${separacionAccion}`}>
         {/* LA ACCIÓN Y CÓMO HACERLA (tarea 307). Primero la instrucción y,
             pegados a ella porque son SUYOS, "Cómo hacerlo" y el dato
             técnico, con menos peso porque no son otra orden. El riesgo ya
@@ -1147,9 +1161,7 @@ export function ModoFoco({
               id={conOpciones ? idPregunta : undefined}
               tabIndex={-1}
               data-foco-lectura
-              className={`min-w-0 text-[26px] font-medium leading-[1.3] tracking-[-.01em] text-pretty outline-none [overflow-wrap:anywhere] ${
-                hecha ? 'text-noct-neutral-400' : 'text-noct-text'
-              }`}
+              className={`${TEXTO_INSTRUCCION} outline-none ${hecha ? 'text-noct-neutral-400' : 'text-noct-text'}`}
             >
               {textoInstruccion}
             </h2>
@@ -1354,7 +1366,7 @@ export function ModoFoco({
                   type="button"
                   disabled={!consultaPuedeVolver}
                   onClick={consultaAnterior}
-                  className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text disabled:opacity-40"
+                  className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-[14px] font-semibold text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text disabled:opacity-40"
                 >
                   <CaretLeft size={14} className="shrink-0" aria-hidden />
                   Acción anterior
@@ -1363,7 +1375,7 @@ export function ModoFoco({
                   type="button"
                   disabled={!consultaPuedeSeguir}
                   onClick={consultaSiguiente}
-                  className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text disabled:opacity-40"
+                  className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-[14px] font-semibold text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text disabled:opacity-40"
                 >
                   Acción siguiente
                   <CaretRight size={14} className="shrink-0" aria-hidden />
@@ -1377,7 +1389,7 @@ export function ModoFoco({
               onClick={() => onFalla(tarea.texto)}
               aria-haspopup="dialog"
               aria-label="Tengo un problema con esta acción: ver las salidas"
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-[14px] font-semibold text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text"
             >
               <Warning size={15} className="shrink-0" aria-hidden />
               Tengo un problema
@@ -1386,7 +1398,7 @@ export function ModoFoco({
               <button
                 type="button"
                 onClick={desmarcar}
-                className="inline-flex min-h-11 items-center rounded-lg px-3 text-[13px] font-medium text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text"
+                className="inline-flex min-h-11 items-center rounded-lg px-3 text-[14px] font-semibold text-noct-neutral-400 hover:bg-noct-text/[.07] hover:text-noct-text"
               >
                 Desmarcar
               </button>
@@ -1426,9 +1438,9 @@ export function AntesDeEmpezar({ requisitos }: { requisitos: string[] }) {
 }
 
 // QUÉ CLASE DE TRABAJO ES ESTA ACCIÓN (encargo del 2026-09-22, sección
-// 4). Una palabra y un icono, siempre los dos: azul para la acción
-// (entrar, abrir, seleccionar), verde para la comprobación y neutro para
-// la decisión.
+// 4). Una palabra y un icono, siempre los dos: el acento para la acción
+// (entrar, abrir, seleccionar; era azul hasta la tarea 327), verde para la
+// comprobación y neutro para la decisión.
 //
 // EL ESTADO NO SUSTITUYE A LA FUNCIÓN (tarea 307). Hasta ahora una acción
 // ya hecha cambiaba "Qué hacer" por "Hecha": el rótulo dejaba de decir qué
@@ -1456,14 +1468,14 @@ function EtiquetaDeAccion({
         ? { Icono: Question, palabra: 'Decide', color: 'text-noct-neutral-300' }
         : { Icono: CursorClick, palabra: 'Qué hacer', color: 'text-noct-accent-300' }
   return (
-    <p className="flex items-center gap-2 text-[12px] leading-snug">
-      <span className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-[.06em] ${color}`}>
-        <Icono size={13} className="shrink-0" aria-hidden />
+    <p className="flex items-center gap-2 text-[12.5px] leading-snug">
+      <span className={`inline-flex items-center gap-1.5 font-bold uppercase tracking-[.06em] ${color}`}>
+        <Icono size={14} className="shrink-0" aria-hidden />
         {palabra}
       </span>
       {hecha && (
         <span role="img" aria-label="Completada" className="inline-flex shrink-0 text-noct-exito">
-          <Check size={13} aria-hidden />
+          <Check size={14} aria-hidden />
         </span>
       )}
     </p>

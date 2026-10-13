@@ -305,7 +305,7 @@ describe('ejemplo C: las respuestas cambian el camino', () => {
 })
 
 describe('la comprobación final del procedimiento del recorrido (tarea 308)', () => {
-  it('entrar a ella no continúa el recorrido, "Anterior" vuelve a la última acción y solo "Finalizar" sigue', async () => {
+  it('entrar a ella no continúa el recorrido, "Anterior" vuelve a la última acción y solo "Terminar" sigue', async () => {
     await sembrarImpresora()
     const guia = await db.articulos.get('guia-conectar')
     if (!guia?.procedimiento) throw new Error('sin guía')
@@ -322,18 +322,18 @@ describe('la comprobación final del procedimiento del recorrido (tarea 308)', (
     // Con comprobaciones, la última acción lleva a ellas: no promete terminar.
     expect(principal('Completar y terminar')).toBeNull()
     await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir'))
-    await esperar(() => textoPantalla().includes('Antes de terminar, comprueba'), 'la comprobación final')
+    await esperar(() => textoPantalla().includes('¿Quedó resuelto?'), 'la comprobación final')
     expect(textoPantalla()).not.toContain('¿Ahora imprime una página de prueba?')
 
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('Agregar la impresora compartida de prueba'), 'de vuelta en la última acción')
     expect(ubicacionActual().pathname).toBe('/diagnostico/rec-impresora')
     await tocar(await esperarControl('Seguir'))
-    await esperar(() => textoPantalla().includes('Antes de terminar, comprueba'), 'otra vez la comprobación')
+    await esperar(() => textoPantalla().includes('¿Quedó resuelto?'), 'otra vez la comprobación')
 
     await tocar(await esperar(() => document.body.querySelector<HTMLElement>('[role="checkbox"]'), 'la casilla'))
-    const finalizar = await esperar(() => principal('Finalizar'), '"Finalizar"')
-    // Todo marcado y el recorrido todavía espera: lo que cierra es "Finalizar".
+    const finalizar = await esperar(() => principal('Terminar'), '"Terminar"')
+    // Todo marcado y el recorrido todavía espera: lo que cierra es "Terminar".
     expect(textoPantalla()).not.toContain('¿Ahora imprime una página de prueba?')
     await tocar(finalizar)
     await esperar(() => textoPantalla().includes('¿Ahora imprime una página de prueba?'), 'la pregunta siguiente')

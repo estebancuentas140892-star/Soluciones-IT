@@ -195,9 +195,10 @@ describe('Precaución: la advertencia previa y después la acción', () => {
     for (const deLaAccion of ['Qué hacer', 'Cómo hacerlo', 'Dato técnico', DATO, 'Credencial necesaria', CREDENCIAL, 'Debes ver']) {
       expect(texto).not.toContain(deLaAccion)
     }
-    // El control: el botón principal de siempre, nunca en rojo.
+    // El control: el botón principal de siempre (relleno desde la tarea
+    // 328), nunca en rojo.
     const boton = principal('Entiendo, continuar') as HTMLElement
-    expect(boton.className).toContain('border-noct-accent')
+    expect(boton.className).toContain('bg-noct-accent')
     expect(boton.className).not.toContain('noct-error')
     expect(principal('Completar y seguir')).toBeNull()
   })

@@ -235,7 +235,7 @@ describe('guiaTerminada', () => {
     expect(guiaTerminada(guia([]), undefined, undefined)).toBe(true)
   })
 
-  // Tarea 308: la comprobacion final se cierra con "Finalizar".
+  // Tarea 308: la comprobacion final se cierra con "Terminar".
   it('con la comprobacion final abierta no termina aunque esten todas marcadas', () => {
     const g = guia(['p1'], ['Comprobar A', 'Comprobar B'])
     expect(guiaTerminada(g, ['p1'], [0, 1], undefined, true)).toBe(false)
@@ -250,10 +250,10 @@ describe('guiaTerminada', () => {
 })
 
 describe('cierreDeLaComprobacion (tarea 308)', () => {
-  it('dice "Finalizar" solo con todo marcado; si no, cuantas faltan', () => {
-    expect(cierreDeLaComprobacion(2, 0)).toEqual({ listo: false, etiqueta: 'Faltan 2 comprobaciones' })
-    expect(cierreDeLaComprobacion(2, 1)).toEqual({ listo: false, etiqueta: 'Falta 1 comprobación' })
-    expect(cierreDeLaComprobacion(2, 2)).toEqual({ listo: true, etiqueta: 'Finalizar' })
-    expect(cierreDeLaComprobacion(1, 0)).toEqual({ listo: false, etiqueta: 'Falta 1 comprobación' })
+  it('dice "Terminar" solo con todo marcado; si no, cuantas faltan', () => {
+    expect(cierreDeLaComprobacion(2, 0)).toEqual({ listo: false, etiqueta: 'Marca 2 comprobaciones' })
+    expect(cierreDeLaComprobacion(2, 1)).toEqual({ listo: false, etiqueta: 'Marca 1 comprobación' })
+    expect(cierreDeLaComprobacion(2, 2)).toEqual({ listo: true, etiqueta: 'Terminar' })
+    expect(cierreDeLaComprobacion(1, 0)).toEqual({ listo: false, etiqueta: 'Marca 1 comprobación' })
   })
 })

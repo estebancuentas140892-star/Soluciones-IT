@@ -84,10 +84,10 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
     - Estado por URL: cuando la pantalla de origen tenía un filtro que importa reponer, viaja en la URL (`/soluciones?categoria=<id>` repone el chip) para volver "exactamente como estaba". En Soluciones la categoría es un FILTRO de la lista, no una pantalla propia (decisión del usuario, 2026-07-18).
 
 28. **Durante la ejecución de una guía, un error de navegación se corrige sin perder nada** (regla acordada con el usuario el 2026-10-07, tarea 308; el porqué técnico en [DECISIONES.md](DECISIONES.md) AD-069):
-    - **Ninguna pantalla de la ejecución deja al técnico sin volver atrás.** "Antes de terminar, comprueba" lleva "Anterior" en su pie, como cada acción: una navegación principal, nunca un gesto del navegador, un menú, un enlace pequeño ni el encabezado.
+    - **Ninguna pantalla de la ejecución deja al técnico sin volver atrás.** La comprobación final ("¿Quedó resuelto?"; "Antes de terminar, comprueba" hasta la tarea 328) lleva "Anterior" en su pie, como cada acción: una navegación principal, nunca un gesto del navegador, un menú, un enlace pequeño ni el encabezado.
     - **Volver es por el camino recorrido**, nunca "el anterior de la lista de la guía": con decisiones, por la ruta de las respuestas dadas; desde la comprobación final, a la última acción que se recorrió de verdad.
     - **Volver no deshace nada:** ni acciones hechas, ni respuestas, ni el camino elegido, ni lo reutilizado, ni lo marcado en la comprobación. Una acción ya hecha se revisa con su marca.
-    - **Entrar, volver y terminar son tres gestos distintos.** "Siguiente" en la última acción entra a la comprobación final; "Anterior" vuelve; solo "Finalizar" termina la guía. Llegar a la comprobación, o marcarla entera, no la termina.
+    - **Entrar, volver y terminar son tres gestos distintos.** "Siguiente" en la última acción entra a la comprobación final; "Anterior" vuelve; solo "Terminar" termina la guía (se llamó "Finalizar" hasta la tarea 328). Llegar a la comprobación, o marcarla entera, no la termina.
 
 ## Bóveda
 

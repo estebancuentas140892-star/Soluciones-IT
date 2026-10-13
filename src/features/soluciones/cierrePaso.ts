@@ -227,9 +227,9 @@ export function cierreDelPaso({
  * Sin pasos que ejecutar no hay nada que cerrar (caso K1: una guia que
  * es solo metadata): no bloquea, como no bloqueaba antes.
  *
- * Y LA COMPROBACION FINAL SE CIERRA CON "FINALIZAR" (tarea 308). Con
- * `cierrePendiente` (las casillas se marcaron en la pantalla "Antes de
- * terminar, comprueba" y todavia no se pulso "Finalizar") la guia no esta
+ * Y LA COMPROBACION FINAL SE CIERRA CON "TERMINAR" (tarea 308; "Finalizar"
+ * hasta la 328). Con `cierrePendiente` (las casillas se marcaron en la
+ * comprobacion final y todavia no se pulso "Terminar") la guia no esta
  * terminada aunque esten todas: entrar a la comprobacion, marcarla o volver
  * atras desde ella no cierran nada. Sin comprobaciones no hay nada que
  * dejar abierto, y una fila de antes de la 308 no lo trae: ahi terminar
@@ -253,11 +253,15 @@ export function guiaTerminada(
 /**
  * EL CONTROL DE LA COMPROBACION FINAL (tarea 308), con la misma gramatica
  * que `cierreDelPaso`: nunca promete lo que no hara. Con todas las casillas
- * marcadas dice "Finalizar" y cierra la ejecucion; si falta alguna, dice
- * cuantas, inactivo y legible.
+ * marcadas dice "Terminar" y cierra la ejecucion; si falta alguna, pide
+ * cuantas, inactivo y legible ("Marca 2 comprobaciones").
+ *
+ * Hasta el rediseño movil "1b Pulgar" (tarea 328) decia "Finalizar" y, si
+ * faltaba algo, "Faltan N comprobaciones". El gesto no cambia: entrar,
+ * volver y terminar siguen siendo tres gestos distintos (regla 28).
  */
 export function cierreDeLaComprobacion(total: number, marcadas: number): { listo: boolean; etiqueta: string } {
   const faltan = Math.max(0, total - marcadas)
-  if (faltan === 0) return { listo: true, etiqueta: 'Finalizar' }
-  return { listo: false, etiqueta: faltan === 1 ? 'Falta 1 comprobación' : `Faltan ${faltan} comprobaciones` }
+  if (faltan === 0) return { listo: true, etiqueta: 'Terminar' }
+  return { listo: false, etiqueta: faltan === 1 ? 'Marca 1 comprobación' : `Marca ${faltan} comprobaciones` }
 }

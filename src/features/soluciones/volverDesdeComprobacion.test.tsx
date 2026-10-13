@@ -32,7 +32,7 @@ import { ProveedorEjecucion } from './ProveedorEjecucion'
 
 // VOLVER DESDE LA COMPROBACIÓN FINAL (tarea 308).
 //
-// "Antes de terminar, comprueba" era la vista sin paso de la ejecución
+// "¿Quedó resuelto?" era la vista sin paso de la ejecución
 // (`indiceActual` null) y no tenía pie: quien pulsaba "Siguiente" por error
 // en la última acción quedaba atrapado ahí, sin poder revisar lo que acababa
 // de hacer. Ahora es un estado más de la ejecución, con tres conceptos que no
@@ -43,7 +43,7 @@ import { ProveedorEjecucion } from './ProveedorEjecucion'
 //   - "Anterior" vuelve a la última acción realmente recorrida (por la ruta
 //     de las respuestas, nunca la anterior en la lista de la guía), sin
 //     desmarcar ni cambiar nada;
-//   - solo "Finalizar" termina la ejecución.
+//   - solo "Terminar" termina la ejecución.
 //
 // Se recorre con la pantalla de verdad (`GuiaPage`). Todo lo sembrado es
 // INVENTADO.
@@ -58,7 +58,7 @@ const RUTAS = [
   { ruta: '/soluciones', elemento: <p>LISTA DE GUÍAS</p> },
 ]
 
-const COMPROBACION = 'Antes de terminar, comprueba'
+const COMPROBACION = '¿Quedó resuelto?'
 
 // LA GUÍA LINEAL: A → B → C, con C de dos acciones; la segunda trae todo lo
 // que la ejecución enseña (riesgo, "Cómo hacerlo" numerado, dato técnico y
@@ -231,18 +231,18 @@ describe('guía lineal: A → B → C → comprobación final', () => {
     expect(avance?.cierrePendiente).toBeFalsy()
     expect(await terminada('guia-lineal')).toBe(false)
 
-    // "Anterior" es una navegación principal: el mismo botón de 64 px de cada
-    // acción, en el pie pegajoso, activo.
+    // "Anterior" es una navegación principal: el mismo botón de cada acción
+    // (62 px desde la tarea 328), en el pie pegajoso, activo.
     const boton = await anterior()
     expect(boton.hasAttribute('disabled')).toBe(false)
-    expect(boton.className).toContain('h-16')
-    expect(boton.className).toContain('w-16')
+    expect(boton.className).toContain('h-[62px]')
+    expect(boton.className).toContain('w-[62px]')
     expect(boton.closest('.sticky')).not.toBeNull()
-    // Con casillas sin marcar, el control dice cuántas faltan, inactivo.
-    const cierre = principal('Faltan 2 comprobaciones')
+    // Con casillas sin marcar, el control dice cuántas marcar, inactivo.
+    const cierre = principal('Marca 2 comprobaciones')
     expect(cierre?.hasAttribute('disabled')).toBe(true)
-    expect(cierre?.className).toContain('h-16')
-    expect(principal('Finalizar')).toBeNull()
+    expect(cierre?.className).toContain('h-[62px]')
+    expect(principal('Terminar')).toBeNull()
     // La pantalla sigue siendo la de siempre: el título y sus casillas.
     expect(casillas()).toHaveLength(2)
     for (const texto of COMPROBACIONES) expect(textoPantalla()).toContain(texto)
@@ -322,19 +322,19 @@ describe('guía lineal: A → B → C → comprobación final', () => {
   })
 })
 
-describe('solo "Finalizar" termina la ejecución', () => {
-  it('marcar todas las casillas no termina; "Anterior" sigue funcionando y conserva lo marcado; "Finalizar" termina', async () => {
+describe('solo "Terminar" termina la ejecución', () => {
+  it('marcar todas las casillas no termina; "Anterior" sigue funcionando y conserva lo marcado; "Terminar" termina', async () => {
     await sembrarLineal()
     await montar(RUTAS, RUTA_LINEAL)
     await lineaHastaLaComprobacion()
 
     await tocar(casillas()[0])
-    await esperar(() => principal('Falta 1 comprobación'), 'falta una')
-    expect(principal('Falta 1 comprobación')?.hasAttribute('disabled')).toBe(true)
+    await esperar(() => principal('Marca 1 comprobación'), 'falta una')
+    expect(principal('Marca 1 comprobación')?.hasAttribute('disabled')).toBe(true)
     await tocar(casillas()[1])
-    const finalizar = await esperar(() => principal('Finalizar'), '"Finalizar"')
+    const finalizar = await esperar(() => principal('Terminar'), '"Terminar"')
     expect(finalizar.hasAttribute('disabled')).toBe(false)
-    // Con todo marcado, la guía TODAVÍA no está terminada: falta "Finalizar".
+    // Con todo marcado, la guía TODAVÍA no está terminada: falta "Terminar".
     expect(textoPantalla()).toContain(COMPROBACION)
     expect(textoPantalla()).not.toContain('Guía terminada')
     await esperarQue(async () => (await fila('guia-lineal'))?.cierrePendiente === true, 'la comprobación abierta')
@@ -355,7 +355,7 @@ describe('solo "Finalizar" termina la ejecución', () => {
     expect(casillas().map((c) => c.getAttribute('aria-checked'))).toEqual(['true', 'true'])
     expect(await fila('guia-lineal')).toEqual(antes)
 
-    await tocar(await esperar(() => principal('Finalizar'), '"Finalizar"'))
+    await tocar(await esperar(() => principal('Terminar'), '"Terminar"'))
     await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía terminada')
     await esperarQue(async () => (await fila('guia-lineal'))?.cierrePendiente === false, 'la comprobación cerrada')
     expect(await terminada('guia-lineal')).toBe(true)
@@ -376,7 +376,7 @@ describe('solo "Finalizar" termina la ejecución', () => {
     await enLaComprobacion()
     // No se tomó por terminada (abrir una terminada empieza un caso nuevo).
     expect(casillas().map((c) => c.getAttribute('aria-checked'))).toEqual(['true', 'true'])
-    expect(principal('Finalizar')).not.toBeNull()
+    expect(principal('Terminar')).not.toBeNull()
     expect((await fila('guia-lineal'))?.ejecucionId).toBe('ejecucion-de-prueba')
 
     await tocar(await anterior())
@@ -532,7 +532,7 @@ describe('regresiones', () => {
     expect(await fila('guia-si-no')).toEqual(antes)
   })
 
-  it('"Probar" (la vista de lista) no cambia: marcar la última comprobación la termina, sin "Finalizar"', async () => {
+  it('"Probar" (la vista de lista) no cambia: marcar la última comprobación la termina, sin "Terminar"', async () => {
     const pasos = pasosLineales()
     const raiz = 'vista-previa:guia-lineal:prueba'
     await db.progresoPasos.put({
