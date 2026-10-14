@@ -63,7 +63,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 5 | Mantenimiento y autorización (tres formas de dato) | 331 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 6 | Agenda y Más | 332 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 7 | Tema claro | 333 | Bloqueada: contradice la regla 12 y depende de RP-3 |
-| (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Pendiente de decisión |
+| (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Decidido: verde lima; integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | Pendiente de decisión |
 
 ### 327. Rediseño móvil, paso 1: tokens cian, IBM Plex Mono local y botón primario relleno
@@ -125,6 +125,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Impacto:** medio.
 - **Prioridad:** Media. **Estado:** Integrada en `main` (2026-10-13) y desplegada, pendiente de la confirmación visual del usuario en producción; no se archiva hasta entonces. **Hecho:** `ContadoresAgenda` (en `SeccionesAgenda.tsx`, compartido con `ResolverPage.tsx`) arriba de la Agenda en lugar de `ResumenDelDia` (retirado); "Todo al día por hoy" en verde suave; cabeceras de grupo a 15 px con conteo en mono; fila plegada "Sin fecha" al final con En curso y Por revisar del equipo (abierta si no hay nada con fecha); "Ver los otros N" a 14 px. Más (`FilasMas.tsx`, `PantallaMas.tsx`): rótulos a 13,5 px en minúsculas, filas de 60 px; Herramientas de inventario cambia con ellas. AD-082.
 - **Área afectada:** los archivos citados y sus pruebas (`masInfraestructura.test.tsx` y las de la Agenda).
+- **Dependencias:** 327.
+
+### 334. El color de categoría 6 coincide con el acento cian
+
+- **Título:** decidir si `noct-cat-6` se mueve para no leerse como "esto se toca".
+- **Descripción:** `src/index.css`: `--color-noct-cat-6: oklch(0.75 0.11 200)` tiene el mismo matiz que el acento nuevo (`oklch(0.82 0.11 200)`, tarea 327). El handoff movió el tipo "configuración" de 195 a 175 por el mismo motivo, pero no dice nada de las categorías. Opciones: dejarlo (la categoría tiñe chips y cabeceras de grupo, que también se tocan), o mover el 6 a otro matiz sin chocar con el 5 (170) ni el 7 (235).
+- **Motivo:** hallazgo de la tarea 327.
+- **Impacto:** bajo: solo la sexta categoría y las que repiten el ciclo.
+- **Prioridad:** Baja. **Estado:** Integrada en `main` (2026-10-13) y desplegada, pendiente de la confirmación visual del usuario en producción; no se archiva hasta entonces. **Decisión del usuario (2026-10-13):** mover solo la 6 a verde lima. **Hecho:** `--color-noct-cat-6` en `src/index.css` (línea 191 aprox.) de `oklch(0.75 0.11 200)` a `oklch(0.75 0.11 118)`, con su comentario. AD-083.
+- **Área afectada:** `src/index.css` (`--color-noct-cat-6`).
 - **Dependencias:** 327.
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
@@ -593,16 +603,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Prioridad:** Baja. **Estado:** Bloqueada: contradice la regla 12 (la app es de tema oscuro únicamente) y requiere la recomendación de producto RP-3 (preferencia de tema oscuro, claro o automático en Ajustes). No se implementa sin decisión del usuario.
 - **Área afectada:** `src/index.css`, Ajustes.
 - **Dependencias:** decisión del usuario sobre RP-3 y la regla 12; 327.
-
-### 334. El color de categoría 6 coincide con el acento cian
-
-- **Título:** decidir si `noct-cat-6` se mueve para no leerse como "esto se toca".
-- **Descripción:** `src/index.css`: `--color-noct-cat-6: oklch(0.75 0.11 200)` tiene el mismo matiz que el acento nuevo (`oklch(0.82 0.11 200)`, tarea 327). El handoff movió el tipo "configuración" de 195 a 175 por el mismo motivo, pero no dice nada de las categorías. Opciones: dejarlo (la categoría tiñe chips y cabeceras de grupo, que también se tocan), o mover el 6 a otro matiz sin chocar con el 5 (170) ni el 7 (235).
-- **Motivo:** hallazgo de la tarea 327.
-- **Impacto:** bajo: solo la sexta categoría y las que repiten el ciclo.
-- **Prioridad:** Baja. **Estado:** Pendiente de decisión del usuario.
-- **Área afectada:** `src/index.css` (`--color-noct-cat-6`).
-- **Dependencias:** 327.
 
 ### 335. Recomendaciones de producto del rediseño móvil (RP-1, RP-2 y RP-4)
 

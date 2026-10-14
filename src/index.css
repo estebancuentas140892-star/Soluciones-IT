@@ -176,13 +176,19 @@
      del icono de cada articulo, el estado el punto de un equipo). La
      propuesta original sugeria retirar el color por tipo para dejar el
      color solo a la categoria; el usuario decidio el 2026-07-21
-     conservarlo, porque justamente lo habia pedido en la tarea 73. */
+     conservarlo, porque justamente lo habia pedido en la tarea 73.
+
+     La 6 estaba en 200, el mismo matiz que el acento cian del rediseño
+     movil "1b Pulgar" (tarea 327), que significa "esto se toca". Desde
+     la tarea 334 (2026-10-13, decision del usuario) va en 118, verde
+     lima, en el hueco que habia entre la 3 (95) y la 4 (140): solo
+     cambia ella y el cian queda para las acciones. */
   --color-noct-cat-1: oklch(0.75 0.11 25);
   --color-noct-cat-2: oklch(0.75 0.11 60);
   --color-noct-cat-3: oklch(0.75 0.11 95);
   --color-noct-cat-4: oklch(0.75 0.11 140);
   --color-noct-cat-5: oklch(0.75 0.11 170);
-  --color-noct-cat-6: oklch(0.75 0.11 200);
+  --color-noct-cat-6: oklch(0.75 0.11 118);
   --color-noct-cat-7: oklch(0.75 0.11 235);
   --color-noct-cat-8: oklch(0.75 0.11 270);
   --color-noct-cat-9: oklch(0.75 0.11 300);

@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Cambiado (colores, tarea 334): la categoría 6 pasa de cian a verde lima
+
+**Área modificada:** `src/index.css` (`--color-noct-cat-6`).
+**Tipo:** Modificado; Documentación (DECISIONES AD-083, TAREAS 334).
+**Motivo:** hallazgo de la tarea 327: la categoría 6 tenía el mismo matiz que el acento cian, que significa "esto se toca". Decisión del usuario del 2026-10-13.
+**Qué cambia:** `--color-noct-cat-6` de `oklch(0.75 0.11 200)` a `oklch(0.75 0.11 118)`. Los chips, cabeceras y rejillas de las categorías con ese color se ven verde lima. Las otras nueve no cambian.
+**Estructura de datos:** sin cambios (la clave `cat-6` guardada sigue valiendo).
+**Verificación:** suite completa, `tsc -b`, lint y build en verde; en el navegador, el valor calculado del token.
+**Impacto esperado:** ninguna categoría se confunde con una acción.
+
 ### Cambiado (Agenda y Más, tarea 332): contadores arriba, "Sin fecha" plegado y Más más legible
 
 **Área modificada:** `src/features/inicio/SeccionesAgenda.tsx` (`ContadoresAgenda` nuevo, `ResumenDelDia` retirado, "Sin fecha"), `AgendaPage.tsx`, `ResolverPage.tsx` (usa `ContadoresAgenda`), `src/features/mas/FilasMas.tsx` y `PantallaMas.tsx`.
