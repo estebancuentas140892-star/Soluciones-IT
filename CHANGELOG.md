@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Cambiado (búsqueda, tarea 330, tercera parte): chips de alcance y el buscador global con el campo abajo
+
+**Área modificada:** `src/features/busqueda/alcanceBusqueda.ts`, `ChipsDeAlcance.tsx` y `useIdsDeRed.ts` (nuevos), `BuscadorGlobal.tsx`, `src/features/inicio/ResolverPage.tsx`, `src/components/useAltoDelTeclado.ts` (nuevo, sale de `DockBusqueda.tsx`).
+**Tipo:** Modificado y Agregado; Documentación (BUSCADOR 7.11, DECISIONES AD-080 decisión 5, DOCUMENTACION_FUNCIONAL 5.1, COMPONENTES_UI 2.10d-ter y 3.8c, TAREAS 330).
+**Motivo:** encargo del 2026-10-13, paso 4 del rediseño móvil "1b Pulgar".
+**Qué cambia:** al buscar, con resultados de más de una clase, chips "Todo", "Equipos", "Red", "Guías", "Personas", "Lugares" y "Claves" con su conteo, que solo filtran la vista (en Resolver y en el buscador global). El buscador global pasa a tener el regreso y el título arriba, los chips, la lista y el campo abajo, pegado al teclado; desplazar la lista cierra el teclado.
+**Estructura de datos:** sin cambios. No cambia qué se indexa ni el orden.
+**Verificación:** prueba nueva `alcanceBusqueda.test.tsx`; suite completa, `tsc -b`, lint y build en verde. En el navegador a 375 px: la búsqueda global desde Más con chips y el campo abajo.
+**Impacto esperado:** acotar una búsqueda larga de un toque, sin escribir otra cosa.
+
 ### Cambiado (Resolver, tarea 330, segunda parte): necesita atención con contadores, la fila de la agenda con barra de estado, "Seguir donde ibas" y "Guías" por categoría
 
 **Área modificada:** `src/features/inicio/ResolverPage.tsx` (`BloqueAtencion`, `BloqueSeguir` nuevo, `BloqueRecientes`, `BloqueAccesos`), `src/features/inicio/SeccionesAgenda.tsx` (`FilaAgenda`).

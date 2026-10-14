@@ -22,6 +22,9 @@ import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
+import { alcanceEfectivo, conteoPorAlcance, filtrarPorAlcance, type Alcance } from '../busqueda/alcanceBusqueda'
+import { ChipsDeAlcance } from '../busqueda/ChipsDeAlcance'
+import { useIdsDeRed } from '../busqueda/useIdsDeRed'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { BorradoresCoincidentes, GuiasEnBorrador } from '../busqueda/BorradoresCoincidentes'
 import { MARCADOR_BUSCADOR } from '../busqueda/resultados'
@@ -123,6 +126,14 @@ export function ResolverPage() {
 
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
+  // EL ALCANCE (tarea 330): chips que solo filtran la vista de lo encontrado.
+  const [alcanceElegido, setAlcance] = useState<Alcance>('todo')
+  const idsDeRed = useIdsDeRed()
+  const conteo = useMemo(() => conteoPorAlcance(resultados, idsDeRed), [resultados, idsDeRed])
+  const alcance = alcanceEfectivo(alcanceElegido, conteo)
+  const visibles = useMemo(() => filtrarPorAlcance(resultados, alcance, idsDeRed), [resultados, alcance, idsDeRed])
+  // Los borradores son guías: se ven en "Todo" y en "Guías".
+  const conBorradores = alcance === 'todo' || alcance === 'guias'
 
   // ALCANCES DISTINTOS, DICHOS EN VOZ ALTA (hallazgo H09, criterio A16;
   // encargo del 2026-09-20, tarea 1). El buscador global solo indexa lo
@@ -217,14 +228,15 @@ export function ResolverPage() {
       <main className="flex-1 px-4 pb-6 pt-4">
         {buscando ? (
           <div className="flex flex-col gap-4">
+            {resultados.length > 0 && <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />}
             {/* La guía en borrador que coincide en el título, DELANTE de
                 todo lo demás, salvo que ya haya una publicada que también
                 coincida en el título: esa conserva la prioridad. */}
-            {!hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
+            {conBorradores && !hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
 
             {resultados.length > 0 ? (
               <ResultadosBusqueda
-                resultados={resultados}
+                resultados={visibles}
                 consulta={consulta}
                 consultaCruda={consultaCruda}
                 onDesbloqueada={() => setHuboDesbloqueo(true)}
@@ -260,16 +272,16 @@ export function ResolverPage() {
               </>
             )}
 
-            {hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
+            {conBorradores && hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
 
             {/* BORRADORES COINCIDENTES: los que solo coinciden por
                 etiqueta, categoría o tipo. En su propio bloque, nunca
                 mezclados con los oficiales. */}
-            <BorradoresCoincidentes
+            {conBorradores && <BorradoresCoincidentes
               borradores={secundarios}
               consulta={consulta}
               consultaCruda={consultaCruda}
-            />
+            />}
 
             {resultados.length === 0 && (
               <div className="flex flex-wrap justify-center gap-2">

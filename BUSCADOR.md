@@ -301,6 +301,13 @@ Si las primeras están cerca, sigue siendo **"Mejores resultados"**, como siempr
 - **Qué NO cambia:** el orden, las intenciones, los pesos, los sinónimos, el índice, `formasBusqueda` y la confianza. Solo cambia a dónde lleva el enlace de una guía (`ResultadosBusqueda`, `rutaGuiaConEquipo`).
 - **Pruebas:** `equipoDeLaConsulta.test.ts` (con el índice de verdad y los datos sintéticos del benchmark) y `credencialDelEquipoFlujo.test.tsx` (de Resolver a la guía).
 
+### 7.11 Chips de alcance: filtrar la vista, no la búsqueda (2026-10-13, tarea 330)
+
+- En Resolver y en el buscador global, con resultados de más de una clase, una fila de chips: **Todo** y cada alcance con resultados (Equipos, Red, Guías, Personas, Lugares, Claves), con su conteo. Lo hacen `alcanceBusqueda.ts` (`alcanceDe`, `conteoPorAlcance`, `filtrarPorAlcance`, `alcanceEfectivo`) y `ChipsDeAlcance.tsx`.
+- **Solo filtran la vista**: no cambian qué se indexa, la consulta, el orden ni el agrupado; "Todo" es la lista de siempre. Un alcance que se queda sin resultados al cambiar lo escrito vuelve a "Todo".
+- Los alcances siguen a los grupos (`GRUPOS_BUSQUEDA`): "Guías" junta guías, guías con preguntas, categorías y adjuntos; "Red" son los equipos de una categoría de red (`useIdsDeRed`); el Centro de consulta se ve solo en "Todo". "Facturación" (del diseño) no se dibuja: las autorizaciones no se indexan (tarea 321).
+- En Resolver, los borradores coincidentes (guías) se enseñan en "Todo" y en "Guías".
+
 ## 8. Sugerencias anti duplicados
 
 `buscarSimilares` / `buscarArticulosSimilares` (`useIndiceBusqueda.ts`) reutilizan el mismo índice y la misma expansión de sinónimos, pero además:

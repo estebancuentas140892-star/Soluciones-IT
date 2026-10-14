@@ -1,11 +1,15 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { MagnifyingGlass, Plus, X } from '../../components/iconos'
+import { CaretLeft, MagnifyingGlass, Plus } from '../../components/iconos'
+import { useAltoDelTeclado } from '../../components/useAltoDelTeclado'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import type { ModoBuscador } from './modoConsulta'
+import { alcanceEfectivo, conteoPorAlcance, filtrarPorAlcance, type Alcance } from './alcanceBusqueda'
+import { ChipsDeAlcance } from './ChipsDeAlcance'
+import { useIdsDeRed } from './useIdsDeRed'
 import { PuenteBoveda } from './PuenteBoveda'
 import { AYUDA_BUSCADOR, MARCADOR_BUSCADOR } from './resultados'
 import { ResultadosBusqueda } from './ResultadosBusqueda'
@@ -68,6 +72,13 @@ export function BuscadorGlobal({
 
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
+  // EL ALCANCE (tarea 330): solo filtra lo que ya se encontró.
+  const [alcanceElegido, setAlcance] = useState<Alcance>('todo')
+  const idsDeRed = useIdsDeRed()
+  const conteo = useMemo(() => conteoPorAlcance(resultados, idsDeRed), [resultados, idsDeRed])
+  const alcance = alcanceEfectivo(alcanceElegido, conteo)
+  const visibles = useMemo(() => filtrarPorAlcance(resultados, alcance, idsDeRed), [resultados, alcance, idsDeRed])
+  const teclado = useAltoDelTeclado()
 
   // `onCerrar` llega como flecha nueva en cada render de quien abre la
   // capa. Leerlo de una ref deja el efecto de abajo atado SOLO a abrir y
@@ -109,6 +120,7 @@ export function BuscadorGlobal({
     if (!abierto) {
       setQuery('')
       setHuboDesbloqueo(false)
+      setAlcance('todo')
     }
   }, [abierto])
 
@@ -123,54 +135,49 @@ export function BuscadorGlobal({
       aria-modal="true"
       aria-label={modo === 'consulta' ? 'Consultar sin salir de la tarea' : 'Buscar en Soluciones IT'}
       className="nocturne fixed inset-0 z-[60] flex flex-col bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text"
+      // Con el teclado abierto (iOS no encoge la página), todo sube por
+      // encima de él: el campo, abajo, queda pegado al teclado.
+      style={teclado > 0 ? { paddingBottom: teclado } : undefined}
     >
-      <div className="flex items-center gap-2 border-b border-noct-divider px-3 py-2.5">
-        {/* Mismo campo que el resto de la app (tarea 207, regla M-R8):
-            46 px, el alcance escrito y el borrar a 44 px reales, que
-            aquí ni siquiera existía. Lo que distingue a este buscador
-            del de cada sección es su alcance, no su forma. */}
-        {/* La pregunta, no el alcance (tarea 241, sección 1 del
-            encargo): el técnico no viene a "buscar en Soluciones IT",
-            viene a resolver algo. La etiqueta accesible sigue diciendo
-            el alcance, que es lo que distingue este buscador de los de
-            sección (regla M-R8). */}
-        <CampoBusqueda
-          valor={query}
-          onCambiar={setQuery}
-          alcance="Soluciones IT"
-          // El mismo marcador que el campo de Resolver (propuesta final
-          // de Claude Design; desde la tarea 288, una invitación a contar
-          // lo que pasa). La pregunta queda debajo, en el estado vacío.
-          textoAlternativo={MARCADOR_BUSCADOR}
-          refCampo={campo}
-          className="min-w-0 flex-1"
-        />
+      {/* LA CABECERA DE LA BÚSQUEDA (rediseño móvil "1b Pulgar", tarea 330):
+          el regreso a la izquierda y qué es. El campo baja al pulgar. */}
+      <div className="flex min-h-[50px] flex-none items-center gap-1 px-1 py-0.5">
         <button
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar el buscador"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
         >
-          <X size={20} aria-hidden />
+          <CaretLeft size={20} aria-hidden />
         </button>
+        <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold">
+          {modo === 'consulta' ? 'Consultar sin salir de la tarea' : 'Buscar en Soluciones IT'}
+        </h2>
       </div>
 
-      {/* EL MODO SE DICE (sección 8): quien busca a mitad de una guía
+      {/* EN MODO CONSULTA, POR QUÉ ES SEGURO TOCAR (sección 9): el técnico
           tiene que saber que nada de aquí lo saca de ella, o no se
           atreverá a tocar un resultado. Una línea, sin caja. */}
       {modo === 'consulta' && (
-        <p className="border-b border-noct-divider px-4 py-2 text-[12.5px] leading-snug text-noct-neutral-400">
+        <p className="flex-none px-4 pb-2 text-[12.5px] leading-snug text-noct-neutral-400">
           Modo consulta: lo que abras aquí no te saca de lo que estás haciendo.
         </p>
       )}
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-8 pt-4">
+      {/* LOS CHIPS DE ALCANCE (tarea 330): solo filtran la vista. */}
+      {buscando && resultados.length > 0 && (
+        <div className="flex-none px-3.5 pb-2.5">
+          <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />
+        </div>
+      )}
+
+      <div
+        // Desplazar la lista con el dedo cierra el teclado: se está
+        // mirando lo encontrado, no escribiendo.
+        onTouchMove={() => campo.current?.blur()}
+        className="min-h-0 flex-1 overflow-y-auto border-t border-noct-divider px-4 pb-6 pt-4"
+      >
         {!buscando ? (
-          // La pregunta y, en vez de la lista de lo que indexa, las mismas
-          // tres maneras de escribir que enseña Resolver (tarea 288): el
-          // técnico describe lo que pasa y el buscador decide qué lo
-          // resuelve. Antes decía "Busca una guía, equipo, acceso,
-          // herramienta, comando o problema".
           <div className="flex flex-col gap-1 px-0.5">
             <p className="text-[14.5px] font-medium leading-snug">¿Qué necesitas resolver?</p>
             <p className="text-[13px] leading-relaxed text-noct-neutral-400">{AYUDA_BUSCADOR}</p>
@@ -180,7 +187,7 @@ export function BuscadorGlobal({
           </div>
         ) : resultados.length > 0 ? (
           <ResultadosBusqueda
-            resultados={resultados}
+            resultados={visibles}
             consulta={consulta}
             consultaCruda={consultaCruda}
             onNavegar={onNavegar ?? onCerrar}
@@ -191,7 +198,7 @@ export function BuscadorGlobal({
           />
         ) : (
           <div className="flex flex-col gap-4">
-            {/* Estado vacío más útil (sección 16 del encargo): con la
+            {/* Estado vacío honesto (sección 14 del encargo): con la
                 bóveda bloqueada, "no hay nada" no es toda la verdad.
                 Sigue sin confirmar que exista ninguna credencial. Sin
                 resultados públicos, el puente conserva su forma
@@ -206,7 +213,7 @@ export function BuscadorGlobal({
                 </p>
               </div>
               <div className="mt-0.5 flex flex-wrap justify-center gap-2">
-                {/* Crear un equipo es salir a un formulario: no se ofrece
+                {/* Crear es una salida: no en modo consulta, que vive
                     encima de una tarea. */}
                 {modo === 'normal' && (
                   <Link
@@ -225,6 +232,20 @@ export function BuscadorGlobal({
             </div>
           </div>
         )}
+      </div>
+
+      {/* EL CAMPO, ABAJO, AL PULGAR (tarea 330): con el teclado abierto,
+          pegado a él. El marcador invita a contar lo que pasa (tarea 288) y
+          la etiqueta accesible sigue diciendo el alcance (regla M-R8). */}
+      <div className="flex-none border-t border-noct-divider bg-noct-bg px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5">
+        <CampoBusqueda
+          valor={query}
+          onCambiar={setQuery}
+          alcance="Soluciones IT"
+          textoAlternativo={MARCADOR_BUSCADOR}
+          refCampo={campo}
+          variante="dock"
+        />
       </div>
     </div>,
     document.body,

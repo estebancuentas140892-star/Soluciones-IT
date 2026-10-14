@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { QrCode } from './iconos'
 import { PEGADA_SOBRE_PESTANAS } from './nocturne'
+import { useAltoDelTeclado } from './useAltoDelTeclado'
 
 // EL DOCK DE BÚSQUEDA (rediseño móvil "1b Pulgar", tarea 330, AD-080).
 // En las raíces Resolver, Equipos y Bóveda el buscador baja al pulgar:
@@ -53,25 +54,4 @@ export function DockBusqueda({ children, conEscaner = true }: { children: ReactN
       )}
     </div>
   )
-}
-
-/** Cuánto tapa el teclado la parte de abajo de la pantalla, en px (0 si nada). */
-function useAltoDelTeclado(): number {
-  const [alto, setAlto] = useState(0)
-  useEffect(() => {
-    const vista = window.visualViewport
-    if (!vista) return
-    const ventana = vista
-    function medir() {
-      setAlto(Math.max(0, Math.round(window.innerHeight - ventana.height - ventana.offsetTop)))
-    }
-    medir()
-    ventana.addEventListener('resize', medir)
-    ventana.addEventListener('scroll', medir)
-    return () => {
-      ventana.removeEventListener('resize', medir)
-      ventana.removeEventListener('scroll', medir)
-    }
-  }, [])
-  return alto
 }

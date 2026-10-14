@@ -1,0 +1,45 @@
+import { FilaDeslizable } from '../../components/FilaDeslizable'
+import { ALCANCES, type Alcance } from './alcanceBusqueda'
+
+// LOS CHIPS DE ALCANCE (tarea 330): "Todo" y cada alcance con resultados,
+// con su conteo en IBM Plex Mono. Solo filtran la vista. Una sola fila que se
+// desliza en horizontal (`FilaDeslizable`); 44 px de toque.
+export function ChipsDeAlcance({
+  conteo,
+  alcance,
+  onCambiar,
+}: {
+  conteo: Record<Alcance, number>
+  alcance: Alcance
+  onCambiar: (alcance: Alcance) => void
+}) {
+  const chips = [
+    { valor: 'todo' as const, etiqueta: 'Todo' },
+    ...ALCANCES.filter((a) => conteo[a.valor] > 0),
+  ]
+  // Con un solo alcance con resultados, "Todo" y ese chip dirían lo mismo.
+  if (chips.length <= 2) return null
+  return (
+    <FilaDeslizable etiqueta="Filtrar los resultados" className="gap-1.5">
+      {chips.map((chip) => {
+        const activo = chip.valor === alcance
+        return (
+          <button
+            key={chip.valor}
+            type="button"
+            aria-pressed={activo}
+            onClick={() => onCambiar(chip.valor)}
+            className={`inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-[13.5px] font-semibold transition-colors ${
+              activo
+                ? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300'
+                : 'border-noct-text/25 text-noct-neutral-200 hover:bg-noct-text/[.05]'
+            }`}
+          >
+            {chip.etiqueta}
+            <span className="font-mono text-[12px] opacity-75">{conteo[chip.valor]}</span>
+          </button>
+        )
+      })}
+    </FilaDeslizable>
+  )
+}
