@@ -272,7 +272,7 @@ describe('Resolver sin escribir: Recientes y Atención', () => {
     await montar(RUTAS, '/')
 
     const fila = await esperar(() => nombre(acceso), 'el acceso vencido en Atención')
-    expect(seccionDe(fila)).toBe('Atención')
+    expect(seccionDe(fila)).toBe('Necesita atención')
     esperarEntero(fila)
   })
 })

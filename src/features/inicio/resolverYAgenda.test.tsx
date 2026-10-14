@@ -151,6 +151,12 @@ async function esperarTexto(que: string): Promise<string> {
   return textoPantalla()
 }
 
+/** Resolver pintado: su puerta al catálogo, "Todas" (`Todas las guías`), siempre está. */
+async function esperarResolver(): Promise<string> {
+  await esperar(() => control('Todas las guías'), 'aparece "Todas las guías"')
+  return textoPantalla()
+}
+
 beforeEach(async () => {
   await limpiarBase()
   await sembrarPerfil(true)
@@ -329,7 +335,7 @@ describe('La agenda completa (/agenda)', () => {
 describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
   it('el buscador vive en el dock de abajo, sin la pregunta (tarea 330)', async () => {
     await montar(RUTAS, '/')
-    await esperarTexto('Todas las guías')
+    await esperarResolver()
     const texto = textoPantalla()
     expect(campoBuscador()).not.toBeNull()
     expect(campoBuscador()?.closest('[data-dock-busqueda]')).not.toBeNull()
@@ -341,13 +347,13 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
     expect(campoBuscador()?.getAttribute('aria-label')).toBe('Buscar en Soluciones IT')
     // Sin nada que atender no hay bloque "Atención" (ni un "todo al día"
     // de adorno), pero el catálogo sigue a un toque.
-    expect(texto).not.toContain('Atención')
+    expect(texto).not.toContain('Necesita atención')
     expect(control('Todas las guías')).not.toBeNull()
   })
 
   it('la línea de ayuda ya no va en Resolver (tarea 330): la dice la búsqueda vacía', async () => {
     await montar(RUTAS, '/')
-    await esperarTexto('Todas las guías')
+    await esperarResolver()
     expect(AYUDA_BUSCADOR).toBe('Ej.: no imprime, usuario bloqueado, impresora mercadeo')
     expect(textoPantalla()).not.toContain(AYUDA_BUSCADOR)
   })
@@ -360,7 +366,7 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
     await sembrarAcceso('c4', 'Hosting', 3)
     await montar(RUTAS, '/')
 
-    const texto = await esperarTexto('Atención')
+    const texto = await esperarTexto('Necesita atención')
     expect(texto).toContain('Panel del router')
     expect(texto).toContain('Portal de nómina')
     // El cuarto (un próximo) queda en la agenda completa, y el enlace lo dice.
@@ -373,17 +379,17 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
   it('una clave próxima a vencer también es atención', async () => {
     await sembrarAcceso('c1', 'Resolución POS de prueba', 12)
     await montar(RUTAS, '/')
-    expect(await esperarTexto('Atención')).toContain('Resolución POS de prueba')
+    expect(await esperarTexto('Necesita atención')).toContain('Resolución POS de prueba')
   })
 
   it('los borradores propios y las sugerencias del equipo no salen en Resolver', async () => {
     await sembrarBorradorPropio('b1', 'Cambiar el tóner')
     await sembrarSugerenciaDelEquipo('e1', 'La impresora no imprime')
     await montar(RUTAS, '/')
-    const texto = await esperarTexto('Todas las guías')
+    const texto = await esperarResolver()
     expect(texto).not.toContain('Cambiar el tóner')
     expect(texto).not.toContain('La impresora no imprime')
-    expect(texto).not.toContain('Atención')
+    expect(texto).not.toContain('Necesita atención')
   })
 
   // La Agenda tiene una sola puerta, Resolver (tarea 265): Más ya no tiene
@@ -423,12 +429,12 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
 
   it('con la agenda vacía no hay puerta: nada que abrir', async () => {
     await montar(RUTAS, '/')
-    const texto = await esperarTexto('Todas las guías')
+    const texto = await esperarResolver()
     expect(texto).not.toContain('Agenda')
-    expect(texto).not.toContain('Atención')
+    expect(texto).not.toContain('Necesita atención')
   })
 
-  it('"Recientes" lista la guía usada y la que está a medias se continúa en su paso', async () => {
+  it('"Seguir donde ibas" lleva a la guía a medias y la continúa en su paso (tarea 330)', async () => {
     await sembrarGuia({
       id: 'guia-1',
       titulo: 'Instalar la impresora de prueba',
@@ -444,10 +450,10 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
     await registrarVisita('articulo', 'guia-1')
     await montar(RUTAS, '/')
 
-    const texto = await esperarTexto('Recientes')
+    const texto = await esperarTexto('Seguir donde ibas')
     expect(texto).toContain('Instalar la impresora de prueba')
-    // El avance, en acento y sin rodeos, junto a "Continuar" (propuesta
-    // final de Claude Design).
+    // El avance, sin rodeos, junto a "Continuar"; en su tarjeta, no en la
+    // lista de recientes (tarea 330).
     expect(texto).toContain('paso 2 de 2')
     expect(texto).toContain('Continuar')
     await tocar(await esperar(() => control(/^Continuar Instalar la impresora/), 'la fila de la guía a medias'))
@@ -463,29 +469,29 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
     await alternarFavorito('articulo', 'guia-1')
     await montar(RUTAS, '/')
 
-    const texto = await esperarTexto('Todas las guías')
+    const texto = await esperarResolver()
     expect(texto).not.toContain('Favoritas')
     expect(texto).not.toContain('Guía marcada con estrella')
     expect(await db.favoritos.count()).toBe(1)
   })
 
-  it('"Accesos rápidos" aparece con dos o más categorías con guías y filtra la lista', async () => {
+  it('"Guías" lista las categorías con guías, con cuántas tiene cada una, y filtra la lista (tarea 330)', async () => {
     await sembrarGuia({ id: 'g1', titulo: 'Guía de impresoras', categoriaId: 'cat-imp', pasos: [pasoPrueba('a1', 'Paso', ['Hacer'])] })
     await db.categorias.update('cat-imp', { nombre: 'Impresoras' })
     await sembrarGuia({ id: 'g2', titulo: 'Guía de POS', categoriaId: 'cat-pos', pasos: [pasoPrueba('b1', 'Paso', ['Hacer'])] })
     await db.categorias.update('cat-pos', { nombre: 'POS', orden: 0 })
     await montar(RUTAS, '/')
 
-    await esperarTexto('Accesos rápidos')
     await tocar(await esperar(() => control(/^Impresoras: 1 guía/), 'el acceso rápido de Impresoras'))
     expect(ubicacionActual().pathname).toBe('/soluciones')
     expect(ubicacionActual().search).toBe('?categoria=cat-imp')
   })
 
-  it('con una sola categoría con guías no hay accesos rápidos, pero sí "Todas las guías"', async () => {
+  it('con una sola categoría con guías no hay chips de categoría, pero sí "Todas las guías"', async () => {
     await sembrarGuia({ id: 'g1', titulo: 'Guía única', pasos: [pasoPrueba('a1', 'Paso', ['Hacer'])] })
     await montar(RUTAS, '/')
-    expect(await esperarTexto('Todas las guías')).not.toContain('Accesos rápidos')
+    await esperarResolver()
+    expect(control(/: \d+ guías?$/)).toBeNull()
   })
 })
 
@@ -495,7 +501,7 @@ describe('Resolver: el número de la pestaña', () => {
     await sembrarAcceso('c2', 'Portal de nómina', 0)
     await montar(RUTAS, '/')
 
-    await esperarTexto('Atención')
+    await esperarTexto('Necesita atención')
     expect(textoPantalla()).toContain('(2 asuntos urgentes)')
   })
 
@@ -505,7 +511,7 @@ describe('Resolver: el número de la pestaña', () => {
     await sembrarSugerenciaDelEquipo('e1', 'La impresora no imprime')
     await montar(RUTAS, '/')
 
-    const texto = await esperarTexto('Atención')
+    const texto = await esperarTexto('Necesita atención')
     expect(texto).not.toContain('asuntos urgentes')
     expect(texto).not.toContain('asunto urgente')
   })
@@ -514,7 +520,7 @@ describe('Resolver: el número de la pestaña', () => {
     await sembrarAcceso('c1', 'Panel del router', -3)
     await montar(RUTAS, '/')
 
-    await esperarTexto('Atención')
+    await esperarTexto('Necesita atención')
     expect(textoPantalla()).toContain('(1 asunto urgente)')
   })
 })
@@ -526,10 +532,10 @@ describe('Resolver: permisos', () => {
     await sembrarDatoDeEquipo('cp1', 'PIN de la alarma', -2)
     await montar(RUTAS, '/')
 
-    const texto = await esperarTexto('Todas las guías')
+    const texto = await esperarResolver()
     expect(texto).not.toContain('Panel del router')
     expect(texto).not.toContain('PIN de la alarma')
-    expect(texto).not.toContain('Atención')
+    expect(texto).not.toContain('Necesita atención')
   })
 })
 
@@ -559,7 +565,7 @@ describe('Resolver en móvil y en escritorio', () => {
     await sembrarAcceso('c1', 'Panel del router', -30)
     await montar(RUTAS, '/')
 
-    await esperarTexto('Atención')
+    await esperarTexto('Necesita atención')
     expect(document.activeElement).toBe(campoBuscador())
   })
 
@@ -568,7 +574,7 @@ describe('Resolver en móvil y en escritorio', () => {
     await sembrarAcceso('c1', 'Panel del router', -30)
     await montar(RUTAS, '/')
 
-    const texto = await esperarTexto('Atención')
+    const texto = await esperarTexto('Necesita atención')
     expect(document.activeElement).not.toBe(campoBuscador())
     expect(texto).toContain('Panel del router')
   })

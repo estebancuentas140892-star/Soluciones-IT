@@ -346,6 +346,9 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 
 **REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 330, [DECISIONES.md](DECISIONES.md) AD-080).** La cabecera es de una sola fila: **"Resolver" a 25 px**, la sincronización y la cuenta. **Se retiran la pregunta "¿Qué necesitas resolver?" y la línea de ayuda** de debajo. Manda sobre lo que sigue donde choque.
 - **El buscador baja al dock**: el mismo campo ("Buscar en Soluciones IT", marcador "Describe qué necesitas resolver…"), de 52 px, pegado sobre la barra de pestañas, con el escáner de 52 px al lado. Con el teclado abierto sube con él; desplazar la lista con el dedo cierra el teclado. Escribir enseña los resultados en la pantalla, como siempre.
+- **Necesita atención** (si hay algo con fecha): el título a 17 px con "Agenda" a la derecha, **tres contadores** (vencidos, para hoy y próximos; el número en IBM Plex Mono y en su color si hay alguno) que abren la Agenda, y debajo hasta tres asuntos en su fila: una **barra lateral de 4 px** del color de su estado, el icono neutro, el nombre entero a 15,5 px, la razón en su color y el verbo a 14 px. Sin nada con fecha, la línea de siempre que abre la Agenda si guarda algo más.
+- **Seguir donde ibas**: la guía a medias más reciente en una tarjeta que se toca entera, con qué es ("Guía · Impresoras" o "Guía con preguntas"), su título entero, un segmento por paso (una barra con más de 12), "paso N de M" y "Continuar". Las demás recientes siguen debajo, en "Recientes".
+- **Guías**: el título con "Todas" a la derecha (la puerta al catálogo, nombre accesible "Todas las guías") y los chips de categoría con cuántas guías tiene cada una (antes "Accesos rápidos", con icono).
 
 **Ruta:** `/` · **Archivo:** `src/features/inicio/ResolverPage.tsx` (lógica en `resolver.ts`) · **Nivel:** Sección, el primero de los cuatro destinos
 

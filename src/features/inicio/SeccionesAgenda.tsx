@@ -303,30 +303,31 @@ function CabeceraAgenda({ titulo, total, estado }: { titulo: string; total: numb
 export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: EstadoAgenda }) {
   const Icono = ICONO_PENDIENTE[item.categoria]
   const accion = accionDeItem(item)
+  // LA FILA DEL REDISEÑO MÓVIL "1b PULGAR" (tarea 330): el estado en una
+  // barra lateral de 4 px de su color (y en la razón), el icono neutro (lo
+  // que es, no cómo está) y el verbo a 14 px seminegrita. Antes el icono
+  // llevaba el color y la fila vencida, un fondo rojo.
   return (
     <Link
       to={item.ruta}
       aria-label={`${accion} ${item.titulo} · ${ETIQUETA_ESTADO[estado]}`}
-      className={`flex min-h-14 items-center gap-3 rounded-md px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05] ${
-        item.tono === 'error' ? 'bg-noct-error/[.07]' : ''
-      }`}
+      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04]"
     >
-      <span
-        className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md ${TONO_PENDIENTE[item.tono]}`}
-      >
-        <Icono size={17} aria-hidden />
+      <span aria-hidden data-barra-estado className={`my-1 w-1 shrink-0 self-stretch rounded-sm ${BARRA_PENDIENTE[item.tono]}`} />
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300">
+        <Icono size={18} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
         {/* El nombre entero (regla 23): es lo que dice QUÉ vence o qué
             hay que revisar. La razón de debajo sí se recorta. */}
         <span
           data-nombre-principal
-          className="block min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+          className="block min-w-0 text-[15.5px] font-semibold leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
         >
           {item.titulo}
         </span>
-        <span className="block truncate text-[12.5px]">
-          <span className={COLOR_RAZON[item.tono]}>{item.detalle}</span>
+        <span className="mt-0.5 block truncate text-[13px] leading-[1.35]">
+          <span className={`font-[550] ${COLOR_RAZON[item.tono]}`}>{item.detalle}</span>
           {item.fecha !== null && item.origen && <span className="text-noct-neutral-400"> · {item.origen}</span>}
         </span>
       </span>
@@ -334,7 +335,7 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
           mismo ("esto lleva a otro sitio") y en 360 px el chevron se
           come 20 px del título, que es el dato que de verdad hay que
           leer. */}
-      <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300" aria-hidden>
+      <span className="shrink-0 text-[14px] font-semibold text-noct-accent-300" aria-hidden>
         {accion}
       </span>
     </Link>
@@ -358,10 +359,11 @@ const ICONO_PENDIENTE: Record<ItemPendiente['categoria'], (props: IconoProps) =>
   // Tarea 321: el aviso de una autorización de facturación de un POS.
   facturacion: Storefront,
 }
-const TONO_PENDIENTE: Record<ItemPendiente['tono'], string> = {
-  neutro: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]',
-  precaucion: 'text-noct-precaucion bg-noct-precaucion/[.12]',
-  error: 'text-noct-error bg-noct-error/[.12]',
+// La barra lateral de la fila, en el color de su estado (tarea 330).
+const BARRA_PENDIENTE: Record<ItemPendiente['tono'], string> = {
+  neutro: 'bg-noct-neutral-500',
+  precaucion: 'bg-noct-precaucion',
+  error: 'bg-noct-error',
 }
 // La razón va en el color del estado, no en gris: es lo que distingue
 // "Venció hace 3 días" de "Borrador tuyo · hace 2 días" de un vistazo.

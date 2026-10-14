@@ -8,6 +8,7 @@ import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { DockBusqueda } from '../../components/DockBusqueda'
 import {
+  ArrowRight,
   BookOpen,
   CaretRight,
   ClockCountdown,
@@ -15,10 +16,9 @@ import {
   PencilSimple,
   Plus,
   TreeStructure,
-  Warning,
 } from '../../components/iconos'
 import { ROTULO_RECORRIDO } from '../../lib/diagnostico'
-import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
@@ -32,8 +32,7 @@ import {
   repartirBorradores,
   sinLosYaOficiales,
 } from '../busqueda/borradoresEnBusqueda'
-import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
-import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
+import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import { articulosSinTerminar, pasoDeTotal } from '../soluciones/sinTerminar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { obtenerActividadReciente } from '../historial/actividadEquipo'
@@ -197,6 +196,8 @@ export function ResolverPage() {
   // es la señal de "ya sé lo que hay" que evita enseñarla un instante a
   // quien sí tiene trabajo a medias.
   const consultasListas = useLiveQuery(() => db.progresoPasos.count(), []) !== undefined
+  // La guía a medias más reciente (con avance o con una pregunta en curso).
+  const seguir = recientes.find((r) => r.avance !== null || r.enCurso !== null) ?? null
   const hayBloquesReales =
     pendientes.length > 0 || avances.size > 0 || recientes.some((r) => r.enCurso !== null)
 
@@ -292,8 +293,12 @@ export function ResolverPage() {
         ) : (
           <div className="flex flex-col gap-[22px]">
             {!agendaCargando && <BloqueAtencion agenda={agenda} />}
-            <BloqueRecientes recientes={recientes} />
-            <BloqueAccesos accesos={accesos} categorias={categorias} />
+            {/* SEGUIR DONDE IBAS (tarea 330): la guía a medias más reciente,
+                en una tarjeta con su avance. Las demás recientes siguen
+                debajo, en su lista. */}
+            {seguir && <BloqueSeguir guia={seguir} />}
+            <BloqueRecientes recientes={recientes.filter((r) => r !== seguir)} />
+            <BloqueAccesos accesos={accesos} />
 
             {/* Bienvenida del primer día: los tres pasos que dejan al
                 técnico listo para trabajar sin señal. Va al final para no
@@ -332,27 +337,127 @@ export function ResolverPage() {
 function BloqueAtencion({ agenda }: { agenda: Agenda }) {
   const { visibles, total } = asuntosDeAtencion(agenda)
   if (total === 0) return <PuertaAgendaSinFecha agenda={agenda} />
+  // NECESITA ATENCIÓN (tarea 330): tres contadores (vencidos, para hoy y
+  // próximos) que abren la Agenda, y debajo los asuntos con su fila. El
+  // número en IBM Plex Mono y en el color de su estado solo si hay alguno.
+  const contadores = [
+    { clave: 'vencidos', n: agenda.vencidos.length, etiqueta: 'vencidos', tono: 'error' },
+    { clave: 'hoy', n: agenda.hoy.length, etiqueta: 'para hoy', tono: 'precaucion' },
+    { clave: 'proximos', n: agenda.proximos.length, etiqueta: 'próximos', tono: 'neutro' },
+  ] as const
   return (
-    <section aria-labelledby="resolver-atencion">
-      <div className="mb-1.5 flex items-center gap-2 px-0.5">
-        <Warning size={14} className="shrink-0 text-noct-precaucion" aria-hidden />
-        <TituloSeccion>
-          <span id="resolver-atencion">Atención</span>
-        </TituloSeccion>
+    <section aria-labelledby="resolver-atencion" className="flex flex-col gap-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 id="resolver-atencion" className="text-[17px] font-semibold tracking-[-.01em]">
+          Necesita atención
+        </h2>
+        <Link
+          to="/agenda"
+          // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe) y
+          // el origen taparía la fecha de hoy de su cabecera (tarea 265).
+          aria-label={total > visibles.length ? `Ver la agenda completa (${total})` : 'Ver la agenda completa'}
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline"
+        >
+          Agenda
+          <CaretRight size={13} aria-hidden />
+        </Link>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {contadores.map((c) => (
+          <Link
+            key={c.clave}
+            to="/agenda"
+            aria-label={`${c.n} ${c.etiqueta}: abrir la Agenda`}
+            className={`flex min-h-16 flex-col justify-center gap-px rounded-[14px] px-3 py-2 hover:brightness-110 ${
+              c.n > 0 ? FONDO_CONTADOR[c.tono] : 'bg-noct-text/[.06]'
+            }`}
+          >
+            <span
+              className={`font-mono text-[24px] font-semibold leading-[1.1] ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
+            >
+              {c.n}
+            </span>
+            <span className="text-[12.5px] font-[550] text-noct-neutral-300">{c.etiqueta}</span>
+          </Link>
+        ))}
       </div>
       <div className="flex flex-col">
         {visibles.map(({ item, estado }) => (
           <FilaAgenda key={item.clave} item={item} estado={estado} />
         ))}
       </div>
+    </section>
+  )
+}
+
+const FONDO_CONTADOR = {
+  error: 'bg-noct-error/[.13]',
+  precaucion: 'bg-noct-precaucion/[.13]',
+  neutro: 'bg-noct-text/[.06]',
+} as const
+const COLOR_CONTADOR = {
+  error: 'text-noct-error',
+  precaucion: 'text-noct-precaucion',
+  neutro: 'text-noct-text',
+} as const
+
+// SEGUIR DONDE IBAS (tarea 330): la guía a medias más reciente, en una
+// tarjeta que se toca entera (la tarjeta queda para lo que se toca entero,
+// regla del sistema visual). Dice qué es, su título entero, su avance en
+// segmentos (uno por paso; con muchos pasos, una barra) y "Continuar".
+function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
+  const conPreguntas = guia.tipo === 'diagnostico'
+  const Icono = conPreguntas ? TreeStructure : BookOpen
+  const avance = guia.avance
+  const detalle =
+    guia.enCurso ??
+    (avance ? pasoDeTotal(Math.min(avance.hechos + 1, avance.total), avance.total, avance.totalAbierto ?? false) : '')
+  return (
+    <section aria-labelledby="resolver-seguir" className="flex flex-col gap-2.5">
+      <h2 id="resolver-seguir" className="text-[17px] font-semibold tracking-[-.01em]">
+        Seguir donde ibas
+      </h2>
       <Link
-        to="/agenda"
-        // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe) y
-        // el origen taparía la fecha de hoy de su cabecera (tarea 265).
-        className="mt-0.5 inline-flex min-h-11 items-center gap-1.5 px-1.5 text-[13px] font-medium text-noct-accent-300 hover:underline"
+        to={guia.ruta}
+        state={ORIGEN_RESOLVER}
+        aria-label={`Continuar ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
+        className="flex flex-col gap-2.5 rounded-2xl border border-noct-text/25 bg-noct-surface p-3.5 text-noct-text hover:bg-noct-text/[.04]"
       >
-        {total > visibles.length ? `Ver la agenda completa (${total})` : 'Ver la agenda completa'}
-        <CaretRight size={13} aria-hidden />
+        <span className="flex items-center gap-2 text-[12.5px] text-noct-neutral-400">
+          <Icono size={14} className="shrink-0" aria-hidden />
+          <span className="min-w-0 truncate">
+            {conPreguntas ? ROTULO_RECORRIDO : ['Guía', guia.categoriaNombre].filter(Boolean).join(' · ')}
+            {guia.borrador ? ' · Borrador' : ''}
+          </span>
+        </span>
+        <span data-nombre-principal className="text-[16px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+          {guia.titulo}
+        </span>
+        {avance && avance.total > 0 && (
+          <span aria-hidden className="flex gap-1">
+            {avance.total <= 12 ? (
+              Array.from({ length: avance.total }, (_, i) => (
+                <span
+                  key={i}
+                  className={`h-[5px] min-w-0 flex-1 rounded-[3px] ${
+                    i < avance.hechos ? 'bg-noct-accent' : i === avance.hechos ? 'bg-noct-text' : 'bg-noct-neutral-700'
+                  }`}
+                />
+              ))
+            ) : (
+              <span className="h-[5px] flex-1 overflow-hidden rounded-[3px] bg-noct-neutral-700">
+                <span className="block h-full bg-noct-accent" style={{ width: `${Math.round((avance.hechos / avance.total) * 100)}%` }} />
+              </span>
+            )}
+          </span>
+        )}
+        <span className="flex items-center justify-between gap-2">
+          <span className="min-w-0 text-[13.5px] text-noct-neutral-300">{detalle}</span>
+          <span className="flex shrink-0 items-center gap-1.5 text-[14px] font-semibold text-noct-accent-300">
+            Continuar
+            <ArrowRight size={15} aria-hidden />
+          </span>
+        </span>
       </Link>
     </section>
   )
@@ -398,9 +503,9 @@ function BloqueRecientes({ recientes }: { recientes: GuiaReciente[] }) {
   if (recientes.length === 0) return null
   return (
     <section aria-labelledby="resolver-recientes">
-      <TituloSeccion className="mb-1.5 px-0.5">
-        <span id="resolver-recientes">Recientes</span>
-      </TituloSeccion>
+      <h2 id="resolver-recientes" className="mb-1 text-[17px] font-semibold tracking-[-.01em]">
+        Recientes
+      </h2>
       <div className="flex flex-col">
         {recientes.map((guia) => (
           <FilaReciente key={`${guia.tipo}:${guia.id}`} guia={guia} />
@@ -479,50 +584,43 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
 // ella (la categoría es un FILTRO de la lista, decisión del 2026-07-18).
 // "Todas las guías" está SIEMPRE, con o sin accesos: es la única puerta
 // al catálogo desde que Guías dejó de ser pestaña.
-function BloqueAccesos({
-  accesos,
-  categorias,
-}: {
-  accesos: AccesoRapido[]
-  categorias: { id: string; nombre: string; color: string | null; orden: number }[]
-}) {
-  const porId = new Map(categorias.map((c) => [c.id, c]))
+function BloqueAccesos({ accesos }: { accesos: AccesoRapido[] }) {
+  // GUÍAS (tarea 330): el catálogo por categoría, con cuántas guías tiene
+  // cada una, y "Todas" a la derecha del título. "Todas las guías" está
+  // SIEMPRE: es la única puerta al catálogo desde que Guías dejó de ser
+  // pestaña.
   return (
-    <section aria-labelledby="resolver-accesos">
+    <section aria-labelledby="resolver-accesos" className="flex flex-col gap-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 id="resolver-accesos" className="text-[17px] font-semibold tracking-[-.01em]">
+          Guías
+        </h2>
+        <Link
+          to="/soluciones"
+          state={ORIGEN_RESOLVER}
+          aria-label="Todas las guías"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline"
+        >
+          Todas
+          <CaretRight size={13} aria-hidden />
+        </Link>
+      </div>
       {accesos.length > 0 && (
-        <>
-          <TituloSeccion className="mb-2 px-0.5">
-            <span id="resolver-accesos">Accesos rápidos</span>
-          </TituloSeccion>
-          <div className="flex flex-wrap gap-2">
-            {accesos.map((acceso) => {
-              const categoria = porId.get(acceso.categoriaId)
-              const Icono = iconoDeCategoria(acceso.nombre)
-              return (
-                <Link
-                  key={acceso.categoriaId}
-                  to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
-                  state={ORIGEN_RESOLVER}
-                  aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full border border-noct-divider bg-noct-surface px-3.5 text-[14px] font-medium text-noct-text hover:border-noct-neutral-600 hover:bg-noct-text/[.04]"
-                >
-                  <Icono size={16} className={`shrink-0 ${categoria ? claseTextoDeCategoria(categoria) : 'text-noct-neutral-400'}`} aria-hidden />
-                  {acceso.nombre}
-                </Link>
-              )
-            })}
-          </div>
-        </>
+        <div className="flex flex-wrap gap-2">
+          {accesos.map((acceso) => (
+            <Link
+              key={acceso.categoriaId}
+              to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
+              state={ORIGEN_RESOLVER}
+              aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-noct-text/25 px-3.5 text-[14.5px] font-[550] text-noct-text hover:bg-noct-text/[.05]"
+            >
+              {acceso.nombre}
+              <span className="font-mono text-[12.5px] text-noct-neutral-500">{acceso.guias}</span>
+            </Link>
+          ))}
+        </div>
       )}
-      <Link
-        to="/soluciones"
-        state={ORIGEN_RESOLVER}
-        className={`${accesos.length > 0 ? 'mt-1.5' : ''} inline-flex min-h-11 items-center gap-1.5 px-1 text-[13.5px] font-medium text-noct-accent-300 hover:underline`}
-      >
-        <BookOpen size={14} aria-hidden />
-        Todas las guías
-        <CaretRight size={13} aria-hidden />
-      </Link>
     </section>
   )
 }

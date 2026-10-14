@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Cambiado (Resolver, tarea 330, segunda parte): necesita atención con contadores, la fila de la agenda con barra de estado, "Seguir donde ibas" y "Guías" por categoría
+
+**Área modificada:** `src/features/inicio/ResolverPage.tsx` (`BloqueAtencion`, `BloqueSeguir` nuevo, `BloqueRecientes`, `BloqueAccesos`), `src/features/inicio/SeccionesAgenda.tsx` (`FilaAgenda`).
+**Tipo:** Modificado; Documentación (DECISIONES AD-080 decisión 4, DOCUMENTACION_FUNCIONAL 5.1, COMPONENTES_UI `FilaAgenda`, TAREAS 330).
+**Motivo:** encargo del 2026-10-13, paso 4 del rediseño móvil "1b Pulgar".
+**Qué cambia:** "Necesita atención" con tres contadores (vencidos, para hoy, próximos) que abren la Agenda; cada asunto con una barra lateral de 4 px del color de su estado, el icono neutro y el verbo a 14 px (también en la Agenda); la guía a medias más reciente en la tarjeta "Seguir donde ibas" con su avance en segmentos; los rótulos de bloque a 17 px; "Accesos rápidos" pasa a "Guías", con "Todas" y chips con conteo.
+**Estructura de datos:** sin cambios.
+**Verificación:** 209 archivos y 3294 pruebas (`resolverYAgenda` y `nombresSinRecorte` actualizadas), `tsc -b`, lint y build en verde; en el navegador a 375 px con el banco de pruebas.
+**Impacto esperado:** lo urgente contado de un vistazo y la guía a medias a un toque.
+
 ### Cambiado (raíces, tarea 330, primera parte): el buscador baja al dock y la cabecera de raíz es de una fila
 
 **Área modificada:** `src/components/DockBusqueda.tsx` (nuevo), `CampoBusqueda.tsx` (variante `dock`), `CabeceraColapsable.tsx` (25 px), `src/features/inicio/ResolverPage.tsx`, `src/features/dispositivos/DispositivosPage.tsx`, `src/features/boveda/BovedaPage.tsx`.

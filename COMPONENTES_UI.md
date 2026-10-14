@@ -605,6 +605,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Puertas:** "Ver la agenda completa" en el bloque "Atención" de Resolver y la fila "Agenda" del grupo Consulta de Más (con lo urgente como subtítulo). Desde el 2026-09-22 es la ÚNICA pantalla que pinta los cinco grupos: Resolver solo enseña lo que tiene fecha.
 
 ### 3.8s-bis `inicio/SeccionesAgenda` (2026-09-20, tarea 247)
+- **`FilaAgenda` desde la tarea 330:** el estado en una barra lateral de 4 px de su color (`BARRA_PENDIENTE`, `data-barra-estado`) y en la razón; el icono neutro de 36 px; el nombre a 15,5 px seminegrita; la razón a 13 px; el verbo a 14 px seminegrita; fila de 62 px con divisor. Antes el icono llevaba el color y la fila vencida un fondo rojo.
 - **Propósito:** los grupos de la agenda, **una sola vez**, para las dos pantallas que los muestran (Inicio y `/agenda`). Antes cada una tenía su copia de `FilaAgenda`, `CabeceraAgenda` y `BloqueLista`; dos copias del mismo dibujo es como empiezan a divergir (un tope distinto de "Próximos", un estado nuevo que solo entra en una).
 - **Exporta:** `SeccionesAgenda` (los cinco grupos, el estado "Todo al día por hoy" y, opcional, el enlace "Ver agenda completa"), `ResumenDelDia` (fecha y resumen de una línea) y `FilaAgenda`.
 - **Props de `SeccionesAgenda`:** `{ agenda, cargando?, conEnlaceCompleta? }`. La agenda se la pasa quien la calcula (`agruparAgenda(usePendientes().items)`): el componente no consulta la base, salvo `useReanudar()` para la tarjeta de "En curso".
