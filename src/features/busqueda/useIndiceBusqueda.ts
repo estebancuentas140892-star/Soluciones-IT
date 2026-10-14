@@ -426,7 +426,9 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
     ;(procedimiento?.pasos ?? []).forEach((paso, indice) => {
       for (const adjunto of paso.adjuntos) {
         documentos.push({
-          id: `adjunto:${adjunto.referencia}`,
+          // Por articulo y paso: el mismo archivo (misma referencia, tarea
+          // 123) puede estar en dos guias o en una ficha (tarea 322).
+          id: `adjunto:${articulo.id}:${indice}:${adjunto.referencia}`,
           tipo: 'adjunto',
           titulo: adjunto.nombre,
           subtitulo: `${articulo.titulo} · ${paso.titulo || `Paso ${indice + 1}`}`,
@@ -494,7 +496,11 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
           : undefined
     if (!dueno) continue
     documentos.push({
-      id: `adjunto:${adjunto.referencia}`,
+      // Por fila y no por referencia (tarea 322): un acta vinculada a
+      // varios equipos son varias filas con la misma referencia, y cada
+      // una sale con su equipo. Con `adjunto:<referencia>` el indice
+      // recibia dos veces el mismo id y MiniSearch tumbaba Resolver.
+      id: `adjunto:${adjunto.id}`,
       tipo: 'adjunto',
       titulo: adjunto.nombre,
       subtitulo: dueno.titulo,
@@ -619,7 +625,17 @@ export function crearIndiceDesdeDocumentos(documentos: DocumentoBusqueda[]): Min
       prefix: (termino: string, _indice: number, terminos: string[]) => usaPrefijo(termino, terminos),
     },
   })
-  indice.addAll(documentos)
+  // Un id repetido hace que MiniSearch lance y, con el, cae la pantalla
+  // entera ("No se pudo cargar la aplicación"). Los ids se arman para ser
+  // unicos; esto es la red: se queda el primero y el resto se ignora.
+  const vistos = new Set<string>()
+  indice.addAll(
+    documentos.filter((documento) => {
+      if (vistos.has(documento.id)) return false
+      vistos.add(documento.id)
+      return true
+    }),
+  )
   return indice
 }
 
