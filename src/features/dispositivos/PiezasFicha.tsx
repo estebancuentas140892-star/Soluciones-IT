@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import type { TipoArticulo } from '../../lib/db'
 import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 import { CaretRight, CaretUp, Key, TreeStructure, type IconoProps } from '../../components/iconos'
 import { BAJA_CON_LAS_PESTANAS, BTN_PRIMARIO_RELLENO, PEGADA_SOBRE_PESTANAS } from '../../components/nocturne'
@@ -9,6 +10,11 @@ import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizaci
 // tarea 329, AD-079). Son presentación: no leen ni escriben datos. Los
 // conteos, los avisos y las listas los calcula `DispositivoPage`, que es
 // quien ya tenía esos datos.
+//
+// Desde 768 px (tarea 338) la disposición es la misma, pero cada pieza
+// habla el lenguaje visual de antes del rediseño con variantes `md:`:
+// rótulos de sección en mayúsculas de 11 px, filas de 14 y 15 px, la
+// tarjeta de borde fino y el pie delineado. El teléfono no cambia.
 
 type Icono = (props: IconoProps) => React.JSX.Element
 
@@ -25,9 +31,14 @@ export interface AvisoEquipo {
   onAbrir: () => void
 }
 
+// Desde 768 px (tarea 338) el aviso lleva el borde y el tinte del aviso de
+// migración pendiente de la ficha, el aviso de antes del rediseño.
 const TONO_AVISO = {
-  error: { fondo: 'bg-noct-error/[.13]', icono: 'text-noct-error' },
-  precaucion: { fondo: 'bg-noct-precaucion/[.13]', icono: 'text-noct-precaucion' },
+  error: { fondo: 'bg-noct-error/[.13] md:border-noct-error/35 md:bg-noct-error/[.08]', icono: 'text-noct-error' },
+  precaucion: {
+    fondo: 'bg-noct-precaucion/[.13] md:border-noct-precaucion/35 md:bg-noct-precaucion/[.08]',
+    icono: 'text-noct-precaucion',
+  },
 } as const
 
 // AVISOS DEL EQUIPO, justo bajo el carnet: lo que sus datos ya dicen que
@@ -46,13 +57,13 @@ export function AvisosDelEquipo({ avisos }: { avisos: AvisoEquipo[] }) {
             type="button"
             onClick={aviso.onAbrir}
             aria-label={aviso.etiqueta}
-            className={`flex min-h-12 w-full items-center gap-2.5 rounded-xl py-1.5 pl-3 pr-1.5 text-left text-noct-text hover:brightness-110 ${TONO_AVISO[aviso.tono].fondo}`}
+            className={`flex min-h-12 w-full items-center gap-2.5 rounded-xl py-1.5 pl-3 pr-1.5 text-left text-noct-text hover:brightness-110 md:min-h-0 md:rounded-md md:border md:px-[13px] md:py-2.5 ${TONO_AVISO[aviso.tono].fondo}`}
           >
             <aviso.Icono size={18} className={`shrink-0 ${TONO_AVISO[aviso.tono].icono}`} aria-hidden />
-            <span className="min-w-0 flex-1 text-[14px] font-[550] leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+            <span className="min-w-0 flex-1 text-[14px] font-[550] leading-[1.3] text-pretty [overflow-wrap:anywhere] md:text-[13px] md:font-normal md:leading-[1.45]">
               {aviso.texto}
             </span>
-            <span className="flex min-h-9 shrink-0 items-center px-2.5 text-[14px] font-semibold text-noct-accent-300">
+            <span className="flex min-h-9 shrink-0 items-center px-2.5 text-[14px] font-semibold text-noct-accent-300 md:min-h-0 md:px-0 md:text-[13px] md:font-medium">
               {aviso.verbo}
             </span>
           </button>
@@ -65,6 +76,9 @@ export function AvisosDelEquipo({ avisos }: { avisos: AvisoEquipo[] }) {
 // UNA FILA DEL ÍNDICE "MÁS DEL EQUIPO": un solo nivel, con lo que guarda
 // dicho en su valor. El galón dice qué pasa al tocarla: `CaretUp` abre una
 // hoja (se consulta aquí), `CaretRight` una pantalla (se trabaja ahí).
+// Desde 768 px (tarea 338) es la cabecera de las secciones plegables de
+// antes: 14 px, el conteo a 12,5 y el icono teñido si el dato avisa; el
+// divisor lo pone la tarjeta (`DispositivoPage`).
 export function FilaIndice({
   Icono,
   titulo,
@@ -87,12 +101,16 @@ export function FilaIndice({
         type="button"
         onClick={onAbrir}
         aria-haspopup={abre === 'hoja' ? 'dialog' : undefined}
-        className="flex min-h-[52px] w-full items-center gap-3 border-b border-noct-divider text-left text-noct-text hover:bg-noct-text/[.04]"
+        className="flex min-h-[52px] w-full items-center gap-3 border-b border-noct-divider text-left text-noct-text hover:bg-noct-text/[.04] md:gap-2.5 md:border-b-0 md:px-3.5"
       >
-        <Icono size={18} className="shrink-0 text-noct-neutral-400" aria-hidden />
-        <span className="min-w-0 flex-1 text-[15px] leading-snug">{titulo}</span>
+        <Icono
+          size={18}
+          className={`shrink-0 text-noct-neutral-400${tono === 'precaucion' ? ' md:text-noct-precaucion' : ''}`}
+          aria-hidden
+        />
+        <span className="min-w-0 flex-1 text-[15px] leading-snug md:text-[14px] md:leading-[inherit]">{titulo}</span>
         <span
-          className={`max-w-[45%] shrink-0 truncate text-[13.5px] font-[550] ${
+          className={`max-w-[45%] shrink-0 truncate text-[13.5px] font-[550] md:text-[12.5px] md:font-medium md:tabular-nums ${
             tono === 'precaucion' ? 'text-noct-precaucion' : 'text-noct-neutral-400'
           }`}
         >
@@ -112,12 +130,28 @@ export interface ItemResolver {
   tipo: string
   titulo: string
   extra?: string
+  /** El tipo de la guía: desde 768 px tiñe el recuadro del icono (tarea 338). */
+  tipoArticulo?: TipoArticulo
+}
+
+// El tinte del recuadro del icono desde 768 px (tarea 338): el de su tipo,
+// como en las filas de problemas y procedimientos de antes del rediseño
+// (`claseTonoDeTipo`). Las clases van literales para que Tailwind las vea.
+const TINTE_ESCRITORIO: Record<TipoArticulo, string> = {
+  instalacion: 'md:bg-noct-tipo-instalacion/[.12] md:text-noct-tipo-instalacion',
+  configuracion: 'md:bg-noct-tipo-configuracion/[.12] md:text-noct-tipo-configuracion',
+  conexion: 'md:bg-noct-tipo-conexion/[.12] md:text-noct-tipo-conexion',
+  problema_frecuente: 'md:bg-noct-precaucion/[.12] md:text-noct-precaucion',
+  mantenimiento: 'md:bg-noct-exito/[.12] md:text-noct-exito',
+  manual: 'md:bg-noct-neutral-400/[.12] md:text-noct-neutral-400',
 }
 
 // RESOLVER CON ESTE EQUIPO: hasta tres filas (los problemas frecuentes
 // primero) y "Ver N", que abre la hoja con todo, el diagnóstico de su
 // categoría al final. Sustituye a los bloques "Problemas frecuentes" y
-// "Procedimientos" de la ficha, que ahora viven en esa hoja.
+// "Procedimientos" de la ficha, que ahora viven en esa hoja. Desde 768 px
+// (tarea 338): el rótulo de sección de antes y las filas de procedimiento
+// de antes (sin divisor, recuadro de 34 px teñido, título a 15/500).
 export function ResolverConEsteEquipo({
   items,
   total,
@@ -130,8 +164,11 @@ export function ResolverConEsteEquipo({
   if (items.length === 0) return null
   return (
     <section aria-labelledby="resolver-con-este-equipo" className="flex flex-col">
-      <div className="flex items-baseline justify-between gap-2 pb-0.5">
-        <h2 id="resolver-con-este-equipo" className="text-[17px] font-semibold tracking-[-.01em]">
+      <div className="flex items-baseline justify-between gap-2 pb-0.5 md:pb-2">
+        <h2
+          id="resolver-con-este-equipo"
+          className="text-[17px] font-semibold tracking-[-.01em] md:text-[11px] md:font-medium md:uppercase md:tracking-[0.08em] md:text-noct-neutral-500"
+        >
           Resolver con este equipo
         </h2>
         {total > items.length && (
@@ -140,7 +177,7 @@ export function ResolverConEsteEquipo({
             onClick={onVerTodos}
             aria-haspopup="dialog"
             aria-label={`Ver las ${total} formas de resolver con este equipo`}
-            className="flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300"
+            className="flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 md:min-h-0 md:text-[13px] md:font-medium"
           >
             Ver {total}
             <CaretUp size={13} aria-hidden />
@@ -152,22 +189,30 @@ export function ResolverConEsteEquipo({
           <li key={item.id}>
             <Link
               to={item.ruta}
-              className="flex min-h-16 items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04]"
+              className="flex min-h-16 items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-[54px] md:rounded-lg md:border-b-0 md:px-2 md:py-1.5 md:transition-colors md:hover:bg-noct-text/[.05]"
             >
-              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] bg-noct-text/[.06] text-noct-neutral-300">
-                <item.Icono size={19} aria-hidden />
+              <span
+                className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] bg-noct-text/[.06] text-noct-neutral-300 md:h-[34px] md:w-[34px] md:rounded-md${
+                  item.tipoArticulo ? ` ${TINTE_ESCRITORIO[item.tipoArticulo]}` : ''
+                }`}
+              >
+                <item.Icono size={19} className="md:size-[17px]" aria-hidden />
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[12.5px] leading-snug text-noct-neutral-500">{item.tipo}</span>
+              <span className="min-w-0 flex-1 md:flex md:flex-col md:gap-px">
+                <span className="block text-[12.5px] leading-snug text-noct-neutral-500 md:leading-[1.4] md:text-noct-neutral-400">
+                  {item.tipo}
+                </span>
                 {/* El título es la identidad de la guía: no se recorta (regla 23). */}
-                <span className="block text-[15.5px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+                <span className="block text-[15.5px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere] md:text-[15px] md:font-medium">
                   {item.titulo}
                 </span>
                 {item.extra && (
-                  <span className="mt-px block truncate text-[13px] leading-snug text-noct-neutral-400">{item.extra}</span>
+                  <span className="mt-px block truncate text-[13px] leading-snug text-noct-neutral-400 md:text-[11.5px] md:leading-[inherit] md:text-noct-neutral-500">
+                    {item.extra}
+                  </span>
                 )}
               </span>
-              <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+              <CaretRight size={14} className="shrink-0 text-noct-neutral-500 md:text-noct-neutral-600" aria-hidden />
             </Link>
           </li>
         ))}
@@ -195,10 +240,13 @@ export function BarraAccionEquipo({
       Resolver un problema
     </>
   )
-  const clase = `${BTN_PRIMARIO_RELLENO} min-w-0 flex-1`
+  // Desde 768 px (tarea 338) el botón ya va delineado (BTN_PRIMARIO_RELLENO);
+  // aquí se repone el alto, el radio y la letra del pie de antes, y la barra
+  // recupera su relleno.
+  const clase = `${BTN_PRIMARIO_RELLENO} min-w-0 flex-1 md:min-h-[52px] md:rounded-xl md:text-[15px] md:leading-[inherit]`
   return (
     <div
-      className={`sticky ${PEGADA_SOBRE_PESTANAS} ${BAJA_CON_LAS_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] lg:px-10`}
+      className={`sticky ${PEGADA_SOBRE_PESTANAS} ${BAJA_CON_LAS_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:px-4 md:pb-3 lg:px-10`}
     >
       {/* El aviso de versión nueva va aquí, encima de los botones (tarea
           274): esta barra se pega a la misma altura que la franja del
@@ -227,7 +275,7 @@ export function BarraAccionEquipo({
             onClick={onCredenciales}
             aria-haspopup="dialog"
             aria-label="Credenciales del equipo"
-            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[15px] border-[1.5px] border-noct-text/25 text-noct-text hover:bg-noct-text/[.06]"
+            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[15px] border-[1.5px] border-noct-text/25 text-noct-text hover:bg-noct-text/[.06] md:h-[52px] md:w-[52px] md:rounded-xl md:border md:border-noct-divider md:hover:bg-noct-text/[.07]"
           >
             <Key size={21} aria-hidden />
           </button>

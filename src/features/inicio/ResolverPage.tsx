@@ -7,6 +7,7 @@ import { tiempoRelativo } from '../../lib/tiempoRelativo'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { DockBusqueda } from '../../components/DockBusqueda'
+import { useAnchoTelefono } from '../../components/useAnchoTelefono'
 import {
   ArrowRight,
   BookOpen,
@@ -27,7 +28,7 @@ import { ChipsDeAlcance } from '../busqueda/ChipsDeAlcance'
 import { useIdsDeRed } from '../busqueda/useIdsDeRed'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { BorradoresCoincidentes, GuiasEnBorrador } from '../busqueda/BorradoresCoincidentes'
-import { MARCADOR_BUSCADOR } from '../busqueda/resultados'
+import { AYUDA_BUSCADOR, MARCADOR_BUSCADOR } from '../busqueda/resultados'
 import {
   borradoresCoincidentes,
   esBorradorVivo,
@@ -35,7 +36,8 @@ import {
   repartirBorradores,
   sinLosYaOficiales,
 } from '../busqueda/borradoresEnBusqueda'
-import { normalizarTexto } from '../soluciones/iconosSoluciones'
+import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
+import { claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 import { articulosSinTerminar, pasoDeTotal } from '../soluciones/sinTerminar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { obtenerActividadReciente } from '../historial/actividadEquipo'
@@ -101,6 +103,9 @@ export function ResolverPage() {
   // teléfono NO: el teclado en pantalla taparía lo que hay debajo; ahí el
   // campo ya es lo primero y lo más grande.
   const refCampo = useRef<HTMLInputElement>(null)
+  // El buscador va abajo, en el dock, solo con ancho de teléfono (tarea
+  // 338); desde 768 px vuelve arriba, en la banda de la pregunta.
+  const telefono = useAnchoTelefono()
   useEffect(() => {
     const conPunteroFino =
       typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
@@ -216,16 +221,63 @@ export function ResolverPage() {
     // Nivel 1 del chasis (tarea 185): raíz de su pila, el primero de los
     // cuatro destinos. `conLupa={false}` (regla M-R8, "un buscador por
     // pantalla"): esta pantalla trae su propio buscador, así que la lupa
-    // del chasis sería el segundo de la misma pantalla. Desde la tarea 330
-    // la cabecera es de una fila (título, sincronización y cuenta) y el
-    // buscador baja al dock: la pregunta "¿Qué necesitas resolver?" y la
-    // línea de ayuda se retiran.
+    // del chasis sería el segundo de la misma pantalla. Desde la tarea 330,
+    // en el teléfono, la cabecera es de una fila (título, sincronización y
+    // cuenta) y el buscador baja al dock: la pregunta "¿Qué necesitas
+    // resolver?" y la línea de ayuda se retiran. Desde 768 px (tarea 338)
+    // vuelven arriba, en la banda del chasis, como antes del rediseño.
     <Chasis
       titulo="Resolver"
       conLupa={false}
       tituloContraido={escribiendo}
+      barra={
+        telefono ? undefined : (
+          <div className="px-4 pb-3.5 pt-1.5">
+            {/* LA PREGUNTA, NO EL MÓDULO. El técnico no llega con ganas de
+                buscar, llega con algo que resolver. La etiqueta accesible
+                sigue nombrando el alcance (regla M-R8). Se pliega con el
+                primer carácter (alto y opacidad, 180 ms; sin animación si
+                el sistema pide menos movimiento). */}
+            <div
+              aria-hidden={escribiendo}
+              className={`grid transition-[grid-template-rows,opacity] duration-[180ms] ease-out motion-reduce:transition-none ${
+                escribiendo ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+              }`}
+            >
+              <div className="overflow-hidden">
+                <p className="px-0.5 pb-2.5 text-[22px] font-medium leading-[1.25] tracking-[-.01em] text-noct-text">
+                  ¿Qué necesitas resolver?
+                </p>
+              </div>
+            </div>
+            {/* SE DESCRIBE, NO SE NOMBRA (tarea 288, fase 9): el marcador
+                invita a contar lo que pasa. */}
+            <CampoBusqueda
+              valor={query}
+              onCambiar={setQuery}
+              alcance="Soluciones IT"
+              textoAlternativo={MARCADOR_BUSCADOR}
+              refCampo={refCampo}
+              variante="destacada"
+            />
+            {/* Con el campo vacío, una ayuda discreta con tres maneras reales
+                de escribir; se pliega con el primer carácter, igual que la
+                pregunta. */}
+            <div
+              aria-hidden={escribiendo}
+              className={`grid transition-[grid-template-rows,opacity] duration-[180ms] ease-out motion-reduce:transition-none ${
+                escribiendo ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
+              }`}
+            >
+              <div className="overflow-hidden">
+                <p className="px-1 pt-2 text-[12.5px] leading-snug text-noct-neutral-400">{AYUDA_BUSCADOR}</p>
+              </div>
+            </div>
+          </div>
+        )
+      }
     >
-      <main className="flex-1 px-4 pb-6 pt-4">
+      <main className="flex-1 px-4 pb-6 pt-4 md:pb-16">
         {buscando ? (
           <div className="flex flex-col gap-4">
             {resultados.length > 0 && <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />}
@@ -310,7 +362,7 @@ export function ResolverPage() {
                 debajo, en su lista. */}
             {seguir && <BloqueSeguir guia={seguir} />}
             <BloqueRecientes recientes={recientes.filter((r) => r !== seguir)} />
-            <BloqueAccesos accesos={accesos} />
+            <BloqueAccesos accesos={accesos} categorias={categorias} />
 
             {/* Bienvenida del primer día: los tres pasos que dejan al
                 técnico listo para trabajar sin señal. Va al final para no
@@ -325,17 +377,20 @@ export function ResolverPage() {
 
       {/* EL BUSCADOR, AL PULGAR (tarea 330): el mismo de siempre, abajo,
           sobre las pestañas y, con el teclado abierto, sobre el teclado.
-          El marcador sigue invitando a describir lo que pasa (tarea 288). */}
-      <DockBusqueda>
-        <CampoBusqueda
-          valor={query}
-          onCambiar={setQuery}
-          alcance="Soluciones IT"
-          textoAlternativo={MARCADOR_BUSCADOR}
-          refCampo={refCampo}
-          variante="dock"
-        />
-      </DockBusqueda>
+          El marcador sigue invitando a describir lo que pasa (tarea 288).
+          Solo en el teléfono (tarea 338). */}
+      {telefono && (
+        <DockBusqueda>
+          <CampoBusqueda
+            valor={query}
+            onCambiar={setQuery}
+            alcance="Soluciones IT"
+            textoAlternativo={MARCADOR_BUSCADOR}
+            refCampo={refCampo}
+            variante="dock"
+          />
+        </DockBusqueda>
+      )}
     </Chasis>
   )
 }
@@ -352,10 +407,12 @@ function BloqueAtencion({ agenda }: { agenda: Agenda }) {
   // NECESITA ATENCIÓN (tarea 330): tres contadores (vencidos, para hoy y
   // próximos) que abren la Agenda, y debajo los asuntos con su fila. Los
   // contadores son los mismos de la Agenda (`ContadoresAgenda`, tarea 332).
+  // Desde 768 px (tarea 338), los títulos de bloque vuelven al rótulo de
+  // `TituloSeccion` y los enlaces, a 13 px en peso 500.
   return (
-    <section aria-labelledby="resolver-atencion" className="flex flex-col gap-2.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 id="resolver-atencion" className="text-[17px] font-semibold tracking-[-.01em]">
+    <section aria-labelledby="resolver-atencion" className="flex flex-col gap-2.5 md:gap-1.5">
+      <div className="flex items-baseline justify-between gap-2 md:items-center md:px-0.5">
+        <h2 id="resolver-atencion" className="text-[17px] font-semibold tracking-[-.01em] md:text-[11px] md:font-medium md:uppercase md:tracking-[0.08em] md:text-noct-neutral-500">
           Necesita atención
         </h2>
         <Link
@@ -363,7 +420,7 @@ function BloqueAtencion({ agenda }: { agenda: Agenda }) {
           // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe) y
           // el origen taparía la fecha de hoy de su cabecera (tarea 265).
           aria-label={total > visibles.length ? `Ver la agenda completa (${total})` : 'Ver la agenda completa'}
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline md:gap-1.5 md:text-[13px] md:font-medium"
         >
           Agenda
           <CaretRight size={13} aria-hidden />
@@ -391,15 +448,19 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
     guia.enCurso ??
     (avance ? pasoDeTotal(Math.min(avance.hechos + 1, avance.total), avance.total, avance.totalAbierto ?? false) : '')
   return (
-    <section aria-labelledby="resolver-seguir" className="flex flex-col gap-2.5">
-      <h2 id="resolver-seguir" className="text-[17px] font-semibold tracking-[-.01em]">
+    <section aria-labelledby="resolver-seguir" className="flex flex-col gap-2.5 md:gap-1.5">
+      <h2 id="resolver-seguir" className="text-[17px] font-semibold tracking-[-.01em] md:px-0.5 md:text-[11px] md:font-medium md:uppercase md:tracking-[0.08em] md:text-noct-neutral-500">
         Seguir donde ibas
       </h2>
       <Link
         to={guia.ruta}
         state={ORIGEN_RESOLVER}
         aria-label={`Continuar ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
-        className="flex flex-col gap-2.5 rounded-2xl border border-noct-text/25 bg-noct-surface p-3.5 text-noct-text hover:bg-noct-text/[.04]"
+        // Desde 768 px (tarea 338), tarjeta del lenguaje de antes del
+        // rediseño móvil: radio de 8 px y borde divisor que se aclara al
+        // pasar el puntero; el avance, en la barra fina de acento de la
+        // guía a medias de entonces (`BarraReanudar`).
+        className="flex flex-col gap-2.5 rounded-2xl border border-noct-text/25 bg-noct-surface p-3.5 text-noct-text hover:bg-noct-text/[.04] md:rounded-lg md:border-noct-divider md:hover:border-noct-neutral-600"
       >
         <span className="flex items-center gap-2 text-[12.5px] text-noct-neutral-400">
           <Icono size={14} className="shrink-0" aria-hidden />
@@ -408,7 +469,7 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
             {guia.borrador ? ' · Borrador' : ''}
           </span>
         </span>
-        <span data-nombre-principal className="text-[16px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+        <span data-nombre-principal className="text-[16px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere] md:text-[15px] md:font-medium">
           {guia.titulo}
         </span>
         {avance && avance.total > 0 && (
@@ -417,23 +478,30 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
               Array.from({ length: avance.total }, (_, i) => (
                 <span
                   key={i}
-                  className={`h-[5px] min-w-0 flex-1 rounded-[3px] ${
-                    i < avance.hechos ? 'bg-noct-accent' : i === avance.hechos ? 'bg-noct-text' : 'bg-noct-neutral-700'
+                  className={`h-[5px] min-w-0 flex-1 rounded-[3px] md:h-[3px] md:rounded-full ${
+                    i < avance.hechos
+                      ? 'bg-noct-accent'
+                      : i === avance.hechos
+                        ? 'bg-noct-text md:bg-noct-accent/[.18]'
+                        : 'bg-noct-neutral-700 md:bg-noct-accent/[.18]'
                   }`}
                 />
               ))
             ) : (
-              <span className="h-[5px] flex-1 overflow-hidden rounded-[3px] bg-noct-neutral-700">
+              <span className="h-[5px] flex-1 overflow-hidden rounded-[3px] bg-noct-neutral-700 md:h-[3px] md:rounded-full md:bg-noct-accent/[.18]">
                 <span className="block h-full bg-noct-accent" style={{ width: `${Math.round((avance.hechos / avance.total) * 100)}%` }} />
               </span>
             )}
           </span>
         )}
+        {/* Desde 768 px, el avance y "Continuar" como los decía la fila
+            de la guía a medias en Recientes antes del rediseño móvil (tarea
+            338): el paso en acento y "Continuar" con forma de botón. */}
         <span className="flex items-center justify-between gap-2">
-          <span className="min-w-0 text-[13.5px] text-noct-neutral-300">{detalle}</span>
-          <span className="flex shrink-0 items-center gap-1.5 text-[14px] font-semibold text-noct-accent-300">
+          <span className="min-w-0 text-[13.5px] text-noct-neutral-300 md:text-[12.5px] md:leading-[1.4] md:text-noct-accent-300">{detalle}</span>
+          <span className="flex shrink-0 items-center gap-1.5 text-[14px] font-semibold text-noct-accent-300 md:h-9 md:rounded-lg md:border md:border-noct-accent md:px-3 md:text-[13px] md:font-medium">
             Continuar
-            <ArrowRight size={15} aria-hidden />
+            <ArrowRight size={15} className="md:hidden" aria-hidden />
           </span>
         </span>
       </Link>
@@ -481,7 +549,7 @@ function BloqueRecientes({ recientes }: { recientes: GuiaReciente[] }) {
   if (recientes.length === 0) return null
   return (
     <section aria-labelledby="resolver-recientes">
-      <h2 id="resolver-recientes" className="mb-1 text-[17px] font-semibold tracking-[-.01em]">
+      <h2 id="resolver-recientes" className="mb-1 text-[17px] font-semibold tracking-[-.01em] md:mb-1.5 md:px-0.5 md:text-[11px] md:font-medium md:uppercase md:tracking-[0.08em] md:text-noct-neutral-500">
         Recientes
       </h2>
       <div className="flex flex-col">
@@ -562,22 +630,29 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
 // ella (la categoría es un FILTRO de la lista, decisión del 2026-07-18).
 // "Todas las guías" está SIEMPRE, con o sin accesos: es la única puerta
 // al catálogo desde que Guías dejó de ser pestaña.
-function BloqueAccesos({ accesos }: { accesos: AccesoRapido[] }) {
+function BloqueAccesos({
+  accesos,
+  categorias,
+}: {
+  accesos: AccesoRapido[]
+  categorias: { id: string; nombre: string; color: string | null; orden: number }[]
+}) {
+  const porId = new Map(categorias.map((c) => [c.id, c]))
   // GUÍAS (tarea 330): el catálogo por categoría, con cuántas guías tiene
   // cada una, y "Todas" a la derecha del título. "Todas las guías" está
   // SIEMPRE: es la única puerta al catálogo desde que Guías dejó de ser
   // pestaña.
   return (
-    <section aria-labelledby="resolver-accesos" className="flex flex-col gap-2.5">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 id="resolver-accesos" className="text-[17px] font-semibold tracking-[-.01em]">
+    <section aria-labelledby="resolver-accesos" className="flex flex-col gap-2.5 md:gap-2">
+      <div className="flex items-baseline justify-between gap-2 md:items-center md:px-0.5">
+        <h2 id="resolver-accesos" className="text-[17px] font-semibold tracking-[-.01em] md:text-[11px] md:font-medium md:uppercase md:tracking-[0.08em] md:text-noct-neutral-500">
           Guías
         </h2>
         <Link
           to="/soluciones"
           state={ORIGEN_RESOLVER}
           aria-label="Todas las guías"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline md:gap-1.5 md:text-[13.5px] md:font-medium"
         >
           Todas
           <CaretRight size={13} aria-hidden />
@@ -585,18 +660,31 @@ function BloqueAccesos({ accesos }: { accesos: AccesoRapido[] }) {
       </div>
       {accesos.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {accesos.map((acceso) => (
-            <Link
-              key={acceso.categoriaId}
-              to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
-              state={ORIGEN_RESOLVER}
-              aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-noct-text/25 px-3.5 text-[14.5px] font-[550] text-noct-text hover:bg-noct-text/[.05]"
-            >
-              {acceso.nombre}
-              <span className="font-mono text-[12.5px] text-noct-neutral-500">{acceso.guias}</span>
-            </Link>
-          ))}
+          {accesos.map((acceso) => {
+            const categoria = porId.get(acceso.categoriaId)
+            const Icono = iconoDeCategoria(acceso.nombre)
+            return (
+              <Link
+                key={acceso.categoriaId}
+                to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
+                state={ORIGEN_RESOLVER}
+                aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
+                // Desde 768 px, la píldora de los accesos rápidos de antes
+                // del rediseño móvil (tarea 338).
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-noct-text/25 px-3.5 text-[14.5px] font-[550] text-noct-text hover:bg-noct-text/[.05] md:rounded-full md:border-noct-divider md:bg-noct-surface md:text-[14px] md:font-medium md:hover:border-noct-neutral-600 md:hover:bg-noct-text/[.04]"
+              >
+                {/* El icono de su categoría, en su color, solo desde 768 px:
+                    la píldora de antes del rediseño móvil lo llevaba (tarea 338). */}
+                <Icono
+                  size={16}
+                  className={`hidden shrink-0 md:block ${categoria ? claseTextoDeCategoria(categoria) : 'text-noct-neutral-400'}`}
+                  aria-hidden
+                />
+                {acceso.nombre}
+                <span className="font-mono text-[12.5px] text-noct-neutral-500">{acceso.guias}</span>
+              </Link>
+            )
+          })}
         </div>
       )}
     </section>

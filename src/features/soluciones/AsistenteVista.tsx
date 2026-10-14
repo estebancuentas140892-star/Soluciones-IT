@@ -524,12 +524,13 @@ export function AsistenteVista({
       <div className={`flex flex-col ${conPie ? 'flex-1' : ''}`}>
         {/* En la guía principal, los segmentos de la cabecera con el último,
             el de la comprobación, a la vista, y "Final" donde va el contador
-            (rediseño móvil "1b Pulgar", tarea 328). */}
+            (rediseño móvil "1b Pulgar", tarea 328). Desde 768 px, "Final"
+            con la letra del contador de antes, sin caja (tarea 338). */}
         {nivel === 0 && (
           <>
             <BandaTarea>
-              <span className="flex h-11 shrink-0 items-center px-1">
-                <span className="flex min-h-[34px] items-center rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text">
+              <span className="flex h-11 shrink-0 items-center px-1 md:px-2">
+                <span className="flex min-h-[34px] items-center rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text md:min-h-0 md:rounded-none md:bg-transparent md:px-0 md:text-[14px] md:text-noct-accent-300">
                   Final
                 </span>
               </span>
@@ -550,7 +551,7 @@ export function AsistenteVista({
             </BandaBajoTarea>
           </>
         )}
-        <div className={`flex flex-col gap-[18px] pt-[18px] ${conPie ? 'pb-6' : ''}`}>
+        <div className={`flex flex-col gap-[18px] pt-[18px] md:gap-4 md:pt-3 ${conPie ? 'pb-6' : ''}`}>
           {/* En el flujo de otra guía, su avance es el de esa guía: una barra
               de esta mediría otra cosa (tarea 289). La guía principal ya lo
               dice con los segmentos de su cabecera. */}
@@ -560,17 +561,19 @@ export function AsistenteVista({
               vistazo antes de dar el trabajo por hecho. Desde la tarea 328
               tiene la forma de una acción de la guía: el rótulo verde de
               "Comprueba", la pregunta al tamaño de la instrucción y una
-              casilla de 64 px por comprobación. */}
+              casilla de 64 px por comprobación. Desde 768 px (tarea 338), la
+              misma forma con la letra, el rótulo y la casilla de antes, y cada
+              comprobación en una tarjeta con el borde del divisor. */}
           <div className="flex flex-col gap-1.5">
-            <p className="flex items-center gap-1.5 text-[12.5px] font-bold uppercase leading-snug tracking-[.06em] text-noct-exito">
-              <SealCheck size={14} className="shrink-0" aria-hidden />
+            <p className="flex items-center gap-1.5 text-[12.5px] font-bold uppercase leading-snug tracking-[.06em] text-noct-exito md:text-[12px] md:font-semibold">
+              <SealCheck size={14} className="shrink-0 md:size-[13px]" aria-hidden />
               Comprueba
             </p>
             <EncabezadoConFoco className={`${TEXTO_INSTRUCCION} text-noct-text`}>
               {/* A mitad del flujo no se termina nada: se comprueba y se sigue. */}
               {integrada ? '¿Quedó bien?' : '¿Quedó resuelto?'}
             </EncabezadoConFoco>
-            <p className="text-[15px] leading-[1.45] text-noct-neutral-300">
+            <p className="text-[15px] leading-[1.45] text-noct-neutral-300 md:text-[14px] md:leading-snug md:text-noct-neutral-400">
               {integrada
                 ? 'Marca lo que comprobaste para seguir.'
                 : 'Marca lo que comprobaste. Hasta entonces la guía no se da por terminada.'}
@@ -586,17 +589,21 @@ export function AsistenteVista({
                     role="checkbox"
                     aria-checked={marcada}
                     onClick={() => void alternarVerificacion(indice)}
-                    className="flex min-h-16 w-full items-center gap-3.5 rounded-[14px] border-[1.5px] border-noct-text/25 bg-noct-surface px-3.5 py-2 text-left active:bg-noct-neutral-800"
+                    className="flex min-h-16 w-full items-center gap-3.5 rounded-[14px] border-[1.5px] border-noct-text/25 bg-noct-surface px-3.5 py-2 text-left active:bg-noct-neutral-800 md:min-h-12 md:gap-3 md:rounded-xl md:border md:border-noct-divider md:px-4 md:active:bg-noct-surface"
                   >
                     <span
                       aria-hidden
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 transition-colors ${
-                        marcada ? 'border-noct-exito bg-noct-exito text-noct-bg' : 'border-noct-neutral-500 text-transparent'
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border-2 transition-colors md:h-6 md:w-6 md:rounded-md md:border-[1.5px] ${
+                        marcada
+                          ? 'border-noct-exito bg-noct-exito text-noct-bg md:bg-noct-exito/15 md:text-noct-exito'
+                          : 'border-noct-neutral-500 text-transparent'
                       }`}
                     >
-                      <Check size={17} />
+                      <Check size={17} className="md:size-3.5" />
                     </span>
-                    <span className={`text-[15.5px] leading-[1.35] ${marcada ? 'text-noct-neutral-300' : 'text-noct-text'}`}>
+                    <span
+                      className={`text-[15.5px] leading-[1.35] md:text-[15px] md:leading-snug ${marcada ? 'text-noct-neutral-300 md:text-noct-neutral-400' : 'text-noct-text'}`}
+                    >
                       {item}
                     </span>
                   </button>
@@ -644,7 +651,9 @@ export function AsistenteVista({
               to={salida.to}
               state={salida.estado}
               // La única acción rellena de la pantalla (regla 30, tarea 328).
-              className={`mt-2 w-full max-w-xs ${BTN_PRIMARIO_RELLENO}`}
+              // Desde 768 px, delineada, con su alto, su radio y su borde de
+              // antes (tarea 338).
+              className={`mt-2 w-full max-w-xs ${BTN_PRIMARIO_RELLENO} md:h-14 md:rounded-2xl md:border-2 md:px-0 md:leading-[inherit]`}
             >
               Salir de la guía
             </Link>
@@ -1622,10 +1631,11 @@ function ContadorPaso({
       // a 14.5 px sobre fondo tenue, en el color del texto. Antes era texto
       // de 13 px en el acento y "dónde estoy" dependía de leer dos líneas
       // pequeñas (hallazgo 2 de la auditoría móvil). El toque sigue siendo
-      // de 44 px: la caja visible mide 34 dentro de él.
-      className="group flex h-11 shrink-0 items-center px-1"
+      // de 44 px: la caja visible mide 34 dentro de él. Desde 768 px
+      // (tarea 338), sin caja, en el acento y con la letra de antes.
+      className="group flex h-11 shrink-0 items-center px-1 md:rounded-lg md:px-2 md:hover:bg-noct-text/[.07]"
     >
-      <span className="flex min-h-[34px] items-center gap-1 rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text group-hover:bg-noct-text/[.1]">
+      <span className="flex min-h-[34px] items-center gap-1 rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text group-hover:bg-noct-text/[.1] md:min-h-0 md:rounded-none md:bg-transparent md:px-0 md:text-[14px] md:text-noct-accent-300 md:group-hover:bg-transparent">
         {indice + 1}/{total ?? '…'}
         <CaretDown size={12} className="text-noct-neutral-400" aria-hidden />
       </span>

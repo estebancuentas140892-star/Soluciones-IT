@@ -37,8 +37,11 @@ export function CabeceraColapsable({ titulo, forzarContraida = false }: { titulo
     <h1
       // 25 px y 650 en reposo desde el rediseño móvil "1b Pulgar" (tarea 330):
       // la cabecera de raíz es una sola fila, título, sincronización y cuenta.
-      className={`min-w-0 truncate leading-[1.15] transition-[font-size] duration-150 motion-reduce:transition-none ${
-        contraida ? 'text-[14px] font-medium' : 'text-[25px] font-[650] tracking-[-.02em]'
+      // Desde 768 px, los 21 px y el 500 de antes (tarea 338).
+      className={`min-w-0 truncate leading-[1.15] transition-[font-size] duration-150 motion-reduce:transition-none md:leading-[1.2] ${
+        contraida
+          ? 'text-[14px] font-medium'
+          : 'text-[25px] font-[650] tracking-[-.02em] md:text-[21px] md:font-medium md:tracking-normal'
       }`}
     >
       {titulo}

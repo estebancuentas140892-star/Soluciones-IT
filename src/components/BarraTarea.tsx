@@ -106,7 +106,7 @@ export function BarraTarea({
   if (compacta) {
     return (
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-surface/[.95] backdrop-blur-[12px]">
-        <div className={`flex items-center gap-1 pl-1 pr-1 ${contexto ? 'min-h-[50px] py-0.5' : 'h-11'}`}>
+        <div className={`flex items-center gap-1 pl-1 pr-1 ${contexto ? 'min-h-[50px] py-0.5 md:min-h-11' : 'h-11'}`}>
           {alSalir ? (
             <button
               type="button"
@@ -131,10 +131,12 @@ export function BarraTarea({
           {contexto ? (
             // Dos líneas: con qué (12 px, el mínimo de texto) y qué (14 px
             // seminegrita). El título se recorta en una línea: entero se
-            // lee en el índice de pasos, que abre el contador.
+            // lee en el índice de pasos, que abre el contador. Desde 768 px
+            // (tarea 338) en la letra de antes: el título a 14,5 px y 500, y
+            // el contexto a 11 px, como la línea de contexto de un documento.
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12px] leading-[1.3] text-noct-neutral-500">{contexto}</p>
-              <h1 className="truncate text-[14px] font-semibold leading-[1.3]">{titulo}</h1>
+              <p className="truncate text-[12px] leading-[1.3] text-noct-neutral-500 md:text-[11px]">{contexto}</p>
+              <h1 className="truncate text-[14px] font-semibold leading-[1.3] md:text-[14.5px] md:font-medium md:leading-tight">{titulo}</h1>
             </div>
           ) : (
             <h1 className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-tight">{titulo}</h1>

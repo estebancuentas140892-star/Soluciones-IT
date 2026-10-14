@@ -62,11 +62,13 @@ export function PantallaAdvertencia({
 }: Props & { refTitulo: Ref<HTMLHeadingElement> }) {
   const idTitulo = useId()
   const tono = tonoDeLaAdvertencia(alertas)
+  // Desde 768 px, el radio, el peso y la letra de antes del rediseño móvil
+  // (tarea 338); la disposición es la misma.
   return (
     <div className="flex flex-col gap-7">
       <section
         aria-labelledby={idTitulo}
-        className={`flex flex-col gap-3.5 rounded-r-[18px] border-l-4 px-4 py-4 ${tono.claseBarra} ${tono.claseFondo}`}
+        className={`flex flex-col gap-3.5 rounded-r-[18px] border-l-4 px-4 py-4 md:rounded-r-2xl ${tono.claseBarra} ${tono.claseFondo}`}
       >
         <h2
           id={idTitulo}
@@ -83,7 +85,7 @@ export function PantallaAdvertencia({
             {tono.etiqueta}
             <span className="sr-only">.</span>
           </span>{' '}
-          <span className="text-[23px] font-semibold leading-[1.25] tracking-[-.01em] text-noct-text min-[375px]:text-[26px]">
+          <span className="text-[23px] font-semibold leading-[1.25] tracking-[-.01em] text-noct-text min-[375px]:text-[26px] md:font-medium">
             Antes de continuar
           </span>
         </h2>
@@ -94,7 +96,7 @@ export function PantallaAdvertencia({
           <ArrowDown size={13} className="shrink-0" aria-hidden />
           Lo que sigue
         </p>
-        <p className="text-[17px] leading-[1.4] text-pretty text-noct-neutral-200 [overflow-wrap:anywhere]">{loQueSigue}</p>
+        <p className="text-[17px] leading-[1.4] text-pretty text-noct-neutral-200 [overflow-wrap:anywhere] md:text-[18px] md:leading-snug">{loQueSigue}</p>
       </div>
     </div>
   )

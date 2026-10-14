@@ -57,7 +57,8 @@ import { ConteoFila, FilaMas as Fila, TituloGrupo } from './FilasMas'
 //
 // REDISEÑO MÓVIL "1b PULGAR" (tarea 332): mismos grupos y destinos; los
 // rótulos de grupo en minúsculas a 13,5 px y las filas de 60 px
-// (`FilasMas`).
+// (`FilasMas`). Solo en el teléfono: desde 768 px, las variantes `md:`
+// devuelven el aspecto de antes (tarea 338).
 
 export function PantallaMas() {
   const ubicaciones = useLiveQuery(() => db.ubicaciones.filter((u) => !u.eliminadoEn).count(), [])
@@ -215,19 +216,21 @@ function FilaFavoritos({ favoritos }: { favoritos: ElementoFavorito[] }) {
         onClick={() => setAbierta((valor) => !valor)}
         aria-expanded={abierta}
         aria-controls={idCuerpo}
-        className="flex min-h-[60px] w-full items-center gap-3.5 py-2 text-left text-noct-text hover:bg-noct-text/[.04]"
+        // Desde 768 px, la fila de antes del rediseño móvil (tarea 338),
+        // igual que `FilaMas`.
+        className="flex min-h-[60px] w-full items-center gap-3.5 py-2 text-left text-noct-text hover:bg-noct-text/[.04] md:min-h-[52px] md:px-0.5"
       >
-        <Star size={20} className="w-5 shrink-0 text-noct-neutral-400" aria-hidden />
+        <Star size={20} className="w-5 shrink-0 text-noct-neutral-400 md:h-[19px]" aria-hidden />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15.5px] font-[550] leading-[1.3]">Mis favoritos</span>
-          <span className="block truncate text-[13px] leading-[1.35] text-noct-neutral-400">
+          <span className="block text-[15.5px] font-[550] leading-[1.3] md:text-[15px] md:font-normal md:leading-[1.35]">Mis favoritos</span>
+          <span className="block truncate text-[13px] leading-[1.35] text-noct-neutral-400 md:text-[12.5px] md:text-noct-neutral-500">
             Lo que marcaste con la estrella
           </span>
         </span>
         <ConteoFila valor={favoritos.length} />
         <CaretDown
           size={15}
-          className={`shrink-0 text-noct-neutral-500 transition-transform duration-150 motion-reduce:transition-none ${
+          className={`shrink-0 text-noct-neutral-500 transition-transform duration-150 motion-reduce:transition-none md:text-noct-neutral-600 ${
             abierta ? 'rotate-180' : ''
           }`}
           aria-hidden
@@ -236,14 +239,14 @@ function FilaFavoritos({ favoritos }: { favoritos: ElementoFavorito[] }) {
       {abierta && (
         // Sangría alineada con el título de la fila (20 de icono + 14 de
         // separación), para que se lea como su contenido.
-        <div id={idCuerpo} className="flex flex-col pb-1.5 pl-[34px]">
+        <div id={idCuerpo} className="flex flex-col pb-1.5 pl-[34px] md:pl-9 md:pr-0.5">
           {favoritos.map((favorito) => {
             const { Icono } = VISUAL_POR_TIPO[favorito.tipo]
             return (
               <Link
                 key={favorito.clave}
                 to={favorito.ruta}
-                className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 text-[14px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
+                className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 text-[14px] text-noct-text first:border-t-0 hover:text-noct-accent-300 md:text-[13.5px]"
               >
                 <Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
                 {/* Hasta dos líneas, como los títulos de Recientes y de los

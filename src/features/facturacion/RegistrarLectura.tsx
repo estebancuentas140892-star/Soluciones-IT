@@ -27,6 +27,11 @@ import {
 // Si lo que falla es otro dato de la autorización (guardada antes de una
 // regla), se dice y se manda a Editar: aquí no se corrige. La hoja es
 // una superficie, así que los campos llevan el fondo de la app.
+//
+// Desde 768 px (tarea 338) con la letra de los formularios de antes del
+// rediseño móvil: los avisos a 12.5-13 px y el botón con el alto, el radio
+// y la letra del primario de AutorizacionForm (su color lo da
+// BTN_PRIMARIO_RELLENO, delineado desde 768).
 
 type Lectura = Pick<DatosAutorizacion, 'consecutivoActual' | 'consecutivoLeidoEn' | 'consecutivoFuente'>
 const CAMPOS_LECTURA: (keyof DatosAutorizacion)[] = ['consecutivoActual', 'consecutivoLeidoEn', 'consecutivoFuente']
@@ -68,9 +73,9 @@ export function RegistrarLectura({
   }
 
   return (
-    <form onSubmit={guardar} noValidate className="flex flex-col gap-4">
+    <form onSubmit={guardar} noValidate className="flex flex-col gap-4 md:gap-3.5">
       {tieneConsecutivoLeido(autorizacion) && (
-        <p className="text-[13.5px] leading-[1.45] text-noct-neutral-300">
+        <p className="text-[13.5px] leading-[1.45] text-noct-neutral-300 md:text-[13px] md:text-noct-neutral-400">
           Última lectura: <span className="font-mono font-semibold">{formatearNumero(autorizacion.consecutivoActual as number)}</span>
           , el {fechaConAnio(autorizacion.consecutivoLeidoEn as string)} en {autorizacion.consecutivoFuente}.
         </p>
@@ -105,11 +110,15 @@ export function RegistrarLectura({
         />
       </Campo>
       {mostrarError && (
-        <p role="alert" className="text-[13.5px] leading-[1.45] text-noct-error">
+        <p role="alert" className="text-[13.5px] leading-[1.45] text-noct-error md:text-[12.5px]">
           {deLaLectura ? mostrarError.mensaje : `${mostrarError.mensaje} Corrígelo en Editar.`}
         </p>
       )}
-      <button type="submit" disabled={guardando} className={`w-full ${BTN_PRIMARIO_RELLENO}`}>
+      <button
+        type="submit"
+        disabled={guardando}
+        className={`w-full ${BTN_PRIMARIO_RELLENO} md:min-h-11 md:gap-1.5 md:rounded-lg md:text-[13px] md:font-medium md:[&>svg]:size-3.5`}
+      >
         <FloppyDisk size={18} aria-hidden />
         {guardando ? 'Guardando...' : 'Guardar lectura'}
       </button>

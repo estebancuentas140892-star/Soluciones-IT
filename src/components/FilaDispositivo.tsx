@@ -84,7 +84,7 @@ export function FilaDispositivo({
   const atenuada = estadoVisible?.excepcion ?? false
   // Al 66 % y no al 60: en el tema claro el nombre atenuado quedaba en
   // 4.4:1 (tarea 333).
-  const atenuacion = atenuada ? 'opacity-[.66]' : ''
+  const atenuacion = atenuada ? 'opacity-[.66] md:opacity-60' : ''
   const { pre, match, post } = partirTitulo(dispositivo.nombre, normalizarTexto(resaltar.trim()))
   const enPartes = typeof subtitulo !== 'string'
   const conSubtitulo = enPartes ? subtitulo.length > 0 : subtitulo !== ''
@@ -120,7 +120,7 @@ export function FilaDispositivo({
       <span
         className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-400 ${
           conFoto ? 'overflow-hidden' : ''
-        } ${atenuada ? 'opacity-[.66]' : ''}`}
+        } ${atenuada ? 'opacity-[.66] md:opacity-60' : ''}`}
       >
         {conFoto && dispositivo.foto ? (
           <MiniaturaPortada
@@ -148,7 +148,7 @@ export function FilaDispositivo({
         <p
           className={`line-clamp-2 break-words text-[15px] font-medium leading-[1.3] text-pretty ${
             derecha ? '' : 'col-span-2'
-          } ${atenuada ? 'opacity-[.66]' : ''}`}
+          } ${atenuada ? 'opacity-[.66] md:opacity-60' : ''}`}
         >
           {pre}
           {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}

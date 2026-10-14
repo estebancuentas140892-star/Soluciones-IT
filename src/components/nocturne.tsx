@@ -51,8 +51,10 @@ export const PEGADA_SOBRE_PESTANAS = 'bottom-[calc(65px+env(safe-area-inset-bott
 // esconden al bajar (`pestanasSeOcultanAlBajar` del chasis, tarea 329): la
 // barra baja al borde, con el área segura dentro de su relleno, y sube otra
 // vez cuando las pestañas vuelven.
+// Solo en el teléfono (`max-md:`, tarea 338): desde 768 px no hay pestañas
+// abajo y la barra ya va al borde, con su relleno de siempre.
 export const BAJA_CON_LAS_PESTANAS =
-  'transition-[bottom] duration-200 motion-reduce:transition-none group-data-[pestanas=ocultas]/chasis:bottom-0 group-data-[pestanas=ocultas]/chasis:pb-[calc(12px+env(safe-area-inset-bottom))]'
+  'transition-[bottom] duration-200 motion-reduce:transition-none max-md:group-data-[pestanas=ocultas]/chasis:bottom-0 max-md:group-data-[pestanas=ocultas]/chasis:pb-[calc(12px+env(safe-area-inset-bottom))]'
 
 // Botones .btn del sistema: el primario va delineado en el acento y el
 // secundario con el divisor. Delineado es lo normal: Editar, Programar,
@@ -68,8 +70,15 @@ export const BTN_PRIMARIO = `${BTN_BASE} border-noct-accent px-2.5 py-[7px] text
 // Alto mínimo de 54 (la acción va al pulgar) y texto en `on-accent`, el
 // casi negro que se lee sobre el cian. No hereda de BTN_BASE: su tamaño
 // de letra, radio y alto son otros, y no lleva borde visible.
+//
+// RELLENO SOLO EN EL TELÉFONO (tarea 338, AD-087). El rediseño "1b
+// Pulgar" es móvil: desde 768 px el botón vuelve a la forma que tenía el
+// primario de esas pantallas antes del rediseño, delineado en el acento
+// con su tinte y el texto en `accent-300` (el pie de la ficha, el de la
+// guía). Las variantes `md:` van aquí y no en cada pantalla; cada una solo
+// repone, también con `md:`, su alto, su radio y su letra de antes.
 export const BTN_PRIMARIO_RELLENO =
-  'inline-flex min-h-[54px] cursor-pointer items-center justify-center gap-2 rounded-[15px] border border-transparent bg-noct-accent px-4 text-[16px] font-semibold leading-tight text-noct-on-accent hover:bg-noct-accent-300 active:bg-noct-accent-500 disabled:cursor-not-allowed disabled:opacity-45'
+  'inline-flex min-h-[54px] cursor-pointer items-center justify-center gap-2 rounded-[15px] border border-transparent bg-noct-accent px-4 text-[16px] font-semibold leading-tight text-noct-on-accent hover:bg-noct-accent-300 active:bg-noct-accent-500 disabled:cursor-not-allowed disabled:opacity-45 md:border-noct-accent md:bg-noct-accent/[.12] md:text-noct-accent-300 md:hover:bg-noct-accent/[.18] md:active:bg-noct-accent/25'
 export const BTN_SECUNDARIO = `${BTN_BASE} border-noct-divider px-2.5 py-[7px] text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`
 // Variante destructiva del primario (.btn-danger): para la accion que
 // SI ejecuta la eliminacion (a diferencia de BTN_GHOST_PELIGRO, pensado

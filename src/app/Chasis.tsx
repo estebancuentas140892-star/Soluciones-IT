@@ -493,21 +493,23 @@ export function Chasis(props: Props) {
                 {/* Mientras la pantalla enseña el nombre en grande, aquí solo
                     a dónde se vuelve (tarea 329). Es texto de apoyo: el
                     regreso ya tiene su nombre accesible. */}
+                {/* Solo en el teléfono (tarea 338): desde 768 px la fila
+                    lleva siempre el nombre, como antes del rediseño móvil. */}
                 {props.tituloVisible === false && (
                   <p
                     aria-hidden
-                    className="absolute inset-0 flex items-center truncate text-[15px] text-noct-neutral-400"
+                    className="absolute inset-0 flex items-center truncate text-[15px] text-noct-neutral-400 md:hidden"
                   >
                     {volverEtiqueta ?? contexto}
                   </p>
                 )}
                 <h1
                   className={`min-w-0 transition-opacity duration-150 motion-reduce:transition-none ${
-                    props.tituloVisible === false ? 'opacity-0' : 'opacity-100'
+                    props.tituloVisible === false ? 'opacity-0 md:opacity-100' : 'opacity-100'
                   }`}
                 >
                   {contexto && (
-                    <span className="block truncate text-[12px] leading-[1.3] text-noct-neutral-500">{contexto}</span>
+                    <span className="block truncate text-[12px] leading-[1.3] text-noct-neutral-500 md:text-[11px]">{contexto}</span>
                   )}
                   <span className="block truncate text-[14px] font-medium leading-[1.25]">{props.titulo}</span>
                 </h1>

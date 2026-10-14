@@ -42,7 +42,7 @@ interface Props {
 }
 
 function clasesNodo(estado: EstadoPaso): string {
-  if (estado === 'actual') return 'border-noct-accent bg-noct-accent/[.16] text-noct-text font-semibold'
+  if (estado === 'actual') return 'border-noct-accent bg-noct-accent/[.16] text-noct-text font-semibold md:border-noct-accion md:bg-noct-accion/[.16]'
   if (estado === 'hecho') return 'border-noct-exito/40 text-noct-neutral-300'
   if (estado === 'saltado') return 'border-dashed border-noct-neutral-600 text-noct-neutral-400'
   return 'border-noct-divider text-noct-neutral-400'
@@ -56,7 +56,7 @@ function MarcaNodo({ resumen }: { resumen: ResumenPaso }) {
     <span
       aria-hidden
       className={`shrink-0 font-mono text-[11.5px] ${
-        resumen.estado === 'actual' ? 'text-noct-accent-300' : 'text-noct-neutral-500'
+        resumen.estado === 'actual' ? 'text-noct-accent-300 md:text-noct-accion' : 'text-noct-neutral-500'
       }`}
     >
       {resumen.indice + 1}
@@ -112,7 +112,7 @@ export function RutaProcedimiento({
         )}
       </ol>
       <p className="mt-2.5 flex flex-wrap items-baseline gap-x-2 text-[13.5px] leading-snug">
-        <span className="font-semibold uppercase tracking-[.06em] text-noct-accent-300">
+        <span className="font-semibold uppercase tracking-[.06em] text-noct-accent-300 md:text-noct-accion">
           Paso {actual.indice + 1}
           {totalRuta !== null && ` de ${totalRuta}`}
         </span>

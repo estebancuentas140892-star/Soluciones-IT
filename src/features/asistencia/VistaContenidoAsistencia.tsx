@@ -78,7 +78,7 @@ function Bloque({ bloque, numero }: { bloque: BloqueAsistencia; numero: number |
       const Icono = bloque.tipo === 'accion' ? CursorClick : SealCheck
       return (
         <div className="flex items-start gap-2.5">
-          <span className="mt-0.5 flex min-w-[22px] shrink-0 items-center justify-center text-noct-accent-300">
+          <span className="mt-0.5 flex min-w-[22px] shrink-0 items-center justify-center text-noct-accent-300 md:text-noct-accion">
             {numero !== null ? (
               <span className="text-[14px] font-semibold tabular-nums">{numero}.</span>
             ) : (

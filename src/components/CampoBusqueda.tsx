@@ -70,7 +70,9 @@ export function CampoBusqueda({
     >
       <MagnifyingGlass
         size={destacada ? 20 : 18}
-        className={`shrink-0 ${buscando || dock ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
+        // Con texto, desde 768 px la lupa vuelve al acento de antes del
+        // rediseño móvil (tarea 338); el dock solo existe en el teléfono.
+        className={`shrink-0 ${buscando || dock ? 'text-noct-accent-300 md:text-noct-accent' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
         aria-hidden
       />
       <input

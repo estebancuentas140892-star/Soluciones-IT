@@ -61,15 +61,22 @@
    para que Tailwind genere las utilidades (bg-noct-bg, text-noct-accent,
    border-noct-divider...). Regla del sistema: todo valor sale de estos
    tokens; nunca hex sueltos en las pantallas Nocturne. El acento se usa
-   delineado (borde y texto), salvo UNA acción rellena por pantalla: la
-   que hace avanzar o ejecutar (BTN_PRIMARIO_RELLENO, regla 30 de
-   REGLAS.md). */
+   delineado (borde y texto), salvo UNA acción rellena por pantalla en el
+   teléfono: la que hace avanzar o ejecutar (BTN_PRIMARIO_RELLENO, regla
+   30 de REGLAS.md).
+
+   DOS ANCHOS, UN SOLO JUEGO DE VARIABLES (tarea 338, AD-087). Este
+   @theme lleva los valores de tableta y escritorio, los de antes del
+   rediseño móvil "1b Pulgar" (copiados de 06be087, no reconstruidos). El
+   bloque `@media (width < 48rem)` de abajo reescribe en el teléfono los
+   que el rediseño cambió: acento cian y su rampa, IBM Plex Mono en
+   `font-mono`, el tipo "configuración" y la categoría 6. El rediseño es
+   solo móvil; ninguna utilidad se duplica por ancho. */
 @theme {
   --font-inter: 'Inter Variable', system-ui, -apple-system, sans-serif;
-  /* Sustituye la pila monoespaciada del sistema que trae Tailwind: toda
-     utilidad `font-mono` (VALOR_TECNICO, VALOR_TECNICO_COMPACTO y el
-     resto) pasa a IBM Plex Mono sin tocar cada pantalla. */
-  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  /* `font-mono` no se declara aquí: desde 768 px es la pila del sistema
+     que trae Tailwind, la de siempre. En el teléfono es IBM Plex Mono
+     (bloque `@media (width < 48rem)` de abajo). */
 
   /* Cuarto punto de quiebre del chasis (tarea 191, turno 5 del handoff,
      regla R30). Los cuatro anchos con composición propia son 768 (`md`),
@@ -103,22 +110,21 @@
   --color-noct-neutral-800: #3f424d;
   --color-noct-neutral-900: #292b31;
 
-  /* Acento: el cian del escudo del icono de la app (rediseño móvil "1b
-     Pulgar", 2026-10-13; antes lavanda #9184d9). Es el único color
-     interactivo: dice "esto se toca" y nada más. La rampa se regeneró en
-     oklch con el mismo matiz (200); el 300 es el acento como texto y el
-     400 coincide con el acento. `on-accent` es el texto sobre el relleno
-     de acento (el único relleno, BTN_PRIMARIO_RELLENO). */
-  --color-noct-accent: oklch(0.82 0.11 200);
-  --color-noct-accent-100: oklch(0.96 0.025 200);
-  --color-noct-accent-200: oklch(0.92 0.05 200);
-  --color-noct-accent-300: oklch(0.87 0.08 200);
-  --color-noct-accent-400: oklch(0.82 0.11 200);
-  --color-noct-accent-500: oklch(0.72 0.105 200);
-  --color-noct-accent-600: oklch(0.6 0.095 200);
-  --color-noct-accent-700: oklch(0.49 0.08 200);
-  --color-noct-accent-800: oklch(0.38 0.06 200);
-  --color-noct-accent-900: oklch(0.28 0.04 200);
+  /* Acento desde 768 px: el lavanda de Nocturne y su rampa, los de antes
+     del rediseño móvil. En el teléfono es el cian del escudo del icono de
+     la app (bloque `@media (width < 48rem)`). `on-accent` es el texto
+     sobre el relleno de acento (BTN_PRIMARIO_RELLENO); el relleno solo
+     existe en el teléfono, pero el token vale en los dos anchos. */
+  --color-noct-accent: #9184d9;
+  --color-noct-accent-100: #f5f4ff;
+  --color-noct-accent-200: #e7e5fe;
+  --color-noct-accent-300: #d2cefd;
+  --color-noct-accent-400: #b5abfc;
+  --color-noct-accent-500: #968ae0;
+  --color-noct-accent-600: #796cbf;
+  --color-noct-accent-700: #5d5294;
+  --color-noct-accent-800: #423a6a;
+  --color-noct-accent-900: #2b2741;
   --color-noct-on-accent: #08191e;
 
   /* Estados (literales exactos de 08_ESTILO.md, identicos en todas
@@ -132,7 +138,7 @@
      la ejecucion de una guia cada color tiene UN significado, y ninguno
      va sin su icono y su palabra:
        verde  (exito)   inicio, accion completada, "Debes ver"
-       acento (cian)    la accion en curso: entrar, abrir, seleccionar
+       accion           la accion en curso: entrar, abrir, seleccionar
        rojo   (error)   riesgo real, detenerse ("Cuidado", "Importante")
      "Donde" ya no forma parte de la ejecucion (tarea 307); su amarillo
      propio, `noct-lugar`, se habia retirado en la tarea 303 porque se leia
@@ -140,10 +146,14 @@
      precaucion sigue significando "requiere atencion" fuera de las guias
      (vencimientos, equipos en mantenimiento), y dentro de una guia la
      precaucion no lo usa: es un riesgo, asi que va en rojo.
-     Hasta el rediseño movil "1b Pulgar" (2026-10-13) la accion tenia su
-     propio azul (`noct-accion`, matiz 240) para separarse del acento
-     lavanda. Con el acento en cian ya no compiten: el token se retiro y
-     la accion en curso usa el acento (texto en `noct-accent-300`). */
+     La accion tiene su propio azul (`noct-accion`, matiz 240) para
+     separarse del acento lavanda. En el telefono el rediseño movil "1b
+     Pulgar" (2026-10-13) la pasa al acento cian, con el que ya no compite
+     (texto en `noct-accent-300`); el azul se retiro el 2026-10-13 y vuelve
+     el 2026-10-14 SOLO desde 768 px (tarea 338): sus usos son
+     `text-noct-accent-300 md:text-noct-accion` y equivalentes, nunca sin
+     `md:` (lo vigila components/sistemaVisual.test.ts). */
+  --color-noct-accion: oklch(0.76 0.12 240);
 
   /* Color de identidad de cada tipo de documento (Soluciones): antes
      instalacion, configuracion y conexion compartian el acento (todo se
@@ -153,12 +163,13 @@
      ambar, exito verde) y el neutro, que ya los distinguian. Los tres
      colores nuevos comparten la banda de luminosidad/chroma de los
      estados (L ~0.7-0.8, C ~0.1-0.14) para convivir sin desentonar, con
-     matices bien separados en el circulo (rosa 330, verde azulado 175,
-     azul 255). Configuracion estaba en 195 y paso a 175 con el rediseño
-     movil "1b Pulgar" (2026-10-13), para no confundirse con el acento
-     cian (200). */
+     matices bien separados en el circulo (rosa 330, cian 195, azul 255).
+     En el telefono configuracion pasa a 175, verde azulado, para no
+     confundirse con el acento cian (200) del rediseño movil "1b Pulgar"
+     (2026-10-13); desde 768 px el acento es lavanda y sigue en 195
+     (tarea 338). */
   --color-noct-tipo-instalacion: oklch(0.72 0.14 330);
-  --color-noct-tipo-configuracion: oklch(0.78 0.1 175);
+  --color-noct-tipo-configuracion: oklch(0.78 0.1 195);
   --color-noct-tipo-conexion: oklch(0.7 0.13 255);
 
   /* Color de IDENTIDAD de cada categoria (fase 0b de
@@ -178,21 +189,61 @@
      color solo a la categoria; el usuario decidio el 2026-07-21
      conservarlo, porque justamente lo habia pedido en la tarea 73.
 
-     La 6 estaba en 200, el mismo matiz que el acento cian del rediseño
-     movil "1b Pulgar" (tarea 327), que significa "esto se toca". Desde
-     la tarea 334 (2026-10-13, decision del usuario) va en 118, verde
-     lima, en el hueco que habia entre la 3 (95) y la 4 (140): solo
-     cambia ella y el cian queda para las acciones. */
+     La 6 esta en 200, el mismo matiz que el acento cian del rediseño
+     movil "1b Pulgar" (tarea 327), que significa "esto se toca". Por eso
+     la tarea 334 (2026-10-13, decision del usuario, AD-083) la paso a
+     118, verde lima, en el hueco entre la 3 (95) y la 4 (140). Ese choque
+     solo existe donde el acento es cian: desde la tarea 338 (AD-087) la
+     6 es lima en el telefono y conserva su 200 desde 768 px, donde el
+     acento es lavanda. */
   --color-noct-cat-1: oklch(0.75 0.11 25);
   --color-noct-cat-2: oklch(0.75 0.11 60);
   --color-noct-cat-3: oklch(0.75 0.11 95);
   --color-noct-cat-4: oklch(0.75 0.11 140);
   --color-noct-cat-5: oklch(0.75 0.11 170);
-  --color-noct-cat-6: oklch(0.75 0.11 118);
+  --color-noct-cat-6: oklch(0.75 0.11 200);
   --color-noct-cat-7: oklch(0.75 0.11 235);
   --color-noct-cat-8: oklch(0.75 0.11 270);
   --color-noct-cat-9: oklch(0.75 0.11 300);
   --color-noct-cat-10: oklch(0.75 0.11 335);
+}
+
+/* EL TELÉFONO: LOS TOKENS DEL REDISEÑO "1b PULGAR" (tareas 327 y 334,
+   limitados al teléfono por la tarea 338, AD-087).
+
+   Por debajo de 768 px (`md`, el mismo corte del Chasis: 767 todavía es
+   teléfono, 768 ya no) se reescriben las MISMAS variables del @theme con
+   los valores del rediseño móvil; desde 768 rigen los de arriba, los de
+   antes. Toda utilidad (`text-noct-accent`, `bg-noct-accent/10`,
+   `font-mono`...) y todo `var(--color-...)` escrito a mano siguen al
+   ancho sin duplicar nada. Va fuera de las capas de Tailwind a propósito:
+   una regla sin capa gana a la de `@layer theme`.
+   - Acento: el cian del escudo del icono de la app. Es el único color
+     interactivo: dice "esto se toca" y nada más. La rampa se regeneró en
+     oklch con el mismo matiz (200); el 300 es el acento como texto y el
+     400 coincide con el acento.
+   - `font-mono`: IBM Plex Mono para todo lo que se copia o se compara
+     (VALOR_TECNICO, VALOR_TECNICO_COMPACTO y el resto).
+   - Tipo "configuración" en 175 y categoría 6 en 118 (AD-083): los dos
+     estaban en el matiz del acento cian. */
+@media (width < 48rem) {
+  :root {
+    --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+    --color-noct-accent: oklch(0.82 0.11 200);
+    --color-noct-accent-100: oklch(0.96 0.025 200);
+    --color-noct-accent-200: oklch(0.92 0.05 200);
+    --color-noct-accent-300: oklch(0.87 0.08 200);
+    --color-noct-accent-400: oklch(0.82 0.11 200);
+    --color-noct-accent-500: oklch(0.72 0.105 200);
+    --color-noct-accent-600: oklch(0.6 0.095 200);
+    --color-noct-accent-700: oklch(0.49 0.08 200);
+    --color-noct-accent-800: oklch(0.38 0.06 200);
+    --color-noct-accent-900: oklch(0.28 0.04 200);
+
+    --color-noct-tipo-configuracion: oklch(0.78 0.1 175);
+    --color-noct-cat-6: oklch(0.75 0.11 118);
+  }
 }
 
 /* TEMA CLARO "A PLENO SOL, TAQUILLA" (tarea 333, paso 7 del rediseño movil
@@ -201,7 +252,14 @@
    (public/tema.js y src/lib/tema.ts) y redefine TODOS los tokens de color
    de arriba, sin tocar ninguna pantalla: las utilidades de Tailwind leen
    las variables. Una prueba (sistemaVisual.test.ts) exige que cada token
-   `--color-noct-*` tenga aqui su valor claro.
+   `--color-noct-*` tenga aqui su valor claro (menos `noct-accion`, que
+   solo se usa desde 768 px).
+
+   SOLO EN EL TELÉFONO (tarea 338, AD-087). Nació para leer a pleno sol,
+   en una taquilla, dentro del rediseño móvil: por eso vive dentro de
+   `@media (width < 48rem)`. Desde 768 px la preferencia se conserva pero
+   no pinta nada (tableta y escritorio siguen en el oscuro de siempre), y
+   Ajustes no ofrece elegirla ahí (ElegirTema, `md:hidden`).
 
    Valores del handoff (Sistema visual movil.dc.html): fondo #f4f5f8,
    superficie blanca, texto #191b28 / #353949 / #4f5468 / #62687e, divisor
@@ -219,6 +277,7 @@
    pulsado; del 600 al 900, que en oscuro son fondos hondos, pasan a
    tintes claros. Categorias y tipos bajan su luminosidad (0.75 a 0.52)
    para leerse sobre blanco con el mismo matiz. */
+@media (width < 48rem) {
 :root[data-tema='claro'] {
   --color-noct-bg: #f4f5f8;
   --color-noct-surface: #ffffff;
@@ -268,6 +327,7 @@
 
   /* Los controles nativos (fecha, desplazamiento) en claro. */
   color-scheme: light;
+}
 }
 
 html,

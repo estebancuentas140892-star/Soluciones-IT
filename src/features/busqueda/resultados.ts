@@ -42,7 +42,7 @@ export interface Visual {
 export const VISUAL_POR_TIPO: Record<TipoResultado, Visual> = {
   articulo: { Icono: BookOpen, tono: 'text-noct-accent-300 bg-noct-accent/[.12]' },
   categoria: { Icono: BookOpen, tono: 'text-noct-accent-300 bg-noct-accent/[.12]' },
-  diagnostico: { Icono: TreeStructure, tono: 'text-noct-accent-300 bg-noct-accent/[.12]' },
+  diagnostico: { Icono: TreeStructure, tono: 'text-noct-accent-300 bg-noct-accent/[.12] md:text-noct-accion md:bg-noct-accion/[.12]' },
   adjunto: { Icono: BookOpen, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },
   dispositivo: { Icono: Monitor, tono: 'text-noct-exito bg-noct-exito/[.12]' },
   credencial: { Icono: LockSimple, tono: 'text-noct-neutral-400 bg-noct-neutral-400/[.12]' },

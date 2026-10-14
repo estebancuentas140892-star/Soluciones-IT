@@ -6,6 +6,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-14
+
+### Corregido (interfaz, tarea 338): el rediseño "1b Pulgar" es solo móvil; tableta y escritorio vuelven a su aspecto de antes
+
+**Área modificada:** `src/index.css` (el `@theme` vuelve a los valores de `06be087`; bloque nuevo `@media (width < 48rem)` con los del rediseño; el tema claro dentro de él; `noct-accion` repuesto), `public/tema.js` y `src/lib/tema.ts` (`colorBarra`), `src/lib/anchoTelefono.ts` y `src/components/useAnchoTelefono.ts` (nuevos), `src/pruebas/setup.ts`, `src/components/nocturne.tsx` (`BTN_PRIMARIO_RELLENO` con su forma de escritorio, `BAJA_CON_LAS_PESTANAS` solo móvil), `CabeceraColapsable.tsx`, `BarraTarea.tsx`, `HojaInferior.tsx`, `FilaDispositivo.tsx`, `src/app/Chasis.tsx`, `ElegirTema.tsx`, los ocho usos de `noct-accion` y las pantallas `inicio/ResolverPage.tsx`, `SeccionesAgenda.tsx`, `AgendaPage.tsx`, `mas/PantallaMas.tsx`, `FilasMas.tsx`, `dispositivos/DispositivoPage.tsx`, `PiezasFicha.tsx`, `DispositivosPage.tsx`, `boveda/BovedaPage.tsx`, `CredencialEnHoja.tsx`, `busqueda/BuscadorGlobal.tsx`, `ChipsDeAlcance.tsx`, `resultados.ts`, `facturacion/AutorizacionPage.tsx`, `RegistrarLectura.tsx`, `mantenimientos/MantenimientosDelEquipo.tsx`, `MantenimientosPage.tsx`, `MantenimientoPage.tsx`, `soluciones/ModoFoco.tsx`, `SenalesDePaso.tsx`, `AsistenteVista.tsx`, `PantallaAdvertencia.tsx`, `IntervencionAlTerminar.tsx`, `RutaProcedimiento.tsx`, `diagnostico/DiagnosticoRunPage.tsx` y `asistencia/VistaContenidoAsistencia.tsx` (todas en `src/features/`); pruebas `sistemaVisual.test.ts`, `tema.test.ts` y `anchoTelefono.test.ts` (nueva); `buscadorPorAncho.test.tsx` (nueva).
+**Tipo:** Corregido (alcance visual) y Documentación (REGLAS reglas 12, 30 y 31 nueva; DECISIONES AD-087; ARQUITECTURA, sistema visual; COMPONENTES_UI; DOCUMENTACION_FUNCIONAL, 1. Visión general y secciones de Resolver, Equipos, Bóveda, Escanear y Ajustes; TAREAS 338).
+**Motivo:** el encargo del rediseño móvil (2026-10-13) era "solo por debajo de 768 px", pero las tareas 327 a 335 aplicaron sus tokens en el `@theme` global y sus clases sin variante de ancho: tableta y escritorio cambiaron. Encargo del usuario del 2026-10-14.
+**Qué cambia:**
+- **Por debajo de 768 px nada cambia:** el teléfono sigue exactamente como en `c6ebefb` (acento cian, IBM Plex Mono, botón relleno, tema claro, dock, formas nuevas).
+- **Desde 768 px vuelve el aspecto de antes del rediseño** (`06be087`): acento lavanda y su rampa, `font-mono` del sistema, tipo "configuración" en 195, categoría 6 en 200, el azul de la acción en la guía, títulos de raíz a 21 px, rótulos y letra de antes, el primario delineado y los buscadores de Resolver, Equipos, Bóveda y el buscador global arriba. Se conservan la disposición nueva de cada pantalla y todas las funciones nuevas (RP-1, RP-2, RP-4, chips de alcance, pantalla de mantenimiento, tres capas de la autorización).
+- **Tema claro:** solo pinta y solo se ofrece en el teléfono; la preferencia (`sit-tema`) no cambia.
+- **Categoría 6:** lima solo en el teléfono (el choque con el cian que motivó AD-083 solo existe ahí).
+**Estructura de datos:** ninguna. No cambian Supabase, `schema.sql`, Dexie, la sincronización ni ningún dato.
+**Verificación:** auditoría de estilo computado de `06be087`, `c6ebefb` y la corrección a la vez, 44 pantallas y estados a 7 anchos: a 320, 375, 390 y 767 px las 184 combinaciones son idénticas a `c6ebefb`; a 768, 1024 y 1280 px los elementos con estilo distinto de `06be087` bajan de 2964 a 646 y quedan 57 de 138 combinaciones idénticas; el resto es la disposición nueva conservada (detalle en TAREAS 338). 215 archivos y 3340 pruebas (+20); `tsc -b`, lint, build y `verificar-precache.mjs` en verde. Prueba sin conexión real: 73 bien y 7 fallos de la ejecución de una guía, idénticos en `c6ebefb` (previos, los corrige la rama `fix/prueba-sin-conexion`).
+**Impacto esperado:** quien usa tableta o escritorio vuelve a la app de antes del rediseño, con sus funciones nuevas; el teléfono no cambia.
+
 ## 2026-10-13
 
 ### Corregido (búsqueda, hallazgo de la tarea 322): un mismo archivo en dos fichas ya no tumba Resolver

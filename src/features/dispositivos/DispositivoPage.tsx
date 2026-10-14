@@ -426,7 +426,8 @@ export function DispositivoPage() {
   // "RESOLVER CON ESTE EQUIPO" (tarea 329): los problemas frecuentes primero
   // (los del equipo y después los de su categoría), luego los procedimientos;
   // las tres primeras a la vista y el resto en su hoja. Cada una abre la guía
-  // con este equipo (tarea 290).
+  // con este equipo (tarea 290). `tipoArticulo` solo tiñe su icono desde
+  // 768 px, como las filas de antes (tarea 338).
   const formasDeResolver: ItemResolver[] = [
     ...problemas.map((a) => ({
       id: a.id,
@@ -435,6 +436,7 @@ export function DispositivoPage() {
       tipo: 'Problema frecuente',
       titulo: a.titulo,
       extra: a.sintomas[0],
+      tipoArticulo: 'problema_frecuente' as const,
     })),
     ...procedimientos.map((a) => ({
       id: a.id,
@@ -442,6 +444,7 @@ export function DispositivoPage() {
       Icono: BookOpen,
       tipo: etiquetaDeTipo(a.tipo),
       titulo: a.titulo,
+      tipoArticulo: a.tipo,
     })),
   ]
 
@@ -572,7 +575,7 @@ export function DispositivoPage() {
         </button>
       }
       barra={menuAbierto && (
-        <div className="flex flex-col gap-3 px-4 pb-3 lg:px-10">
+        <div className="flex flex-col gap-3 px-4 pb-3 md:pb-2 lg:px-10">
           <div className="flex flex-wrap gap-2">
             <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} variante="menu" />
             <BotonCompartir titulo={dispositivo.nombre} />
@@ -652,8 +655,12 @@ export function DispositivoPage() {
 
           No se quita ni un dato: lo que iba en pliegues dentro de pliegues
           está ahora en hojas, una a la vez. Un solo eje vertical (R26,
-          tarea 191): `lg:px-10`. */}
-      <main className="@container flex flex-1 flex-col gap-6 px-4 pb-4 pt-2 lg:px-10">
+          tarea 191): `lg:px-10`.
+
+          Desde 768 px (tarea 338) la disposición es esta misma, pero con el
+          lenguaje visual de antes del rediseño: tamaños, pesos, rótulos,
+          tarjetas y radios vuelven con variantes `md:`. */}
+      <main className="@container flex flex-1 flex-col gap-6 px-4 pb-4 pt-2 md:gap-[22px] lg:px-10">
         {/* Migracion pendiente (hallazgos L2/L3): este equipo reemplaza a
             otro que todavia tiene conexiones, credenciales o campos
             protegidos sin mover. */}
@@ -671,7 +678,7 @@ export function DispositivoPage() {
             palabras ("Administracio-n"). Después, sus avisos. */}
         <section aria-label="Identidad del equipo" className="flex flex-col gap-3 pt-2">
           <div className="flex items-start gap-3.5">
-            <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-noct-text/[.06] text-noct-neutral-300">
+            <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-noct-text/[.06] text-noct-neutral-300 md:h-[46px] md:w-[46px] md:rounded-[10px]">
               {dispositivo.foto ? (
                 <MiniaturaPortada
                   referencia={dispositivo.foto.referencia}
@@ -679,21 +686,21 @@ export function DispositivoPage() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <IconoNodo tipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="h-[26px] w-[26px]" />
+                <IconoNodo tipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="h-[26px] w-[26px] md:h-[22px] md:w-[22px]" />
               )}
             </span>
             <span className="min-w-0 flex-1">
               <span
                 ref={setNodoNombre}
                 data-nombre-equipo
-                className="block text-[28px] font-[650] leading-[1.1] tracking-[-.02em] text-pretty [overflow-wrap:anywhere]"
+                className="block text-[28px] font-[650] leading-[1.1] tracking-[-.02em] text-pretty [overflow-wrap:anywhere] md:text-[24px] md:font-medium md:leading-[1.2] md:tracking-[-.01em]"
               >
                 {dispositivo.nombre}
               </span>
               {(lineaTipo || sinResponsable) && (
                 <span
                   data-linea-identidad
-                  className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[14px] leading-[1.4] text-noct-neutral-400"
+                  className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[14px] leading-[1.4] text-noct-neutral-400 md:mt-0.5 md:text-[13.5px]"
                 >
                   {/* El separador va pegado al final del primer tramo: si la
                       línea parte, "sin responsable" no empieza con un punto. */}
@@ -709,7 +716,7 @@ export function DispositivoPage() {
                       type="button"
                       onClick={() => setAsignando(true)}
                       aria-label="Asignar un responsable"
-                      className="-my-3 inline-flex min-h-11 items-center rounded-md px-1 text-[14px] font-semibold text-noct-accent-300 hover:bg-noct-accent/10"
+                      className="-my-3 inline-flex min-h-11 items-center rounded-md px-1 text-[14px] font-semibold text-noct-accent-300 hover:bg-noct-accent/10 md:text-[13.5px] md:font-medium"
                     >
                       Asignar
                     </button>
@@ -727,14 +734,22 @@ export function DispositivoPage() {
         {/* DATOS PARA TRABAJAR: lo que se usa con el equipo delante, sin
             tarjeta: filas con su divisor. Su IP en IBM Plex Mono a 20 px
             con copiar, dónde está, quién responde de él y a qué está
-            conectado. Sin ninguno, no hay bloque. */}
+            conectado. Sin ninguno, no hay bloque.
+            Desde 768 px (tarea 338) vuelve la tarjeta de antes (borde fino,
+            fondo de superficie, divisores entre filas y no tras la última),
+            con sus filas de 13,5 px y la IP como una `FilaDato` técnica. */}
         {(dispositivo.ip || ubicacionNombre || personaVivaACargo || anotadoPorValidar || subida) && (
-        <section aria-label="Datos para trabajar" className="flex flex-col">
+        <section
+          aria-label="Datos para trabajar"
+          className="flex flex-col md:overflow-hidden md:rounded-lg md:border md:border-noct-divider md:bg-noct-surface md:[&>:not(:has(~:not(:empty)))]:border-b-0"
+        >
           {dispositivo.ip && (
-            <div className="flex min-h-[68px] items-center gap-3 border-b border-noct-divider">
+            <div className="flex min-h-[68px] items-center gap-3 border-b border-noct-divider md:min-h-0 md:items-start md:gap-2.5 md:px-3.5 md:py-2">
               <div className="min-w-0 flex-1">
-                <p className="text-[12.5px] leading-snug text-noct-neutral-500">Dirección IP</p>
-                <p className="font-mono text-[20px] font-medium leading-[1.3] tracking-[-.01em] [overflow-wrap:anywhere]">
+                <p className="text-[12.5px] leading-snug text-noct-neutral-500 md:text-[12px] md:leading-[1.35] md:text-noct-neutral-400">
+                  Dirección IP
+                </p>
+                <p className="font-mono text-[20px] font-medium leading-[1.3] tracking-[-.01em] [overflow-wrap:anywhere] md:mt-px md:text-[14px] md:font-normal md:leading-[1.35] md:tracking-[normal] md:tabular-nums">
                   {dispositivo.ip}
                 </p>
               </div>
@@ -747,21 +762,29 @@ export function DispositivoPage() {
               <Link
                 to={`/ubicaciones/${ubicacionViva.id}`}
                 state={origenEsteEquipo}
-                className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5 hover:bg-noct-text/[.04]"
+                className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5 hover:bg-noct-text/[.04] md:min-h-12 md:gap-2.5 md:px-3.5 md:py-0 md:text-[13.5px] md:text-noct-accent-300"
               >
-                <MapPin size={18} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                <MapPin size={18} className="shrink-0 text-noct-neutral-500 md:size-[15px] md:text-noct-accent-300" aria-hidden />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[12.5px] leading-snug text-noct-neutral-500">Ubicación</span>
-                  <span className="block text-[15px] leading-snug text-noct-text [overflow-wrap:anywhere]">{ubicacionNombre}</span>
+                  <span className="block text-[12.5px] leading-snug text-noct-neutral-500 md:text-[12px] md:leading-[inherit]">
+                    Ubicación
+                  </span>
+                  <span className="block text-[15px] leading-snug text-noct-text [overflow-wrap:anywhere] md:text-[13.5px] md:leading-[inherit] md:text-noct-accent-300">
+                    {ubicacionNombre}
+                  </span>
                 </span>
                 <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
               </Link>
             ) : (
-              <span className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5">
-                <MapPin size={18} className="shrink-0 text-noct-neutral-500" aria-hidden />
+              <span className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5 md:min-h-12 md:gap-2.5 md:px-3.5 md:py-0 md:text-[13.5px] md:text-noct-neutral-200">
+                <MapPin size={18} className="shrink-0 text-noct-neutral-500 md:size-[15px]" aria-hidden />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[12.5px] leading-snug text-noct-neutral-500">Ubicación</span>
-                  <span className="block text-[15px] leading-snug text-noct-neutral-200 [overflow-wrap:anywhere]">{ubicacionNombre}</span>
+                  <span className="block text-[12.5px] leading-snug text-noct-neutral-500 md:text-[12px] md:leading-[inherit]">
+                    Ubicación
+                  </span>
+                  <span className="block text-[15px] leading-snug text-noct-neutral-200 [overflow-wrap:anywhere] md:text-[13.5px] md:leading-[inherit]">
+                    {ubicacionNombre}
+                  </span>
                 </span>
               </span>
             ))}
@@ -772,7 +795,7 @@ export function DispositivoPage() {
               alguien lo anotó. Sus filas traen su propio margen (las de la
               tarjeta de antes): se compensa aquí. */}
           {aplicaResponsable && (
-            <div className="-mx-3.5 border-b border-noct-divider empty:hidden">
+            <div className="-mx-3.5 border-b border-noct-divider empty:hidden md:mx-0">
               <ResponsableDelEquipo dispositivo={dispositivo} origen={origenEsteEquipo} ocultarSiNoHay />
             </div>
           )}
@@ -787,12 +810,14 @@ export function DispositivoPage() {
               aria-label={`Conectado a ${textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}${
                 subida.otros > 0 ? ` y ${subida.otros} más` : ''
               }. Ver conexión`}
-              className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5 hover:bg-noct-text/[.04]"
+              className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5 hover:bg-noct-text/[.04] md:min-h-12 md:gap-2.5 md:px-3.5 md:py-2"
             >
-              <PlugsConnected size={18} className="shrink-0 text-noct-neutral-500" aria-hidden />
+              <PlugsConnected size={18} className="shrink-0 text-noct-neutral-500 md:size-[15px]" aria-hidden />
               <span className="min-w-0 flex-1">
-                <span className="block text-[12.5px] leading-snug text-noct-neutral-500">Conectado a</span>
-                <span className="block font-mono text-[14.5px] leading-snug text-noct-text [overflow-wrap:anywhere]">
+                <span className="block text-[12.5px] leading-snug text-noct-neutral-500 md:text-[12px] md:leading-[inherit]">
+                  Conectado a
+                </span>
+                <span className="block font-mono text-[14.5px] leading-snug text-noct-text [overflow-wrap:anywhere] md:font-inter md:text-[13.5px] md:leading-[inherit]">
                   {textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}
                   {subida.otros > 0 && <span className="font-inter text-noct-neutral-500"> · y {subida.otros} más</span>}
                 </span>
@@ -811,12 +836,16 @@ export function DispositivoPage() {
 
         {/* MÁS DEL EQUIPO: un índice de un solo nivel (antes, un pliegue con
             pliegues dentro). Cada fila dice lo que guarda y abre su hoja;
-            una sola a la vez. */}
+            una sola a la vez. Desde 768 px (tarea 338), el rótulo de sección
+            de antes y las filas en la tarjeta de las secciones plegables. */}
         <section aria-labelledby="mas-del-equipo" className="flex flex-col">
-          <h2 id="mas-del-equipo" className="pb-1 text-[17px] font-semibold tracking-[-.01em]">
+          <h2
+            id="mas-del-equipo"
+            className="pb-1 text-[17px] font-semibold tracking-[-.01em] md:pb-2 md:text-[11px] md:font-medium md:uppercase md:tracking-[0.08em] md:text-noct-neutral-500"
+          >
             Más del equipo
           </h2>
-          <ul className="flex flex-col">
+          <ul className="flex flex-col md:divide-y md:divide-noct-divider md:overflow-hidden md:rounded-lg md:border md:border-noct-divider md:bg-noct-surface">
             <FilaIndice Icono={Info} titulo="Más datos" valor={`${totalMasDatos}`} onAbrir={() => setHoja('datos')} />
             {hayImpacto && (
               <FilaIndice
@@ -964,7 +993,9 @@ export function DispositivoPage() {
               <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda />
             </div>
           ) : (
-            <p className="text-[14px] leading-snug text-noct-neutral-400">Ninguna credencial de la Bóveda da acceso a este equipo.</p>
+            <p className="text-[14px] leading-snug text-noct-neutral-400 md:text-[12.5px] md:text-noct-neutral-500">
+              Ninguna credencial de la Bóveda da acceso a este equipo.
+            </p>
           )}
         </HojaInferior>
       )}
@@ -999,7 +1030,8 @@ export function DispositivoPage() {
       </HojaInferior>
 
       {/* Todo lo que se resuelve con el equipo: sus problemas frecuentes, sus
-          procedimientos y, al final, el diagnóstico de su categoría. */}
+          procedimientos y, al final, el diagnóstico de su categoría. Desde
+          768 px sus rótulos son los de sección de antes (tarea 338). */}
       <HojaInferior
         abierta={hoja === 'resolver'}
         onCerrar={cerrarHoja}
@@ -1009,7 +1041,9 @@ export function DispositivoPage() {
         <div className="flex flex-col gap-4">
           {totalProblemas > 0 && (
             <div className="flex flex-col">
-              <h3 className="pb-1 text-[13.5px] font-semibold text-noct-neutral-400">Problemas frecuentes</h3>
+              <h3 className="pb-1 text-[13.5px] font-semibold text-noct-neutral-400 md:pb-2 md:text-[11px] md:font-medium md:uppercase md:tracking-[0.08em] md:text-noct-neutral-500">
+                Problemas frecuentes
+              </h3>
               <ProblemasDelEquipo
                 dispositivoId={dispositivoId}
                 categoriaId={dispositivo.categoriaId}
@@ -1021,7 +1055,9 @@ export function DispositivoPage() {
           )}
           {totalResolver > 0 && (
             <div className="flex flex-col">
-              <h3 className="pb-1 text-[13.5px] font-semibold text-noct-neutral-400">Procedimientos</h3>
+              <h3 className="pb-1 text-[13.5px] font-semibold text-noct-neutral-400 md:text-[11px] md:font-medium md:uppercase md:tracking-[0.08em] md:text-noct-neutral-500">
+                Procedimientos
+              </h3>
               <ProcedimientosDelEquipo
                 dispositivoId={dispositivoId}
                 categoriaId={dispositivo.categoriaId}

@@ -31,9 +31,11 @@ export function HojaInferior({
   return (
     <Modal abierto={abierta} onCerrar={onCerrar} tituloId={idTitulo}>
       <div className="mb-2 flex items-start gap-2">
+        {/* Desde 768 px (tarea 338) la letra de los diálogos de antes del
+            rediseño móvil: título a 16 px, contexto a 11 px. */}
         <div className="min-w-0 flex-1 pt-1.5">
-          {contexto && <p className="text-[12px] leading-snug text-noct-neutral-500 [overflow-wrap:anywhere]">{contexto}</p>}
-          <h2 id={idTitulo} className="text-[17px] font-semibold leading-snug [overflow-wrap:anywhere]">
+          {contexto && <p className="text-[12px] leading-snug text-noct-neutral-500 [overflow-wrap:anywhere] md:text-[11px]">{contexto}</p>}
+          <h2 id={idTitulo} className="text-[17px] font-semibold leading-snug [overflow-wrap:anywhere] md:text-base">
             {titulo}
           </h2>
         </div>

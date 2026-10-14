@@ -44,14 +44,15 @@ import { ROTULO_DEBES_VER } from '../../lib/resultadoVisual'
 // una vista compacta, ni los números ni las frases crecen más que su tarea.
 const TAMANOS_COMO_HACERLO = {
   accion: { rotulo: 'text-[12px]', icono: 13, lista: 'text-[16px] space-y-1.5', ubicacion: 'text-[13px]' },
-  fila: { rotulo: 'text-[12px]', icono: 12, lista: 'text-[14px] space-y-1', ubicacion: 'text-[12.5px]' },
-  lectura: { rotulo: 'text-[12px]', icono: 12, lista: 'text-[13px] space-y-1', ubicacion: 'text-[12px]' },
+  fila: { rotulo: 'text-[12px] md:text-[11.5px]', icono: 12, lista: 'text-[14px] space-y-1', ubicacion: 'text-[12.5px]' },
+  lectura: { rotulo: 'text-[12px] md:text-[11px]', icono: 12, lista: 'text-[13px] space-y-1', ubicacion: 'text-[12px]' },
 } as const
 
 // El número de cada microacción en la ejecución: una caja de 24 px con el
-// contador `micro` de su lista (ver `ComoHacerlo`).
+// contador `micro` de su lista (ver `ComoHacerlo`). Solo en el teléfono
+// (tarea 338): desde 768 px no hay caja y numera el navegador, como antes.
 const NUMERO_EN_CAJA =
-  'relative min-h-6 pl-9 [counter-increment:micro] before:absolute before:left-0 before:top-[-1px] before:flex before:h-6 before:w-6 before:items-center before:justify-center before:rounded-[7px] before:bg-noct-text/[.06] before:font-mono before:text-[13px] before:font-semibold before:text-noct-neutral-300 before:content-[counter(micro)]'
+  'relative min-h-6 pl-9 [counter-increment:micro] before:absolute before:left-0 before:top-[-1px] before:flex before:h-6 before:w-6 before:items-center before:justify-center before:rounded-[7px] before:bg-noct-text/[.06] before:font-mono before:text-[13px] before:font-semibold before:text-noct-neutral-300 before:content-[counter(micro)] md:static md:min-h-0 md:pl-0.5 md:before:hidden'
 
 // CÓMO HACERLO (tarea 303; una sola lista numerada desde la tarea 310,
 // AD-071): las microacciones de la acción (ver `src/lib/comoHacer.ts`).
@@ -106,12 +107,13 @@ export function ComoHacerlo({
           monoespaciada de la lista: la frase sigue siendo texto normal, así
           que no se confunde con un dato técnico, y cada `li` conserva solo
           su frase y su ubicación. En las vistas de lista, los números del
-          navegador. */}
+          navegador; y también en la ejecución desde 768 px (tarea 338), con
+          la lista de antes del rediseño. */}
       <ol
         aria-labelledby={idRotulo}
         className={
           variante === 'accion'
-            ? 'flex list-none flex-col gap-2.5 pt-1 text-[16px] leading-[1.4] text-noct-text [counter-reset:micro]'
+            ? 'flex list-none flex-col gap-2.5 pt-1 text-[16px] leading-[1.4] text-noct-text [counter-reset:micro] md:block md:list-decimal md:space-y-1.5 md:pl-[1.6em] md:pt-0 md:leading-snug md:text-noct-neutral-200 md:tabular-nums md:marker:text-noct-neutral-400'
             : `list-decimal pl-[1.6em] leading-snug text-noct-neutral-200 tabular-nums marker:text-noct-neutral-400 ${tamano.lista}`
         }
       >
@@ -146,15 +148,18 @@ export function ComoHacerlo({
 // IBM Plex Mono a 15 px y un botón de copiar de 44 px a su derecha: el dato
 // se viene a copiar, no a teclear mirando la pantalla. Sin texto no hay qué
 // copiar, y no se ofrece.
+//
+// Desde 768 px (tarea 338), la forma de antes: el dato en su caja pequeña,
+// a su medida y con la letra de entonces; el botón de copiar, a su lado.
 export function DatoTecnico({ texto }: { texto: string }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5 md:gap-1">
       <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
         <Code size={13} className="shrink-0" aria-hidden />
         Dato técnico
       </p>
-      <div className="flex min-w-0 items-center gap-2 rounded-xl bg-noct-text/[.06] py-1 pl-3 pr-1">
-        <p className="min-w-0 flex-1 py-1.5 font-mono text-[15px] leading-[1.35] text-noct-neutral-100 [overflow-wrap:anywhere]">
+      <div className="flex min-w-0 items-center gap-2 rounded-xl bg-noct-text/[.06] py-1 pl-3 pr-1 md:w-fit md:max-w-full md:rounded-none md:bg-transparent md:p-0">
+        <p className="min-w-0 flex-1 py-1.5 font-mono text-[15px] leading-[1.35] text-noct-neutral-100 [overflow-wrap:anywhere] md:flex-initial md:rounded-md md:bg-noct-text/[.06] md:px-2.5 md:text-[14.5px] md:leading-snug md:text-noct-neutral-200">
           {texto || 'Dato sin texto'}
         </p>
         {texto && <BotonCopiar etiqueta="el dato" texto={texto} destacado />}
@@ -165,7 +170,7 @@ export function DatoTecnico({ texto }: { texto: string }) {
 
 // Tamaños según dónde se lee, los mismos tres sitios que "Cómo hacerlo".
 const TAMANOS_DEBES_VER = {
-  accion: { boton: 'text-[15px] font-semibold', icono: 18 },
+  accion: { boton: 'text-[15px] font-semibold md:text-[14px] md:font-medium md:[&>svg:first-child]:size-4', icono: 18 },
   fila: { boton: 'text-[13px] font-medium', icono: 15 },
   lectura: { boton: 'text-[13px] font-medium', icono: 14 },
 } as const

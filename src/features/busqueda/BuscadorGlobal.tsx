@@ -1,8 +1,9 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { CaretLeft, MagnifyingGlass, Plus } from '../../components/iconos'
+import { CaretLeft, MagnifyingGlass, Plus, X } from '../../components/iconos'
 import { useAltoDelTeclado } from '../../components/useAltoDelTeclado'
+import { useAnchoTelefono } from '../../components/useAnchoTelefono'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
@@ -79,6 +80,10 @@ export function BuscadorGlobal({
   const alcance = alcanceEfectivo(alcanceElegido, conteo)
   const visibles = useMemo(() => filtrarPorAlcance(resultados, alcance, idsDeRed), [resultados, alcance, idsDeRed])
   const teclado = useAltoDelTeclado()
+  // El campo va abajo, al pulgar, solo con ancho de teléfono (tarea 338).
+  // Desde 768 px vuelve arriba, junto a la X, como antes del rediseño móvil.
+  const telefono = useAnchoTelefono()
+  const IconoCerrar = telefono ? CaretLeft : X
 
   // `onCerrar` llega como flecha nueva en cada render de quien abre la
   // capa. Leerlo de una ref deja el efecto de abajo atado SOLO a abrir y
@@ -140,17 +145,29 @@ export function BuscadorGlobal({
       style={teclado > 0 ? { paddingBottom: teclado } : undefined}
     >
       {/* LA CABECERA DE LA BÚSQUEDA (rediseño móvil "1b Pulgar", tarea 330):
-          el regreso a la izquierda y qué es. El campo baja al pulgar. */}
-      <div className="flex min-h-[50px] flex-none items-center gap-1 px-1 py-0.5">
+          el regreso a la izquierda y qué es. El campo baja al pulgar.
+          Desde 768 px (tarea 338), la barra de antes: el campo arriba, la X
+          a su derecha y el título oculto (lo dicen el campo y el diálogo). */}
+      <div className="flex min-h-[50px] flex-none items-center gap-1 px-1 py-0.5 md:min-h-0 md:gap-2 md:border-b md:border-noct-divider md:px-3 md:py-2.5">
+        {!telefono && (
+          <CampoBusqueda
+            valor={query}
+            onCambiar={setQuery}
+            alcance="Soluciones IT"
+            textoAlternativo={MARCADOR_BUSCADOR}
+            refCampo={campo}
+            className="min-w-0 flex-1"
+          />
+        )}
         <button
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar el buscador"
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
         >
-          <CaretLeft size={20} aria-hidden />
+          <IconoCerrar size={20} aria-hidden />
         </button>
-        <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold">
+        <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold md:hidden">
           {modo === 'consulta' ? 'Consultar sin salir de la tarea' : 'Buscar en Soluciones IT'}
         </h2>
       </div>
@@ -159,14 +176,16 @@ export function BuscadorGlobal({
           tiene que saber que nada de aquí lo saca de ella, o no se
           atreverá a tocar un resultado. Una línea, sin caja. */}
       {modo === 'consulta' && (
-        <p className="flex-none px-4 pb-2 text-[12.5px] leading-snug text-noct-neutral-400">
+        <p className="flex-none px-4 pb-2 text-[12.5px] leading-snug text-noct-neutral-400 md:border-b md:border-noct-divider md:pt-2">
           Modo consulta: lo que abras aquí no te saca de lo que estás haciendo.
         </p>
       )}
 
-      {/* LOS CHIPS DE ALCANCE (tarea 330): solo filtran la vista. */}
+      {/* LOS CHIPS DE ALCANCE (tarea 330): solo filtran la vista. Desde 768
+          px (tarea 338) van en su propia franja bajo la barra, con la línea
+          debajo que en el teléfono lleva la lista. */}
       {buscando && resultados.length > 0 && (
-        <div className="flex-none px-3.5 pb-2.5">
+        <div className="flex-none px-3.5 pb-2.5 md:border-b md:border-noct-divider md:px-4 md:pt-2.5">
           <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />
         </div>
       )}
@@ -175,7 +194,7 @@ export function BuscadorGlobal({
         // Desplazar la lista con el dedo cierra el teclado: se está
         // mirando lo encontrado, no escribiendo.
         onTouchMove={() => campo.current?.blur()}
-        className="min-h-0 flex-1 overflow-y-auto border-t border-noct-divider px-4 pb-6 pt-4"
+        className="min-h-0 flex-1 overflow-y-auto border-t border-noct-divider px-4 pb-6 pt-4 md:border-t-0 md:pb-8"
       >
         {!buscando ? (
           <div className="flex flex-col gap-1 px-0.5">
@@ -236,17 +255,20 @@ export function BuscadorGlobal({
 
       {/* EL CAMPO, ABAJO, AL PULGAR (tarea 330): con el teclado abierto,
           pegado a él. El marcador invita a contar lo que pasa (tarea 288) y
-          la etiqueta accesible sigue diciendo el alcance (regla M-R8). */}
-      <div className="flex-none border-t border-noct-divider bg-noct-bg px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5">
-        <CampoBusqueda
-          valor={query}
-          onCambiar={setQuery}
-          alcance="Soluciones IT"
-          textoAlternativo={MARCADOR_BUSCADOR}
-          refCampo={campo}
-          variante="dock"
-        />
-      </div>
+          la etiqueta accesible sigue diciendo el alcance (regla M-R8). Solo
+          en el teléfono (tarea 338): desde 768 px va arriba. */}
+      {telefono && (
+        <div className="flex-none border-t border-noct-divider bg-noct-bg px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5">
+          <CampoBusqueda
+            valor={query}
+            onCambiar={setQuery}
+            alcance="Soluciones IT"
+            textoAlternativo={MARCADOR_BUSCADOR}
+            refCampo={campo}
+            variante="dock"
+          />
+        </div>
+      )}
     </div>,
     document.body,
   )

@@ -64,23 +64,26 @@ export function ContadoresAgenda({ agenda, enlace }: { agenda: Agenda; enlace?: 
     <div className="grid grid-cols-3 gap-2">
       {contadores.map((c) => {
         const etiqueta = c.n === 1 ? c.uno : c.varios
-        const clase = `flex min-h-16 flex-col justify-center gap-px rounded-[14px] px-3 py-2 ${
-          c.n > 0 ? FONDO_CONTADOR[c.tono] : 'bg-noct-text/[.06]'
+        // Desde 768 px (tarea 338), tarjeta del lenguaje de antes del
+        // rediseño móvil: radio de 8 px, borde divisor, superficie si no
+        // hay ninguno, y número y rótulo con los pesos de entonces.
+        const clase = `flex min-h-16 flex-col justify-center gap-px rounded-[14px] px-3 py-2 md:rounded-lg md:border md:border-noct-divider ${
+          c.n > 0 ? FONDO_CONTADOR[c.tono] : 'bg-noct-text/[.06] md:bg-noct-surface'
         }`
         // El espacio entre el número y su rótulo no se ve (la caja es una
         // columna) pero hace que se lea "1 para hoy" y no "1para hoy".
         const contenido = (
           <>
             <span
-              className={`font-mono text-[24px] font-semibold leading-[1.1] ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
+              className={`font-mono text-[24px] font-semibold leading-[1.1] md:font-medium ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
             >
               {c.n}
             </span>{' '}
-            <span className="text-[12.5px] font-[550] text-noct-neutral-300">{etiqueta}</span>
+            <span className="text-[12.5px] font-[550] text-noct-neutral-300 md:font-normal md:text-noct-neutral-400">{etiqueta}</span>
           </>
         )
         return enlace ? (
-          <Link key={c.clave} to={enlace} aria-label={`${c.n} ${etiqueta}: abrir la Agenda`} className={`${clase} hover:brightness-110`}>
+          <Link key={c.clave} to={enlace} aria-label={`${c.n} ${etiqueta}: abrir la Agenda`} className={`${clase} hover:brightness-110 md:hover:border-noct-neutral-600`}>
             {contenido}
           </Link>
         ) : (
@@ -96,7 +99,7 @@ export function ContadoresAgenda({ agenda, enlace }: { agenda: Agenda; enlace?: 
 const FONDO_CONTADOR = {
   error: 'bg-noct-error/[.13]',
   precaucion: 'bg-noct-precaucion/[.13]',
-  neutro: 'bg-noct-text/[.06]',
+  neutro: 'bg-noct-text/[.06] md:bg-noct-surface',
 } as const
 const COLOR_CONTADOR = {
   error: 'text-noct-error',
@@ -156,11 +159,13 @@ export function SeccionesAgenda({
           todas sus letras, en vez de dejar el hueco en blanco. Con algo
           vencido o de hoy NO aparece: sería mentir. */}
       {urgentes === 0 && (
-        <div className="flex items-center gap-3 rounded-[14px] bg-noct-exito/[.13] p-3.5">
-          <Check size={20} className="shrink-0 text-noct-exito" aria-hidden />
+        // Desde 768 px (tarea 338), la caja de antes del rediseño móvil:
+        // superficie con borde divisor y el título a 14,5 px.
+        <div className="flex items-center gap-3 rounded-[14px] bg-noct-exito/[.13] p-3.5 md:gap-2.5 md:rounded-lg md:border md:border-noct-divider md:bg-noct-surface md:px-3.5 md:py-3">
+          <Check size={20} className="shrink-0 text-noct-exito md:size-[17px]" aria-hidden />
           <p className="min-w-0 flex-1">
-            <span className="block text-[15.5px] font-semibold leading-[1.3]">Todo al día por hoy</span>
-            <span className="block text-[13px] leading-[1.35] text-noct-neutral-300">Nada vencido ni para hoy.</span>
+            <span className="block text-[15.5px] font-semibold leading-[1.3] md:text-[14.5px] md:font-medium">Todo al día por hoy</span>
+            <span className="block text-[13px] leading-[1.35] text-noct-neutral-300 md:text-[12.5px] md:text-noct-neutral-400">Nada vencido ni para hoy.</span>
           </p>
         </div>
       )}
@@ -219,15 +224,18 @@ export function SeccionesAgenda({
             onClick={() => setSinFechaElegido(!sinFechaAbierto)}
             aria-expanded={sinFechaAbierto}
             aria-controls={idSinFecha}
-            className="flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04]"
+            // Desde 768 px (tarea 338), con el lenguaje de las filas de
+            // antes: título de 15 px en peso 500, subtítulo de 12,5 px y el
+            // conteo como `ConteoFila`.
+            className="flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04] md:px-0.5"
           >
             <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-semibold leading-[1.3]">Sin fecha</span>
-              <span className="block text-[13px] leading-[1.35] text-noct-neutral-400">
+              <span className="block text-[15px] font-semibold leading-[1.3] md:font-medium">Sin fecha</span>
+              <span className="block text-[13px] leading-[1.35] text-noct-neutral-400 md:text-[12.5px]">
                 Por revisar y en curso. No vencen.
               </span>
             </span>
-            <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500">{totalSinFecha}</span>
+            <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500 md:text-noct-neutral-400">{totalSinFecha}</span>
             <CaretDown
               size={15}
               className={`shrink-0 text-noct-neutral-400 transition-transform duration-150 motion-reduce:transition-none ${
@@ -323,11 +331,12 @@ function BloqueLista({
         <button
           type="button"
           onClick={() => setDesplegado(true)}
-          className="mt-0.5 inline-flex min-h-11 items-center gap-1.5 self-start px-0.5 text-[14px] font-semibold text-noct-accent-300"
+          // Desde 768 px, el enlace de antes del rediseño móvil (tarea 338).
+          className="mt-0.5 inline-flex min-h-11 items-center gap-1.5 self-start px-0.5 text-[14px] font-semibold text-noct-accent-300 md:px-1.5 md:text-[12.5px] md:font-medium"
         >
           {textoVerOtros(ocultos)}
           <span className="sr-only"> {etiquetaVerMas}</span>
-          <CaretDown size={13} aria-hidden />
+          <CaretDown size={13} className="md:size-3" aria-hidden />
         </button>
       )}
     </section>
@@ -339,13 +348,15 @@ function BloqueLista({
 // (rojo) de "Para hoy" (ámbar) y de "Próximos" (gris) sin leer el
 // rótulo. El rótulo ya nombra el estado, así que el punto es refuerzo,
 // no la única señal. Desde la tarea 332, en minúsculas a 15 px (antes un
-// rótulo en mayúsculas) y el conteo en IBM Plex Mono.
+// rótulo en mayúsculas) y el conteo en IBM Plex Mono. Solo en el teléfono:
+// desde 768 px vuelven el rótulo de `TituloSeccion` y el conteo de 11 px
+// (tarea 338).
 function CabeceraAgenda({ titulo, total, estado }: { titulo: string; total: number; estado: EstadoAgenda }) {
   return (
-    <div className="flex items-center gap-2 pb-1">
-      <span className={`h-2 w-2 shrink-0 rounded-full ${COLOR_ESTADO[estado]}`} aria-hidden />
-      <h2 className="min-w-0 flex-1 text-[15px] font-semibold leading-[1.3]">{titulo}</h2>
-      <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500">{total}</span>
+    <div className="flex items-center gap-2 pb-1 md:mb-1.5 md:px-0.5 md:pb-0">
+      <span className={`h-2 w-2 shrink-0 rounded-full md:h-[7px] md:w-[7px] ${COLOR_ESTADO[estado]}`} aria-hidden />
+      <h2 className="min-w-0 flex-1 text-[15px] font-semibold leading-[1.3] md:text-[11px] md:font-medium md:uppercase md:leading-[1.55] md:tracking-[0.08em] md:text-noct-neutral-500">{titulo}</h2>
+      <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500 md:font-inter md:text-[11px] md:text-noct-neutral-400">{total}</span>
     </div>
   )
 }
@@ -363,27 +374,35 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
   // barra lateral de 4 px de su color (y en la razón), el icono neutro (lo
   // que es, no cómo está) y el verbo a 14 px seminegrita. Antes el icono
   // llevaba el color y la fila vencida, un fondo rojo.
+  //
+  // SOLO EN EL TELÉFONO (tarea 338): desde 768 px vuelve la fila de antes.
+  // Sin barra ni línea divisoria; el estado lo dicen otra vez la caja del
+  // icono en su color y, en la vencida, el fondo rojo.
   return (
     <Link
       to={item.ruta}
       aria-label={`${accion} ${item.titulo} · ${ETIQUETA_ESTADO[estado]}`}
-      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04]"
+      className={`flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-14 md:rounded-md md:border-b-0 md:px-2 md:py-[9px] md:hover:bg-noct-text/[.05] ${
+        item.tono === 'error' ? 'md:bg-noct-error/[.07]' : ''
+      }`}
     >
-      <span aria-hidden data-barra-estado className={`my-1 w-1 shrink-0 self-stretch rounded-sm ${BARRA_PENDIENTE[item.tono]}`} />
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300">
-        <Icono size={18} aria-hidden />
+      <span aria-hidden data-barra-estado className={`my-1 w-1 shrink-0 self-stretch rounded-sm md:hidden ${BARRA_PENDIENTE[item.tono]}`} />
+      <span
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300 md:h-[34px] md:w-[34px] md:rounded-md ${TONO_PENDIENTE_ESCRITORIO[item.tono]}`}
+      >
+        <Icono size={18} className="md:size-[17px]" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
         {/* El nombre entero (regla 23): es lo que dice QUÉ vence o qué
             hay que revisar. La razón de debajo sí se recorta. */}
         <span
           data-nombre-principal
-          className="block min-w-0 text-[15.5px] font-semibold leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+          className="block min-w-0 text-[15.5px] font-semibold leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty] md:text-[15px] md:font-medium"
         >
           {item.titulo}
         </span>
-        <span className="mt-0.5 block truncate text-[13px] leading-[1.35]">
-          <span className={`font-[550] ${COLOR_RAZON[item.tono]}`}>{item.detalle}</span>
+        <span className="mt-0.5 block truncate text-[13px] leading-[1.35] md:mt-0 md:text-[12.5px] md:leading-[1.55]">
+          <span className={`font-[550] md:font-normal ${COLOR_RAZON[item.tono]}`}>{item.detalle}</span>
           {item.fecha !== null && item.origen && <span className="text-noct-neutral-400"> · {item.origen}</span>}
         </span>
       </span>
@@ -391,7 +410,7 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
           mismo ("esto lleva a otro sitio") y en 360 px el chevron se
           come 20 px del título, que es el dato que de verdad hay que
           leer. */}
-      <span className="shrink-0 text-[14px] font-semibold text-noct-accent-300" aria-hidden>
+      <span className="shrink-0 text-[14px] font-semibold text-noct-accent-300 md:text-[12.5px] md:font-medium" aria-hidden>
         {accion}
       </span>
     </Link>
@@ -420,6 +439,13 @@ const BARRA_PENDIENTE: Record<ItemPendiente['tono'], string> = {
   neutro: 'bg-noct-neutral-500',
   precaucion: 'bg-noct-precaucion',
   error: 'bg-noct-error',
+}
+// Desde 768 px, sin la barra, la caja del icono vuelve a llevar el color de
+// su estado, como antes del rediseño móvil (tarea 338).
+const TONO_PENDIENTE_ESCRITORIO: Record<ItemPendiente['tono'], string> = {
+  neutro: 'md:text-noct-neutral-400 md:bg-noct-neutral-400/[.12]',
+  precaucion: 'md:text-noct-precaucion md:bg-noct-precaucion/[.12]',
+  error: 'md:text-noct-error md:bg-noct-error/[.12]',
 }
 // La razón va en el color del estado, no en gris: es lo que distingue
 // "Venció hace 3 días" de "Borrador tuyo · hace 2 días" de un vistazo.

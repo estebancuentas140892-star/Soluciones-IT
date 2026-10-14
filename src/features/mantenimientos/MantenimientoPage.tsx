@@ -367,7 +367,13 @@ export function RegistrarDesenlace({
         disabled={guardando}
         // Guardar el desenlace hace avanzar: es la acción rellena de la
         // pantalla (regla 30). Cancelar es destructivo y va delineado en rojo.
-        className={desenlace === 'cancelado' ? `${BTN_PRIMARIO_PELIGRO} min-h-11 self-start px-4 disabled:opacity-50` : `${BTN_PRIMARIO_RELLENO} w-full`}
+        // Desde 768 px (tarea 338), el alto, el radio, la letra y el ancho
+        // del primario de antes (`min-h-11 self-start px-4`).
+        className={
+          desenlace === 'cancelado'
+            ? `${BTN_PRIMARIO_PELIGRO} min-h-11 self-start px-4 disabled:opacity-50`
+            : `${BTN_PRIMARIO_RELLENO} w-full md:min-h-11 md:w-auto md:gap-1.5 md:self-start md:rounded-lg md:text-[13px] md:font-medium`
+        }
       >
         {guardando
           ? 'Guardando...'

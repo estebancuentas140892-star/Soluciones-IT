@@ -5,6 +5,7 @@ import { db, type TipoSecreto } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { DockBusqueda } from '../../components/DockBusqueda'
+import { useAnchoTelefono } from '../../components/useAnchoTelefono'
 import {
   ArrowElbowDownRight,
   ArrowSquareOut,
@@ -269,6 +270,8 @@ export function BovedaPage() {
 
   const [categoria, setCategoria] = useState('')
   const [texto, setTexto] = useState('')
+  // El buscador va abajo, en el dock, solo con ancho de teléfono (tarea 338).
+  const telefono = useAnchoTelefono()
   const [minutos, setMinutos] = useState(obtenerMinutosAutobloqueo)
 
   // Hojas inferiores del rediseño: la de "Crear" (con presets) y el
@@ -481,9 +484,17 @@ export function BovedaPage() {
         {/* Dónde va cada clave (una línea, no una tarjeta): la Bóveda
             guarda lo compartido; lo que es de un solo equipo vive en
             "Datos protegidos" de su ficha. */}
-        <p className="px-4 pb-2.5 pt-1 text-[12px] leading-relaxed text-noct-neutral-500">
+        <p className="px-4 pb-2.5 pt-1 text-[12px] leading-relaxed text-noct-neutral-500 md:pb-0 md:text-[11.5px] md:text-noct-neutral-600">
           Si la clave pertenece a un solo equipo, guárdala en Datos protegidos de su ficha.
         </p>
+
+        {/* Desde 768 px el buscador va aquí, arriba, como antes del rediseño
+            móvil (tarea 338). En el teléfono va al dock de abajo. */}
+        {!telefono && (
+          <div className="px-4 pb-2.5 pt-2.5">
+            <CampoBusqueda valor={texto} onCambiar={setTexto} alcance="la Bóveda" />
+          </div>
+        )}
 
 
         {categorias.length > 0 && (
@@ -518,7 +529,7 @@ export function BovedaPage() {
         )}
       </>
     }>
-      <main className="flex flex-1 flex-col gap-3 px-4 pb-6 pt-3">
+      <main className="flex flex-1 flex-col gap-3 px-4 pb-6 pt-3 md:pb-16">
         {mostrarAviso && (
           <div className="flex items-center gap-2.5 rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] px-[13px] py-2.5">
             <Warning size={16} className="shrink-0 text-noct-precaucion" aria-hidden />
@@ -699,9 +710,11 @@ export function BovedaPage() {
 
       {/* EL BUSCADOR DE LA BÓVEDA, AL PULGAR (tarea 330): el de siempre, con
           la Bóveda desbloqueada, en el dock de abajo. */}
-      <DockBusqueda>
-        <CampoBusqueda valor={texto} onCambiar={setTexto} alcance="la Bóveda" variante="dock" />
-      </DockBusqueda>
+      {telefono && (
+        <DockBusqueda>
+          <CampoBusqueda valor={texto} onCambiar={setTexto} alcance="la Bóveda" variante="dock" />
+        </DockBusqueda>
+      )}
 
       {/* Hoja "Nuevo acceso": arriba los dos gestos de todos los días
           (un acceso con usuario y contraseña, una clave suelta); los

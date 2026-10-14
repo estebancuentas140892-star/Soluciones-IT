@@ -18,6 +18,10 @@ import { registrarIntervencion } from '../../lib/repositorio'
 // bitácora que "Intervenciones" de la ficha (`registrarIntervencion`, campo
 // 'intervencion'), con el mismo formulario: qué se hizo y el motivo
 // opcional, y después, la foto si hace falta.
+//
+// Desde 768 px (tarea 338), los botones de la hoja llevan el alto, el radio
+// y la letra del primario de antes (`BTN_PRIMARIO`, el de "Guardar
+// intervención" de la ficha); el relleno ya lo quita la constante.
 export function IntervencionAlTerminar({ equipoId, tituloGuia }: { equipoId: string; tituloGuia: string }) {
   const equipo = useLiveQuery(() => db.dispositivos.get(equipoId), [equipoId])
   const [abierta, setAbierta] = useState(false)
@@ -98,7 +102,7 @@ function FormularioIntervencion({
       <div className="flex flex-col gap-3">
         <p className="text-[14px] leading-[1.45] text-noct-neutral-300">Quedó en su historial. Si hace falta, agrega una foto.</p>
         <Adjuntos entidadTipo="historial" entidadId={entradaId} />
-        <button type="button" onClick={alTerminar} className={`w-full ${BTN_PRIMARIO_RELLENO}`}>
+        <button type="button" onClick={alTerminar} className={`w-full ${BTN_PRIMARIO_RELLENO} md:min-h-11 md:rounded-lg md:text-[13px] md:font-medium`}>
           Listo
         </button>
       </div>
@@ -124,8 +128,8 @@ function FormularioIntervencion({
           className={`min-h-11 ${CLASE_CAMPO_SOBRE_SUPERFICIE}`}
         />
       </Campo>
-      <button type="submit" disabled={guardando || !descripcion.trim()} className={`w-full ${BTN_PRIMARIO_RELLENO}`}>
-        <FloppyDisk size={18} aria-hidden />
+      <button type="submit" disabled={guardando || !descripcion.trim()} className={`w-full ${BTN_PRIMARIO_RELLENO} md:min-h-11 md:rounded-lg md:text-[13px] md:font-medium`}>
+        <FloppyDisk size={18} className="md:size-[15px]" aria-hidden />
         {guardando ? 'Guardando...' : 'Guardar en el historial'}
       </button>
     </form>

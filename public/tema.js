@@ -19,6 +19,10 @@
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-color-scheme: light)').matches)
   document.documentElement.setAttribute('data-tema', claro ? 'claro' : 'oscuro')
+  // El claro solo pinta con ancho de teléfono (tarea 338): desde 768 px la
+  // página sigue oscura y la barra del navegador con ella. Mismo corte que
+  // src/lib/anchoTelefono.ts.
+  var telefono = typeof window.matchMedia !== 'function' || window.matchMedia('(width < 48rem)').matches
   var barra = document.querySelector('meta[name="theme-color"]')
-  if (barra) barra.setAttribute('content', claro ? '#f4f5f8' : '#161826')
+  if (barra) barra.setAttribute('content', claro && telefono ? '#f4f5f8' : '#161826')
 })()

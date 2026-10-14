@@ -33,8 +33,9 @@ export function AgendaPage() {
   return (
     // Nivel documento: se consulta y se vuelve. Sube a Resolver (padreDe).
     <Chasis modo="documento" titulo="Agenda" contexto={hoyTexto}>
-      <main className="flex-1 px-4 pb-16 pt-3.5">
-        <div className="flex flex-col gap-[22px]">
+      {/* Desde 768 px, los márgenes de antes del rediseño móvil (tarea 338). */}
+      <main className="flex-1 px-4 pb-16 pt-3.5 md:pt-4">
+        <div className="flex flex-col gap-[22px] md:gap-[18px]">
           {/* El día ya está en la cabecera del chasis (`contexto`). Arriba,
               los tres contadores (tarea 332), sin enlace: ya se está en la
               Agenda. Mientras carga no se cuenta nada. */}

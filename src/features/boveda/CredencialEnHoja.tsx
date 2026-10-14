@@ -20,6 +20,10 @@ import { useTituloDelVinculo } from './useTituloDelVinculo'
 // ofrece "Bloquear Bóveda" cuando está abierta. Cerrarla, bloquear o volver a
 // mostrar no mueve la guía: la acción, el avance y el paso siguen debajo,
 // intactos. El nombre es el mismo que dice la hoja (`useTituloDelVinculo`).
+//
+// Desde 768 px (tarea 338) la fila tiene la forma del bloque protegido de
+// antes del rediseño: tarjeta con el borde del divisor, el icono, el nombre
+// y la acción ("Ver") con la letra de la fila de un vínculo.
 export function CredencialEnHoja({ vinculo }: { vinculo: VinculoProtegido }) {
   const [abierta, setAbierta] = useState(false)
   const titulo = useTituloDelVinculo(vinculo) || (vinculo.tipo === 'equipo' ? 'Credencial del equipo' : 'Credencial')
@@ -35,19 +39,19 @@ export function CredencialEnHoja({ vinculo }: { vinculo: VinculoProtegido }) {
         aria-haspopup="dialog"
         aria-label={`Ver la credencial: ${titulo}`}
         onClick={() => setAbierta(true)}
-        className="flex min-h-[58px] w-full min-w-0 items-center gap-3 rounded-[14px] border-[1.5px] border-noct-text/25 py-1.5 pl-3.5 pr-2 text-left hover:bg-noct-text/[.04] active:bg-noct-text/[.07]"
+        className="flex min-h-[58px] w-full min-w-0 items-center gap-3 rounded-[14px] border-[1.5px] border-noct-text/25 py-1.5 pl-3.5 pr-2 text-left hover:bg-noct-text/[.04] active:bg-noct-text/[.07] md:min-h-12 md:gap-2.5 md:rounded-[10px] md:border md:border-noct-divider md:bg-noct-surface md:px-3 md:hover:bg-noct-surface md:active:bg-noct-surface"
       >
-        <Key size={19} className="shrink-0 text-noct-neutral-300" aria-hidden />
+        <Key size={19} className="shrink-0 text-noct-neutral-300 md:size-4 md:text-noct-neutral-400" aria-hidden />
         <span className="min-w-0 flex-1">
           {/* El nombre no se recorta (regla 23): crece en altura. */}
-          <span className="block text-[15px] font-semibold leading-snug text-pretty [overflow-wrap:anywhere]">
+          <span className="block text-[15px] font-semibold leading-snug text-pretty [overflow-wrap:anywhere] md:text-[13.5px] md:font-medium">
             {titulo}
           </span>
-          <span className="block text-[12.5px] leading-snug text-noct-neutral-400">Se abre aquí, sin salir de la guía</span>
+          <span className="block text-[12.5px] leading-snug text-noct-neutral-400 md:text-[12px]">Se abre aquí, sin salir de la guía</span>
         </span>
         <span
           aria-hidden
-          className="flex min-h-10 shrink-0 items-center rounded-[10px] bg-noct-accent/[.14] px-3 text-[14px] font-semibold text-noct-accent-300"
+          className="flex min-h-10 shrink-0 items-center rounded-[10px] bg-noct-accent/[.14] px-3 text-[14px] font-semibold text-noct-accent-300 md:min-h-0 md:rounded-none md:bg-transparent md:px-0 md:text-[12.5px] md:font-medium"
         >
           Ver
         </span>

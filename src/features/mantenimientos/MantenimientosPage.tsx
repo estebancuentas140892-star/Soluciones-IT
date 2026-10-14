@@ -8,6 +8,8 @@ import { MantenimientosDelEquipo } from './MantenimientosDelEquipo'
 // tarea 331): "hoja para consultar, pantalla para trabajar". Se llega desde
 // la fila "Mantenimiento" de la ficha (que lleva el galón de pantalla) y se
 // vuelve a ella. Nivel documento: conserva las pestañas.
+// Desde 768 px (tarea 338) Programar ya no va en una barra pegada: el aire
+// del final lo pone esta pantalla, como el `pb-12` de las fichas de antes.
 export function MantenimientosPage() {
   const { dispositivoId = '' } = useParams()
   const dispositivo = useLiveQuery(async () => (await db.dispositivos.get(dispositivoId)) ?? null, [dispositivoId])
@@ -29,7 +31,7 @@ export function MantenimientosPage() {
       titulo="Mantenimiento"
       contexto={dispositivo.nombre}
     >
-      <main className="flex flex-1 flex-col px-4 pt-4 lg:px-10">
+      <main className="flex flex-1 flex-col px-4 pt-4 md:pb-12 lg:px-10">
         <MantenimientosDelEquipo dispositivoId={dispositivoId} nombreEquipo={dispositivo.nombre} />
       </main>
     </Chasis>

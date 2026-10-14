@@ -14,6 +14,18 @@ Dos utilidades Tailwind del mismo tipo (dos colores de texto, dos fondos, dos an
 
 Lo que sí se puede concatenar sin problema: `font-mono`, `text-center`, `min-h-*`.
 
+### 0.1 El rediseño "1b Pulgar" es solo móvil (tarea 338, AD-087, regla 31)
+
+Los componentes que el rediseño móvil cambió llevan su forma de tableta y escritorio (la de antes del rediseño, `06be087`) como variantes `md:` sobre las mismas clases: por debajo de 768 px son exactamente los de las tareas 327 a 335, y desde 768 px vuelven al lenguaje visual anterior conservando su disposición y sus funciones nuevas. Ningún componente se duplica por ancho. Al tocar uno de estos, se cambian los dos anchos a propósito o ninguno:
+
+- **Primitivas:** `BTN_PRIMARIO_RELLENO` (delineado desde 768, ver 1.1), `BAJA_CON_LAS_PESTANAS` (`max-md:`), `CampoBusqueda` (lupa con texto en el acento), `CabeceraColapsable` (21 px), `BarraTarea` compacta (contexto a 11 px, título a 14,5/500), `HojaInferior` (título a 16 px), `FilaDispositivo` (atenuada al 60 %).
+- **Inicio y Más:** `FilaAgenda` (la fila de 56 px de antes: caja de icono de 34 en el color del estado, fondo rojo si venció, sin la barra lateral de 4 px), `ContadoresAgenda` y la cabecera de cada grupo (rótulo de `TituloSeccion`), `FilaMas` y `TituloGrupo` (52 px, rótulo de 11 px en mayúsculas).
+- **Búsqueda:** `ChipsDeAlcance` (la forma de los chips de categoría de Equipos: redondos, 13 px, conteo en Inter).
+- **Ficha de equipo (`PiezasFicha`):** `BarraAccionEquipo` (botón de 52 px, `rounded-xl`, 15 px), `FilaIndice` (la cabecera de sección plegable de antes) y las filas de "Resolver con este equipo" (la fila de procedimiento de antes, con el recuadro teñido por su tipo: `ItemResolver.tipoArticulo`, opcional, solo de presentación).
+- **Guía:** `BOTON_PRINCIPAL` y `BOTON_ANTERIOR` de `ModoFoco.tsx` (64 px, delineados), `TEXTO_INSTRUCCION`, `SenalesDePaso` y `CredencialEnHoja` (la fila de un vínculo de antes).
+- **Mantenimiento y facturación:** `MantenimientosDelEquipo` (la letra del pliegue de antes de la ficha, "Programar" como fantasma en acento) y las capas de `AutorizacionPage` (rótulo arriba, valor abajo, `TituloSeccion`).
+- **Buscador de las raíces:** `DockBusqueda` solo en el teléfono (ver 2.10d-ter, `useAnchoTelefono`).
+
 ## 1. Primitivas base
 
 ### 1.1 `src/components/nocturne.tsx` (variantes de botón y rótulos)
@@ -35,7 +47,7 @@ Constantes de clase (para interpolar en `className`, no son componentes):
 | `BTN_ICONO_SECUNDARIO` | cuadrado 44x44 delineado (34x34 hasta la tarea 262) |
 | `BTN_ICONO_PELIGRO` | cuadrado 44x44 sin borde, rojo (34x34 hasta la tarea 262) |
 
-**Una sola acción rellena por pantalla (tarea 327, regla 30, AD-077).** `BTN_PRIMARIO_RELLENO` es solo para la acción que hace avanzar o ejecutar (Completar y seguir, Resolver un problema, Empezar, Guardar, Desbloquear, Terminar), y como mucho una por pantalla. Lo que no avanza (Editar, Programar, Registrar lectura) sigue con `BTN_PRIMARIO` delineado. No hereda la base de los demás botones: lleva su propio tamaño de letra, radio y alto. Hover en `noct-accent-300`, pulsado en `noct-accent-500`, deshabilitado al 45 %. Las pantallas lo adoptan en las tareas del rediseño móvil (328 en adelante).
+**Una sola acción rellena por pantalla (tarea 327, regla 30, AD-077).** `BTN_PRIMARIO_RELLENO` es solo para la acción que hace avanzar o ejecutar (Completar y seguir, Resolver un problema, Empezar, Guardar, Desbloquear, Terminar), y como mucho una por pantalla. Lo que no avanza (Editar, Programar, Registrar lectura) sigue con `BTN_PRIMARIO` delineado. No hereda la base de los demás botones: lleva su propio tamaño de letra, radio y alto. Hover en `noct-accent-300`, pulsado en `noct-accent-500`, deshabilitado al 45 %. Las pantallas lo adoptan en las tareas del rediseño móvil (328 en adelante). **Relleno solo en el teléfono (tarea 338, AD-087, regla 31):** la constante trae sus variantes `md:` (`md:border-noct-accent md:bg-noct-accent/[.12] md:text-noct-accent-300`, con su `md:hover:` y `md:active:`), así que desde 768 px vuelve a la forma delineada que tenía el primario de esas pantallas antes del rediseño; cada pantalla solo repone con `md:` su alto, su radio y su letra de entonces.
 
 **Toque de 44 en los botones de icono (tarea 262, regla R6).**
 - **Caja y dibujo:** la caja entera es el objetivo y mide 44x44. El dibujo lo pone cada consumidor, de 16 a 18 px, y no crece.
@@ -249,7 +261,8 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** el buscador de una raíz, al pulgar: pegado sobre la barra de pestañas (`PEGADA_SOBRE_PESTANAS`), con el escáner (`/escaner`, "Escanear QR", 52 px) al lado si `conEscaner` (por defecto).
 - **Props:** `{ children, conEscaner = true }`; `children` es el campo de la pantalla (`CampoBusqueda` variante `dock`). Marca `data-dock-busqueda`.
 - **Teclado:** con `visualViewport` mide cuánto tapa el teclado y se pega encima (`bottom` en línea); donde el navegador encoge la página, no hace falta. Un `touchmove` fuera del dock con su campo enfocado lo desenfoca (desplazar la lista cierra el teclado).
-- **Dónde:** `ResolverPage`, `DispositivosPage` y `BovedaPage` (desbloqueada), como último hijo del chasis, después de `main`.
+- **Dónde:** `ResolverPage`, `DispositivosPage` y `BovedaPage` (desbloqueada), como último hijo del chasis, después de `main`. **Solo con ancho de teléfono (tarea 338):** cada pantalla pregunta `useAnchoTelefono()` y, desde 768 px, monta el MISMO campo donde estaba antes del rediseño (la banda superior, con su variante de entonces) en vez del dock; nunca los dos.
+- **`useAnchoTelefono()`** (`src/components/useAnchoTelefono.ts`, tarea 338, sobre `src/lib/anchoTelefono.ts`): `true` por debajo de 768 px (`CONSULTA_TELEFONO = '(width < 48rem)'`, el `md` del Chasis), en vivo con `useSyncExternalStore` al girar el teléfono o estrechar la ventana. Para lo poco del rediseño móvil que no se puede decir en CSS. `src/lib/anchoTelefono.ts` lo usa también `tema.ts` (`esAnchoTelefono`, `suscribirAnchoTelefono`). En las pruebas la ventana de happy-dom es de teléfono (375 x 812, `src/pruebas/setup.ts`).
 - **`useAltoDelTeclado()`** (`src/components/useAltoDelTeclado.ts`): cuánto tapa el teclado la parte de abajo, por `visualViewport` (0 si nada o sin `visualViewport`). Lo usan `DockBusqueda` y `BuscadorGlobal`.
 
 ### 2.10d-bis `CampoBusqueda`
@@ -270,7 +283,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 ### 2.10e0 `HojaInferior` (`src/components/HojaInferior.tsx`, 2026-10-13, tareas 328 y 329)
 
 - **Propósito:** "hoja para consultar, pantalla para trabajar" (rediseño móvil "1b Pulgar"): lo que se mira sin dejar la pantalla se abre encima y al cerrarla todo sigue donde estaba.
-- **Props:** `{ abierta, onCerrar, titulo, contexto?, etiquetaCerrar = Cerrar, children }`. Sobre `Modal` (anclada abajo en el teléfono, Escape y tocar fuera la cierran), con la línea de contexto a 12 px, el título a 17 px y una X de 44 px. Cerrada no monta su contenido.
+- **Props:** `{ abierta, onCerrar, titulo, contexto?, etiquetaCerrar = Cerrar, children }`. Sobre `Modal` (anclada abajo en el teléfono, Escape y tocar fuera la cierran), con la línea de contexto a 12 px, el título a 17 px y una X de 44 px. Cerrada no monta su contenido. Desde 768 px (tarea 338) es el diálogo centrado de siempre (`Modal` ya lo era desde 640 px) con la letra de los diálogos de antes: título a 16 px y contexto a 11 px.
 - **Dónde:** `CredencialEnHoja` (la credencial de una acción) y las hojas de `DispositivoPage` (Más datos, Si falla caen, Conexiones, Credenciales, Datos protegidos, Adjuntos, Mantenimiento, Facturación, Intervenciones y Resolver con este equipo).
 
 ### 2.10e0b `dispositivos/PiezasFicha` (2026-10-13, tarea 329, AD-079)
@@ -330,6 +343,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dónde:** la monta `Chasis` en los niveles `seccion` y `documento` (no en `tarea`: esas pantallas ya tienen su propia `BarraTarea` y no necesitan una segunda barra flotante, R19).
 
 ### 2.10j `CabeceraColapsable`
+- **Desde la tarea 330** en reposo mide 25 px y 650 (cabecera de raíz del rediseño móvil); **desde la tarea 338** eso es solo del teléfono y desde 768 px vuelve a 21 px y 500.
 - **Propósito:** el título de la sección dentro de `BarraSuperior` (tarea 187, mockup `4e`). Al desplazarse pasa de 21 a 14 px y **se queda en pantalla**: la orientación no debe depender solo de la pestaña iluminada, que en escritorio está a 700 px de distancia y mide 10,5 px. El mockup lo mide como una cabecera que baja de 232 a 150 px sin perder el nombre.
 - **Props:** `{ titulo: string, forzarContraida?: boolean }`. `forzarContraida` (2026-10-01, tarea 287) la deja a 14 px sin desplazamiento: Resolver mientras se escribe, por la prop `tituloContraido` de `Chasis` (sección) y `BarraSuperior`.
 - **Cómo:** un listener de `scroll` sobre `window`, con el trabajo diferido a `requestAnimationFrame` y un guardia para no encolar dos por fotograma. Umbral de 12 px, deliberadamente bajo: el mockup lo dibuja como "desplazado", no como un salto que tarde en notarse. La transición es solo de `font-size` y se anula con `motion-reduce`.
@@ -426,7 +440,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dónde:** `MiniaturaPortada`, `Adjuntos`, `ProcedimientoVista`.
 
 ### 2.18 `OpcionRadio` (2026-10-10, tarea 320)
-- **Desde la tarea 333** la usa también `autenticacion/ElegirTema` (Ajustes > Aplicación > Tema): tres opciones con título y detalle dentro de un `role="radiogroup"` con su rótulo, leyendo y guardando la preferencia con `useSyncExternalStore` sobre `src/lib/tema.ts` (`preferenciaTemaActual`, `suscribirPreferenciaTema`, `guardarPreferenciaTema`). Sin props.
+- **Desde la tarea 333** la usa también `autenticacion/ElegirTema` (Ajustes > Aplicación > Tema): tres opciones con título y detalle dentro de un `role="radiogroup"` con su rótulo, leyendo y guardando la preferencia con `useSyncExternalStore` sobre `src/lib/tema.ts` (`preferenciaTemaActual`, `suscribirPreferenciaTema`, `guardarPreferenciaTema`). Sin props. **Solo en el teléfono desde la tarea 338** (`md:hidden`): el tema claro solo pinta por debajo de 768 px.
 - **Propósito:** una respuesta de una pregunta cerrada: botón con `role="radio"` y `aria-checked`, 44 px de alto, el círculo de selección a la izquierda, el borde y el fondo en acento cuando está elegida. Botón y no `<input type="radio">`: la app no usa los controles nativos del navegador.
 - **Props:** `{ activa: boolean, onClick: () => void, children }`. Quien la usa pone el contenedor `role="radiogroup"` con su nombre accesible (`aria-labelledby` con `useId`).
 - **Dónde:** `DecisionSobreEquipo` (de donde se extrajo; era su `Opcion` interna, sin cambiar su aspecto), `SelectorTipoMantenimiento` y la pregunta "¿Cómo terminó?" de `MantenimientoPage`.

@@ -23,7 +23,10 @@ export function ElegirTema() {
   const preferencia = useSyncExternalStore(suscribirPreferenciaTema, preferenciaTemaActual)
   const idTitulo = useId()
   return (
-    <div className="flex flex-col gap-2.5 p-3.5">
+    // Solo con ancho de teléfono (tarea 338, AD-087): el claro nació para
+    // leer a pleno sol dentro del rediseño móvil y desde 768 px no pinta,
+    // así que ahí no se ofrece. La preferencia guardada no se toca.
+    <div className="flex flex-col gap-2.5 p-3.5 md:hidden">
       <div>
         <p id={idTitulo} className="text-[14px] font-semibold text-noct-text">
           Tema

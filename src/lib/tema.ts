@@ -9,12 +9,19 @@
 // tokens `--color-noct-*` del tema claro cuelgan de `:root[data-tema="claro"]`
 // en src/index.css, así que ninguna pantalla sabe de temas.
 //
+// SOLO EN EL TELÉFONO (tarea 338, AD-087): esos tokens viven dentro de
+// `@media (width < 48rem)`. La preferencia, su clave y su almacenamiento no
+// cambian; desde 768 px simplemente no pinta (tableta y escritorio siguen
+// en el oscuro de antes del rediseño móvil) y Ajustes no la ofrece ahí.
+//
 // Es una preferencia de ESTE teléfono, como el modo de ejecución, y no se
 // sincroniza. Vive en localStorage y no en Dexie porque tiene que leerse
 // ANTES de pintar, sin esperar a nada: public/tema.js la aplica de forma
 // síncrona en el <head> (la CSP no admite scripts en línea) y este módulo
 // toma el relevo cuando arranca la app. Los dos usan la misma clave y los
 // mismos colores de la barra del navegador; si cambian, cambian juntos.
+
+import { esAnchoTelefono, suscribirAnchoTelefono } from './anchoTelefono'
 
 export type PreferenciaTema = 'oscuro' | 'claro' | 'automatico'
 export type TemaEfectivo = 'oscuro' | 'claro'
@@ -54,11 +61,21 @@ function telefonoPideClaro(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(CONSULTA_CLARO).matches
 }
 
+/**
+ * El color de la barra del navegador para un tema efectivo. El claro solo
+ * pinta con ancho de teléfono (tarea 338: sus tokens viven en
+ * `@media (width < 48rem)`); desde 768 px la página sigue oscura, y la barra
+ * con ella.
+ */
+export function colorBarra(tema: TemaEfectivo, anchoTelefono: boolean): string {
+  return tema === 'claro' && anchoTelefono ? COLOR_BARRA.claro : COLOR_BARRA.oscuro
+}
+
 /** Pinta el tema efectivo de una preferencia: el atributo de <html> y la barra del navegador. */
 export function aplicarTema(preferencia: PreferenciaTema): TemaEfectivo {
   const tema = temaEfectivo(preferencia, telefonoPideClaro())
   document.documentElement.setAttribute('data-tema', tema)
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', COLOR_BARRA[tema])
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colorBarra(tema, esAnchoTelefono()))
   return tema
 }
 
@@ -103,4 +120,7 @@ export function iniciarTema(): void {
   window.matchMedia(CONSULTA_CLARO).addEventListener('change', () => {
     if (preferenciaTemaActual() === 'automatico') aplicarTema('automatico')
   })
+  // Al cruzar los 768 px (girar el teléfono, estrechar la ventana) cambia
+  // si el claro pinta, y la barra del navegador lo acompaña (tarea 338).
+  suscribirAnchoTelefono(() => aplicarTema(preferenciaTemaActual()))
 }
