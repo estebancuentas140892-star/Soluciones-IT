@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Corregido (prueba sin conexión, tarea 336): la prueba vuelve a pasar entera tras el rediseño de la ejecución
+
+**Área modificada:** `scripts/prueba-sin-conexion.mjs` (pasos 4b, 4b2 y 4c y la cabecera).
+**Tipo:** Corregido (solo la prueba; la app no cambia); Documentación (TAREAS 336 y 337).
+**Motivo:** sobre `main` (`82dd99b`) la prueba sin conexión real daba 7 fallos. Reproducidos en el banco local y en la prueba con la red cortada, ninguno es una regresión sin red: la tarea 328 (AD-078) cambió la ejecución de una guía sin correr la prueba. El número de "Cómo hacerlo" va en su caja con un contador de CSS (la prueba pedía los números del navegador), la comprobación final pregunta "¿Quedó resuelto?" y termina con "Terminar" (la prueba buscaba "Antes de terminar, comprueba" y "Finalizar"), y la credencial del equipo se resuelve en la hoja que abre su fila (la prueba la buscaba en el cuerpo de la acción).
+**Qué cambia:** 4b acepta los números del navegador o un contador de CSS dibujado en cada microacción, y exige la ubicación bajo la suya; 4b2 usa los textos nuevos y comprueba además que, sin marcar, el control dice "Marca 1 comprobación", inactivo; 4c abre la hoja y comprueba dentro la credencial resuelta, el desbloqueo, que nada cifrado llega a la página y que otro equipo no recibe la credencial ajena. Dos comprobaciones que pasaban en vacío (volver a la última acción y "nada de la Bóveda en la página") vuelven a mirar lo que dicen.
+**Estructura de datos:** sin cambios.
+**Verificación:** prueba sin conexión 73 de 80 sobre `main` y 84 de 84 sobre la rama ("PRUEBA SIN CONEXION: OK"); la comprobación nueva de 4b falla contra el DOM del banco si se quitan los números o si la ubicación cambia de microacción; suite completa (212 archivos y 3318 pruebas), `tsc -b`, lint y build en verde.
+**Impacto esperado:** la única prueba que ejecuta una guía con el service worker y sin red vuelve a distinguir una regresión real de una prueba desactualizada.
+
 ### Agregado (tema, tarea 333): tema claro opcional, oscuro por defecto
 
 **Área modificada:** `src/index.css` (tokens claros), `src/lib/tema.ts` (nuevo), `public/tema.js` (nuevo), `index.html`, `src/main.tsx`, `src/features/autenticacion/ElegirTema.tsx` (nuevo) y `CuentaPage.tsx`; ajustes de contraste en `src/features/busqueda/ChipsDeAlcance.tsx` y `src/components/FilaDispositivo.tsx`.
