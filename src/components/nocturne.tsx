@@ -47,6 +47,12 @@ export function TagNeutral({ children, className = '' }: { children: ReactNode; 
 // chasis (tarea 274): una barra que use esta clase publica su propio
 // hueco del aviso (`huecoAvisoActualizacion`), o una taparía a la otra.
 export const PEGADA_SOBRE_PESTANAS = 'bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0'
+// Lo que se suma a PEGADA_SOBRE_PESTANAS en una pantalla cuyas pestañas se
+// esconden al bajar (`pestanasSeOcultanAlBajar` del chasis, tarea 329): la
+// barra baja al borde, con el área segura dentro de su relleno, y sube otra
+// vez cuando las pestañas vuelven.
+export const BAJA_CON_LAS_PESTANAS =
+  'transition-[bottom] duration-200 motion-reduce:transition-none group-data-[pestanas=ocultas]/chasis:bottom-0 group-data-[pestanas=ocultas]/chasis:pb-[calc(12px+env(safe-area-inset-bottom))]'
 
 // Botones .btn del sistema: el primario va delineado en el acento y el
 // secundario con el divisor. Delineado es lo normal: Editar, Programar,

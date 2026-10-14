@@ -13,15 +13,15 @@ import { lineaDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { origenesDistintos, referenciasHacia, resumenImpacto } from '../../lib/grafo'
 import { conectadoA, textoConectadoA } from '../../lib/conexiones'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
-import { conOrigen, type EstadoConOrigen } from '../../lib/origenNavegacion'
+import { conOrigen } from '../../lib/origenNavegacion'
 import { Chasis } from '../../app/Chasis'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { Adjuntos } from '../../components/Adjuntos'
 import { BotonFavorito } from '../../components/BotonFavorito'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
-import { FilaDato } from '../../components/FilaDato'
+import { BotonCopiar, FilaDato } from '../../components/FilaDato'
+import { HojaInferior } from '../../components/HojaInferior'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
-import { SeccionPlegable } from '../../components/SeccionPlegable'
 import { useGrafo } from '../../components/useGrafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
@@ -35,6 +35,7 @@ import {
   ClockCounterClockwise,
   DotsThreeOutline,
   Info,
+  Key,
   LockSimple,
   MapPin,
   Paperclip,
@@ -44,20 +45,14 @@ import {
   QrCode,
   ShareNetwork,
   TrashSimple,
-  TreeStructure,
   Storefront,
   WarningOctagon,
+  User,
+  WarningCircle,
   Wrench,
   XCircle,
 } from '../../components/iconos'
-import {
-  BTN_GHOST_PELIGRO,
-  BTN_ICONO_SECUNDARIO,
-  BTN_SECUNDARIO,
-  PEGADA_SOBRE_PESTANAS,
-  TituloSeccion,
-} from '../../components/nocturne'
-import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
+import { BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { useImpactoEquipo } from '../red/useImpactoEquipo'
 import { ConexionesFicha } from '../red/ConexionesFicha'
@@ -68,6 +63,9 @@ import { procedimientosDeCategoria, procedimientosDeDispositivo } from './proced
 import { problemasDeCategoria, problemasDeDispositivo } from './problemasDeDispositivo'
 import { Historial } from '../historial/Historial'
 import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
+import { AvisosDelEquipo, BarraAccionEquipo, FilaIndice, ResolverConEsteEquipo, type AvisoEquipo, type ItemResolver } from './PiezasFicha'
+import { rutaGuiaConEquipo } from '../soluciones/contextoEjecucion'
+import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { CredencialesDelEquipo } from './CredencialesDelEquipo'
 import { ProblemasDelEquipo } from './ProblemasDelEquipo'
 import { ProcedimientosDelEquipo } from './ProcedimientosDelEquipo'
@@ -82,17 +80,30 @@ import { MantenimientosDelEquipo } from '../mantenimientos/MantenimientosDelEqui
 import { conteoDeFacturacion, esCategoriaPos } from '../facturacion/autorizacion'
 import { AutorizacionesDelPos } from '../facturacion/AutorizacionesDelPos'
 
-// Las anclas que viven dentro de "Más del equipo": llegar a una abre el
-// pliegue (si no, el salto no encontraría su destino).
-const ANCLAS_MAS_DEL_EQUIPO = ['#datos', '#conexiones', '#seguridad', '#foto']
+// LAS HOJAS DE LA FICHA (tarea 329): lo que se consulta sin dejarla. Una
+// sola abierta a la vez.
+type HojaFicha =
+  | 'datos'
+  | 'impacto'
+  | 'conexiones'
+  | 'credenciales'
+  | 'seguridad'
+  | 'adjuntos'
+  | 'mantenimiento'
+  | 'facturacion'
+  | 'intervenciones'
+  | 'resolver'
 
-/** "Datos, conexiones, adjuntos e intervenciones": lo que guarda el pliegue, dicho de corrido. */
-function enumerar(partes: string[]): string {
-  if (partes.length <= 1) return partes.join('')
-  const ultima = partes[partes.length - 1]
-  // "e" delante de un sonido "i" ("e intervenciones"), "y" en el resto.
-  const y = /^(i|hi)[^aeou]/i.test(ultima) ? 'e' : 'y'
-  return `${partes.slice(0, -1).join(', ')} ${y} ${ultima}`
+// Las anclas de "Más del equipo": llegar a una abre su hoja (el bloque
+// "¿Qué sigue?" de un equipo recién creado y los enlaces de otras pantallas
+// las usan; si no, el salto no encontraría su destino).
+const HOJA_POR_ANCLA: Record<string, HojaFicha> = {
+  '#datos': 'datos',
+  '#conexiones': 'conexiones',
+  '#seguridad': 'seguridad',
+  '#foto': 'adjuntos',
+  '#mantenimiento': 'mantenimiento',
+  '#facturacion': 'facturacion',
 }
 
 // Fecha corta al estilo del diseño ("12 jul"), con el año solo cuando
@@ -171,15 +182,32 @@ export function DispositivoPage() {
     [dispositivo?.responsableId],
   )
   const [asignando, setAsignando] = useState(false)
-  // "MÁS DEL EQUIPO", plegado en una sola fila salvo cuando se llega a una
-  // de sus secciones: el bloque "¿Qué sigue?" (equipo recién creado), el
-  // nombre sugerido de un dato protegido o un enlace con su ancla.
-  const [masAbierto, setMasAbierto] = useState(
-    () => recienCreado || Boolean(nombreCampoSugerido) || ANCLAS_MAS_DEL_EQUIPO.includes(location.hash),
+  // LA HOJA ABIERTA (tarea 329): "Más del equipo" es un índice de un solo
+  // nivel y cada fila abre la suya. Se llega abierta con el nombre sugerido
+  // de un dato protegido (el nudge de la Bóveda, fase P3) o con un ancla.
+  const [hoja, setHoja] = useState<HojaFicha | null>(
+    () => HOJA_POR_ANCLA[location.hash] ?? (nombreCampoSugerido ? 'seguridad' : null),
   )
   useEffect(() => {
-    if (ANCLAS_MAS_DEL_EQUIPO.includes(location.hash)) setMasAbierto(true)
+    const deLaAncla = HOJA_POR_ANCLA[location.hash]
+    if (deLaAncla) setHoja(deLaAncla)
   }, [location.hash])
+  const cerrarHoja = () => setHoja(null)
+  // EL NOMBRE SUBE A LA CABECERA AL DESPLAZARSE (tarea 329): mientras el
+  // carnet está a la vista, la cabecera dice solo a dónde se vuelve; cuando
+  // el nombre grande sale por arriba, aparece en ella (M-R1 se cumple: el
+  // nombre siempre está a la vista, pero no dos veces en la primera
+  // pantalla). Sin IntersectionObserver, el nombre va siempre arriba.
+  const [nodoNombre, setNodoNombre] = useState<HTMLElement | null>(null)
+  const [nombreALaVista, setNombreALaVista] = useState(true)
+  useEffect(() => {
+    if (!nodoNombre || typeof IntersectionObserver === 'undefined') return
+    const observador = new IntersectionObserver(([entrada]) => setNombreALaVista(entrada.isIntersecting), {
+      rootMargin: '-56px 0px 0px 0px',
+    })
+    observador.observe(nodoNombre)
+    return () => observador.disconnect()
+  }, [nodoNombre])
   // Reemplazo (hallazgo L3): equipo al que este reemplaza (si lo hay) y
   // equipo que reemplazo a este (inverso, derivado con un filtro directo
   // ya que no hay copia de referencia que consultar sin ella).
@@ -388,18 +416,37 @@ export function DispositivoPage() {
   const procedimientosPropios = procedimientosDeDispositivo(articulos, dispositivoId)
   const problemasPropios = problemasDeDispositivo(articulos, dispositivoId)
   const criterio = { marca: dispositivo.marca, modelo: dispositivo.modelo }
-  const totalResolver =
-    procedimientosPropios.length +
-    procedimientosDeCategoria(
-      articulos,
-      dispositivo.categoriaId,
-      new Set(procedimientosPropios.map((a) => a.id)),
-      criterio,
-    ).length
-  const totalProblemas =
-    problemasPropios.length +
-    problemasDeCategoria(articulos, dispositivo.categoriaId, new Set(problemasPropios.map((a) => a.id)), criterio)
-      .length
+  const procedimientos = [
+    ...procedimientosPropios,
+    ...procedimientosDeCategoria(articulos, dispositivo.categoriaId, new Set(procedimientosPropios.map((a) => a.id)), criterio),
+  ]
+  const problemas = [
+    ...problemasPropios,
+    ...problemasDeCategoria(articulos, dispositivo.categoriaId, new Set(problemasPropios.map((a) => a.id)), criterio),
+  ]
+  const totalResolver = procedimientos.length
+  const totalProblemas = problemas.length
+  // "RESOLVER CON ESTE EQUIPO" (tarea 329): los problemas frecuentes primero
+  // (los del equipo y después los de su categoría), luego los procedimientos;
+  // las tres primeras a la vista y el resto en su hoja. Cada una abre la guía
+  // con este equipo (tarea 290).
+  const formasDeResolver: ItemResolver[] = [
+    ...problemas.map((a) => ({
+      id: a.id,
+      ruta: rutaGuiaConEquipo(`/soluciones/${a.categoriaId}/${a.id}`, dispositivoId),
+      Icono: WarningCircle,
+      tipo: 'Problema frecuente',
+      titulo: a.titulo,
+      extra: a.sintomas[0],
+    })),
+    ...procedimientos.map((a) => ({
+      id: a.id,
+      ruta: rutaGuiaConEquipo(`/soluciones/${a.categoriaId}/${a.id}`, dispositivoId),
+      Icono: BookOpen,
+      tipo: etiquetaDeTipo(a.tipo),
+      titulo: a.titulo,
+    })),
+  ]
 
   // Las credenciales de la Bóveda que dan acceso a este equipo: solo
   // con permiso, como la propia lista (`CredencialesDelEquipo`).
@@ -428,305 +475,560 @@ export function DispositivoPage() {
       })
     : []
 
+  // AVISOS DEL EQUIPO (tarea 329): lo que sus datos ya dicen que pide
+  // atención, dicho bajo el carnet con su verbo. Sin datos nuevos.
+  const autorizacionesEnUso = autorizaciones.filter((a) => !a.eliminadoEn && a.estado !== 'reemplazada')
+  const conflictosAnotados = detalles.filter(([clave]) => /^conflicto/i.test(clave.trim()))
+  const avisos: AvisoEquipo[] = [
+    ...(autorizacionesEnUso.some((a) => a.estado === 'conflicto')
+      ? [
+          {
+            clave: 'facturacion-conflicto',
+            Icono: WarningCircle,
+            texto: 'Autorización de facturación en conflicto',
+            tono: 'error' as const,
+            verbo: 'Ver',
+            etiqueta: 'Ver la facturación del equipo: una autorización está en conflicto',
+            onAbrir: () => setHoja('facturacion'),
+          },
+        ]
+      : autorizacionesEnUso.some((a) => a.estado === 'documentada')
+        ? [
+            {
+              clave: 'facturacion-validar',
+              Icono: WarningCircle,
+              texto: 'Autorización de facturación por validar',
+              tono: 'precaucion' as const,
+              verbo: 'Ver',
+              etiqueta: 'Ver la facturación del equipo: una autorización está por validar',
+              onAbrir: () => setHoja('facturacion'),
+            },
+          ]
+        : []),
+    ...(anotadoPorValidar
+      ? [
+          {
+            clave: 'responsable-validar',
+            Icono: User,
+            texto: 'Responsable anotado, por validar',
+            tono: 'precaucion' as const,
+            verbo: 'Validar',
+            etiqueta: 'Validar el responsable anotado',
+            onAbrir: () => setAsignando(true),
+          },
+        ]
+      : []),
+    ...conflictosAnotados.map(([clave]) => ({
+      clave: `detalle-${clave}`,
+      Icono: WarningCircle,
+      texto: clave.trim(),
+      tono: 'error' as const,
+      verbo: 'Ver',
+      etiqueta: `Ver los datos del equipo: ${clave.trim()}`,
+      onAbrir: () => setHoja('datos'),
+    })),
+  ]
+
+  // El índice "Más del equipo" (tarea 329): un solo nivel, cada fila con lo
+  // que guarda y su hoja. Mantenimiento y Facturación tendrán su pantalla
+  // (tarea 331); hasta entonces abren lo de siempre en su hoja.
+  const intervencionesValor =
+    intervenciones.total === 0 ? 'Ninguna' : (tiempoRelativo(intervenciones.ultima) ?? String(intervenciones.total))
+  const hayImpacto = equiposEnRiesgo > 0 || cadenaDependencia.length > 0
+  const conCredenciales = Boolean(perfil?.puedeVerBoveda)
+
+  // A dónde lleva "Resolver un problema": el diagnóstico de su categoría si
+  // existe; si no, la hoja con todo lo que se resuelve con el equipo.
+  const resolverBarra = hayDiagnosticos
+    ? { to: `/diagnostico?categoria=${dispositivo.categoriaId}`, estado: origenEsteEquipo }
+    : formasDeResolver.length > 0
+      ? { onAbrir: () => setHoja('resolver') }
+      : null
+
   return (
     // Nivel 2 del chasis (tarea 185): documento. Conserva las pestañas
     // (R19) y el regreso es contextual: un equipo de red vuelve a Red,
-    // que es de donde se llega, y no a Equipos.
+    // que es de donde se llega, y no a Equipos. Desde la tarea 329 las
+    // pestañas se esconden al bajar y el nombre sube a la cabecera solo
+    // cuando el carnet sale de la pantalla.
     <Chasis
       modo="documento"
       volverA={volverA}
       volverEtiqueta={esRed ? 'Red' : 'Equipos'}
       // Ancla permanente (M-001, M-R1): el nombre del equipo se queda en
-      // pantalla al desplazarse, con de dónde viene y dónde está. Antes
-      // era un `h1` dentro del scroll, así que a partir de los primeros
-      // 400 px nada decía QUÉ equipo se estaba mirando.
+      // pantalla al desplazarse, con de dónde viene y dónde está.
       titulo={dispositivo.nombre}
       contexto={[esRed ? 'Red' : 'Equipos', ubicacionNombre].filter(Boolean).join(' · ')}
+      tituloVisible={!nombreALaVista}
+      pestanasSeOcultanAlBajar
       acciones={
-        <>
-          <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} />
-          <BotonCompartir titulo={dispositivo.nombre} />
-          <button
-            type="button"
-            onClick={() => setMenuAbierto((v) => !v)}
-            aria-label="Más acciones: duplicar, editar, etiqueta QR, reemplazar, dar de baja o eliminar"
-            aria-expanded={menuAbierto}
-            className={BTN_ICONO_SECUNDARIO}
-          >
-            <DotsThreeOutline size={17} aria-hidden />
-          </button>
-        </>
+        // Favorito y Compartir viven en el menú desde la tarea 329: la
+        // cabecera de un documento lleva el regreso, de qué es y "···".
+        <button
+          type="button"
+          onClick={() => setMenuAbierto((v) => !v)}
+          aria-label="Acciones del equipo: favorito, compartir, duplicar, editar, etiqueta QR, reemplazar, dar de baja o eliminar"
+          aria-expanded={menuAbierto}
+          className={BTN_ICONO_SECUNDARIO}
+        >
+          <DotsThreeOutline size={17} aria-hidden />
+        </button>
       }
       barra={menuAbierto && (
-        <div className="flex flex-wrap gap-2 px-4 pb-2 lg:px-10">
-          <Link
-            to={`/dispositivos/nuevo?copiarDe=${dispositivoId}`}
-            onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
-          >
-            <Copy size={14} aria-hidden />
-            Duplicar
-          </Link>
-          <Link
-            to={`/dispositivos/${dispositivoId}/editar`}
-            onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
-          >
-            <PencilSimple size={14} aria-hidden />
-            Editar
-          </Link>
-          <Link
-            to="/dispositivos/etiquetas"
-            // Etiquetas vuelve a este equipo, no a su puerta de inventario.
-            state={origenEsteEquipo}
-            onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
-          >
-            <QrCode size={14} aria-hidden />
-            Etiqueta QR
-          </Link>
-          <Link
-            to={`/dispositivos/nuevo?reemplazaA=${dispositivoId}`}
-            onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
-          >
-            <ArrowsClockwise size={14} aria-hidden />
-            Reemplazar
-          </Link>
-          <Link
-            to={`/dispositivos/${dispositivoId}/baja`}
-            onClick={() => setMenuAbierto(false)}
-            className={`shrink-0 ${BTN_SECUNDARIO}`}
-          >
-            <XCircle size={14} aria-hidden />
-            Dar de baja
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              setMenuAbierto(false)
-              setMostrarEliminar(true)
-            }}
-            className={BTN_GHOST_PELIGRO}
-          >
-            <TrashSimple size={14} aria-hidden />
-            Eliminar
-          </button>
+        <div className="flex flex-col gap-3 px-4 pb-3 lg:px-10">
+          <div className="flex flex-wrap gap-2">
+            <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} variante="menu" />
+            <BotonCompartir titulo={dispositivo.nombre} />
+            <Link
+              to={`/dispositivos/nuevo?copiarDe=${dispositivoId}`}
+              onClick={() => setMenuAbierto(false)}
+              className={`shrink-0 ${BTN_SECUNDARIO}`}
+            >
+              <Copy size={14} aria-hidden />
+              Duplicar
+            </Link>
+            <Link
+              to={`/dispositivos/${dispositivoId}/editar`}
+              onClick={() => setMenuAbierto(false)}
+              className={`shrink-0 ${BTN_SECUNDARIO}`}
+            >
+              <PencilSimple size={14} aria-hidden />
+              Editar
+            </Link>
+            <Link
+              to="/dispositivos/etiquetas"
+              // Etiquetas vuelve a este equipo, no a su puerta de inventario.
+              state={origenEsteEquipo}
+              onClick={() => setMenuAbierto(false)}
+              className={`shrink-0 ${BTN_SECUNDARIO}`}
+            >
+              <QrCode size={14} aria-hidden />
+              Etiqueta QR
+            </Link>
+            <Link
+              to={`/dispositivos/nuevo?reemplazaA=${dispositivoId}`}
+              onClick={() => setMenuAbierto(false)}
+              className={`shrink-0 ${BTN_SECUNDARIO}`}
+            >
+              <ArrowsClockwise size={14} aria-hidden />
+              Reemplazar
+            </Link>
+          </div>
+          {/* LO DESTRUCTIVO, APARTE (regla 30): separado del resto por
+              espacio y una línea, nunca junto a Editar. */}
+          <div className="flex flex-wrap gap-2 border-t border-noct-divider pt-3">
+            <Link
+              to={`/dispositivos/${dispositivoId}/baja`}
+              onClick={() => setMenuAbierto(false)}
+              className={`shrink-0 ${BTN_SECUNDARIO}`}
+            >
+              <XCircle size={14} aria-hidden />
+              Dar de baja
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuAbierto(false)
+                setMostrarEliminar(true)
+              }}
+              className={BTN_GHOST_PELIGRO}
+            >
+              <TrashSimple size={14} aria-hidden />
+              Eliminar
+            </button>
+          </div>
         </div>
       )}
     >
-      {/* La ficha 360° en cuatro capas (auditoría móvil del 2026-08-03,
-          hallazgo M-014 -P0-, regla M-R4, mockup `4b`).
+      {/* LA FICHA EN EL TELÉFONO (rediseño móvil "1b Pulgar", tarea 329,
+          AD-079; antes, las cuatro capas de la auditoría móvil, M-014).
 
-          Lo medido: nueve secciones siempre abiertas, sin plegado ni
-          índice, en orden de escritura y no de urgencia. A 360 px,
-          "Conexiones" -la respuesta a "¿de qué depende esto?"- empezaba
-          pasadas TRES pantallas de scroll, y la primera se iba entera en
-          la foto de 150 px y la línea de completitud, que no sirven para
-          trabajar con el equipo delante. "360°" se estaba leyendo como
-          "todo a la vez".
+            Carnet y avisos   qué es, en qué estado y qué pide atención.
+            Datos para trabajar
+                              su IP copiable, dónde está, quién responde
+                              de él y a qué está conectado, sin tarjeta.
+                              Con los avisos, cabe en la primera pantalla.
+            Resolver con este equipo
+                              tres formas a la vista y "Ver N" con todas.
+            Más del equipo    un índice de un solo nivel: cada fila dice lo
+                              que guarda y abre su hoja.
 
-          El reparto no quita ni un dato (revisado en la tarea 256,
-          encargo del 2026-09-22, sección 18: "¿qué sabemos de este
-          dispositivo?"):
-
-            Ahora        qué es, en qué estado, su IP copiable, dónde
-                         está, quién responde de él y a qué está
-                         conectado. Cabe en la primera pantalla.
-            Problemas frecuentes, Procedimientos y Credenciales
-                         lo que se resuelve con este equipo, con UNA sola
-                         acción dominante fija al pie (M-R3).
-            Profundidad  "Más datos del equipo" (la información técnica
-                         completa, que antes era la capa "Contexto",
-                         abierta), impacto, conexiones, datos
-                         protegidos, adjuntos e intervenciones,
-                         plegados CON SU CONTEO a la vista (M-R4).
-
-          Un solo eje vertical (R26, tarea 191): `lg:px-10`, el mismo de
-          las fichas hermanas de artículo y credencial. */}
-      <main className="@container flex flex-1 flex-col gap-[22px] px-4 pb-4 pt-2 lg:px-10">
+          No se quita ni un dato: lo que iba en pliegues dentro de pliegues
+          está ahora en hojas, una a la vez. Un solo eje vertical (R26,
+          tarea 191): `lg:px-10`. */}
+      <main className="@container flex flex-1 flex-col gap-6 px-4 pb-4 pt-2 lg:px-10">
         {/* Migracion pendiente (hallazgos L2/L3): este equipo reemplaza a
             otro que todavia tiene conexiones, credenciales o campos
-            protegidos sin mover. Enlaza a la pantalla de migracion en vez
-            de repetir aqui la logica de que hay pendiente. */}
+            protegidos sin mover. */}
         {dispositivo.reemplazaA && (
           <BannerMigracionPendiente nuevoId={dispositivoId} viejoId={dispositivo.reemplazaA} />
         )}
 
         {pasos.length > 0 && <QueSigue pasos={pasos} dispositivoId={dispositivoId} />}
 
-        {/* AHORA (encargo del 2026-09-22, sección 18, tarea 256): lo que
-            se viene a saber con el equipo delante, en la primera
-            pantalla. Qué es (nombre, tipo, marca y modelo, estado), su IP
-            copiable, dónde está, quién responde de él y a qué está
-            conectado. El nombre ya vive arriba, en el ancla permanente
-            del chasis (M-001): la tarjeta lo da a 16 con lo que lo
-            acompaña. */}
-        {/* IDENTIDAD (propuesta final de Claude Design, 2026-10-01): qué
-            es, a la vista y sin caja. El nombre a 24 px (hasta dos líneas),
-            debajo lo que el nombre no dice ya y, si nadie responde de él,
-            "sin responsable" con su "Asignar". El estado, solo si está
-            registrado. */}
-        <section aria-label="Identidad del equipo" className="flex items-start gap-3.5 pt-2">
-          <span className="flex h-[46px] w-[46px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300">
-            {dispositivo.foto ? (
-              <MiniaturaPortada
-                referencia={dispositivo.foto.referencia}
-                alt={dispositivo.nombre}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <IconoNodo tipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="h-[22px] w-[22px]" />
-            )}
-          </span>
-          <span className="min-w-0 flex-1">
-            {/* Entero: es la identidad del equipo, y se lee aunque ocupe
-                varias líneas. */}
-            <span className="block text-[24px] font-medium leading-[1.2] tracking-[-.01em] text-pretty [overflow-wrap:anywhere]">
-              {dispositivo.nombre}
+        {/* EL CARNET: qué es, a la vista y sin caja. Icono de 52 px, el
+            nombre a 28 px (entero, es su identidad), debajo lo que el
+            nombre no dice ya y, si nadie responde de él, "sin responsable"
+            con su "Asignar". El estado, debajo y solo si está registrado:
+            a la derecha le quitaba ancho al nombre, que a 28 px partía
+            palabras ("Administracio-n"). Después, sus avisos. */}
+        <section aria-label="Identidad del equipo" className="flex flex-col gap-3 pt-2">
+          <div className="flex items-start gap-3.5">
+            <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-noct-text/[.06] text-noct-neutral-300">
+              {dispositivo.foto ? (
+                <MiniaturaPortada
+                  referencia={dispositivo.foto.referencia}
+                  alt={dispositivo.nombre}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <IconoNodo tipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="h-[26px] w-[26px]" />
+              )}
             </span>
-            {(lineaTipo || sinResponsable) && (
+            <span className="min-w-0 flex-1">
               <span
-                data-linea-identidad
-                className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[13.5px] leading-[1.4] text-noct-neutral-400"
+                ref={setNodoNombre}
+                data-nombre-equipo
+                className="block text-[28px] font-[650] leading-[1.1] tracking-[-.02em] text-pretty [overflow-wrap:anywhere]"
               >
-                {/* El separador va pegado al final del primer tramo: si la
-                    línea parte, "sin responsable" no empieza con un punto. */}
-                {lineaTipo && (
-                  <span className="min-w-0">
-                    {lineaTipo}
-                    {sinResponsable ? ' ·' : ''}
-                  </span>
-                )}
-                {sinResponsable && <span>sin responsable</span>}
-                {sinResponsable && !anotadoPorValidar && (
-                  <button
-                    type="button"
-                    onClick={() => setAsignando(true)}
-                    aria-label="Asignar un responsable"
-                    className="-my-3 inline-flex min-h-11 items-center rounded-md px-1 text-[13.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/10"
-                  >
-                    Asignar
-                  </button>
-                )}
+                {dispositivo.nombre}
               </span>
-            )}
-            {/* El estado, solo si está registrado, debajo: así el nombre
-                tiene todo el ancho. La misma pastilla de siempre (M-017). */}
-            {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} className="mt-2" />}
-          </span>
+              {(lineaTipo || sinResponsable) && (
+                <span
+                  data-linea-identidad
+                  className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[14px] leading-[1.4] text-noct-neutral-400"
+                >
+                  {/* El separador va pegado al final del primer tramo: si la
+                      línea parte, "sin responsable" no empieza con un punto. */}
+                  {lineaTipo && (
+                    <span className="min-w-0">
+                      {lineaTipo}
+                      {sinResponsable ? ' ·' : ''}
+                    </span>
+                  )}
+                  {sinResponsable && <span>sin responsable</span>}
+                  {sinResponsable && !anotadoPorValidar && (
+                    <button
+                      type="button"
+                      onClick={() => setAsignando(true)}
+                      aria-label="Asignar un responsable"
+                      className="-my-3 inline-flex min-h-11 items-center rounded-md px-1 text-[14px] font-semibold text-noct-accent-300 hover:bg-noct-accent/10"
+                    >
+                      Asignar
+                    </button>
+                  )}
+                </span>
+              )}
+              {/* La misma pastilla de siempre (M-017). */}
+              {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} className="mt-2" />}
+            </span>
+          </div>
+          <AvisosDelEquipo avisos={avisos} />
         </section>
         <HojaAsignarPersona dispositivo={dispositivo} abierto={asignando} onCerrar={() => setAsignando(false)} />
 
-        {/* DATOS PARA TRABAJAR: lo que se usa con el equipo delante. Su IP
-            copiable, dónde está, quién responde de él (si hay alguien o un
-            nombre anotado) y a qué está conectado. Sin ninguno, no hay
-            caja. */}
+        {/* DATOS PARA TRABAJAR: lo que se usa con el equipo delante, sin
+            tarjeta: filas con su divisor. Su IP en IBM Plex Mono a 20 px
+            con copiar, dónde está, quién responde de él y a qué está
+            conectado. Sin ninguno, no hay bloque. */}
         {(dispositivo.ip || ubicacionNombre || personaVivaACargo || anotadoPorValidar || subida) && (
-        <section aria-label="Datos para trabajar">
-          <div className="divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface">
-            {dispositivo.ip && (
-              <div className="px-3.5">
-                <FilaDato etiqueta="Dirección IP" valor={dispositivo.ip} tecnico copiable={dispositivo.ip} />
+        <section aria-label="Datos para trabajar" className="flex flex-col">
+          {dispositivo.ip && (
+            <div className="flex min-h-[68px] items-center gap-3 border-b border-noct-divider">
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] leading-snug text-noct-neutral-500">Dirección IP</p>
+                <p className="font-mono text-[20px] font-medium leading-[1.3] tracking-[-.01em] [overflow-wrap:anywhere]">
+                  {dispositivo.ip}
+                </p>
               </div>
-            )}
+              <BotonCopiar etiqueta="Dirección IP" texto={dispositivo.ip} destacado />
+            </div>
+          )}
 
-            {ubicacionNombre &&
-              (ubicacionViva ? (
-                <Link
-                  to={`/ubicaciones/${ubicacionViva.id}`}
-                  state={origenEsteEquipo}
-                  className="flex min-h-12 items-center gap-2.5 px-3.5 text-[13.5px] text-noct-accent-300 hover:bg-noct-text/[.04]"
-                >
-                  <MapPin size={15} className="shrink-0" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate">{ubicacionNombre}</span>
-                  <CaretRight size={13} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                </Link>
-              ) : (
-                <span className="flex min-h-12 items-center gap-2.5 px-3.5 text-[13.5px] text-noct-neutral-200">
-                  <MapPin size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate">{ubicacionNombre}</span>
-                </span>
-              ))}
-
-            {/* Quién responde de él: subió de "Contexto" (tarea 256), con
-                "Cambiar"; o el nombre anotado por validar, con "Asignar".
-                Sin nadie, desde la propuesta final de Claude Design la fila
-                no se dibuja: lo dice la línea de identidad, con su
-                "Asignar". Un equipo de red solo lleva la fila si alguien lo
-                anotó. */}
-            {aplicaResponsable && (
-              <ResponsableDelEquipo dispositivo={dispositivo} origen={origenEsteEquipo} ocultarSiNoHay />
-            )}
-
-            {/* A QUÉ ESTÁ CONECTADO (sección 18): el switch que le da
-                servicio y su puerto, que es lo que se busca en el rack.
-                "Ver conexión" abre la topología de este equipo. */}
-            {subida && (
+          {ubicacionNombre &&
+            (ubicacionViva ? (
               <Link
-                to={`/red/topologia/${dispositivoId}`}
+                to={`/ubicaciones/${ubicacionViva.id}`}
                 state={origenEsteEquipo}
-                aria-label={`Conectado a ${textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}${
-                  subida.otros > 0 ? ` y ${subida.otros} más` : ''
-                }. Ver conexión`}
-                className="flex min-h-12 items-center gap-2.5 px-3.5 py-2 hover:bg-noct-text/[.04]"
+                className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5 hover:bg-noct-text/[.04]"
               >
-                <PlugsConnected size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                {/* Rótulo arriba y valor abajo, como la IP: el nombre de un
-                    switch ("SW-CENTRAL-02") no se parte por su guion. */}
+                <MapPin size={18} className="shrink-0 text-noct-neutral-500" aria-hidden />
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[12px] text-noct-neutral-500">Conectado a</span>
-                  <span className="block truncate text-[13.5px] text-noct-text">
-                    {textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}
-                    {subida.otros > 0 && <span className="text-noct-neutral-500"> · y {subida.otros} más</span>}
-                  </span>
+                  <span className="block text-[12.5px] leading-snug text-noct-neutral-500">Ubicación</span>
+                  <span className="block text-[15px] leading-snug text-noct-text [overflow-wrap:anywhere]">{ubicacionNombre}</span>
                 </span>
-                <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300">Ver conexión</span>
-                <CaretRight size={13} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
               </Link>
-            )}
-          </div>
+            ) : (
+              <span className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5">
+                <MapPin size={18} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12.5px] leading-snug text-noct-neutral-500">Ubicación</span>
+                  <span className="block text-[15px] leading-snug text-noct-neutral-200 [overflow-wrap:anywhere]">{ubicacionNombre}</span>
+                </span>
+              </span>
+            ))}
+
+          {/* Quién responde de él, con "Cambiar"; o el nombre anotado por
+              validar, con "Asignar". Sin nadie, la fila no se dibuja: lo
+              dice la línea del carnet. Un equipo de red solo la lleva si
+              alguien lo anotó. Sus filas traen su propio margen (las de la
+              tarjeta de antes): se compensa aquí. */}
+          {aplicaResponsable && (
+            <div className="-mx-3.5 border-b border-noct-divider empty:hidden">
+              <ResponsableDelEquipo dispositivo={dispositivo} origen={origenEsteEquipo} ocultarSiNoHay />
+            </div>
+          )}
+
+          {/* A QUÉ ESTÁ CONECTADO (sección 18): el switch que le da
+              servicio y su puerto, que es lo que se busca en el rack. Abre
+              la topología de este equipo. */}
+          {subida && (
+            <Link
+              to={`/red/topologia/${dispositivoId}`}
+              state={origenEsteEquipo}
+              aria-label={`Conectado a ${textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}${
+                subida.otros > 0 ? ` y ${subida.otros} más` : ''
+              }. Ver conexión`}
+              className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5 hover:bg-noct-text/[.04]"
+            >
+              <PlugsConnected size={18} className="shrink-0 text-noct-neutral-500" aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[12.5px] leading-snug text-noct-neutral-500">Conectado a</span>
+                <span className="block font-mono text-[14.5px] leading-snug text-noct-text [overflow-wrap:anywhere]">
+                  {textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}
+                  {subida.otros > 0 && <span className="font-inter text-noct-neutral-500"> · y {subida.otros} más</span>}
+                </span>
+              </span>
+              <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+            </Link>
+          )}
         </section>
         )}
 
-        {/* LO QUE SE RESUELVE CON ESTE EQUIPO (sección 18): primero sus
-            problemas frecuentes (con el diagnóstico de su categoría, que
-            es otra forma de llegar a ellos), después sus procedimientos y,
-            con permiso, las credenciales que dan acceso a él. Cada bloque
-            solo existe si tiene algo: un título sobre una lista vacía no
-            ayuda (regla 20e). Los botones de creación viven en la puerta
-            única del pie (M-016, regla M-R10). */}
-        {(hayDiagnosticos || totalProblemas > 0) && (
-          <section>
-            <TituloSeccion className="mb-2">Problemas frecuentes</TituloSeccion>
-            <div className="flex flex-col gap-2">
-              <IniciarDiagnosticoBoton
+        <ResolverConEsteEquipo
+          items={formasDeResolver.slice(0, 3)}
+          total={formasDeResolver.length}
+          onVerTodos={() => setHoja('resolver')}
+        />
+
+        {/* MÁS DEL EQUIPO: un índice de un solo nivel (antes, un pliegue con
+            pliegues dentro). Cada fila dice lo que guarda y abre su hoja;
+            una sola a la vez. */}
+        <section aria-labelledby="mas-del-equipo" className="flex flex-col">
+          <h2 id="mas-del-equipo" className="pb-1 text-[17px] font-semibold tracking-[-.01em]">
+            Más del equipo
+          </h2>
+          <ul className="flex flex-col">
+            <FilaIndice Icono={Info} titulo="Más datos" valor={`${totalMasDatos}`} onAbrir={() => setHoja('datos')} />
+            {hayImpacto && (
+              <FilaIndice
+                Icono={WarningOctagon}
+                titulo="Si falla, caen"
+                valor={`${equiposEnRiesgo} ${equiposEnRiesgo === 1 ? 'equipo' : 'equipos'}`}
+                tono="precaucion"
+                onAbrir={() => setHoja('impacto')}
+              />
+            )}
+            <FilaIndice
+              Icono={PlugsConnected}
+              titulo="Conexiones"
+              valor={totalConexiones === 0 ? 'Ninguna' : `${totalConexiones}`}
+              onAbrir={() => setHoja('conexiones')}
+            />
+            {conCredenciales && (
+              <FilaIndice
+                Icono={Key}
+                titulo="Credenciales"
+                valor={totalCredenciales === 0 ? 'Ninguna' : `${totalCredenciales}`}
+                onAbrir={() => setHoja('credenciales')}
+              />
+            )}
+            {conCredenciales && (
+              <FilaIndice
+                Icono={LockSimple}
+                titulo="Datos protegidos"
+                valor={totalCamposProtegidos === 0 ? 'Ninguno' : `${totalCamposProtegidos}`}
+                onAbrir={() => setHoja('seguridad')}
+              />
+            )}
+            <FilaIndice
+              Icono={Paperclip}
+              titulo="Adjuntos"
+              valor={totalAdjuntos === 0 ? 'Ninguno' : `${totalAdjuntos}`}
+              onAbrir={() => setHoja('adjuntos')}
+            />
+            <FilaIndice
+              Icono={Wrench}
+              titulo="Mantenimiento"
+              valor={conteoDeMantenimientos(mantenimientos)}
+              onAbrir={() => setHoja('mantenimiento')}
+            />
+            {tieneFacturacion && (
+              <FilaIndice
+                Icono={Storefront}
+                titulo="Facturación"
+                valor={facturacion.texto}
+                tono={facturacion.revisar ? 'precaucion' : 'neutro'}
+                onAbrir={() => setHoja('facturacion')}
+              />
+            )}
+            <FilaIndice
+              Icono={ClockCounterClockwise}
+              titulo="Intervenciones"
+              valor={intervencionesValor}
+              onAbrir={() => setHoja('intervenciones')}
+            />
+          </ul>
+        </section>
+
+        {/* La puerta única de documentar (M-016, M-031, regla M-R10). */}
+        <PuertaDocumentar
+          dispositivo={dispositivo}
+          categoriaNombre={categoria?.nombre ?? ''}
+          puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
+          completitud={completitud}
+        />
+
+        {/* La barra fija (M-R3): "Resolver un problema", relleno, y la llave
+            de sus credenciales. */}
+        <BarraAccionEquipo
+          resolver={resolverBarra}
+          onCredenciales={conCredenciales && totalCredenciales > 0 ? () => setHoja('credenciales') : null}
+        />
+      </main>
+
+      {/* LAS HOJAS (tarea 329): lo que antes iba plegado, ahora encima de la
+          ficha, una a la vez. El contenido solo se monta con su hoja abierta. */}
+      <HojaInferior abierta={hoja === 'datos'} onCerrar={cerrarHoja} titulo="Más datos del equipo" contexto={dispositivo.nombre}>
+        <div className="divide-y divide-noct-divider">
+          {camposContexto.map((campo) => (
+            <FilaDato
+              key={campo.etiqueta}
+              etiqueta={campo.etiqueta}
+              valor={campo.valor}
+              tecnico={campo.tecnico}
+              copiable={campo.valor}
+            />
+          ))}
+          {detalles.map(([clave, valor]) => (
+            <FilaDato key={clave} etiqueta={clave} valor={valor} copiable={valor} />
+          ))}
+          {reemplazaNombre && (
+            <FilaDato etiqueta="Reemplaza a">
+              <Link
+                to={`/dispositivos/${dispositivo.reemplazaA}`}
+                state={origenEsteEquipo}
+                className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
+              >
+                <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
+                {reemplazaNombre}
+              </Link>
+            </FilaDato>
+          )}
+          {reemplazadoPor && (
+            <FilaDato etiqueta="Reemplazado por">
+              <Link
+                to={`/dispositivos/${reemplazadoPor.id}`}
+                state={origenEsteEquipo}
+                className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
+              >
+                <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
+                {reemplazadoPor.nombre}
+              </Link>
+            </FilaDato>
+          )}
+          <ResponsablesAnteriores periodos={anterioresResponsables} origen={origenEsteEquipo} />
+          <FilaDato etiqueta="Categoría y fecha">
+            <span className="min-w-0 flex-1 truncate text-[13.5px] text-noct-neutral-300">{metaLinea}</span>
+          </FilaDato>
+        </div>
+        {dispositivo.observaciones && (
+          <p className="mt-2.5 whitespace-pre-wrap text-[13px] leading-[1.55] text-noct-neutral-300">
+            {dispositivo.observaciones}
+          </p>
+        )}
+      </HojaInferior>
+
+      <HojaInferior abierta={hoja === 'impacto'} onCerrar={cerrarHoja} titulo="Si falla, caen" contexto={dispositivo.nombre}>
+        <ImpactoYDependencias dispositivo={dispositivo} sinCabecera />
+      </HojaInferior>
+
+      <HojaInferior abierta={hoja === 'conexiones'} onCerrar={cerrarHoja} titulo="Conexiones" contexto={dispositivo.nombre}>
+        <ConexionesFicha dispositivo={dispositivo} sinCabecera />
+      </HojaInferior>
+
+      {conCredenciales && (
+        <HojaInferior abierta={hoja === 'credenciales'} onCerrar={cerrarHoja} titulo="Credenciales" contexto={dispositivo.nombre}>
+          {totalCredenciales > 0 ? (
+            <div className="flex flex-col">
+              <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda />
+            </div>
+          ) : (
+            <p className="text-[14px] leading-snug text-noct-neutral-400">Ninguna credencial de la Bóveda da acceso a este equipo.</p>
+          )}
+        </HojaInferior>
+      )}
+
+      {conCredenciales && (
+        <HojaInferior abierta={hoja === 'seguridad'} onCerrar={cerrarHoja} titulo="Datos protegidos" contexto={dispositivo.nombre}>
+          <SeguridadDelEquipo
+            dispositivoId={dispositivoId}
+            puedeVerBoveda
+            nombreSugerido={nombreCampoSugerido}
+            sinCabecera
+          />
+        </HojaInferior>
+      )}
+
+      <HojaInferior abierta={hoja === 'adjuntos'} onCerrar={cerrarHoja} titulo="Adjuntos" contexto={dispositivo.nombre}>
+        {dispositivo.foto && <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />}
+        <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} sinCabecera />
+      </HojaInferior>
+
+      {/* Lo que toca hacerle al equipo (tarea 320): programar aquí; cerrar,
+          en la pantalla de cada mantenimiento. */}
+      <HojaInferior abierta={hoja === 'mantenimiento'} onCerrar={cerrarHoja} titulo="Mantenimiento" contexto={dispositivo.nombre}>
+        <MantenimientosDelEquipo dispositivoId={dispositivoId} />
+      </HojaInferior>
+
+      {tieneFacturacion && (
+        <HojaInferior abierta={hoja === 'facturacion'} onCerrar={cerrarHoja} titulo="Facturación" contexto={dispositivo.nombre}>
+          <AutorizacionesDelPos dispositivoId={dispositivoId} nombre={dispositivo.nombre} />
+        </HojaInferior>
+      )}
+
+      <HojaInferior abierta={hoja === 'intervenciones'} onCerrar={cerrarHoja} titulo="Intervenciones" contexto={dispositivo.nombre}>
+        <div className="flex flex-col gap-2.5">
+          <RegistrarIntervencion dispositivoId={dispositivoId} />
+          <Historial entidadTipo="dispositivo" entidadId={dispositivoId} />
+        </div>
+      </HojaInferior>
+
+      {/* Todo lo que se resuelve con el equipo: sus problemas frecuentes, sus
+          procedimientos y, al final, el diagnóstico de su categoría. */}
+      <HojaInferior
+        abierta={hoja === 'resolver'}
+        onCerrar={cerrarHoja}
+        titulo="Resolver con este equipo"
+        contexto={dispositivo.nombre}
+      >
+        <div className="flex flex-col gap-4">
+          {totalProblemas > 0 && (
+            <div className="flex flex-col">
+              <h3 className="pb-1 text-[13.5px] font-semibold text-noct-neutral-400">Problemas frecuentes</h3>
+              <ProblemasDelEquipo
+                dispositivoId={dispositivoId}
                 categoriaId={dispositivo.categoriaId}
                 categoriaNombre={categoria?.nombre}
-                // La lista de problemas vuelve a este equipo, no a Guías
-                // (su padre desde la tarea 269): M-R2.
-                estado={origenEsteEquipo}
+                marca={dispositivo.marca}
+                modelo={dispositivo.modelo}
               />
-              <div className="flex flex-col">
-                <ProblemasDelEquipo
-                  dispositivoId={dispositivoId}
-                  categoriaId={dispositivo.categoriaId}
-                  categoriaNombre={categoria?.nombre}
-                  marca={dispositivo.marca}
-                  modelo={dispositivo.modelo}
-                />
-              </div>
             </div>
-          </section>
-        )}
-
-        {totalResolver > 0 && (
-          <section>
-            <div className="mb-1 flex items-center gap-2">
-              <TituloSeccion>Procedimientos</TituloSeccion>
-              <span className="text-[11px] text-noct-neutral-600">{totalResolver}</span>
-            </div>
+          )}
+          {totalResolver > 0 && (
             <div className="flex flex-col">
+              <h3 className="pb-1 text-[13.5px] font-semibold text-noct-neutral-400">Procedimientos</h3>
               <ProcedimientosDelEquipo
                 dispositivoId={dispositivoId}
                 categoriaId={dispositivo.categoriaId}
@@ -735,235 +1037,15 @@ export function DispositivoPage() {
                 modelo={dispositivo.modelo}
               />
             </div>
-          </section>
-        )}
-
-        {totalCredenciales > 0 && (
-          <section>
-            <TituloSeccion className="mb-2">Credenciales</TituloSeccion>
-            <div className="flex flex-col">
-              <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)} />
-            </div>
-          </section>
-        )}
-
-        {/* MÁS DEL EQUIPO (hasta el 2026-10-01, "Profundidad"). Lo
-            secundario, plegado en UNA fila que dice qué guarda (propuesta
-            final de Claude Design); abierta, las filas de 52 px de siempre,
-            cada una con su conteo y plegada a su vez. El contenido solo se
-            monta al abrirse. Empieza por "Más datos del equipo": los datos
-            técnicos completos (tarea 256). */}
-        <section>
-          <button
-            type="button"
-            onClick={() => setMasAbierto((v) => !v)}
-            aria-expanded={masAbierto}
-            aria-controls="mas-del-equipo"
-            className="flex min-h-[52px] w-full items-center gap-3 border-y border-noct-divider text-left outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-noct-accent"
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-medium leading-[1.3]">Más del equipo</span>
-              {!masAbierto && (
-                <span className="block text-[12.5px] leading-[1.4] text-noct-neutral-500">
-                  {enumerar(
-                    [
-                      'datos',
-                      equiposEnRiesgo > 0 || cadenaDependencia.length > 0 ? 'impacto' : null,
-                      'conexiones',
-                      perfil?.puedeVerBoveda ? 'datos protegidos' : null,
-                      'adjuntos',
-                      'mantenimiento',
-                      tieneFacturacion ? 'facturación' : null,
-                      'intervenciones',
-                    ].filter((parte): parte is string => parte !== null),
-                  ).replace(/^./, (letra) => letra.toUpperCase())}
-                </span>
-              )}
-            </span>
-            <CaretDown
-              size={14}
-              className={`shrink-0 text-noct-neutral-400 transition-transform duration-150 motion-reduce:transition-none ${
-                masAbierto ? 'rotate-180' : ''
-              }`}
-              aria-hidden
-            />
-          </button>
-          {masAbierto && (
-          <div
-            id="mas-del-equipo"
-            className="mt-2.5 divide-y divide-noct-divider overflow-hidden rounded-lg border border-noct-divider bg-noct-surface"
-          >
-            <SeccionPlegable id="datos" titulo="Más datos del equipo" Icono={Info} conteo={totalMasDatos}>
-              <div className="divide-y divide-noct-divider">
-                {camposContexto.map((campo) => (
-                  <FilaDato
-                    key={campo.etiqueta}
-                    etiqueta={campo.etiqueta}
-                    valor={campo.valor}
-                    tecnico={campo.tecnico}
-                    copiable={campo.valor}
-                  />
-                ))}
-                {detalles.map(([clave, valor]) => (
-                  <FilaDato key={clave} etiqueta={clave} valor={valor} copiable={valor} />
-                ))}
-                {reemplazaNombre && (
-                  <FilaDato etiqueta="Reemplaza a">
-                    <Link
-                      to={`/dispositivos/${dispositivo.reemplazaA}`}
-                      state={origenEsteEquipo}
-                      className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
-                    >
-                      <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
-                      {reemplazaNombre}
-                    </Link>
-                  </FilaDato>
-                )}
-                {reemplazadoPor && (
-                  <FilaDato etiqueta="Reemplazado por">
-                    <Link
-                      to={`/dispositivos/${reemplazadoPor.id}`}
-                      state={origenEsteEquipo}
-                      className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-[13.5px] text-noct-accent-300 hover:text-noct-accent-400"
-                    >
-                      <ArrowsClockwise size={14} className="shrink-0" aria-hidden />
-                      {reemplazadoPor.nombre}
-                    </Link>
-                  </FilaDato>
-                )}
-                <ResponsablesAnteriores periodos={anterioresResponsables} origen={origenEsteEquipo} />
-                <FilaDato etiqueta="Categoría y fecha">
-                  <span className="min-w-0 flex-1 truncate text-[13.5px] text-noct-neutral-300">{metaLinea}</span>
-                </FilaDato>
-              </div>
-              {dispositivo.observaciones && (
-                <p className="mt-2.5 whitespace-pre-wrap text-[13px] leading-[1.55] text-noct-neutral-300">
-                  {dispositivo.observaciones}
-                </p>
-              )}
-            </SeccionPlegable>
-
-            {(equiposEnRiesgo > 0 || cadenaDependencia.length > 0) && (
-              <SeccionPlegable
-                titulo="Si falla, caen"
-                Icono={WarningOctagon}
-                tono="precaucion"
-                conteo={`${equiposEnRiesgo} ${equiposEnRiesgo === 1 ? 'equipo' : 'equipos'}`}
-              >
-                <ImpactoYDependencias dispositivo={dispositivo} sinCabecera />
-              </SeccionPlegable>
-            )}
-
-            <SeccionPlegable
-              id="conexiones"
-              titulo="Conexiones"
-              Icono={PlugsConnected}
-              conteo={totalConexiones === 0 ? 'Ninguna' : totalConexiones}
-            >
-              <ConexionesFicha dispositivo={dispositivo} sinCabecera />
-            </SeccionPlegable>
-
-            {perfil?.puedeVerBoveda && (
-              <SeccionPlegable
-                id="seguridad"
-                titulo="Datos protegidos"
-                Icono={LockSimple}
-                conteo={totalCamposProtegidos === 0 ? 'Ninguno' : totalCamposProtegidos}
-                // El nudge anti duplicidad de la Bóveda (fase P3) llega
-                // con el nombre ya sugerido: si la sección se quedara
-                // plegada, el editor precargado no se vería.
-                inicialAbierta={Boolean(nombreCampoSugerido)}
-              >
-                <SeguridadDelEquipo
-                  dispositivoId={dispositivoId}
-                  puedeVerBoveda
-                  nombreSugerido={nombreCampoSugerido}
-                  sinCabecera
-                />
-              </SeccionPlegable>
-            )}
-
-            <SeccionPlegable
-              id="foto"
-              titulo="Adjuntos"
-              Icono={Paperclip}
-              conteo={totalAdjuntos === 0 ? 'Ninguno' : totalAdjuntos}
-            >
-              {dispositivo.foto && (
-                <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />
-              )}
-              <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} sinCabecera />
-            </SeccionPlegable>
-
-            {/* Lo que toca hacerle al equipo (tarea 320), junto a lo que
-                ya se le hizo: programar aquí; cerrar, en la pantalla de
-                cada mantenimiento, que deja la intervención abajo. */}
-            <SeccionPlegable
-              id="mantenimiento"
-              titulo="Mantenimiento"
-              Icono={Wrench}
-              conteo={conteoDeMantenimientos(mantenimientos)}
-            >
-              <MantenimientosDelEquipo dispositivoId={dispositivoId} />
-            </SeccionPlegable>
-
-            {/* Las autorizaciones de facturación de un POS (tarea 321):
-                solo en un POS o en un equipo que ya tenga alguna. */}
-            {tieneFacturacion && (
-              <SeccionPlegable
-                id="facturacion"
-                titulo="Facturación"
-                Icono={Storefront}
-                tono={facturacion.revisar ? 'precaucion' : 'neutro'}
-                conteo={facturacion.texto}
-              >
-                <AutorizacionesDelPos dispositivoId={dispositivoId} nombre={dispositivo.nombre} />
-              </SeccionPlegable>
-            )}
-
-            <SeccionPlegable
-              titulo="Intervenciones"
-              Icono={ClockCounterClockwise}
-              conteo={
-                intervenciones.total === 0
-                  ? 'Ninguna'
-                  : (tiempoRelativo(intervenciones.ultima) ?? intervenciones.total)
-              }
-            >
-              <div className="flex flex-col gap-2.5">
-                <RegistrarIntervencion dispositivoId={dispositivoId} />
-                <Historial entidadTipo="dispositivo" entidadId={dispositivoId} />
-              </div>
-            </SeccionPlegable>
-          </div>
           )}
-        </section>
-
-        {/* La puerta única de documentar (M-016, M-031, regla M-R10).
-            Antes eran tres botones de creación en medio de un bloque de
-            consulta, más la línea de completitud arriba del todo: cuatro
-            invitaciones a escribir repartidas por una pantalla que se usa
-            de pie y con una mano. Aquí se reúnen, se nombran y se dice en
-            voz alta dónde se hacen mejor. */}
-        <PuertaDocumentar
-          dispositivo={dispositivo}
-          categoriaNombre={categoria?.nombre ?? ''}
-          puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
-          completitud={completitud}
-        />
-
-        {/* Acción dominante fija al pie (M-R3). Solo si hay algo que
-            resolver: un control que lleva a una lista vacía es un control
-            muerto (R3). */}
-        {(totalResolver > 0 || totalProblemas > 0) && (
-          <AccionDominanteEquipo
+          <IniciarDiagnosticoBoton
             categoriaId={dispositivo.categoriaId}
-            procedimientos={totalResolver}
-            problemas={totalProblemas}
+            categoriaNombre={categoria?.nombre}
+            // La lista de problemas vuelve a este equipo (M-R2).
             estado={origenEsteEquipo}
           />
-        )}
-      </main>
+        </div>
+      </HojaInferior>
 
       <DialogoEliminar
         abierto={mostrarEliminar}
@@ -1061,57 +1143,6 @@ function BannerMigracionPendiente({ nuevoId, viejoId }: { nuevoId: string; viejo
       </span>
       <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
     </Link>
-  )
-}
-
-// Acción dominante de la ficha de equipo (regla M-R3: una sola acción,
-// fija abajo, de 52 px, con su promesa escrita en una línea). Es el
-// mismo patrón que la ficha de artículo ya tenía aprobado desde la tarea
-// 172 (`BarraAccionFicha`), aplicado aquí: la ficha de equipo no tenía
-// acción dominante, tenía tres botones de CREACIÓN en medio del cuerpo.
-//
-// No reutiliza `BarraAccionFicha` porque esa barra habla de un
-// procedimiento y su avance ("Seguir en el paso 3 de 7"): sus tres
-// estados y su nota no significan nada sobre un equipo.
-function AccionDominanteEquipo({
-  categoriaId,
-  procedimientos,
-  problemas,
-  estado,
-}: {
-  categoriaId: string
-  procedimientos: number
-  problemas: number
-  /** El origen del salto: la lista de problemas vuelve a este equipo (M-R2, tarea 269). */
-  estado?: EstadoConOrigen
-}) {
-  const partes = [
-    procedimientos > 0
-      ? `${procedimientos} ${procedimientos === 1 ? 'procedimiento' : 'procedimientos'}`
-      : null,
-    problemas > 0 ? `${problemas} ${problemas === 1 ? 'problema frecuente' : 'problemas frecuentes'}` : null,
-  ].filter(Boolean)
-
-  return (
-    <div
-      className={`sticky ${PEGADA_SOBRE_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-4 pb-3 pt-2.5 backdrop-blur-[12px] lg:px-10`}
-    >
-      {/* El aviso de versión nueva va aquí, encima del botón (tarea 274):
-          esta barra se pega a la misma altura que la franja del chasis, y
-          una de las dos taparía a la otra. Vacío no ocupa nada. */}
-      <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
-      <Link
-        to={`/diagnostico?categoria=${categoriaId}`}
-        state={estado}
-        className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-noct-accent bg-noct-accent/[.12] px-4 text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.18] active:bg-noct-accent/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
-      >
-        <TreeStructure size={18} aria-hidden />
-        Resolver un problema con este equipo
-      </Link>
-      <p className="mt-1.5 text-center text-[11.5px] text-noct-neutral-400">
-        {partes.join(' y ')} {procedimientos + problemas === 1 ? 'aplica' : 'aplican'} aquí
-      </p>
-    </div>
   )
 }
 
@@ -1219,7 +1250,8 @@ function PuertaDocumentar({
 }
 
 // Compartir el enlace de la ficha con el diálogo nativo del teléfono, o
-// copiarlo al portapapeles donde no exista. Botón de icono en Nocturne.
+// copiarlo al portapapeles donde no exista. Desde la tarea 329 vive en el
+// menú "···", con su palabra.
 function BotonCompartir({ titulo }: { titulo: string }) {
   const [copiado, setCopiado] = useState(false)
 
@@ -1234,10 +1266,10 @@ function BotonCompartir({ titulo }: { titulo: string }) {
     <button
       type="button"
       onClick={() => void compartir()}
-      aria-label={copiado ? 'Enlace copiado' : 'Compartir la ficha'}
-      className={BTN_ICONO_SECUNDARIO}
+      className={`shrink-0 ${BTN_SECUNDARIO}`}
     >
-      {copiado ? <Check size={16} className="text-noct-exito" aria-hidden /> : <ShareNetwork size={17} aria-hidden />}
+      {copiado ? <Check size={14} className="text-noct-exito" aria-hidden /> : <ShareNetwork size={14} aria-hidden />}
+      {copiado ? 'Enlace copiado' : 'Compartir la ficha'}
     </button>
   )
 }

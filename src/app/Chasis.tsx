@@ -1,4 +1,5 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
+import { decidirContraida, type EstadoContraible } from '../components/contraerAlBajar'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
 import { usePerfilVivo } from '../features/autenticacion/usePerfilVivo'
@@ -177,8 +178,25 @@ interface PropsDocumento extends PropsComunes {
    * escriben su nombre en la banda de abajo.
    */
   titulo?: string
-  /** De dónde viene ("Equipos · Rack 1"), a 11 px sobre el título. */
+  /** De dónde viene ("Equipos · Rack 1"), a 12 px sobre el título. */
   contexto?: string
+  /**
+   * EL NOMBRE APARECE AL DESPLAZARSE (rediseño móvil "1b Pulgar", tarea
+   * 329). Con `false`, la fila superior enseña solo a dónde vuelve
+   * ("Equipos") porque la pantalla ya escribe el nombre en grande en su
+   * primera pantalla; con `true`, el nombre de siempre (M-R1). El `h1` no
+   * se quita nunca: solo se desvanece, y el lector de pantalla lo sigue
+   * leyendo. Sin la prop, el nombre va siempre, como hasta ahora.
+   */
+  tituloVisible?: boolean
+  /**
+   * La barra de pestañas se esconde al bajar y vuelve al subir (tarea 329,
+   * la ficha de equipo): una ficha larga gana alto de pantalla sin perder la
+   * navegación, que reaparece con el primer gesto hacia arriba. Una barra de
+   * acción pegada sobre las pestañas baja con ellas
+   * (`BAJA_CON_LAS_PESTANAS`).
+   */
+  pestanasSeOcultanAlBajar?: boolean
   /** Acciones propias de la pantalla, a la derecha de la fila de regreso. */
   acciones?: ReactNode
   /** Banda bajo la fila de regreso: título, buscador, pestañas internas. */
@@ -305,6 +323,22 @@ export function Chasis(props: Props) {
   const direccion = direccionPara(location)
   useMemoriaScroll(location.pathname)
   useMemoriaPestana(location.pathname, location.search)
+
+  // PESTAÑAS QUE SE ESCONDEN AL BAJAR (tarea 329): solo donde la pantalla lo
+  // pide (la ficha de equipo). La misma decisión que la barra de reanudar
+  // (`decidirContraida`): al bajar se van, al subir o cerca del principio
+  // vuelven, y el micromovimiento no cuenta.
+  const pestanasSeOcultan = props.modo === 'documento' && Boolean(props.pestanasSeOcultanAlBajar)
+  const [desplazamiento, setDesplazamiento] = useState<EstadoContraible>({ contraida: false, ultimo: 0 })
+  useEffect(() => {
+    if (!pestanasSeOcultan) return
+    function alDesplazar() {
+      setDesplazamiento((previo) => decidirContraida(previo, window.scrollY))
+    }
+    window.addEventListener('scroll', alDesplazar, { passive: true })
+    return () => window.removeEventListener('scroll', alDesplazar)
+  }, [pestanasSeOcultan])
+  const pestanasOcultas = pestanasSeOcultan && desplazamiento.contraida
 
   // Tocar la pestaña ya activa sube al principio de la lista (mockup
   // `4e`), en vez de no hacer nada (navegar a la ruta en la que ya
@@ -455,14 +489,29 @@ export function Chasis(props: Props) {
               <BotonVolver to={volverA} soloIcono estado={estadoDeRegreso(origen)}>
                 {volverEtiqueta}
               </BotonVolver>
-              <h1 className="min-w-0 flex-1">
-                {contexto && (
-                  <span className="block truncate text-[11px] leading-[1.3] text-noct-neutral-500">
-                    {contexto}
-                  </span>
+              <div className="relative min-w-0 flex-1">
+                {/* Mientras la pantalla enseña el nombre en grande, aquí solo
+                    a dónde se vuelve (tarea 329). Es texto de apoyo: el
+                    regreso ya tiene su nombre accesible. */}
+                {props.tituloVisible === false && (
+                  <p
+                    aria-hidden
+                    className="absolute inset-0 flex items-center truncate text-[15px] text-noct-neutral-400"
+                  >
+                    {volverEtiqueta ?? contexto}
+                  </p>
                 )}
-                <span className="block truncate text-[14px] font-medium leading-[1.25]">{props.titulo}</span>
-              </h1>
+                <h1
+                  className={`min-w-0 transition-opacity duration-150 motion-reduce:transition-none ${
+                    props.tituloVisible === false ? 'opacity-0' : 'opacity-100'
+                  }`}
+                >
+                  {contexto && (
+                    <span className="block truncate text-[12px] leading-[1.3] text-noct-neutral-500">{contexto}</span>
+                  )}
+                  <span className="block truncate text-[14px] font-medium leading-[1.25]">{props.titulo}</span>
+                </h1>
+              </div>
             </div>
           ) : (
             <BotonVolver to={volverA} estado={estadoDeRegreso(origen)}>
@@ -494,7 +543,12 @@ export function Chasis(props: Props) {
   const destinoActivo = destinoPrincipalDe(location.pathname)
 
   return (
-    <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text md:flex">
+    // `group/chasis` y `data-pestanas`: una barra de acción pegada sobre las
+    // pestañas baja con ellas cuando se esconden (`BAJA_CON_LAS_PESTANAS`).
+    <div
+      data-pestanas={pestanasOcultas ? 'ocultas' : 'visibles'}
+      className="nocturne group/chasis min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text md:flex"
+    >
       {/* Barra lateral de escritorio con los MISMOS cuatro destinos que la
           del teléfono (encargo del 2026-09-22). Dos formas desde la tarea
           191: rail de iconos de 64 px entre 768 y 1279, y completa de
@@ -604,7 +658,9 @@ export function Chasis(props: Props) {
           enlace: una guía ilumina Resolver y Red ilumina Más. */}
       <nav
         aria-label="Navegación principal"
-        className="fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] md:hidden"
+        className={`fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] transition-transform duration-200 motion-reduce:transition-none md:hidden ${
+          pestanasOcultas ? 'translate-y-full' : ''
+        }`}
       >
         {DESTINOS.map(({ to, label, icono: Icono, iconoActivo: IconoActivo }) => {
           const activa = destinoActivo === to

@@ -102,11 +102,11 @@ describe('Equipos', () => {
 
 describe('la ficha del equipo', () => {
   // La identidad (propuesta final de Claude Design, 2026-10-01): el nombre
-  // a 24 px y, debajo, la línea de identidad.
+  // (a 28 px desde la tarea 329, el carnet) y, debajo, la línea de identidad.
   function nombreEnIdentidad(nombre: string): HTMLElement | null {
     return (
       Array.from(document.body.querySelectorAll<HTMLElement>('span')).find(
-        (s) => s.textContent === nombre && s.className.includes('text-[24px]'),
+        (s) => s.textContent === nombre && s.hasAttribute('data-nombre-equipo'),
       ) ?? null
     )
   }

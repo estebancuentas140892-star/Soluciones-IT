@@ -26,7 +26,7 @@ import { MantenimientoPage } from './MantenimientoPage'
 // MANTENIMIENTO OPERATIVO, DE PUNTA A PUNTA (tarea 320, encargo del
 // 2026-10-10, fase B). Lo que solo se ve montando las pantallas:
 //
-//   - en la ficha, "Más del equipo" > "Mantenimiento" programa uno;
+//   - en la ficha, el índice "Más del equipo" > "Mantenimiento" (su hoja desde la tarea 329) programa uno;
 //   - la Agenda lo deriva por su fecha y lleva a su pantalla;
 //   - "Se hizo" pide fecha real, quién y qué, y "Cerrar y registrar en el
 //     equipo" deja la intervención en el historial del equipo, el
@@ -130,7 +130,6 @@ describe('programar desde la ficha del equipo', () => {
   it('"Mantenimiento" programa uno y lo enseña con cuándo toca', async () => {
     await sembrarBase()
     await montar(RUTAS, '/dispositivos/pc')
-    await tocar(await esperar(() => control(/^Más del equipo/), 'Más del equipo'))
     const seccion = await esperar(() => control(/^Mantenimiento/), 'la fila Mantenimiento')
     expect(seccion.textContent).toContain('Ninguno')
     await tocar(seccion)
@@ -171,7 +170,6 @@ describe('programar desde la ficha del equipo', () => {
       fuente: 'Cronograma de prueba 2025',
     })
     await montar(RUTAS, '/dispositivos/pc')
-    await tocar(await esperar(() => control(/^Más del equipo/), 'Más del equipo'))
     const seccion = await esperar(() => control(/^Mantenimiento/), 'la fila Mantenimiento')
     // No es trabajo pendiente: la fila sigue diciendo "Ninguno".
     expect(seccion.textContent).toContain('Ninguno')
@@ -298,7 +296,6 @@ describe('la pantalla de un antecedente por validar', () => {
 
     // Y en la lista del equipo sigue en su bloque aparte.
     await montar(RUTAS, '/dispositivos/pc')
-    await tocar(await esperar(() => control(/^Más del equipo/), 'Más del equipo'))
     await tocar(await esperar(() => control(/^Mantenimiento/), 'la fila Mantenimiento'))
     await esperar(() => textoPantalla().includes('Antecedentes por validar'), 'el bloque aparte')
     expect(textoPantalla()).toContain('Por validar · Acta de prueba 2025')

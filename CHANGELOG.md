@@ -8,6 +8,22 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Cambiado (ficha de equipo, tarea 329): carnet con avisos, datos sin tarjeta, "Resolver con este equipo", un índice de hojas y pestañas que se esconden al bajar
+
+**Área modificada:** `src/features/dispositivos/DispositivoPage.tsx`, `PiezasFicha.tsx` (nuevo), `src/components/HojaInferior.tsx` (nuevo, también lo usa `CredencialEnHoja`), `BotonFavorito.tsx` (variante `menu`), `nocturne.tsx` (`BAJA_CON_LAS_PESTANAS`), `src/app/Chasis.tsx` (`tituloVisible`, `pestanasSeOcultanAlBajar`, contexto a 12 px).
+**Tipo:** Modificado; Documentación (DECISIONES AD-079, DOCUMENTACION_FUNCIONAL 5.3.1, COMPONENTES_UI 2.0, 2.10e0, 2.10e0b y 2.10e1, TAREAS 329).
+**Motivo:** encargo del 2026-10-13, paso 3 del rediseño móvil "1b Pulgar".
+**Qué cambia:**
+- Cabecera con regreso, "Equipos" y "···"; el nombre aparece en ella al desplazarse. Favorito y Compartir pasan al menú; Dar de baja y Eliminar, aparte.
+- Carnet de 52 px con el nombre a 28 px y, debajo, los avisos del equipo (autorización en conflicto o por validar, responsable por validar, conflictos anotados en sus datos), cada uno con su verbo.
+- La IP en IBM Plex Mono a 20 px con copiar, ubicación, responsable y "Conectado a" en filas, sin tarjeta.
+- "Resolver con este equipo": tres formas (los problemas primero) y "Ver N" con todas y el diagnóstico.
+- "Más del equipo": índice de un nivel; cada fila abre su hoja.
+- Barra fija con "Resolver un problema" relleno y la llave de las credenciales; las pestañas se esconden al bajar.
+**Estructura de datos:** sin cambios.
+**Verificación:** 209 archivos y 3294 pruebas (`fichaEquipoMovil.test.tsx` nuevo; `equiposYQr`, `contextoEquipoPantallas`, `facturacionFlujo` y `mantenimientoFlujo` actualizadas), `tsc -b`, lint y build en verde. En el navegador a 375 px con el banco de pruebas: carnet, aviso, IP, ubicación, responsable y "Conectado a" a la vista sin desplazar, por encima de la barra fija; las pestañas se esconden al bajar y vuelven al subir, y el nombre sube a la cabecera.
+**Impacto esperado:** lo que se viene a buscar con el equipo delante, en la primera pantalla, y lo demás a un toque sin pliegues dentro de pliegues.
+
 ### Cambiado (ejecución de guía, tarea 328): cabecera con el equipo y los segmentos, control grande relleno, la credencial en su hoja y la comprobación final con forma de acción
 
 **Área modificada:** `src/components/BarraTarea.tsx` (`contexto`), `src/app/bandaTarea.tsx` (`BandaBajoTarea`, nueva), `src/app/Chasis.tsx`, `src/features/soluciones/AsistentePage.tsx`, `AsistenteVista.tsx` (contador, segmentos, comprobación final, "Guía terminada"), `EstadoEjecucion.tsx` (`SegmentosDePasos`), `ModoFoco.tsx` (`BOTON_PRINCIPAL`, `BOTON_ANTERIOR`, `TEXTO_INSTRUCCION`, `EtiquetaDeAccion`), `SenalesDePaso.tsx` (`ComoHacerlo`, `DatoTecnico`, `DebesVer`), `PantallaAdvertencia.tsx`, `cierrePaso.ts` (`cierreDeLaComprobacion`) y, nuevos, `src/features/boveda/CredencialEnHoja.tsx` y `useTituloDelVinculo.ts`; `src/pruebas/montaje.ts` (`abrirCredencial`).

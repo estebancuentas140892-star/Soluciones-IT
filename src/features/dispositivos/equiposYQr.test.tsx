@@ -215,25 +215,26 @@ describe('la ficha del equipo', () => {
     expect(control('Asignar')).not.toBeNull()
   })
 
-  it('los datos técnicos van plegados en "Más datos del equipo", dentro de "Más del equipo"', async () => {
+  it('los datos técnicos están en la hoja "Más datos", desde el índice "Más del equipo"', async () => {
     await sembrarInventario()
     await montar(RUTAS, '/dispositivos/pc')
-    // "Más del equipo" es una sola fila que dice qué guarda (propuesta
-    // final de Claude Design); abierta, sus secciones siguen plegadas.
-    const mas = await esperar(() => control(/^Más del equipo/), 'la fila Más del equipo')
-    // Lo dice de corrido, con lo que este equipo tiene (aquí, su impacto).
-    expect(mas.textContent).toContain('Datos, impacto, conexiones, adjuntos, mantenimiento e intervenciones')
-    expect(control(/^Más datos del equipo/)).toBeNull()
-    await tocar(mas)
-    const plegado = await esperar(() => control(/^Más datos del equipo/), 'la sección plegada')
+    // "Más del equipo" es un índice de un solo nivel (tarea 329): cada fila
+    // dice lo que guarda y abre su hoja. Aquí, con su impacto.
+    const masDatos = await esperar(() => control(/^Más datos/), 'la fila Más datos')
+    const indice = textoPantalla()
+    for (const fila of ['Si falla, caen', 'Conexiones', 'Adjuntos', 'Mantenimiento', 'Intervenciones']) {
+      expect(indice).toContain(fila)
+    }
+    expect(masDatos.getAttribute('aria-haspopup')).toBe('dialog')
 
     expect(textoPantalla()).not.toContain('SERIE-PRUEBA-1')
-    await tocar(plegado)
-    await esperar(() => textoPantalla().includes('SERIE-PRUEBA-1'), 'el serial')
+    await tocar(masDatos)
+    await esperar(() => textoPantalla().includes('SERIE-PRUEBA-1'), 'el serial, en su hoja')
     expect(textoPantalla()).toContain('INV-PRUEBA-1')
+    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain('Más datos del equipo')
   })
 
-  it('después de lo de arriba, problemas frecuentes y procedimientos, y al final la profundidad', async () => {
+  it('después de lo de arriba, "Resolver con este equipo" (los problemas primero) y al final "Más del equipo"', async () => {
     await sembrarInventario()
     await sembrarGuiasDelEquipo()
     await montar(RUTAS, '/dispositivos/pc')
@@ -242,13 +243,15 @@ describe('la ficha del equipo', () => {
 
     const texto = textoPantalla().toLowerCase()
     const conectado = texto.indexOf('conectado a')
-    const problemas = texto.indexOf('problemas frecuentes')
-    const procedimientos = texto.indexOf('procedimientos')
+    const resolver = texto.indexOf('resolver con este equipo')
+    const problema = texto.indexOf('la caja de prueba no enciende')
+    const procedimiento = texto.indexOf('configurar la caja de prueba')
     const masDelEquipo = texto.indexOf('más del equipo')
     expect(conectado).toBeGreaterThan(-1)
-    expect(conectado).toBeLessThan(problemas)
-    expect(problemas).toBeLessThan(procedimientos)
-    expect(procedimientos).toBeLessThan(masDelEquipo)
+    expect(conectado).toBeLessThan(resolver)
+    expect(resolver).toBeLessThan(problema)
+    expect(problema).toBeLessThan(procedimiento)
+    expect(procedimiento).toBeLessThan(masDelEquipo)
     // "Profundidad" se llama ahora "Más del equipo".
     expect(texto).not.toContain('profundidad')
   })

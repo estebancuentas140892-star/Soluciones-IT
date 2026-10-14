@@ -82,6 +82,7 @@ Suma desde la tarea 268: `Package` (una caja: la puerta "Herramientas de inventa
 Convención: "Props" muestra la firma real; los opcionales llevan su default. "Dónde se usa" viene de los call sites reales.
 
 ### 2.0 `Chasis` (`src/app/Chasis.tsx`)
+- **`tituloVisible` y `pestanasSeOcultanAlBajar` (nivel documento, 2026-10-13, tarea 329).** Con `tituloVisible={false}` la fila superior enseña a dónde se vuelve ("Equipos", 15 px) y el `h1` con el nombre se desvanece (sigue en el árbol accesible); con `true`, el nombre de siempre. Con `pestanasSeOcultanAlBajar` la barra de pestañas se esconde al bajar y vuelve al subir (`decidirContraida`, la de `BarraReanudar`); el contenedor publica `data-pestanas` y `group/chasis` para que una barra pegada baje con ellas (`BAJA_CON_LAS_PESTANAS`). Hoy los usa `DispositivoPage`. El contexto de la fila superior pasa de 11 a 12 px (el mínimo del encargo).
 - **`conBusqueda` (nivel tarea, tarea 241):** con `compacta`, pone la lupa en la cabecera y monta `BuscadorGlobal` (carga diferida) como capa sobre la tarea. Hoy solo lo usa `AsistentePage`. La capa es un portal a `<body>`, así que la tarea de debajo **no se vuelve a montar**: al cerrar se sigue en el mismo paso, con el mismo progreso y el mismo cronómetro.
 - **`amplio` (nivel tarea, tarea 255):** la columna de la tarea pasa de `max-w-md` (448 px) a `md:max-w-3xl` (768 px) desde 768 px de ancho; en el teléfono no cambia nada. Lo usa `AsistentePage`, porque la ruta del procedimiento se ve entera en horizontal y necesita sitio. Los controles de dentro no se estiran: `ModoFoco` y el pie de `AsistenteVista` los centran en `max-w-xl` (576 px).
 
@@ -257,7 +258,21 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Variantes:** tres mensajes por prioridad: cambios propios sin subir (ámbar, `CloudArrowUp`), sin sincronizar aún (`CloudSlash`) y al día (`CloudCheck` verde). Es de **solo lectura**: no abre el panel de sincronización, para no sumar un control a una cabecera que la auditoría pedía adelgazar.
 - **Dónde:** `SolucionesPage`. Lee el estado con `useSyncExternalStore(suscribirSync, obtenerEstadoSync)` y la antigüedad con `tiempoRelativo()` de `src/lib/tiempoRelativo.ts`.
 
+### 2.10e0 `HojaInferior` (`src/components/HojaInferior.tsx`, 2026-10-13, tareas 328 y 329)
+
+- **Propósito:** "hoja para consultar, pantalla para trabajar" (rediseño móvil "1b Pulgar"): lo que se mira sin dejar la pantalla se abre encima y al cerrarla todo sigue donde estaba.
+- **Props:** `{ abierta, onCerrar, titulo, contexto?, etiquetaCerrar = Cerrar, children }`. Sobre `Modal` (anclada abajo en el teléfono, Escape y tocar fuera la cierran), con la línea de contexto a 12 px, el título a 17 px y una X de 44 px. Cerrada no monta su contenido.
+- **Dónde:** `CredencialEnHoja` (la credencial de una acción) y las hojas de `DispositivoPage` (Más datos, Si falla caen, Conexiones, Credenciales, Datos protegidos, Adjuntos, Mantenimiento, Facturación, Intervenciones y Resolver con este equipo).
+
+### 2.10e0b `dispositivos/PiezasFicha` (2026-10-13, tarea 329, AD-079)
+
+- **`AvisosDelEquipo({ avisos })`:** la lista "Avisos del equipo" bajo el carnet; cada `AvisoEquipo` (`clave`, `Icono`, `texto`, `tono` error o precaución, `verbo`, `etiqueta` accesible, `onAbrir`) es una fila tintada de 48 px con su verbo en acento. Sin avisos no dibuja nada.
+- **`FilaIndice({ Icono, titulo, valor, tono?, abre?, onAbrir })`:** una fila de 52 px del índice "Más del equipo", con su valor (ámbar si `tono="precaucion"`) y el galón `CaretUp` (abre hoja, `aria-haspopup="dialog"`) o `CaretRight` (abre pantalla).
+- **`ResolverConEsteEquipo({ items, total, onVerTodos })`:** el título "Resolver con este equipo", hasta tres `ItemResolver` (tipo, título entero, extra) como enlaces de 64 px y "Ver N" si hay más.
+- **`BarraAccionEquipo({ resolver, onCredenciales })`:** la barra fija de la ficha con `BTN_PRIMARIO_RELLENO` ("Resolver un problema", enlace o botón según `resolver`) y la llave de 54 px; lleva el hueco del aviso de versión nueva.
+
 ### 2.10e1 `PEGADA_SOBRE_PESTANAS` (constante de `nocturne.tsx`)
+- **`BAJA_CON_LAS_PESTANAS` (tarea 329):** se suma a esta constante en una pantalla con `pestanasSeOcultanAlBajar`: con las pestañas escondidas la barra va a `bottom-0` con el área segura en su relleno. La usa `BarraAccionEquipo`.
 - **Propósito:** el desplazamiento inferior de **cualquier barra pegajosa** en los niveles que conservan la barra de pestañas (sección y documento): `bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0`.
 - **Por qué existe** (corregido el 2026-08-03, tarea 201): `sticky bottom-0` ancla el elemento al borde inferior del **viewport**, no al de su contenedor, así que mientras quede contenido por debajo la barra se pinta **detrás** de las pestañas, que son `fixed`. Medido a 360x640 sobre un artículo de 3.348 px: 65 px tapados, casi todo el botón de 52 y su nota. Al llegar al final del scroll la barra vuelve a su sitio en el flujo y se ve bien, y por eso la verificación de la tarea 172 no lo detectó: **hay que medir a mitad de un documento largo, no al final.**
 - **El valor es el mismo** `ALTO_PESTANAS` que reserva el chasis (65 px medidos más el área segura, [DECISIONES.md](DECISIONES.md) AD-027), en una sola constante para que un cambio de alto de la barra no haya que perseguirlo por varios archivos.

@@ -602,6 +602,35 @@ Hallazgos **M-004**, **M-005** y **M-009**, regla **M-R8**. Había **nueve copia
 
 **Ruta:** `/dispositivos/:dispositivoId` · **Nivel:** Documento. Vista 360°.
 
+
+**REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 329, [DECISIONES.md](DECISIONES.md) AD-079).** Cambia cómo se presenta la ficha, no sus datos ni sus funciones. Manda sobre lo que sigue donde choquen:
+
+```
+ ‹  Equipos                                   ···   (el nombre sube aquí al desplazarse)
+ [icono 52]  NOMBRE DEL EQUIPO (28 px)
+             tipo · marca modelo · sin responsable  Asignar
+             (Operativo)
+ [!] Autorización de facturación en conflicto  Ver  (avisos, si los hay)
+ Dirección IP  192.168.10.41 (mono, 20 px)    [⧉]
+ ⌖ Ubicación · 👤 Responsable · ⇄ Conectado a       (filas, sin tarjeta)
+ Resolver con este equipo                    Ver N ˄
+   tres formas: los problemas frecuentes primero
+ Más del equipo
+   Más datos · Si falla, caen · Conexiones · Credenciales · Datos protegidos ·
+   Adjuntos · Mantenimiento · Facturación · Intervenciones   (valor y ˄)
+ Documentar este equipo…
+ [■ Resolver un problema ■] [🔑]                      (barra fija)
+```
+
+- **Cabecera:** el regreso, "Equipos" (o "Red", o de dónde se llegó) y "···". El nombre del equipo aparece en ella **solo cuando el carnet sale de la pantalla al desplazarse** (sigue siendo el encabezado de la página para el lector). **Favorito y Compartir** pasan al menú "···", junto a Duplicar, Editar, Etiqueta QR y Reemplazar; **Dar de baja y Eliminar** van aparte, separados por espacio y una línea.
+- **Carnet:** icono (o foto) de 52 px, el nombre a 28 px entero, debajo el tipo (y "sin responsable" con "Asignar" si nadie responde de él) y la pastilla de estado.
+- **Avisos del equipo**, bajo el carnet, solo si los hay: "Autorización de facturación en conflicto" (rojo) o "por validar" (ámbar), con "Ver" (abre Facturación); "Responsable anotado, por validar" (ámbar), con "Validar" (abre Asignar); y cada conflicto anotado en sus datos (una clave que empieza por "Conflicto", como "Conflicto IP histórico"), en rojo, con "Ver" (abre Más datos).
+- **Datos para trabajar, sin tarjeta:** la IP en IBM Plex Mono a 20 px con copiar, la ubicación, el responsable y a qué está conectado (mono), cada uno en su fila. A 375 px, con los avisos, se ven sin desplazar.
+- **Resolver con este equipo:** hasta tres filas (los problemas frecuentes primero, luego los procedimientos), cada una con su tipo, su título entero y, si es un problema, su primer síntoma; abren la guía con este equipo. **"Ver N"** (si hay más de tres) abre una hoja con todos y, al final, "Iniciar diagnóstico" de su categoría. Sustituye a los bloques "Problemas frecuentes" y "Procedimientos" de la ficha.
+- **Más del equipo** es un índice de un solo nivel (antes, un pliegue con pliegues dentro): cada fila dice lo que guarda ("3", "Ninguna", "Atrasado", "PRB") y **abre su hoja**, una a la vez: Más datos, Si falla caen (si aplica), Conexiones, Credenciales y Datos protegidos (con permiso de Bóveda), Adjuntos, Mantenimiento, Facturación (en un POS o si tiene alguna) e Intervenciones. Mantenimiento y Facturación tendrán su pantalla en la tarea 331; hasta entonces abren su hoja. Llegar con un ancla (`#datos`, `#conexiones`, `#seguridad`, `#foto`, `#mantenimiento`, `#facturacion`) o con el nombre sugerido de un dato protegido abre la hoja que toca.
+- **Barra fija:** "Resolver un problema", relleno (la única acción rellena): abre el diagnóstico de su categoría si existe y, si no, la hoja de "Resolver con este equipo". A su lado, con permiso de Bóveda y alguna credencial, la llave abre la hoja de Credenciales.
+- **La barra de pestañas se esconde al bajar** y vuelve al subir o cerca del principio; la barra fija baja al borde mientras tanto. Solo en esta ficha.
+
 **Cabecera:** **ancla permanente** (tarea 201, regla M-R1): chevron de regreso de 44 px (a Equipos o a Red según `es_red` de su categoría), y a su lado el origen a 11 px ("Red · Rack 1") con el **nombre del equipo a 14 px**, que **se queda en pantalla al desplazarse**. A la derecha, **estrella de favorito**, **botón Compartir** (diálogo nativo o copia el enlace) y menú **"···"** con: **Duplicar** (`?copiarDe`), **Editar**, **Etiqueta QR**, **Reemplazar** (`?reemplazaA`), **Dar de baja** (→ `/baja`) y **Eliminar** (sensible).
 
 **"¿QUÉ SABEMOS DE ESTE DISPOSITIVO?" (desde el 2026-09-22, tarea 256, [DECISIONES.md](DECISIONES.md) AD-044).** Manda sobre la descripción de capas de abajo:

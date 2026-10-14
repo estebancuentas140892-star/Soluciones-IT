@@ -28,7 +28,7 @@ import { AutorizacionesPage } from './AutorizacionesPage'
 // AUTORIZACIONES DE FACTURACIÓN, DE PUNTA A PUNTA (tarea 321, encargo del
 // 2026-10-10, fase C). Lo que solo se ve montando las pantallas:
 //
-//   - en la ficha de un POS, "Más del equipo" > "Facturación" dice qué
+//   - en la ficha de un POS, el índice "Más del equipo" > "Facturación" (su hoja desde la tarea 329) dice qué
 //     autorización tiene, su prefijo, su rango, su estado, el
 //     vencimiento si está confirmado y si pide revisión, y registra una
 //     nueva con ese POS ya marcado;
@@ -176,7 +176,6 @@ describe('desde la ficha del POS', () => {
   it('"Facturación" dice "Ninguna" y registra una autorización documentada con ese POS ya marcado', async () => {
     await sembrarBase()
     await montar(RUTAS, '/dispositivos/pos-a')
-    await tocar(await esperar(() => control(/^Más del equipo/), 'Más del equipo'))
     const seccion = await esperar(() => control(/^Facturación/), 'la fila Facturación')
     expect(seccion.textContent).toContain('Ninguna')
     await tocar(seccion)
@@ -221,7 +220,6 @@ describe('desde la ficha del POS', () => {
   it('un equipo que no es POS y no tiene autorizaciones no enseña "Facturación"', async () => {
     await sembrarBase()
     await montar(RUTAS, '/dispositivos/pc')
-    await tocar(await esperar(() => control(/^Más del equipo/), 'Más del equipo'))
     await esperar(() => control(/^Mantenimiento/), 'la sección de mantenimiento')
     expect(control(/^Facturación/)).toBeNull()
   })
@@ -238,7 +236,6 @@ describe('desde la ficha del POS', () => {
     })
     await sembrarAutorizacion({ id: 'doc', prefijo: 'DOC', rangoDesde: 4100, rangoHasta: 90000 })
     await montar(RUTAS, '/dispositivos/pos-a')
-    await tocar(await esperar(() => control(/^Más del equipo/), 'Más del equipo'))
     const seccion = await esperar(() => control(/^Facturación/), 'la fila Facturación')
     expect(seccion.textContent).toContain('2 en uso')
     await tocar(seccion)
