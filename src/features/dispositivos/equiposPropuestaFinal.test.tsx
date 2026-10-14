@@ -69,7 +69,7 @@ describe('la lista de Equipos', () => {
     // La IP sigue a la vista aunque el estado normal no se diga.
     expect(filaDe('caja-1')?.textContent).toContain('10.9.9.1')
 
-    const atenuada = (id: string) => Boolean(filaDe(id)?.querySelector('.opacity-60'))
+    const atenuada = (id: string) => Boolean(filaDe(id)?.querySelector('[class*="opacity-[.66]"]'))
     expect(atenuada('caja-3')).toBe(true)
     expect(atenuada('caja-4')).toBe(true)
     expect(atenuada('caja-1')).toBe(false)

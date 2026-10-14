@@ -426,6 +426,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dónde:** `MiniaturaPortada`, `Adjuntos`, `ProcedimientoVista`.
 
 ### 2.18 `OpcionRadio` (2026-10-10, tarea 320)
+- **Desde la tarea 333** la usa también `autenticacion/ElegirTema` (Ajustes > Aplicación > Tema): tres opciones con título y detalle dentro de un `role="radiogroup"` con su rótulo, leyendo y guardando la preferencia con `useSyncExternalStore` sobre `src/lib/tema.ts` (`preferenciaTemaActual`, `suscribirPreferenciaTema`, `guardarPreferenciaTema`). Sin props.
 - **Propósito:** una respuesta de una pregunta cerrada: botón con `role="radio"` y `aria-checked`, 44 px de alto, el círculo de selección a la izquierda, el borde y el fondo en acento cuando está elegida. Botón y no `<input type="radio">`: la app no usa los controles nativos del navegador.
 - **Props:** `{ activa: boolean, onClick: () => void, children }`. Quien la usa pone el contenedor `role="radiogroup"` con su nombre accesible (`aria-labelledby` con `useId`).
 - **Dónde:** `DecisionSobreEquipo` (de donde se extrajo; era su `Opcion` interna, sin cambiar su aspecto), `SelectorTipoMantenimiento` y la pregunta "¿Cómo terminó?" de `MantenimientoPage`.

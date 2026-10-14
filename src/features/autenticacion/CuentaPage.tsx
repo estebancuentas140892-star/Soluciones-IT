@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { BotonInstalarApp } from '../../components/BotonInstalarApp'
 import { BuscarActualizacion } from '../../components/BuscarActualizacion'
 import { DescargarOffline } from '../../components/DescargarOffline'
+import { ElegirTema } from './ElegirTema'
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { CaretDown, CaretRight, CaretUp, DownloadSimple, LockSimple, SignOut } from '../../components/iconos'
@@ -229,7 +230,9 @@ export function CuentaPage() {
             Ajustes, junto a lo demás de la aplicación. */}
         <section className="flex flex-col gap-1">
           <TituloSeccion>Aplicación</TituloSeccion>
-          <div className="rounded-lg border border-noct-divider bg-noct-surface">
+          {/* El tema (tarea 333): oscuro por defecto, claro opcional. */}
+          <div className="divide-y divide-noct-divider rounded-lg border border-noct-divider bg-noct-surface">
+            <ElegirTema />
             <BuscarActualizacion />
           </div>
         </section>

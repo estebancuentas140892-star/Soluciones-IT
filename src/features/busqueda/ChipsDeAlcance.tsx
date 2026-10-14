@@ -36,7 +36,10 @@ export function ChipsDeAlcance({
             }`}
           >
             {chip.etiqueta}
-            <span className="font-mono text-[12px] opacity-75">{conteo[chip.valor]}</span>
+            {/* El conteo con color y no con opacidad: al 75 % el del chip
+                activo no llegaba a 4.5:1 en el tema claro (tarea 333). En el
+                inactivo, un paso más tenue que el nombre. */}
+            <span className={`font-mono text-[12px] ${activo ? '' : 'text-noct-neutral-400'}`}>{conteo[chip.valor]}</span>
           </button>
         )
       })}

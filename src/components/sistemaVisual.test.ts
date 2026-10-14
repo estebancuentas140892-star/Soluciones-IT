@@ -72,3 +72,33 @@ describe('BTN_PRIMARIO_RELLENO (regla 30)', () => {
     expect(BTN_PRIMARIO.split(/\s+/)).not.toContain('bg-noct-accent')
   })
 })
+
+describe('el tema claro (tarea 333)', () => {
+  // Cada token de color del tema oscuro (@theme) tiene su valor claro: uno
+  // olvidado se vería oscuro sobre fondo claro sin que nada fallara.
+  function tokensDe(bloque: string): string[] {
+    return [...bloque.matchAll(/(--color-noct-[a-z0-9-]+)\s*:/g)].map((m) => m[1]).sort()
+  }
+  const inicioTema = css.indexOf('@theme {')
+  const tema = css.slice(inicioTema, css.indexOf('\n}', inicioTema))
+  const inicioClaro = css.indexOf(":root[data-tema='claro'] {")
+  const claro = css.slice(inicioClaro, css.indexOf('\n}', inicioClaro))
+
+  it('redefine todos los tokens de color, y ninguno de más', () => {
+    expect(inicioClaro).toBeGreaterThan(0)
+    expect(tokensDe(tema).length).toBeGreaterThan(30)
+    expect(tokensDe(claro)).toEqual(tokensDe(tema))
+  })
+
+  it('el script que lo pone antes de pintar existe, carga desde el head y usa la misma clave y colores', async () => {
+    const html = readFileSync('index.html', 'utf8')
+    const script = readFileSync('public/tema.js', 'utf8')
+    expect(html.indexOf('<script src="/tema.js"></script>')).toBeGreaterThan(0)
+    expect(html.indexOf('<script src="/tema.js"></script>')).toBeLessThan(html.indexOf('</head>'))
+    const { CLAVE_TEMA, COLOR_BARRA } = await import('../lib/tema')
+    expect(script).toContain(`'${CLAVE_TEMA}'`)
+    expect(script).toContain(`'${COLOR_BARRA.claro}'`)
+    expect(script).toContain(`'${COLOR_BARRA.oscuro}'`)
+    expect(html).toContain(`<meta name="theme-color" content="${COLOR_BARRA.oscuro}" />`)
+  })
+})

@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Agregado (tema, tarea 333): tema claro opcional, oscuro por defecto
+
+**Área modificada:** `src/index.css` (tokens claros), `src/lib/tema.ts` (nuevo), `public/tema.js` (nuevo), `index.html`, `src/main.tsx`, `src/features/autenticacion/ElegirTema.tsx` (nuevo) y `CuentaPage.tsx`; ajustes de contraste en `src/features/busqueda/ChipsDeAlcance.tsx` y `src/components/FilaDispositivo.tsx`.
+**Tipo:** Agregado; Documentación (REGLAS regla 12 reescrita, DECISIONES AD-085, ARQUITECTURA, DOCUMENTACION_FUNCIONAL 6.6 y la nota de tema, COMPONENTES_UI 2.18, TAREAS 333).
+**Motivo:** paso 7 del rediseño móvil "1b Pulgar" y RP-3; el usuario cambió la regla 12 el 2026-10-13 ("Claro opcional, oscuro por defecto").
+**Qué cambia:** Ajustes > Aplicación > Tema: Oscuro (por defecto), Claro (para leer a pleno sol) o Automático (como el teléfono), solo en este teléfono. El claro cambia todos los colores por tokens, sin tocar pantallas, y se aplica antes de pintar. En los dos temas, el conteo del chip de alcance activo va en su color (no al 75 %) y el nombre de un equipo en excepción se atenúa al 66 % (antes 60 %).
+**Estructura de datos:** sin cambios (la preferencia vive en `localStorage` de cada teléfono).
+**Verificación:** `tema.test.ts` nuevo (efectivo, guardar, por defecto, automático), `sistemaVisual.test.ts` (todos los tokens con su valor claro; script y módulo con la misma clave y colores), prueba nueva en Ajustes (`herramientasInventario.test.tsx`) y `equiposPropuestaFinal` ajustada; suite completa, `tsc -b`, lint y build en verde (`tema.js` en `dist` y en el precache). En el navegador a 375 px: auditoría de contraste de cada texto en 15 pantallas en los dos temas.
+**Impacto esperado:** leer la app al sol, en una taquilla, sin cambiar nada para quien no lo elige.
+
 ### Agregado (guías, tarea 335, RP-1): registrar la intervención al terminar una guía con equipo
 
 **Área modificada:** `src/features/soluciones/IntervencionAlTerminar.tsx` (nuevo) y `AsistenteVista.tsx` (pantalla "Guía terminada").

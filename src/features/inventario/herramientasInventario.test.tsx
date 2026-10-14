@@ -215,4 +215,25 @@ describe('Ajustes', () => {
     await tocar(await esperar(() => fila('Bloqueo y seguridad') ?? control(/^Bloqueo y seguridad/), 'la fila de bloqueo'))
     expect(ubicacionActual().pathname).toBe('/cuenta/seguridad')
   })
+
+  // Tarea 333: el tema, oscuro por defecto y claro opcional, solo en este teléfono.
+  it('elige el tema: oscuro por defecto, y claro se aplica al tocar y queda en este teléfono', async () => {
+    localStorage.removeItem('sit-tema')
+    await montar(RUTAS, '/cuenta')
+    const grupo = await esperar(() => document.body.querySelector<HTMLElement>('[role="radiogroup"]'), 'el tema')
+    const opciones = Array.from(grupo.querySelectorAll<HTMLElement>('[role="radio"]'))
+    expect(opciones.map((o) => o.querySelector('.block')?.textContent)).toEqual(['Oscuro', 'Claro', 'Automático'])
+    expect(opciones[0].getAttribute('aria-checked')).toBe('true')
+    expect(textoPantalla()).toContain('Solo en este teléfono.')
+
+    await tocar(opciones[1])
+    expect(document.documentElement.getAttribute('data-tema')).toBe('claro')
+    expect(localStorage.getItem('sit-tema')).toBe('claro')
+    expect(opciones[1].getAttribute('aria-checked')).toBe('true')
+
+    // Volver a oscuro lo deja como estaba.
+    await tocar(opciones[0])
+    expect(document.documentElement.getAttribute('data-tema')).toBe('oscuro')
+    expect(localStorage.getItem('sit-tema')).toBeNull()
+  })
 })

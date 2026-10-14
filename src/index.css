@@ -195,6 +195,81 @@
   --color-noct-cat-10: oklch(0.75 0.11 335);
 }
 
+/* TEMA CLARO "A PLENO SOL, TAQUILLA" (tarea 333, paso 7 del rediseño movil
+   "1b Pulgar"; regla 12 desde el 2026-10-13: oscuro por defecto, claro
+   opcional en Ajustes). Se activa con `data-tema="claro"` en <html>
+   (public/tema.js y src/lib/tema.ts) y redefine TODOS los tokens de color
+   de arriba, sin tocar ninguna pantalla: las utilidades de Tailwind leen
+   las variables. Una prueba (sistemaVisual.test.ts) exige que cada token
+   `--color-noct-*` tenga aqui su valor claro.
+
+   Valores del handoff (Sistema visual movil.dc.html): fondo #f4f5f8,
+   superficie blanca, texto #191b28 / #353949 / #4f5468 / #62687e, divisor
+   oscuro translucido, acento oklch(0.5 0.1 215) con su texto en
+   oklch(0.45 0.1 218) y blanco encima, y los estados mas oscuros. El
+   acento baja a 0.48: a 0.5 un conteo de 11.5 px en acento sobre su
+   tinte quedaba en 4.3:1 (medido en Equipos), por debajo de 4.5.
+
+   La escala neutra se INVIERTE: en el oscuro el 100 es el mas claro y el
+   900 el mas oscuro, y cada uno se usa por su papel (texto 2 = 300,
+   texto 3 = 400, texto 4 = 500, barras y bordes = 600 a 900). En el
+   claro cada paso conserva su papel: el 300 sigue siendo el texto 2
+   (#353949) y el 900 el fondo mas tenue. Igual la rampa del acento: el
+   300 es el acento como TEXTO (mas oscuro en claro) y el 500 el relleno
+   pulsado; del 600 al 900, que en oscuro son fondos hondos, pasan a
+   tintes claros. Categorias y tipos bajan su luminosidad (0.75 a 0.52)
+   para leerse sobre blanco con el mismo matiz. */
+:root[data-tema='claro'] {
+  --color-noct-bg: #f4f5f8;
+  --color-noct-surface: #ffffff;
+  --color-noct-text: #191b28;
+  --color-noct-divider: rgb(25 27 40 / 0.14);
+
+  --color-noct-neutral-100: #1f2231;
+  --color-noct-neutral-200: #2a2d3e;
+  --color-noct-neutral-300: #353949;
+  --color-noct-neutral-400: #4f5468;
+  --color-noct-neutral-500: #62687e;
+  --color-noct-neutral-600: #7b8196;
+  --color-noct-neutral-700: #b6bac8;
+  --color-noct-neutral-800: #d5d8e1;
+  --color-noct-neutral-900: #e7e9f0;
+
+  --color-noct-accent: oklch(0.48 0.1 215);
+  --color-noct-accent-100: oklch(0.32 0.07 218);
+  --color-noct-accent-200: oklch(0.39 0.085 218);
+  --color-noct-accent-300: oklch(0.45 0.1 218);
+  --color-noct-accent-400: oklch(0.48 0.1 215);
+  --color-noct-accent-500: oklch(0.42 0.1 215);
+  --color-noct-accent-600: oklch(0.62 0.09 215);
+  --color-noct-accent-700: oklch(0.75 0.07 215);
+  --color-noct-accent-800: oklch(0.86 0.045 215);
+  --color-noct-accent-900: oklch(0.93 0.025 215);
+  --color-noct-on-accent: #ffffff;
+
+  --color-noct-exito: oklch(0.5 0.11 156);
+  --color-noct-precaucion: oklch(0.53 0.12 66);
+  --color-noct-error: oklch(0.53 0.17 26);
+
+  --color-noct-tipo-instalacion: oklch(0.52 0.15 330);
+  --color-noct-tipo-configuracion: oklch(0.52 0.1 175);
+  --color-noct-tipo-conexion: oklch(0.5 0.13 255);
+
+  --color-noct-cat-1: oklch(0.52 0.11 25);
+  --color-noct-cat-2: oklch(0.52 0.11 60);
+  --color-noct-cat-3: oklch(0.52 0.11 95);
+  --color-noct-cat-4: oklch(0.52 0.11 140);
+  --color-noct-cat-5: oklch(0.52 0.11 170);
+  --color-noct-cat-6: oklch(0.52 0.11 118);
+  --color-noct-cat-7: oklch(0.52 0.11 235);
+  --color-noct-cat-8: oklch(0.52 0.11 270);
+  --color-noct-cat-9: oklch(0.52 0.11 300);
+  --color-noct-cat-10: oklch(0.52 0.11 335);
+
+  /* Los controles nativos (fecha, desplazamiento) en claro. */
+  color-scheme: light;
+}
+
 html,
 body,
 #root {

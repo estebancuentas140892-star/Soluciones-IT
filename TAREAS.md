@@ -62,7 +62,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 4 | Dock de búsqueda, búsqueda y cabeceras de raíz | 330 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 5 | Mantenimiento y autorización (tres formas de dato) | 331 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 6 | Agenda y Más | 332 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
-| 7 | Tema claro | 333 | Bloqueada: contradice la regla 12 y depende de RP-3 |
+| 7 | Tema claro | 333 | Decidido (claro opcional, oscuro por defecto); integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Decidido: verde lima; integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | Las tres integradas en `main` y desplegadas, pendiente de confirmación visual del usuario |
 
@@ -146,6 +146,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Prioridad:** Media. **Estado:** Integrada en `main` (2026-10-13, en tres partes con su commit y su despliegue) y desplegada, pendiente de la confirmación visual del usuario en producción; no se archiva hasta entonces. **Decisión del usuario:** "la que consideres que es la mejor opción"; se hacen las tres, en tres partes con su commit y su despliegue (AD-084). **Parte 1 hecha: RP-4** (`src/features/escaner/EscanerPage.tsx`, "Buscar este código" en el aviso sin coincidencia; prueba en `src/features/dispositivos/equiposYQr.test.tsx`). **Parte 2 hecha: RP-2** (`src/features/facturacion/RegistrarLectura.tsx` nuevo y `AutorizacionPage.tsx`: "Registrar lectura" abre la hoja, con o sin lectura anterior; sin rango, el formulario; pruebas en `facturacionFlujo.test.tsx`). **Parte 3 hecha: RP-1** (`src/features/soluciones/IntervencionAlTerminar.tsx` nuevo, montado en la pantalla "Guía terminada" de `AsistenteVista.tsx`; prueba en `src/features/soluciones/intervencionAlTerminar.test.tsx`).
 - **Área afectada:** RP-1, `ModoFoco.tsx` y el registro de intervenciones; RP-2, `AutorizacionPage.tsx`; RP-4, `EscanerPage` y el dock de la 330.
 - **Dependencias:** RP-1 de la 328, RP-2 de la 331 y RP-4 de la 330.
+
+### 333. Rediseño móvil, paso 7: tema claro
+
+- **Título:** tema claro "a pleno sol, taquilla" del handoff.
+- **Descripción:** valores en `Sistema visual movil.dc.html` (bloque `[data-tema="claro"]`), como variables bajo `[data-tema="claro"]` en el contenedor `.nocturne`.
+- **Motivo:** handoff del 2026-10-13, paso 7.
+- **Impacto:** medio (legibilidad al sol).
+- **Prioridad:** Baja. **Estado:** Integrada en `main` (2026-10-13) y desplegada, pendiente de la confirmación visual del usuario en producción; no se archiva hasta entonces. **Decisión del usuario (2026-10-13):** "Claro opcional, oscuro por defecto", con automático; regla 12 reescrita (AD-085). **Hecho:** tokens claros en `src/index.css` (`:root[data-tema='claro']`, tras el bloque `@theme`), `src/lib/tema.ts` y `public/tema.js` (aplicar antes de pintar, `<script>` en `index.html`; `iniciarTema` en `src/main.tsx`), `src/features/autenticacion/ElegirTema.tsx` en `CuentaPage.tsx` (Ajustes > Aplicación); contraste: `ChipsDeAlcance.tsx` y `FilaDispositivo.tsx`. Pruebas: `src/lib/tema.test.ts`, `src/components/sistemaVisual.test.ts`, `src/features/inventario/herramientasInventario.test.tsx`.
+- **Área afectada:** `src/index.css`, Ajustes.
+- **Dependencias:** 327 (decisión del usuario tomada el 2026-10-13).
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
@@ -603,16 +613,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 333. Rediseño móvil, paso 7: tema claro (bloqueada)
-
-- **Título:** tema claro "a pleno sol, taquilla" del handoff.
-- **Descripción:** valores en `Sistema visual movil.dc.html` (bloque `[data-tema="claro"]`), como variables bajo `[data-tema="claro"]` en el contenedor `.nocturne`.
-- **Motivo:** handoff del 2026-10-13, paso 7.
-- **Impacto:** medio (legibilidad al sol).
-- **Prioridad:** Baja. **Estado:** Bloqueada: contradice la regla 12 (la app es de tema oscuro únicamente) y requiere la recomendación de producto RP-3 (preferencia de tema oscuro, claro o automático en Ajustes). No se implementa sin decisión del usuario.
-- **Área afectada:** `src/index.css`, Ajustes.
-- **Dependencias:** decisión del usuario sobre RP-3 y la regla 12; 327.
 
 ### 319. Casos de datos y conflictos de la conciliación que no se resuelven por código (usuario y ChatGPT)
 

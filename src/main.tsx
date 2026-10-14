@@ -6,6 +6,7 @@ import { ErrorBoundary } from './components/ErrorBoundary'
 import { iniciarInstalacionPwa } from './lib/instalacionPwa'
 import { recargarUnaVezPorChunk } from './lib/recargaChunk'
 import { iniciarSync } from './lib/sync'
+import { iniciarTema } from './lib/tema'
 
 // Vite avisa con este evento cuando un import dinamico (una pantalla
 // cargada bajo demanda) no se pudo descargar, tipicamente porque se
@@ -23,6 +24,10 @@ window.addEventListener('vite:preloadError', () => {
 // de la pantalla que ofrece instalar: todas las pantallas se cargan bajo
 // demanda y el evento ya habria pasado cuando montan.
 iniciarInstalacionPwa()
+
+// El tema de este teléfono (tarea 333): public/tema.js ya lo puso antes de
+// pintar; aquí se asegura y, en automático, sigue al teléfono.
+iniciarTema()
 
 try {
   iniciarSync()
