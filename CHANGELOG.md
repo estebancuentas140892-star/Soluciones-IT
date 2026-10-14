@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Agregado (escáner, tarea 335, RP-4): buscar el código que no es de ningún equipo
+
+**Área modificada:** `src/features/escaner/EscanerPage.tsx`.
+**Tipo:** Agregado; Documentación (DECISIONES AD-084, DOCUMENTACION_FUNCIONAL escáner, TAREAS 335).
+**Motivo:** recomendación RP-4 del rediseño móvil "1b Pulgar"; el usuario delegó la elección el 2026-10-13.
+**Qué cambia:** el aviso "Ningún equipo coincide con este código" ofrece "Buscar este código", que abre Resolver con el código escrito en el buscador del dock. No aparece si el código es una URL.
+**Estructura de datos:** sin cambios.
+**Verificación:** dos pruebas nuevas en `equiposYQr` (lleva el código a Resolver por el estado, sin URL; no se ofrece con una URL); suite completa, `tsc -b`, lint y build en verde. En el navegador: del escáner a Resolver con los resultados del código.
+**Impacto esperado:** un serial o una placa desconocidos no se quedan en un callejón: se buscan en un toque.
+
 ### Cambiado (colores, tarea 334): la categoría 6 pasa de cian a verde lima
 
 **Área modificada:** `src/index.css` (`--color-noct-cat-6`).

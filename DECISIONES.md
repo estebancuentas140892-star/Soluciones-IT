@@ -913,3 +913,9 @@ Cada decisión indica su estado (Vigente / Revisada / Descartada), su contexto, 
 - **Opciones:** dejarla (la categoría tiñe chips y cabeceras, que también se tocan); redistribuir las diez saltando el cian (cambian todas y las vecinas quedan más juntas); mover solo la 6.
 - **Decisión:** mover solo la 6 a `oklch(0.75 0.11 118)`, verde lima (aprox. #a8b864), en el hueco que había entre la 3 (95, mostaza) y la 4 (140, verde). Misma luminosidad y croma que las demás, así que sigue en la familia. Las otras nueve no cambian, y tampoco la clave `cat-6` que guardan las categorías con color fijado: cambia el matiz en un solo sitio (`src/index.css`).
 - **Consecuencia:** el cian queda solo para las acciones. La 6 queda algo más cerca de la 3 y de la 4 que el resto entre sí, pero no son contiguas en el orden (`colorPorOrden`), así que rara vez aparecen juntas.
+
+## AD-084. Las recomendaciones de producto del rediseño móvil: RP-1, RP-2 y RP-4
+
+- **Estado:** Vigente (2026-10-13, tarea 335). El usuario delegó la elección ("la que consideres que es la mejor opción"); se hacen las tres, cada una con su commit y su despliegue.
+- **Por qué las tres:** son pequeñas, no cambian el esquema ni ninguna regla de negocio, cada una reutiliza un camino que ya existe (el buscador que se repone, el guardado de la autorización con sus validaciones, `registrarIntervencion`) y se pueden retirar sin dejar datos huérfanos. RP-3 (la preferencia de tema) sigue en la tarea 333, bloqueada por la regla 12.
+- **Decisión 1, RP-4: del escáner al buscador.** Cuando el código no coincide con ningún equipo, "Buscar este código" abre Resolver con el código escrito en el buscador del dock (`location.state.busqueda` con `capa: false`, el mismo canal con el que se repone una búsqueda al volver; nunca la URL). No se ofrece si el código es una URL: no es texto que aparezca en ningún sitio. "Seguir escaneando" y "Registrar equipo" no cambian.

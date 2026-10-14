@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db, type Articulo } from '../../lib/db'
 import {
@@ -270,7 +271,14 @@ describe('el escáner', () => {
     { ruta: '/escaner', elemento: <EscanerPage /> },
     { ruta: '/dispositivos/:dispositivoId', elemento: <p>FICHA DEL EQUIPO</p> },
     { ruta: '/conectar', elemento: <p>CONECTAR EQUIPO</p> },
+    { ruta: '/', elemento: <BusquedaRecibida /> },
   ]
+
+  // Lo que recibe Resolver: la búsqueda que viaja en el estado de navegación.
+  function BusquedaRecibida() {
+    const busqueda = (useLocation().state as { busqueda?: { consulta: string; capa: boolean } } | null)?.busqueda
+    return <p>RESOLVER BUSCA {busqueda ? `${busqueda.consulta} ${busqueda.capa ? 'en la capa' : 'en el dock'}` : 'nada'}</p>
+  }
 
   function campoManual(): HTMLInputElement | null {
     return document.body.querySelector<HTMLInputElement>('input[aria-label="Buscar por placa o serial"]')
@@ -306,5 +314,34 @@ describe('el escáner', () => {
     expect(ubicacionActual().pathname).toBe('/conectar')
     expect(ubicacionActual().search).toBe('?codigo=482731')
     expect(textoPantalla()).not.toContain('Ningún equipo coincide')
+  })
+
+  // RP-4 (tarea 335): el código que no es de ningún equipo se puede buscar.
+  it('sin equipo que coincida, "Buscar este código" lo lleva al buscador de Resolver ya escrito', async () => {
+    await sembrarInventario()
+    await montar(RUTAS, '/escaner')
+    const campo = await esperar(() => campoManual(), 'la búsqueda manual')
+
+    await escribir(campo, 'SN-DESCONOCIDO-9')
+    await enviarFormulario(campo)
+    await esperar(() => textoPantalla().includes('Ningún equipo coincide'), 'el aviso')
+    expect(control('Registrar equipo')).not.toBeNull()
+
+    await tocar(control('Buscar este código') as HTMLElement)
+    await esperar(() => textoPantalla().includes('RESOLVER BUSCA'), 'Resolver')
+    expect(ubicacionActual().pathname).toBe('/')
+    expect(ubicacionActual().search).toBe('')
+    expect(textoPantalla()).toContain('RESOLVER BUSCA SN-DESCONOCIDO-9 en el dock')
+  })
+
+  it('una URL que no es de ningún equipo no se ofrece para buscar', async () => {
+    await sembrarInventario()
+    await montar(RUTAS, '/escaner')
+    const campo = await esperar(() => campoManual(), 'la búsqueda manual')
+
+    await escribir(campo, 'https://ejemplo.invalid/otra-cosa')
+    await enviarFormulario(campo)
+    await esperar(() => textoPantalla().includes('Ningún equipo coincide'), 'el aviso')
+    expect(control('Buscar este código')).toBeNull()
   })
 })

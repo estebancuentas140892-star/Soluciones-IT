@@ -902,6 +902,7 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
   - ~~**"Código para conectar un computador"**~~ (retirada el 2026-09-24, tarea 258: el QR del portal lleva a Conectar equipo).
   - **"Varios equipos comparten este código"**: lista de opciones + "Seguir escaneando".
   - **"Ningún equipo coincide con este código"**: muestra el código, botones "Seguir escaneando" y "Registrar equipo" (este último precarga el código leído como serial en el alta, `?serial=`, salvo que sea una URL de etiqueta; hallazgo H3).
+    - **Desde el 2026-10-13 (tarea 335, RP-4, [DECISIONES.md](DECISIONES.md) AD-084):** encima de esos dos, **"Buscar este código"** (lupa, delineado), que abre Resolver con el código ya escrito en el buscador del dock y sus resultados (el código puede estar en una guía, una nota o la Bóveda). Viaja en el estado de navegación, no en la URL. No aparece si el código es una URL.
 
 **El escáner queda como origen (tarea 202, hallazgo M-029).** Hasta ahora "Abrir la ficha" **reemplazaba** el escáner en el historial y la ficha volvía a Equipos, así que inventariar diez equipos de un rack costaba cuatro toques por equipo en vez de dos: había que volver a entrar por "Más". Ahora la ficha se apila encima y su regreso dice **"‹ Escáner"**, con la cámara viva y el conteo intacto. Lo mismo con "Registrar equipo" y con la lista de "Varios equipos".
 

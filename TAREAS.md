@@ -64,7 +64,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 6 | Agenda y Más | 332 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 7 | Tema claro | 333 | Bloqueada: contradice la regla 12 y depende de RP-3 |
 | (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Decidido: verde lima; integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
-| (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | Pendiente de decisión |
+| (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | **En proceso**: el usuario delegó la elección; se hacen las tres. RP-4 integrada en `main` |
 
 ### 327. Rediseño móvil, paso 1: tokens cian, IBM Plex Mono local y botón primario relleno
 
@@ -136,6 +136,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Prioridad:** Baja. **Estado:** Integrada en `main` (2026-10-13) y desplegada, pendiente de la confirmación visual del usuario en producción; no se archiva hasta entonces. **Decisión del usuario (2026-10-13):** mover solo la 6 a verde lima. **Hecho:** `--color-noct-cat-6` en `src/index.css` (línea 191 aprox.) de `oklch(0.75 0.11 200)` a `oklch(0.75 0.11 118)`, con su comentario. AD-083.
 - **Área afectada:** `src/index.css` (`--color-noct-cat-6`).
 - **Dependencias:** 327.
+
+### 335. Recomendaciones de producto del rediseño móvil (RP-1, RP-2 y RP-4)
+
+- **Título:** tres funciones nuevas que el handoff recomienda y no se implementan sin decisión del usuario.
+- **Descripción:** **RP-1:** al terminar una guía abierta desde un equipo, ofrecer "Registrar intervención" con la guía precargada. **RP-2:** atajo "Registrar lectura" del consecutivo desde la autorización, sin abrir el formulario completo. **RP-4:** que el escáner devuelva el código al buscador del dock cuando no coincide con ningún equipo. (RP-3, la preferencia de tema, está en la 333.)
+- **Motivo:** `NOTAS_CLAUDE_CODE.md`, "Recomendaciones de producto".
+- **Impacto:** medio cada una.
+- **Prioridad:** Media. **Estado:** En progreso (2026-10-13). **Decisión del usuario:** "la que consideres que es la mejor opción"; se hacen las tres, en tres partes con su commit y su despliegue (AD-084). **Parte 1 hecha: RP-4** (`src/features/escaner/EscanerPage.tsx`, "Buscar este código" en el aviso sin coincidencia; prueba en `src/features/dispositivos/equiposYQr.test.tsx`). **Falta:** RP-2 (`AutorizacionPage.tsx`, hoja de la lectura) y RP-1 (`AsistenteVista.tsx`, pantalla final de la guía con equipo).
+- **Área afectada:** RP-1, `ModoFoco.tsx` y el registro de intervenciones; RP-2, `AutorizacionPage.tsx`; RP-4, `EscanerPage` y el dock de la 330.
+- **Dependencias:** RP-1 de la 328, RP-2 de la 331 y RP-4 de la 330.
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
@@ -603,16 +613,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Prioridad:** Baja. **Estado:** Bloqueada: contradice la regla 12 (la app es de tema oscuro únicamente) y requiere la recomendación de producto RP-3 (preferencia de tema oscuro, claro o automático en Ajustes). No se implementa sin decisión del usuario.
 - **Área afectada:** `src/index.css`, Ajustes.
 - **Dependencias:** decisión del usuario sobre RP-3 y la regla 12; 327.
-
-### 335. Recomendaciones de producto del rediseño móvil (RP-1, RP-2 y RP-4)
-
-- **Título:** tres funciones nuevas que el handoff recomienda y no se implementan sin decisión del usuario.
-- **Descripción:** **RP-1:** al terminar una guía abierta desde un equipo, ofrecer "Registrar intervención" con la guía precargada. **RP-2:** atajo "Registrar lectura" del consecutivo desde la autorización, sin abrir el formulario completo. **RP-4:** que el escáner devuelva el código al buscador del dock cuando no coincide con ningún equipo. (RP-3, la preferencia de tema, está en la 333.)
-- **Motivo:** `NOTAS_CLAUDE_CODE.md`, "Recomendaciones de producto".
-- **Impacto:** medio cada una.
-- **Prioridad:** Media. **Estado:** Pendiente de decisión del usuario.
-- **Área afectada:** RP-1, `ModoFoco.tsx` y el registro de intervenciones; RP-2, `AutorizacionPage.tsx`; RP-4, `EscanerPage` y el dock de la 330.
-- **Dependencias:** RP-1 de la 328, RP-2 de la 331 y RP-4 de la 330.
 
 ### 319. Casos de datos y conflictos de la conciliación que no se resuelven por código (usuario y ChatGPT)
 

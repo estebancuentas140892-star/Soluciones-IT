@@ -8,11 +8,12 @@ import {
   Check,
   Flashlight,
   FlashlightFill,
+  MagnifyingGlass,
   Monitor,
   Question,
 } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
-import { conOrigen } from '../../lib/origenNavegacion'
+import { conOrigen, type BusquedaEnCurso } from '../../lib/origenNavegacion'
 import { useOrigen } from '../../app/useOrigen'
 import { resolverCodigo } from './resolverCodigo'
 import {
@@ -292,10 +293,19 @@ export function EscanerPage() {
   // Registrar el equipo precargando el codigo leido como serial
   // (hallazgo H3): asi el tecnico no reescribe lo que la app ya leyo. Se
   // omite si el codigo es una URL de etiqueta (no es un serial).
+  const codigoEsUrl = aviso?.tipo === 'no_encontrado' && /^https?:\/\//i.test(aviso.codigo)
   const rutaRegistrarEquipo =
-    aviso?.tipo === 'no_encontrado' && !/^https?:\/\//i.test(aviso.codigo)
+    aviso?.tipo === 'no_encontrado' && !codigoEsUrl
       ? `/dispositivos/nuevo?serial=${encodeURIComponent(aviso.codigo)}`
       : '/dispositivos/nuevo'
+  // BUSCAR EL CÓDIGO (recomendación RP-4 del rediseño móvil, tarea 335):
+  // un código que no es de ningún equipo puede estar en una guía, una nota
+  // o la Bóveda. Lleva al buscador de Resolver (el del dock) con el código
+  // ya escrito, por el mismo canal con el que se repone una búsqueda al
+  // volver (`location.state`, nunca la URL). Una URL de etiqueta no se
+  // busca: no es texto que aparezca en ningún sitio.
+  const busquedaDelCodigo: { busqueda: BusquedaEnCurso } | null =
+    aviso?.tipo === 'no_encontrado' && !codigoEsUrl ? { busqueda: { consulta: aviso.codigo, capa: false } } : null
 
   return (
     <div className="nocturne relative mx-auto flex min-h-svh max-w-md flex-col overflow-hidden bg-noct-bg font-inter text-[15px] text-noct-text">
@@ -430,6 +440,12 @@ export function EscanerPage() {
                 </p>
               </div>
             </div>
+            {busquedaDelCodigo && (
+              <Link to="/" state={busquedaDelCodigo} className={`min-h-11 justify-center ${BTN_SECUNDARIO}`}>
+                <MagnifyingGlass size={16} aria-hidden />
+                Buscar este código
+              </Link>
+            )}
             <div className="flex gap-2.5">
               <button
                 type="button"
