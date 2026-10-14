@@ -74,8 +74,10 @@ import {
   useAvanceProgreso,
   useClaveProgreso,
   useClaveVinculo,
+  useEjecucion,
   useEnVistaPrevia,
 } from './contextoEjecucion'
+import { IntervencionAlTerminar } from './IntervencionAlTerminar'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { estadoVinculo, kickerVinculo } from './estadoVinculo'
 import { TarjetaGuiaVinculada } from './TarjetaGuiaVinculada'
@@ -175,6 +177,12 @@ export function AsistenteVista({
   // interfaz a paneles ya densos.
   const articulo = useLiveQuery(() => (nivel === 0 ? db.articulos.get(articuloId) : undefined), [articuloId, nivel])
   const dispositivoEvidencia = articulo?.dispositivosAfectados?.[0] ?? null
+  // EL EQUIPO DE LA EJECUCIÓN (`?equipo=` o el que se fijó en la guía),
+  // para ofrecer la intervención al terminar (RP-1, tarea 335). En la
+  // vista previa del editor no se ofrece: probar no escribe en ningún
+  // historial.
+  const equipoEjecucion = useEjecucion()?.equipoId ?? null
+  const enVistaPreviaGuia = useEnVistaPrevia()
 
   // DÓNDE ESTÁ EL TÉCNICO AHORA MISMO. Una guía vinculada que no se
   // puede desplegar aquí se abre en su propia pantalla, y hasta ahora
@@ -626,6 +634,11 @@ export function AsistenteVista({
           {/* LA SALIDA ES LA ACCIÓN DE ESTA PANTALLA (encargo del
               2026-09-17): terminar es volver a lo que se estaba
               haciendo. Empezar de nuevo queda como secundaria. */}
+          {/* Con un equipo, dejar en su historial lo que se hizo (RP-1,
+              tarea 335). Delineado: lo principal sigue siendo salir. */}
+          {nivel === 0 && salida && equipoEjecucion && !enVistaPreviaGuia && articulo && (
+            <IntervencionAlTerminar equipoId={equipoEjecucion} tituloGuia={articulo.titulo} />
+          )}
           {nivel === 0 && salida && (
             <Link
               to={salida.to}

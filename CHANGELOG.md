@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Agregado (guías, tarea 335, RP-1): registrar la intervención al terminar una guía con equipo
+
+**Área modificada:** `src/features/soluciones/IntervencionAlTerminar.tsx` (nuevo) y `AsistenteVista.tsx` (pantalla "Guía terminada").
+**Tipo:** Agregado; Documentación (DECISIONES AD-084 decisión 3, DOCUMENTACION_FUNCIONAL guía terminada, COMPONENTES_UI 3.7e-bis, TAREAS 335).
+**Motivo:** recomendación RP-1 del rediseño móvil "1b Pulgar"; el usuario delegó la elección el 2026-10-13.
+**Qué cambia:** al terminar una guía ejecutada con un equipo aparece "Registrar intervención": una hoja con "Qué se hizo" ya escrito y el motivo opcional, que guarda en el historial del equipo y ofrece la foto. Nada se escribe sin guardar; sin equipo o en la vista previa no aparece.
+**Estructura de datos:** sin cambios (la intervención es la misma entrada de historial de siempre).
+**Verificación:** `intervencionAlTerminar.test.tsx` nuevo (ofrece, no escribe hasta guardar, guarda en el equipo y lo dice; sin equipo no aparece); suite completa, `tsc -b`, lint y build en verde. En el navegador a 375 px con una guía del banco local y `?equipo=`, cerrando la hoja sin guardar.
+**Impacto esperado:** lo que se resolvió con una guía queda en la vida del equipo sin ir a su ficha a escribirlo.
+
 ### Agregado (facturación, tarea 335, RP-2): registrar la lectura del consecutivo en una hoja
 
 **Área modificada:** `src/features/facturacion/RegistrarLectura.tsx` (nuevo) y `AutorizacionPage.tsx`.
