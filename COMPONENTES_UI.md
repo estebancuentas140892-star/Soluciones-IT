@@ -244,7 +244,15 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Dónde:** `FilaArticulo` (y por tanto `SolucionesPage`) para el estado de artículo; `FilaDispositivo`, `DispositivoPage`, `CategoriaPage`, `EscanerPage`, `RedPage` y `TopologiaEquipoPage` para el de equipo. **CAND-1 CERRADO en la tarea 207** (hallazgo **M-017**): las seis copias a mano de "punto de color + etiqueta", más la variante propia `pillEstado` de la ficha del equipo, pasaron a esta pastilla.
 - **El punto suelto se conserva a propósito** en el árbol de topología (`TopologiaPage`) y en el de dependencias (`NodoRed`): ahí la fila no lleva el rótulo del estado, solo su color, y una pastilla por nodo sería ruido en un árbol de veinte. `claseEstado` sigue existiendo justo para eso.
 
+### 2.10d-ter `DockBusqueda` (`src/components/DockBusqueda.tsx`, 2026-10-13, tarea 330, AD-080)
+
+- **Propósito:** el buscador de una raíz, al pulgar: pegado sobre la barra de pestañas (`PEGADA_SOBRE_PESTANAS`), con el escáner (`/escaner`, "Escanear QR", 52 px) al lado si `conEscaner` (por defecto).
+- **Props:** `{ children, conEscaner = true }`; `children` es el campo de la pantalla (`CampoBusqueda` variante `dock`). Marca `data-dock-busqueda`.
+- **Teclado:** con `visualViewport` mide cuánto tapa el teclado y se pega encima (`bottom` en línea); donde el navegador encoge la página, no hace falta. Un `touchmove` fuera del dock con su campo enfocado lo desenfoca (desplazar la lista cierra el teclado).
+- **Dónde:** `ResolverPage`, `DispositivosPage` y `BovedaPage` (desbloqueada), como último hijo del chasis, después de `main`.
+
 ### 2.10d-bis `CampoBusqueda`
+- **Variante `dock` (tarea 330):** 52 px, radio 16, borde `noct-text/25` y sombra; la lupa en el acento. La usan Resolver, Equipos y Bóveda dentro de `DockBusqueda`.
 - **Propósito (tarea 207, hallazgos M-004, M-005 y M-009, regla M-R8):** UN solo campo de búsqueda para toda la app. Había **nueve copias** con cuatro alturas (46, 44, 42), dos radios, dos tamaños de icono y alcances redactados cada uno a su manera; Inicio y Guías llegaban a mostrar dos buscadores a la vez. La auditoría lo midió como una duda antes de escribir: "¿esto busca en todo o solo aquí?".
 - **Variante `destacada` (2026-10-01, tarea 287, propuesta final de Claude Design):** prop `variante?: 'normal' | 'destacada'`. La destacada mide **52 px**, radio de 10 px, lupa de 20, texto a **16 px** (sin el zoom de iOS al enfocar) y borde `noct-neutral-600` en reposo (acento con texto o foco, como la normal). Solo la usa **Resolver**, donde el campo es la pantalla; el resto de la app sigue en 46 px.
 - **Props:** `{ valor, onCambiar, alcance, textoAlternativo?, refCampo?, variante?, className? }`. `alcance` compone el marcador ("Buscar en Guías") y la etiqueta accesible; `textoAlternativo` sustituye SOLO el marcador, para el campo que no busca sino que pregunta (Diagnóstico: "Describir el problema: no imprime, sin red...").

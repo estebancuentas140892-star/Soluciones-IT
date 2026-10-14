@@ -44,24 +44,12 @@ async function buscar(texto: string): Promise<void> {
 }
 
 /** El bloque de la pregunta (lo que se pliega). */
-function pliegueDeLaPregunta(): HTMLElement | null {
-  const pregunta = Array.from(document.body.querySelectorAll('p')).find(
-    (p) => p.textContent === '¿Qué necesitas resolver?',
-  )
-  return (pregunta?.parentElement?.parentElement as HTMLElement | null) ?? null
-}
-
 describe('Resolver mientras se escribe', () => {
-  it('la pregunta se pliega con el primer carácter y vuelve al borrar', async () => {
+  it('sin la pregunta: el buscador vive en el dock de abajo y no se pliega nada al escribir (tarea 330)', async () => {
     await montar(RUTAS, '/')
-    const pliegue = await esperar(pliegueDeLaPregunta, 'la pregunta')
-    expect(pliegue.getAttribute('aria-hidden')).not.toBe('true')
-
     await buscar('i')
-    expect(pliegueDeLaPregunta()?.getAttribute('aria-hidden')).toBe('true')
-
-    await buscar('')
-    expect(pliegueDeLaPregunta()?.getAttribute('aria-hidden')).not.toBe('true')
+    expect(textoPantalla()).not.toContain('¿Qué necesitas resolver?')
+    expect(document.body.querySelector('[data-dock-busqueda] input[type="search"]')).not.toBeNull()
   })
 })
 

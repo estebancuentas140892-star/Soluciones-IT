@@ -9,7 +9,8 @@ import { partesDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { FilaDeslizable } from '../../components/FilaDeslizable'
-import { Monitor, Plus, QrCode } from '../../components/iconos'
+import { Monitor, Plus } from '../../components/iconos'
+import { DockBusqueda } from '../../components/DockBusqueda'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { buscarEquipos, conteosDeChips } from './busquedaEquipos'
@@ -192,35 +193,6 @@ export function DispositivosPage() {
           </Link>
         </header>
 
-        {/* BUSCAR Y ESCANEAR, CON EL MISMO PESO: la misma altura (46 px),
-            la misma superficie y el mismo borde. */}
-        <div className="flex items-center gap-2 px-4 pb-2.5">
-          {/* El marcador dice qué se puede buscar (propuesta final de
-              Claude Design), solo con lo que este buscador busca de verdad
-              (`camposDeBusqueda`): nombre, persona, IP, lugar, serial, placa,
-              marca y modelo. La etiqueta accesible sigue siendo "Buscar en
-              Equipos". */}
-          <CampoBusqueda
-            valor={texto}
-            onCambiar={setTexto}
-            alcance="Equipos"
-            textoAlternativo="Nombre, persona, IP, lugar o serial"
-            className="min-w-0 flex-1"
-          />
-          {/* Cuadrado de 46 px con el mismo peso que el campo (propuesta
-              final de Claude Design): el rótulo "Escanear QR" le quitaba al
-              campo el ancho que necesita su marcador. El nombre accesible
-              sigue diciéndolo. */}
-          <Link
-            to="/escaner"
-            aria-label="Escanear QR"
-            title="Escanear QR"
-            className="inline-flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-lg border border-noct-divider bg-noct-surface text-noct-neutral-200 hover:border-noct-neutral-600 hover:bg-noct-text/[.04]"
-          >
-            <QrCode size={20} className="shrink-0" aria-hidden />
-          </Link>
-        </div>
-
         {categoriasGenerales.length > 0 && (
           // LA ÚNICA FILA QUE SE DESLIZA EN HORIZONTAL: si no cabe, el borde
           // con más chips detrás se desvanece (`FilaDeslizable`) en vez de
@@ -257,7 +229,7 @@ export function DispositivosPage() {
         )}
       </>
     }>
-      <main className="flex-1 px-4 pb-16 pt-3">
+      <main className="flex-1 px-4 pb-6 pt-3">
         {hayResultados ? (
           <>
             {generales.length > 0 && (
@@ -319,6 +291,19 @@ export function DispositivosPage() {
           </div>
         )}
       </main>
+
+      {/* BUSCAR Y ESCANEAR, AL PULGAR (tarea 330): el buscador de equipos
+          de siempre (su marcador dice lo que busca de verdad, `camposDeBusqueda`),
+          en el dock de abajo con el escáner al lado. */}
+      <DockBusqueda>
+        <CampoBusqueda
+          valor={texto}
+          onCambiar={setTexto}
+          alcance="Equipos"
+          textoAlternativo="Nombre, persona, IP, lugar o serial"
+          variante="dock"
+        />
+      </DockBusqueda>
     </Chasis>
   )
 }

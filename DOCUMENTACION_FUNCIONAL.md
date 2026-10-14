@@ -344,6 +344,9 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 <a id="51-resolver"></a>
 ### 5.1 Resolver
 
+**REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 330, [DECISIONES.md](DECISIONES.md) AD-080).** La cabecera es de una sola fila: **"Resolver" a 25 px**, la sincronización y la cuenta. **Se retiran la pregunta "¿Qué necesitas resolver?" y la línea de ayuda** de debajo. Manda sobre lo que sigue donde choque.
+- **El buscador baja al dock**: el mismo campo ("Buscar en Soluciones IT", marcador "Describe qué necesitas resolver…"), de 52 px, pegado sobre la barra de pestañas, con el escáner de 52 px al lado. Con el teclado abierto sube con él; desplazar la lista con el dedo cierra el teclado. Escribir enseña los resultados en la pantalla, como siempre.
+
 **Ruta:** `/` · **Archivo:** `src/features/inicio/ResolverPage.tsx` (lógica en `resolver.ts`) · **Nivel:** Sección, el primero de los cuatro destinos
 
 **Objetivo (desde el 2026-09-22, tarea 254, [DECISIONES.md](DECISIONES.md) AD-042).** Responder una sola pregunta: **"¿Qué necesitas resolver?"**. El técnico llega con un problema delante; esta pantalla lo lleva del problema al procedimiento. Sustituye a **Inicio** y a la pestaña **Guías**, que eran dos puertas para lo mismo. **No es un tablero:** sin estadísticas, actividad, favoritos ni tarjetas decorativas.
@@ -563,6 +566,9 @@ Hallazgos **M-004**, **M-005** y **M-009**, regla **M-R8**. Había **nueve copia
 <a id="53-equipos"></a>
 ### 5.3 Equipos
 
+**REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 330, [DECISIONES.md](DECISIONES.md) AD-080).** Cabecera de raíz de una fila ("Equipos" a 25 px, sincronización y cuenta). Manda sobre lo que sigue donde choque.
+- **El buscador de equipos y "Escanear QR" bajan al dock**, sobre la barra de pestañas: el mismo campo ("Buscar en Equipos", "Nombre, persona, IP, lugar o serial") a 52 px y el escáner a 52 px. Arriba quedan "Qué se sabe de cada equipo", "Crear equipo" y los chips de categoría.
+
 **Ruta:** `/dispositivos` · **Archivo:** `src/features/dispositivos/DispositivosPage.tsx` · **Nivel:** Sección
 
 **Objetivo.** Responder "¿qué se sabe de cada equipo?" con el inventario **general** (los equipos de categorías de red van en la sección Red, no aquí).
@@ -713,6 +719,9 @@ Ver campo por campo en la sección 7. Soporta tres modos por query param: normal
 
 <a id="55-boveda"></a>
 ### 5.5 Bóveda
+
+**REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 330, [DECISIONES.md](DECISIONES.md) AD-080).** Cabecera de raíz de una fila ("Bóveda" a 25 px). Manda sobre lo que sigue donde choque.
+- **Con la Bóveda desbloqueada, su buscador baja al dock** ("Buscar en la Bóveda", 52 px) con el escáner al lado. La línea "Si la clave pertenece a un solo equipo…" pasa a 12 px.
 
 **Ruta:** `/boveda` · **Archivo:** `src/features/boveda/BovedaPage.tsx` (bajo `BovedaGuard`) · **Nivel:** Sección
 

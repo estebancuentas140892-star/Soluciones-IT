@@ -7,7 +7,6 @@ import {
   campoBuscador,
   control,
   desmontarTodo,
-  escribir,
   esperar,
   limpiarBase,
   montar,
@@ -328,10 +327,14 @@ describe('La agenda completa (/agenda)', () => {
 })
 
 describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
-  it('pregunta qué hay que resolver y el buscador es lo primero', async () => {
+  it('el buscador vive en el dock de abajo, sin la pregunta (tarea 330)', async () => {
     await montar(RUTAS, '/')
-    const texto = await esperarTexto('¿Qué necesitas resolver?')
+    await esperarTexto('Todas las guías')
+    const texto = textoPantalla()
     expect(campoBuscador()).not.toBeNull()
+    expect(campoBuscador()?.closest('[data-dock-busqueda]')).not.toBeNull()
+    // La cabecera es de una fila: sin "¿Qué necesitas resolver?".
+    expect(texto).not.toContain('¿Qué necesitas resolver?')
     // El marcador invita a contar lo que pasa (tarea 288; antes "Problema,
     // equipo o comando") y el nombre accesible sigue diciendo el alcance.
     expect(campoBuscador()?.placeholder).toBe('Describe qué necesitas resolver…')
@@ -342,27 +345,13 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
     expect(control('Todas las guías')).not.toBeNull()
   })
 
-  it('con el campo vacío hay una ayuda de una línea, y se va al escribir (tarea 288)', async () => {
+  it('la línea de ayuda ya no va en Resolver (tarea 330): la dice la búsqueda vacía', async () => {
     await montar(RUTAS, '/')
-    const ayuda = 'Ej.: no imprime, usuario bloqueado, impresora mercadeo'
-    // UNA línea a 390 px: happy-dom no mide texto, así que se vigila el
-    // largo. Con Inter a 12,5 px caben 350 px; este texto mide 334 y el
-    // anterior ("no imprime el PDF, …", 61 caracteres), 375: se partía.
-    expect(AYUDA_BUSCADOR).toBe(ayuda)
-    expect(ayuda.length).toBeLessThanOrEqual(55)
-    await esperarTexto(ayuda)
-    const parrafo = () =>
-      Array.from(document.body.querySelectorAll('p')).find((p) => p.textContent === ayuda) ?? null
-    // Un párrafo de texto: ni tarjeta, ni botón, ni tutorial.
-    expect(parrafo()?.closest('button, a, [role="dialog"]')).toBeNull()
-    expect(parrafo()?.closest('[aria-hidden="true"]')).toBeNull()
-
-    await escribir(campoBuscador()!, 'impresora')
-    // Se pliega con la pregunta y deja de leerse.
-    expect(parrafo()?.closest('[aria-hidden="true"]')).not.toBeNull()
-    await escribir(campoBuscador()!, '')
-    expect(parrafo()?.closest('[aria-hidden="true"]')).toBeNull()
+    await esperarTexto('Todas las guías')
+    expect(AYUDA_BUSCADOR).toBe('Ej.: no imprime, usuario bloqueado, impresora mercadeo')
+    expect(textoPantalla()).not.toContain(AYUDA_BUSCADOR)
   })
+
 
   it('"Atención" enseña hasta tres asuntos con fecha y lleva a la agenda completa', async () => {
     await sembrarAcceso('c1', 'Panel del router', -30)

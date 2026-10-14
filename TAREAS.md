@@ -59,7 +59,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 1 | Tokens, IBM Plex Mono local y `BTN_PRIMARIO_RELLENO` | 327 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 2 | Ejecución de guía | 328 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 3 | Ficha de equipo | 329 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
-| 4 | Dock de búsqueda, búsqueda y cabeceras de raíz | 330 | Pendiente |
+| 4 | Dock de búsqueda, búsqueda y cabeceras de raíz | 330 | **En proceso**: primera parte (dock y cabeceras) integrada en `main`; faltan el contenido de Resolver y la pantalla de búsqueda |
 | 5 | Mantenimiento y autorización (tres formas de dato) | 331 | Pendiente |
 | 6 | Agenda y Más | 332 | Pendiente |
 | 7 | Tema claro | 333 | Bloqueada: contradice la regla 12 y depende de RP-3 |
@@ -96,6 +96,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Prioridad:** Alta. **Estado:** Integrada en `main` (2026-10-13) y desplegada, pendiente de la confirmación visual del usuario en producción; no se archiva hasta entonces. **Hecho:** `src/features/dispositivos/DispositivoPage.tsx` reescrita en su presentación (carnet de 52 px con el nombre a 28 px y el estado debajo; avisos del equipo; datos para trabajar sin tarjeta con la IP en mono 20 px; "Resolver con este equipo" con tres formas y "Ver N"; índice "Más del equipo" de un nivel con `HojaInferior` por fila, anclas incluidas; menú "···" con Favorito y Compartir y lo destructivo aparte; barra fija `BarraAccionEquipo`), piezas nuevas en `PiezasFicha.tsx`, `src/components/HojaInferior.tsx`, `Chasis.tsx` (`tituloVisible`, `pestanasSeOcultanAlBajar`) y `nocturne.tsx` (`BAJA_CON_LAS_PESTANAS`). Prueba nueva `fichaEquipoMovil.test.tsx`; actualizadas `equiposYQr`, `contextoEquipoPantallas`, `facturacionFlujo` y `mantenimientoFlujo`. Medida a 375 px. **Diferencias con el diseño, a propósito:** el estado va bajo el nombre (a la derecha partía nombres a mitad de palabra) y Mantenimiento y Facturación abren hoja hasta que la 331 les dé pantalla. **Pendiente de la 331:** que esas dos filas abran su pantalla con `CaretRight`.
 - **Área afectada:** `DispositivoPage.tsx`, `FilaDato.tsx`, `SeccionPlegable.tsx` (deja de usarse ahí), `PastillaEstado.tsx`, el chasis (`src/app/Chasis.tsx`, ocultar pestañas al desplazar) y sus pruebas.
 - **Dependencias:** 327. Usa la pantalla de mantenimiento de la 331 (hoy es un pliegue: hasta la 331, la fila abre lo que hay).
+
+### 330. Rediseño móvil, paso 4: dock de búsqueda, búsqueda y cabeceras de raíz
+
+- **Título:** buscar desde abajo en las raíces, con el campo pegado al teclado, y cabeceras de raíz de una fila.
+- **Descripción:** dock de búsqueda abajo en Resolver, Equipos y Bóveda (desbloqueada): campo de 52 px y botón QR de 52 px encima de la barra de pestañas; abre la búsqueda global con el campo sobre el teclado (`visualViewport`). Sustituye al campo en línea de Resolver y a la lupa de la cabecera en esas raíces (M-R8: un buscador por pantalla). Cabecera de raíz de una fila: título 25 px, `PastillaSync` y avatar; desaparecen "¿Qué necesitas resolver?" y la línea de ayuda. Búsqueda (`src/features/busqueda/BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx`): cabecera con regreso, chips de alcance con conteo (Todo, Equipos, Red, Guías, Personas, Lugares, Claves, Facturación) que solo filtran la vista, resultados agrupados por tipo, IP en mono a la derecha; desplazar la lista cierra el teclado; `PuenteBoveda` se conserva como estado vacío con la Bóveda bloqueada. Resolver (`src/features/inicio/ResolverPage.tsx`): Necesita atención (contadores vencidos, para hoy y próximos que abren la Agenda), filas de Atención (`FilaAgenda` con barra lateral de 4 px del estado, icono neutro, verbo 14 px seminegrita), Seguir donde ibas (tarjeta con segmentos), Guías por categoría y el dock. Sin cambios en `asuntosDeAtencion`, `guiasRecientes` ni `accesosRapidos`.
+- **Motivo:** encargo del 2026-10-13, paso 4 (navegación, puntos 1 y 2; pantallas Resolver y Búsqueda).
+- **Impacto:** alto: cambia el gesto principal de buscar. Respeta BUSCADOR.md (no cambia qué se indexa ni el ranking) y la regla 23.
+- **Prioridad:** Alta. **Estado:** En progreso, en tres partes con su commit y su despliegue. **Parte 1 hecha (2026-10-13):** `DockBusqueda` (nuevo, `src/components/DockBusqueda.tsx`) con el buscador de cada pantalla abajo en Resolver, Equipos y Bóveda, escáner al lado y teclado con `visualViewport`; `CampoBusqueda` variante `dock`; título de raíz a 25 px (`CabeceraColapsable`); en Resolver se retiran la pregunta y la línea de ayuda (`ResolverPage.tsx`). **Falta parte 2:** el contenido de Resolver (contadores que abren la Agenda, `FilaAgenda` con barra lateral de 4 px, "Seguir donde ibas" en tarjeta con segmentos, guías por categoría). **Falta parte 3:** la búsqueda global (`BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx`) con cabecera de regreso, chips de alcance con conteo, grupos por tipo, IP en mono y el campo abajo.
+- **Área afectada:** `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `src/components/CampoBusqueda.tsx`, `ResolverPage.tsx`, `SeccionesAgenda.tsx` (`FilaAgenda`), `BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx`, las raíces de Equipos y Bóveda y sus pruebas (`nombresSinRecorte.test.tsx` incluida).
+- **Dependencias:** 327.
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
@@ -553,16 +563,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 330. Rediseño móvil, paso 4: dock de búsqueda, búsqueda y cabeceras de raíz
-
-- **Título:** buscar desde abajo en las raíces, con el campo pegado al teclado, y cabeceras de raíz de una fila.
-- **Descripción:** dock de búsqueda abajo en Resolver, Equipos y Bóveda (desbloqueada): campo de 52 px y botón QR de 52 px encima de la barra de pestañas; abre la búsqueda global con el campo sobre el teclado (`visualViewport`). Sustituye al campo en línea de Resolver y a la lupa de la cabecera en esas raíces (M-R8: un buscador por pantalla). Cabecera de raíz de una fila: título 25 px, `PastillaSync` y avatar; desaparecen "¿Qué necesitas resolver?" y la línea de ayuda. Búsqueda (`src/features/busqueda/BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx`): cabecera con regreso, chips de alcance con conteo (Todo, Equipos, Red, Guías, Personas, Lugares, Claves, Facturación) que solo filtran la vista, resultados agrupados por tipo, IP en mono a la derecha; desplazar la lista cierra el teclado; `PuenteBoveda` se conserva como estado vacío con la Bóveda bloqueada. Resolver (`src/features/inicio/ResolverPage.tsx`): Necesita atención (contadores vencidos, para hoy y próximos que abren la Agenda), filas de Atención (`FilaAgenda` con barra lateral de 4 px del estado, icono neutro, verbo 14 px seminegrita), Seguir donde ibas (tarjeta con segmentos), Guías por categoría y el dock. Sin cambios en `asuntosDeAtencion`, `guiasRecientes` ni `accesosRapidos`.
-- **Motivo:** encargo del 2026-10-13, paso 4 (navegación, puntos 1 y 2; pantallas Resolver y Búsqueda).
-- **Impacto:** alto: cambia el gesto principal de buscar. Respeta BUSCADOR.md (no cambia qué se indexa ni el ranking) y la regla 23.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `src/components/CampoBusqueda.tsx`, `ResolverPage.tsx`, `SeccionesAgenda.tsx` (`FilaAgenda`), `BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx`, las raíces de Equipos y Bóveda y sus pruebas (`nombresSinRecorte.test.tsx` incluida).
-- **Dependencias:** 327.
 
 ### 331. Rediseño móvil, paso 5: mantenimiento y autorización con tres formas de dato
 

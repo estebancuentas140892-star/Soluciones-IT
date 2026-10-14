@@ -6,6 +6,7 @@ import { conOrigen } from '../../lib/origenNavegacion'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
+import { DockBusqueda } from '../../components/DockBusqueda'
 import {
   BookOpen,
   CaretRight,
@@ -23,7 +24,7 @@ import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { BorradoresCoincidentes, GuiasEnBorrador } from '../busqueda/BorradoresCoincidentes'
-import { AYUDA_BUSCADOR, MARCADOR_BUSCADOR } from '../busqueda/resultados'
+import { MARCADOR_BUSCADOR } from '../busqueda/resultados'
 import {
   borradoresCoincidentes,
   esBorradorVivo,
@@ -202,60 +203,17 @@ export function ResolverPage() {
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila, el primero de los
     // cuatro destinos. `conLupa={false}` (regla M-R8, "un buscador por
-    // pantalla"): esta pantalla trae su propio campo en línea, así que la
-    // lupa del chasis sería el segundo buscador de la misma pantalla.
+    // pantalla"): esta pantalla trae su propio buscador, así que la lupa
+    // del chasis sería el segundo de la misma pantalla. Desde la tarea 330
+    // la cabecera es de una fila (título, sincronización y cuenta) y el
+    // buscador baja al dock: la pregunta "¿Qué necesitas resolver?" y la
+    // línea de ayuda se retiran.
     <Chasis
       titulo="Resolver"
       conLupa={false}
       tituloContraido={escribiendo}
-      barra={
-        <div className="px-4 pb-3.5 pt-1.5">
-          {/* LA PREGUNTA, NO EL MÓDULO. El técnico no llega con ganas de
-              buscar, llega con algo que resolver. La etiqueta accesible
-              sigue nombrando el alcance (regla M-R8). Se pliega con el
-              primer carácter (alto y opacidad, 180 ms; sin animación si
-              el sistema pide menos movimiento). */}
-          <div
-            aria-hidden={escribiendo}
-            className={`grid transition-[grid-template-rows,opacity] duration-[180ms] ease-out motion-reduce:transition-none ${
-              escribiendo ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
-            }`}
-          >
-            <div className="overflow-hidden">
-              <p className="px-0.5 pb-2.5 text-[22px] font-medium leading-[1.25] tracking-[-.01em] text-noct-text">
-                ¿Qué necesitas resolver?
-              </p>
-            </div>
-          </div>
-          {/* SE DESCRIBE, NO SE NOMBRA (tarea 288, fase 9). Desde que el
-              buscador entiende qué se pide, el marcador invita a contarlo
-              ("Describe qué necesitas resolver…") en vez de pedir una
-              categoría ("Problema, equipo o comando"). */}
-          <CampoBusqueda
-            valor={query}
-            onCambiar={setQuery}
-            alcance="Soluciones IT"
-            textoAlternativo={MARCADOR_BUSCADOR}
-            refCampo={refCampo}
-            variante="destacada"
-          />
-          {/* Con el campo vacío, una ayuda discreta con tres maneras reales
-              de escribir; se pliega con el primer carácter, igual que la
-              pregunta. Sin tarjeta ni tutorial: una línea de texto. */}
-          <div
-            aria-hidden={escribiendo}
-            className={`grid transition-[grid-template-rows,opacity] duration-[180ms] ease-out motion-reduce:transition-none ${
-              escribiendo ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'
-            }`}
-          >
-            <div className="overflow-hidden">
-              <p className="px-1 pt-2 text-[12.5px] leading-snug text-noct-neutral-400">{AYUDA_BUSCADOR}</p>
-            </div>
-          </div>
-        </div>
-      }
     >
-      <main className="flex-1 px-4 pb-16 pt-4">
+      <main className="flex-1 px-4 pb-6 pt-4">
         {buscando ? (
           <div className="flex flex-col gap-4">
             {/* La guía en borrador que coincide en el título, DELANTE de
@@ -347,6 +305,20 @@ export function ResolverPage() {
           </div>
         )}
       </main>
+
+      {/* EL BUSCADOR, AL PULGAR (tarea 330): el mismo de siempre, abajo,
+          sobre las pestañas y, con el teclado abierto, sobre el teclado.
+          El marcador sigue invitando a describir lo que pasa (tarea 288). */}
+      <DockBusqueda>
+        <CampoBusqueda
+          valor={query}
+          onCambiar={setQuery}
+          alcance="Soluciones IT"
+          textoAlternativo={MARCADOR_BUSCADOR}
+          refCampo={refCampo}
+          variante="dock"
+        />
+      </DockBusqueda>
     </Chasis>
   )
 }

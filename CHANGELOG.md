@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Cambiado (raíces, tarea 330, primera parte): el buscador baja al dock y la cabecera de raíz es de una fila
+
+**Área modificada:** `src/components/DockBusqueda.tsx` (nuevo), `CampoBusqueda.tsx` (variante `dock`), `CabeceraColapsable.tsx` (25 px), `src/features/inicio/ResolverPage.tsx`, `src/features/dispositivos/DispositivosPage.tsx`, `src/features/boveda/BovedaPage.tsx`.
+**Tipo:** Modificado; Documentación (DECISIONES AD-080, DOCUMENTACION_FUNCIONAL 5.1, 5.3 y 5.5, COMPONENTES_UI 2.10d-bis y 2.10d-ter, TAREAS 330).
+**Motivo:** encargo del 2026-10-13, paso 4 del rediseño móvil "1b Pulgar".
+**Qué cambia:** en Resolver, Equipos y Bóveda el buscador de cada pantalla baja a un dock de 52 px sobre las pestañas, con el escáner al lado, y sube con el teclado; el título de raíz pasa a 25 px; en Resolver se retiran la pregunta y la línea de ayuda.
+**Estructura de datos:** sin cambios.
+**Verificación:** suite completa, `tsc -b`, lint y build en verde (actualizadas `resolverYAgenda` y `resultadosPropuestaFinal`). En el navegador a 375 px: el dock queda justo sobre las pestañas en Resolver y Equipos, con un solo buscador por pantalla.
+**Impacto esperado:** buscar con el pulgar, con una mano.
+
 ### Cambiado (ficha de equipo, tarea 329): carnet con avisos, datos sin tarjeta, "Resolver con este equipo", un índice de hojas y pestañas que se esconden al bajar
 
 **Área modificada:** `src/features/dispositivos/DispositivoPage.tsx`, `PiezasFicha.tsx` (nuevo), `src/components/HojaInferior.tsx` (nuevo, también lo usa `CredencialEnHoja`), `BotonFavorito.tsx` (variante `menu`), `nocturne.tsx` (`BAJA_CON_LAS_PESTANAS`), `src/app/Chasis.tsx` (`tituloVisible`, `pestanasSeOcultanAlBajar`, contexto a 12 px).

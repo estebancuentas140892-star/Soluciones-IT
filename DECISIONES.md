@@ -877,3 +877,11 @@ Cada decisión indica su estado (Vigente / Revisada / Descartada), su contexto, 
 - **Decisión 5, pestañas que se esconden al bajar, solo aquí.** Reutiliza `decidirContraida` (umbral de 8 px, siempre a la vista cerca del principio). La barra fija baja al borde con `group-data` sobre el contenedor del chasis, sin medir nada.
 - **Decisión 6, el estado bajo el nombre.** El diseño lo pone a la derecha; a 28 px eso partía nombres reales a mitad de palabra en 375 px. Se conserva bajo el nombre.
 - **Descartado:** dejar el menú como estaba con Favorito y Compartir en la cabecera (el diseño los pide en "···" y la cabecera de un documento queda en regreso, de qué es y menú); llevar los avisos a la Agenda (ya están ahí los vencimientos; aquí son del equipo que se tiene delante).
+
+## AD-080. El buscador de las raíces baja al pulgar y la cabecera de raíz es de una fila
+
+- **Estado:** Vigente (2026-10-13, tarea 330, paso 4 del rediseño móvil "1b Pulgar"; primera parte).
+- **Contexto:** en Resolver, Equipos y Bóveda el buscador era lo primero de la pantalla, arriba, donde el pulgar no llega con una mano; en Resolver además lo precedía una pregunta de 22 px y lo seguía una línea de ayuda.
+- **Decisión 1, el mismo buscador, en otro sitio.** `DockBusqueda` lleva el campo de cada pantalla (su alcance, su etiqueta accesible, su marcador y su lógica no cambian) a un dock pegado sobre las pestañas, con el escáner al lado. Se descartó que el dock abriera la búsqueda global en todas las raíces: Equipos y Bóveda perderían su búsqueda propia (con sus filtros y chips) y el encargo no añade ni quita funciones. La búsqueda global como pantalla con chips es la tercera parte de esta tarea.
+- **Decisión 2, el teclado.** `visualViewport` mide lo que tapa el teclado y el dock se pega encima; desplazar la lista cierra el teclado. Sin `visualViewport`, el dock queda sobre las pestañas.
+- **Decisión 3, cabecera de raíz de una fila.** "Resolver", "Equipos", "Bóveda"… a 25 px y 650 (`CabeceraColapsable`), con la sincronización y la cuenta. En Resolver se retiran "¿Qué necesitas resolver?" y la línea de ayuda (`AYUDA_BUSCADOR` sigue en la búsqueda global vacía). El marcador "Describe qué necesitas resolver…" de la tarea 288 se conserva aunque el diseño proponga "Equipo, IP, guía, persona…": es una decisión de producto ya tomada.

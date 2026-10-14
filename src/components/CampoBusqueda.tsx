@@ -42,11 +42,14 @@ export function CampoBusqueda({
   // sin red..."). La etiqueta accesible sigue diciendo el alcance.
   textoAlternativo?: string
   refCampo?: Ref<HTMLInputElement>
-  variante?: 'normal' | 'destacada'
+  variante?: 'normal' | 'destacada' | 'dock'
   className?: string
 }) {
   const buscando = valor.trim().length > 0
-  const destacada = variante === 'destacada'
+  // `dock` (tarea 330): el de abajo, al pulgar. Mismo alto que `destacada`
+  // (52 px), más redondo, con borde y sombra: flota sobre la lista.
+  const dock = variante === 'dock'
+  const destacada = variante === 'destacada' || dock
 
   return (
     <label
@@ -58,12 +61,16 @@ export function CampoBusqueda({
       // global que sustituyen, y distintos del borde de 1 px que queda
       // cuando hay texto escrito pero el foco está en otra parte.
       className={`flex items-center border bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent ${
-        destacada ? 'h-[52px] gap-3 rounded-[10px] pl-4 pr-3.5' : 'h-[46px] gap-2.5 rounded-lg px-3.5'
-      } ${buscando ? 'border-noct-accent' : destacada ? 'border-noct-neutral-600' : 'border-noct-divider'} ${className}`}
+        dock
+          ? 'h-[52px] gap-2.5 rounded-2xl pl-4 pr-3.5 shadow-[0_6px_20px_rgba(0,0,0,.16)]'
+          : destacada
+            ? 'h-[52px] gap-3 rounded-[10px] pl-4 pr-3.5'
+            : 'h-[46px] gap-2.5 rounded-lg px-3.5'
+      } ${buscando ? 'border-noct-accent' : dock ? 'border-noct-text/25' : destacada ? 'border-noct-neutral-600' : 'border-noct-divider'} ${className}`}
     >
       <MagnifyingGlass
         size={destacada ? 20 : 18}
-        className={`shrink-0 ${buscando ? 'text-noct-accent' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
+        className={`shrink-0 ${buscando || dock ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
         aria-hidden
       />
       <input
