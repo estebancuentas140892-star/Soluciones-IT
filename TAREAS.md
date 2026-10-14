@@ -64,7 +64,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 6 | Agenda y Más | 332 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 7 | Tema claro | 333 | Bloqueada: contradice la regla 12 y depende de RP-3 |
 | (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Decidido: verde lima; integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
-| (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | **En proceso**: el usuario delegó la elección; se hacen las tres. RP-4 integrada en `main` |
+| (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | **En proceso**: el usuario delegó la elección; se hacen las tres. RP-4 y RP-2 integradas en `main` |
 
 ### 327. Rediseño móvil, paso 1: tokens cian, IBM Plex Mono local y botón primario relleno
 
@@ -143,7 +143,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Descripción:** **RP-1:** al terminar una guía abierta desde un equipo, ofrecer "Registrar intervención" con la guía precargada. **RP-2:** atajo "Registrar lectura" del consecutivo desde la autorización, sin abrir el formulario completo. **RP-4:** que el escáner devuelva el código al buscador del dock cuando no coincide con ningún equipo. (RP-3, la preferencia de tema, está en la 333.)
 - **Motivo:** `NOTAS_CLAUDE_CODE.md`, "Recomendaciones de producto".
 - **Impacto:** medio cada una.
-- **Prioridad:** Media. **Estado:** En progreso (2026-10-13). **Decisión del usuario:** "la que consideres que es la mejor opción"; se hacen las tres, en tres partes con su commit y su despliegue (AD-084). **Parte 1 hecha: RP-4** (`src/features/escaner/EscanerPage.tsx`, "Buscar este código" en el aviso sin coincidencia; prueba en `src/features/dispositivos/equiposYQr.test.tsx`). **Falta:** RP-2 (`AutorizacionPage.tsx`, hoja de la lectura) y RP-1 (`AsistenteVista.tsx`, pantalla final de la guía con equipo).
+- **Prioridad:** Media. **Estado:** En progreso (2026-10-13). **Decisión del usuario:** "la que consideres que es la mejor opción"; se hacen las tres, en tres partes con su commit y su despliegue (AD-084). **Parte 1 hecha: RP-4** (`src/features/escaner/EscanerPage.tsx`, "Buscar este código" en el aviso sin coincidencia; prueba en `src/features/dispositivos/equiposYQr.test.tsx`). **Parte 2 hecha: RP-2** (`src/features/facturacion/RegistrarLectura.tsx` nuevo y `AutorizacionPage.tsx`: "Registrar lectura" abre la hoja, con o sin lectura anterior; sin rango, el formulario; pruebas en `facturacionFlujo.test.tsx`). **Falta:** RP-1 (`AsistenteVista.tsx`, pantalla final de la guía con equipo).
 - **Área afectada:** RP-1, `ModoFoco.tsx` y el registro de intervenciones; RP-2, `AutorizacionPage.tsx`; RP-4, `EscanerPage` y el dock de la 330.
 - **Dependencias:** RP-1 de la 328, RP-2 de la 331 y RP-4 de la 330.
 

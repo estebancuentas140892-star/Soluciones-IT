@@ -4,6 +4,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
+import { HojaInferior } from '../../components/HojaInferior'
 import { CaretRight, DotsThreeOutline, Note, Paperclip, PencilSimple, Pulse, SealCheck, Storefront, TrashSimple } from '../../components/iconos'
 import { BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO } from '../../components/nocturne'
 import { formatearNumero, textoRango } from '../../lib/autorizaciones'
@@ -13,6 +14,7 @@ import { conOrigen } from '../../lib/origenNavegacion'
 import { eliminarRegistro } from '../../lib/repositorio'
 import { evidenciaValida, motivoDeRevision, numerosRestantes, tieneConsecutivoLeido } from './autorizacion'
 import { PastillaEstadoAutorizacion } from './PresentacionAutorizacion'
+import { RegistrarLectura } from './RegistrarLectura'
 
 // UNA AUTORIZACIÓN DE FACTURACIÓN (tarea 321): consultarla. Se llega desde
 // la ficha de un POS, desde la Agenda o desde la lista, y vuelve a donde
@@ -32,6 +34,8 @@ export function AutorizacionPage() {
   const origen = useOrigen()
   const [mostrarEliminar, setMostrarEliminar] = useState(false)
   const [menuAbierto, setMenuAbierto] = useState(false)
+  // La hoja de la lectura del consecutivo (RP-2, tarea 335).
+  const [leyendo, setLeyendo] = useState(false)
   const autorizacion = useLiveQuery(
     async () => (await db.autorizaciones_facturacion.get(autorizacionId)) ?? null,
     [autorizacionId],
@@ -229,7 +233,11 @@ export function AutorizacionPage() {
                 </span>
               }
             />
-            <Consecutivo autorizacion={autorizacion} editar={`/facturacion/${autorizacionId}/editar`} />
+            <Consecutivo
+              autorizacion={autorizacion}
+              editar={`/facturacion/${autorizacionId}/editar`}
+              onRegistrarLectura={() => setLeyendo(true)}
+            />
           </section>
 
           <section aria-labelledby="aut-pos" className="flex flex-col">
@@ -282,6 +290,16 @@ export function AutorizacionPage() {
         </div>
       </main>
 
+      {/* Se monta solo abierta: cada lectura empieza en blanco. */}
+      <HojaInferior
+        abierta={leyendo}
+        onCerrar={() => setLeyendo(false)}
+        titulo="Registrar lectura"
+        contexto={[autorizacion.prefijo, textoRango(autorizacion)].filter(Boolean).join(' · ')}
+      >
+        {leyendo && <RegistrarLectura autorizacion={autorizacion} alTerminar={() => setLeyendo(false)} />}
+      </HojaInferior>
+
       <DialogoEliminar
         abierto={mostrarEliminar}
         titulo={`¿Eliminar la autorización ${autorizacion.prefijo}?`}
@@ -321,9 +339,31 @@ function DatoDocumentado({ etiqueta, children }: { etiqueta: string; children: R
 // EL DATO ACTUAL, COMO LA LECTURA DE UN INSTRUMENTO (tarea 331): el último
 // emitido grande y en IBM Plex Mono, la barra del rango gastado, cuántos
 // quedan y cuándo y dónde se leyó. Sin lectura, un guion y por qué no se
-// estima. Registrar la lectura abre el formulario de siempre (el atajo de
-// solo la lectura es la recomendación RP-2, sin decidir).
-function Consecutivo({ autorizacion, editar }: { autorizacion: AutorizacionFacturacion; editar: string }) {
+// estima. Desde la tarea 335 (RP-2), "Registrar lectura" abre una hoja con
+// solo los tres campos de la lectura, con o sin una anterior; sin rango no
+// se puede registrar ninguna, y entonces lleva al formulario, donde se
+// documenta el rango.
+function Consecutivo({
+  autorizacion,
+  editar,
+  onRegistrarLectura,
+}: {
+  autorizacion: AutorizacionFacturacion
+  editar: string
+  onRegistrarLectura: () => void
+}) {
+  const conRango = autorizacion.rangoDesde !== null && autorizacion.rangoHasta !== null
+  const registrar = conRango ? (
+    <button type="button" onClick={onRegistrarLectura} className={ACCION_DELINEADA}>
+      <Pulse size={16} aria-hidden />
+      Registrar lectura
+    </button>
+  ) : (
+    <Link to={editar} className={ACCION_DELINEADA}>
+      <Pulse size={16} aria-hidden />
+      Registrar lectura
+    </Link>
+  )
   if (!tieneConsecutivoLeido(autorizacion)) {
     return (
       <div className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5">
@@ -331,10 +371,7 @@ function Consecutivo({ autorizacion, editar }: { autorizacion: AutorizacionFactu
           <span className="block h-[3px] w-7 rounded-full bg-noct-neutral-500" />
         </span>
         <p className="text-[14px] leading-[1.45] text-noct-neutral-300">Sin lectura. No se estima por fechas ni por consumo.</p>
-        <Link to={editar} className={ACCION_DELINEADA}>
-          <Pulse size={16} aria-hidden />
-          Registrar lectura
-        </Link>
+        {registrar}
       </div>
     )
   }
@@ -369,6 +406,7 @@ function Consecutivo({ autorizacion, editar }: { autorizacion: AutorizacionFactu
       <p className="text-[12.5px] text-noct-neutral-400 [overflow-wrap:anywhere]">
         Leído el {fechaConAnio(autorizacion.consecutivoLeidoEn as string)} en {autorizacion.consecutivoFuente}
       </p>
+      {registrar}
     </div>
   )
 }

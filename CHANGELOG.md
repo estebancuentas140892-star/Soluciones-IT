@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Agregado (facturación, tarea 335, RP-2): registrar la lectura del consecutivo en una hoja
+
+**Área modificada:** `src/features/facturacion/RegistrarLectura.tsx` (nuevo) y `AutorizacionPage.tsx`.
+**Tipo:** Agregado; Documentación (DECISIONES AD-084 decisión 2, DOCUMENTACION_FUNCIONAL facturación, COMPONENTES_UI, TAREAS 335).
+**Motivo:** recomendación RP-2 del rediseño móvil "1b Pulgar"; el usuario delegó la elección el 2026-10-13.
+**Qué cambia:** en la ficha de una autorización, "Registrar lectura" (también cuando ya hay una) abre una hoja con el número, el día (hoy) y dónde se leyó (el sitio anterior). Mismas validaciones e historial que el formulario. Sin rango, sigue abriendo el formulario.
+**Estructura de datos:** sin cambios.
+**Verificación:** `facturacionFlujo` con dos pruebas nuevas (la hoja propone, valida, guarda y deja historial; sin rango lleva al formulario) y una ajustada; suite completa, `tsc -b`, lint y build en verde. En el navegador a 375 px con una autorización de prueba en la base local, retirada al terminar.
+**Impacto esperado:** leer el consecutivo de un POS y anotarlo en segundos, sin recorrer el formulario entero.
+
 ### Agregado (escáner, tarea 335, RP-4): buscar el código que no es de ningún equipo
 
 **Área modificada:** `src/features/escaner/EscanerPage.tsx`.

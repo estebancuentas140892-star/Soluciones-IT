@@ -462,17 +462,71 @@ describe('la ficha en tres formas (tarea 331)', () => {
     expect(control('Eliminar')).not.toBeNull()
   })
 
-  it('sin verificar ni lectura lo dice, con sus dos accesos al formulario, y una reemplazada se lee atenuada', async () => {
+  it('sin verificar ni lectura lo dice, con sus dos accesos, y una reemplazada se lee atenuada', async () => {
     await sembrarBase()
     await sembrarAutorizacion({ id: 'vieja', prefijo: 'OLD', estado: 'reemplazada' })
     await montar(RUTAS, '/facturacion/vieja')
     await esperar(() => textoPantalla().includes('Sin verificar con una fuente actual.'), 'la ficha')
     expect(textoPantalla()).toContain('Sin lectura. No se estima por fechas ni por consumo.')
     expect(control('Registrar verificación')?.getAttribute('href')).toBe('/facturacion/vieja/editar')
-    expect(control('Registrar lectura')?.getAttribute('href')).toBe('/facturacion/vieja/editar')
+    // Con rango, la lectura se registra en su hoja (RP-2, tarea 335).
+    expect(control('Registrar lectura')?.tagName).toBe('BUTTON')
     let capa = document.getElementById('aut-documentado')?.parentElement ?? null
     while (capa && !capa.className.includes('opacity-[.62]')) capa = capa.parentElement
     expect(capa).not.toBeNull()
+  })
+})
+
+// RP-2 (tarea 335): la lectura del consecutivo, en una hoja con sus tres
+// campos, con las mismas validaciones y el mismo historial que el formulario.
+describe('registrar una lectura sin abrir el formulario', () => {
+  function hoja(): HTMLElement {
+    const dialogo = document.body.querySelector<HTMLElement>('[role="dialog"]')
+    if (!dialogo) throw new Error('Sin hoja abierta')
+    return dialogo
+  }
+
+  it('propone hoy y el sitio de la última, valida en la hoja y guarda con su historial', async () => {
+    await sembrarBase()
+    await sembrarAutorizacion({ id: 'lec', consecutivoActual: 3500, consecutivoLeidoEn: '2026-10-01', consecutivoFuente: 'Caja de prueba' })
+    await montar(RUTAS, '/facturacion/lec')
+    await esperar(() => textoPantalla().includes('Quedan 4.500 números'), 'la ficha con su lectura')
+
+    await tocar(control('Registrar lectura') as HTMLElement)
+    await esperar(() => document.body.querySelector('[role="dialog"]'), 'la hoja')
+    expect(hoja().textContent).toContain('Última lectura: 3.500, el 1 oct 2026 en Caja de prueba.')
+    expect(campoDe('Último consecutivo emitido').value).toBe('')
+    expect(campoDe('Leído el').value).toBe(fechaRelativa(0))
+    expect(campoDe('Dónde se leyó').value).toBe('Caja de prueba')
+    // Sin formulario completo: solo los tres campos de la lectura.
+    expect(hoja().querySelectorAll('input')).toHaveLength(3)
+
+    // Las reglas de siempre: sin número no guarda y fuera del rango lo dice.
+    await tocar(control('Guardar lectura') as HTMLElement)
+    await esperar(() => hoja().textContent?.includes('pide el número'), 'el aviso de los tres')
+    await escribir(campoDe('Último consecutivo emitido'), '9000')
+    await tocar(control('Guardar lectura') as HTMLElement)
+    await esperar(() => hoja().textContent?.includes('dentro del rango (3.000 a 8.000)'), 'el aviso del rango')
+    expect((await db.autorizaciones_facturacion.get('lec'))?.consecutivoActual).toBe(3500)
+
+    await escribir(campoDe('Último consecutivo emitido'), '4.200')
+    await tocar(control('Guardar lectura') as HTMLElement)
+    await esperarQue(async () => (await db.autorizaciones_facturacion.get('lec'))?.consecutivoActual === 4200, 'se guarda')
+    await esperar(() => !document.body.querySelector('[role="dialog"]'), 'la hoja se cierra')
+    await esperar(() => textoPantalla().includes('Quedan 3.800 números según esa lectura.'), 'la ficha con la nueva')
+    const guardada = await db.autorizaciones_facturacion.get('lec')
+    expect(guardada).toMatchObject({ consecutivoLeidoEn: fechaRelativa(0), consecutivoFuente: 'Caja de prueba', prefijo: 'PRB', rangoHasta: 8000 })
+    const entrada = (await db.historial.toArray()).find((e) => e.campo === 'autorizacion_facturacion')
+    expect(entrada).toMatchObject({ entidadId: 'pos-a' })
+    expect(ubicacionActual().pathname).toBe('/facturacion/lec')
+  })
+
+  it('sin rango no hay lectura posible: lleva al formulario', async () => {
+    await sembrarBase()
+    await sembrarAutorizacion({ id: 'sinrango', rangoDesde: null, rangoHasta: null })
+    await montar(RUTAS, '/facturacion/sinrango')
+    await esperar(() => textoPantalla().includes('Sin lectura.'), 'la ficha')
+    expect(control('Registrar lectura')?.getAttribute('href')).toBe('/facturacion/sinrango/editar')
   })
 })
 
