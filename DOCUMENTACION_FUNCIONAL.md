@@ -238,7 +238,7 @@ Definidas en `src/App.tsx`. Todas las pantallas se cargan bajo demanda (`React.l
 |------|-----------------------|-------|-------------|
 | `/login` | LoginPage | Fuera del chasis | Inicio de sesión (fuera de RequireAuth) |
 | `/` (index) | ResolverPage | Sección | **Resolver** (desde el 2026-09-22): "¿Qué necesitas resolver?", el buscador global y, debajo, solo lo que ayuda: Atención (hasta tres asuntos con fecha), Recientes (guías usadas en 14 días) y Accesos rápidos por categoría, con "Todas las guías" |
-| `/agenda` | AgendaPage | Documento | **Agenda completa**: fecha, resumen, vencidos, para hoy, próximos, en curso y por revisar del equipo, y al final, plegada, la actividad del equipo (desde el 2026-09-23). Sube a Resolver |
+| `/agenda` | AgendaPage | Documento | **Agenda completa**: fecha, tres contadores, vencidos, para hoy, próximos y la fila plegada "Sin fecha" con en curso y por revisar del equipo (desde la tarea 332; antes el resumen y los cinco grupos a la vista), y al final, plegada, la actividad del equipo (desde el 2026-09-23). Sube a Resolver |
 | `/conectar` | ConectarPage | Tarea | **Conectar equipo** (tarea 258): escribir el código de 6 cifras del computador atendido, o llegar con él desde su QR (`?codigo=`), que pide confirmar. Conectado, dice con qué equipo y desde qué hora, y ofrece volver a la guía o desconectar. Sube a Resolver, o vuelve a la guía desde la que se abrió |
 | `/asistencia` (y `/asistencia/`, que redirige aquí) | Portal público (`asistencia.html`) | Fuera de la app | **Portal de asistencia** (tarea 258): lo abre el computador atendido SIN iniciar sesión. Código y QR, lo que el técnico envía y "Terminar la asistencia". Entrada propia del build: no carga la app, Dexie, Supabase ni el service worker (ver 6.11) |
 | `/cuenta` | CuentaPage | Documento | **Ajustes** (se llamaba Mi cuenta hasta la tarea 268): cambiar la contraseña (plegado), instalar, descargar para offline, bloqueo y seguridad, buscar actualización y cerrar sesión. Sube a Más |
@@ -418,6 +418,14 @@ Cada fila lleva icono con tono por tipo, título con el término **resaltado**, 
 **Vista rápida de una credencial (2026-09-16).** `Ver` despliega el acceso **debajo de su fila**, sin salir de Inicio ni abrir la ficha de la Bóveda: el usuario a la vista y la contraseña, la clave o el valor **tapados** (`••••••••`) aunque la bóveda esté abierta, con `Mostrar`/`Ocultar` y sus botones de copiar (44 px). Mostrado, el valor sale **entero**, en varias líneas si hace falta. Una nota segura se lee tal cual; un archivo seguro no se abre aquí. Abajo, `Cerrar` (vuelve a los mismos resultados, con la consulta escrita) y `Abrir ficha`. Queda registrado igual que en la ficha: abrir la vista, destapar la clave y copiar. Detalle en [BUSCADOR.md](BUSCADOR.md), sección 7.7.
 
 **Volver con la búsqueda escrita (2026-09-16).** Abrir una ficha desde un resultado y volver, con el regreso de la app o con el atrás del teléfono, repone la consulta en este campo y sus resultados. Vaciar el campo la da por terminada. Nunca viaja en la URL. Ver [BUSCADOR.md](BUSCADOR.md), sección 7.8.
+
+**AGENDA DESDE EL REDISEÑO MÓVIL "1b PULGAR" (2026-10-13, tarea 332, [DECISIONES.md](DECISIONES.md) AD-082; manda sobre lo que sigue donde choque).** La fecha de hoy sobre el título, como siempre. Debajo, en este orden:
+- **Tres contadores** (vencidos, para hoy, próximos): el número grande en IBM Plex Mono, en el color de su estado y con su fondo solo si hay alguno; el rótulo concuerda en singular ("1 próximo"). Son los mismos de "Necesita atención" en Resolver, aquí sin enlace. Sustituyen a la línea de resumen ("2 vencidos · 1 para hoy · 3 próximos").
+- **"Todo al día por hoy"** con "Nada vencido ni para hoy." en una caja verde suave, solo sin vencidos ni asuntos de hoy.
+- **Vencidos, Para hoy y Próximos**, cada grupo con su punto de color, su nombre a 15 px y el conteo en IBM Plex Mono, y sus filas (las de Atención). Próximos sigue enseñando tres y "Ver los otros N" (ahora a 14 px).
+- **"Sin fecha"** al final: una fila plegada con "Por revisar y en curso. No vencen.", el conteo y el galón. Al abrirla, **En curso** (la tarjeta de la guía a medias y los borradores) y **Por revisar del equipo**, enteros, sin un segundo "Ver los otros N". Empieza plegada; **sin nada con fecha empieza abierta**, porque es lo único que hay. Lo abierto o cerrado no se guarda.
+- La **Actividad del equipo**, plegada, sigue siendo lo último.
+Las fechas documentales (según la fuente, sin confirmar) no entran en la Agenda, como antes: no hay nada que decir de ellas aquí.
 
 **La agenda completa (`/agenda`), en orden.** Desde el 2026-09-22 es la única pantalla que pinta los grupos (Resolver solo enseña "Atención"). Lleva la fecha de hoy como contexto sobre el título "Agenda" y por eso no la repite dentro. El punto 0 es la bienvenida, que vive en Resolver:
 
@@ -784,6 +792,8 @@ Ver campo por campo en la sección 7. Selector de tipo de secreto que decide qu�
 ### 5.6 Más
 
 **Ruta:** `/mas` · **Archivo:** `src/features/mas/PantallaMas.tsx` · **Nivel:** Sección
+
+**REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 332).** Mismos grupos, filas y destinos, más legibles: el rótulo de cada grupo en minúsculas a 13,5 px (antes 11 px en mayúsculas) y las filas de 60 px, con el icono a 20 px, el título a 15,5 px, la línea de qué contiene a 13 px y el conteo en IBM Plex Mono a 13,5 px. Herramientas de inventario usa las mismas filas y cambia igual.
 
 **PROPUESTA FINAL DE CLAUDE DESIGN (desde el 2026-10-01, tarea 287, bloque 4).** Manda sobre lo que sigue donde choquen. Los mismos destinos, agrupados por **intención**: **Consultar** (Centro de consulta y, si hay, Mis favoritos), **Personas y lugares** (Personas, Ubicaciones), **Infraestructura** (Red), **Inventario** (Herramientas de inventario y, desde la tarea 321, Autorizaciones de facturación) y **Cuenta y aplicación** (Ajustes: el nombre del grupo dice que guarda también el trabajo sin conexión y la actualización). Las filas son de **índice**: icono de línea sin recuadro, título, una línea de qué contiene (parte línea antes que recortarse), el conteo y el galón; 52 px de alto. Ajustes lleva el icono de cuenta (`UserCircle`) en vez del avatar, que sigue en la barra superior. Desplegado, el título de cada favorito usa hasta dos líneas en vez de recortarse. La pantalla Herramientas de inventario usa las mismas filas.
 

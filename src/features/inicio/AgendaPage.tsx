@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Chasis } from '../../app/Chasis'
 import { ActividadDelEquipo } from '../historial/ActividadDelEquipo'
 import { agruparAgenda, fechaDeHoy } from './agenda'
-import { ResumenDelDia, SeccionesAgenda } from './SeccionesAgenda'
+import { ContadoresAgenda, SeccionesAgenda } from './SeccionesAgenda'
 import { usePendientes } from './usePendientes'
 
 // LA AGENDA COMPLETA, EN SU PROPIA PANTALLA.
@@ -15,8 +15,13 @@ import { usePendientes } from './usePendientes'
 // deja una línea que la abre si guarda algo más.
 //
 // No hay dos implementaciones: los grupos, las filas, los desplegables y
-// el estado "Todo al día por hoy" los dibuja `SeccionesAgenda`, que es el
-// mismo componente que usa Inicio. Aquí solo queda el chasis.
+// el estado "Todo al día por hoy" los dibuja `SeccionesAgenda`, y los
+// contadores, `ContadoresAgenda`, los mismos de "Necesita atención" en
+// Resolver. Aquí solo queda el chasis.
+//
+// REDISEÑO MÓVIL "1b PULGAR" (tarea 332): contadores arriba, los grupos
+// con fecha (Vencidos, Para hoy, Próximos) y al final la fila plegada
+// "Sin fecha" con En curso y Por revisar del equipo.
 export function AgendaPage() {
   // Los mismos pendientes que cuenta el chasis para el número de la
   // pestaña, repartidos por FECHA en los cinco grupos (agenda.ts). Cada
@@ -28,10 +33,12 @@ export function AgendaPage() {
   return (
     // Nivel documento: se consulta y se vuelve. Sube a Resolver (padreDe).
     <Chasis modo="documento" titulo="Agenda" contexto={hoyTexto}>
-      <main className="flex-1 px-4 pb-16 pt-4">
-        <div className="flex flex-col gap-[18px]">
-          {/* El día ya está en la cabecera del chasis (`contexto`). */}
-          <ResumenDelDia agenda={agenda} dia={null} cargando={cargando} />
+      <main className="flex-1 px-4 pb-16 pt-3.5">
+        <div className="flex flex-col gap-[22px]">
+          {/* El día ya está en la cabecera del chasis (`contexto`). Arriba,
+              los tres contadores (tarea 332), sin enlace: ya se está en la
+              Agenda. Mientras carga no se cuenta nada. */}
+          {!cargando && <ContadoresAgenda agenda={agenda} />}
           <SeccionesAgenda agenda={agenda} cargando={cargando} />
           {/* Lo que pasa en el equipo, al final y plegado (tarea 257):
               no es un pendiente, así que va después de todos ellos. Solo

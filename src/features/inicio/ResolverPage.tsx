@@ -51,7 +51,7 @@ import {
   type AccesoRapido,
   type GuiaReciente,
 } from './resolver'
-import { FilaAgenda } from './SeccionesAgenda'
+import { ContadoresAgenda, FilaAgenda } from './SeccionesAgenda'
 import { usePendientes } from './usePendientes'
 
 // RESOLVER (encargo del 2026-09-22, secciones 1 y 2).
@@ -350,13 +350,8 @@ function BloqueAtencion({ agenda }: { agenda: Agenda }) {
   const { visibles, total } = asuntosDeAtencion(agenda)
   if (total === 0) return <PuertaAgendaSinFecha agenda={agenda} />
   // NECESITA ATENCIÓN (tarea 330): tres contadores (vencidos, para hoy y
-  // próximos) que abren la Agenda, y debajo los asuntos con su fila. El
-  // número en IBM Plex Mono y en el color de su estado solo si hay alguno.
-  const contadores = [
-    { clave: 'vencidos', n: agenda.vencidos.length, etiqueta: 'vencidos', tono: 'error' },
-    { clave: 'hoy', n: agenda.hoy.length, etiqueta: 'para hoy', tono: 'precaucion' },
-    { clave: 'proximos', n: agenda.proximos.length, etiqueta: 'próximos', tono: 'neutro' },
-  ] as const
+  // próximos) que abren la Agenda, y debajo los asuntos con su fila. Los
+  // contadores son los mismos de la Agenda (`ContadoresAgenda`, tarea 332).
   return (
     <section aria-labelledby="resolver-atencion" className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-2">
@@ -374,25 +369,7 @@ function BloqueAtencion({ agenda }: { agenda: Agenda }) {
           <CaretRight size={13} aria-hidden />
         </Link>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        {contadores.map((c) => (
-          <Link
-            key={c.clave}
-            to="/agenda"
-            aria-label={`${c.n} ${c.etiqueta}: abrir la Agenda`}
-            className={`flex min-h-16 flex-col justify-center gap-px rounded-[14px] px-3 py-2 hover:brightness-110 ${
-              c.n > 0 ? FONDO_CONTADOR[c.tono] : 'bg-noct-text/[.06]'
-            }`}
-          >
-            <span
-              className={`font-mono text-[24px] font-semibold leading-[1.1] ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
-            >
-              {c.n}
-            </span>
-            <span className="text-[12.5px] font-[550] text-noct-neutral-300">{c.etiqueta}</span>
-          </Link>
-        ))}
-      </div>
+      <ContadoresAgenda agenda={agenda} enlace="/agenda" />
       <div className="flex flex-col">
         {visibles.map(({ item, estado }) => (
           <FilaAgenda key={item.clave} item={item} estado={estado} />
@@ -401,17 +378,6 @@ function BloqueAtencion({ agenda }: { agenda: Agenda }) {
     </section>
   )
 }
-
-const FONDO_CONTADOR = {
-  error: 'bg-noct-error/[.13]',
-  precaucion: 'bg-noct-precaucion/[.13]',
-  neutro: 'bg-noct-text/[.06]',
-} as const
-const COLOR_CONTADOR = {
-  error: 'text-noct-error',
-  precaucion: 'text-noct-precaucion',
-  neutro: 'text-noct-text',
-} as const
 
 // SEGUIR DONDE IBAS (tarea 330): la guía a medias más reciente, en una
 // tarjeta que se toca entera (la tarjeta queda para lo que se toca entero,

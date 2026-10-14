@@ -56,7 +56,7 @@ function gruposDeMas(): { titulo: string; filas: string[] }[] {
   return Array.from(document.body.querySelectorAll('main section')).map((seccion) => ({
     titulo: (seccion.querySelector('h2')?.textContent ?? '').trim(),
     filas: Array.from(seccion.querySelectorAll('a, button'))
-      .map((fila) => (fila.querySelector('.text-\\[15px\\]')?.textContent ?? '').trim())
+      .map((fila) => (fila.querySelector('.text-\\[15\\.5px\\]')?.textContent ?? '').trim())
       .filter(Boolean),
   }))
 }
@@ -65,7 +65,7 @@ function gruposDeMas(): { titulo: string; filas: string[] }[] {
 function filaDeMas(titulo: string): HTMLElement | null {
   return (
     Array.from(document.body.querySelectorAll<HTMLElement>('main a, main button')).find(
-      (fila) => (fila.querySelector('.text-\\[15px\\]')?.textContent ?? '').trim() === titulo,
+      (fila) => (fila.querySelector('.text-\\[15\\.5px\\]')?.textContent ?? '').trim() === titulo,
     ) ?? null
   )
 }

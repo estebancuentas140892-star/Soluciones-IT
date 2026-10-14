@@ -177,11 +177,27 @@ describe('La agenda completa (/agenda)', () => {
     await montar(RUTAS, '/agenda')
 
     const texto = await esperarTexto('Vencidos')
-    const orden = ['Vencidos', 'Para hoy', 'Próximos', 'En curso', 'Por revisar del equipo'].map((rotulo) =>
-      texto.indexOf(rotulo),
-    )
+    const orden = ['Vencidos', 'Para hoy', 'Próximos', 'Sin fecha'].map((rotulo) => texto.indexOf(rotulo))
     expect(orden.every((posicion) => posicion >= 0)).toBe(true)
     expect([...orden].sort((a, b) => a - b)).toEqual(orden)
+
+    // Lo que no vence va al final y plegado (tarea 332): "Sin fecha" dice
+    // cuántos guarda y, al abrirlo, En curso y Por revisar del equipo.
+    expect(texto).not.toContain('En curso')
+    expect(texto).not.toContain('Cambiar el tóner')
+    const sinFecha = await esperar(() => control(/^Sin fecha/), 'la fila plegada')
+    expect(sinFecha.getAttribute('aria-expanded')).toBe('false')
+    expect(sinFecha.textContent).toContain('Por revisar y en curso. No vencen.')
+    expect(sinFecha.textContent).toContain('2')
+    await tocar(sinFecha)
+    await esperar(() => textoPantalla().includes('Cambiar el tóner'), 'se despliega')
+    expect(sinFecha.getAttribute('aria-expanded')).toBe('true')
+    const desplegado = textoPantalla()
+    const sinFechaOrden = ['Sin fecha', 'En curso', 'Cambiar el tóner', 'Por revisar del equipo', 'La impresora no imprime'].map(
+      (rotulo) => desplegado.indexOf(rotulo),
+    )
+    expect(sinFechaOrden.every((posicion) => posicion >= 0)).toBe(true)
+    expect([...sinFechaOrden].sort((a, b) => a - b)).toEqual(sinFechaOrden)
 
     // Vencidos: TODOS, y en orden global por fecha (lo más vencido primero).
     expect(texto.indexOf('Panel del router')).toBeLessThan(texto.indexOf('Correo de soporte'))
@@ -235,13 +251,28 @@ describe('La agenda completa (/agenda)', () => {
     expect(texto).toContain('Todo al día por hoy')
   })
 
-  it('no lo dice si queda algo vencido o para hoy, y el resumen concuerda en singular', async () => {
+  it('no lo dice si queda algo vencido o para hoy, y los contadores concuerdan en singular', async () => {
     await sembrarAcceso('c1', 'Portal de nómina', 0)
+    await sembrarAcceso('c2', 'Hosting', 4)
     await montar(RUTAS, '/agenda')
 
     const texto = await esperarTexto('Para hoy')
     expect(texto).not.toContain('Todo al día por hoy')
+    // Los tres contadores arriba (tarea 332), sin enlace: ya se está en la Agenda.
+    expect(texto).toContain('0 vencidos')
     expect(texto).toContain('1 para hoy')
+    expect(texto).toContain('1 próximo')
+    expect(texto.indexOf('1 para hoy')).toBeLessThan(texto.indexOf('Portal de nómina'))
+    expect(control(/abrir la Agenda/)).toBeNull()
+  })
+
+  it('sin nada con fecha, "Sin fecha" ya viene abierto: es lo único que hay', async () => {
+    await sembrarBorradorPropio('b1', 'Cambiar el tóner')
+    await montar(RUTAS, '/agenda')
+
+    await esperarTexto('Cambiar el tóner')
+    expect(control(/^Sin fecha/)?.getAttribute('aria-expanded')).toBe('true')
+    expect(textoPantalla()).toContain('Todo al día por hoy')
   })
 
   it('con la agenda vacía no inventa filas ni secciones', async () => {

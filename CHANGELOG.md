@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Cambiado (Agenda y Más, tarea 332): contadores arriba, "Sin fecha" plegado y Más más legible
+
+**Área modificada:** `src/features/inicio/SeccionesAgenda.tsx` (`ContadoresAgenda` nuevo, `ResumenDelDia` retirado, "Sin fecha"), `AgendaPage.tsx`, `ResolverPage.tsx` (usa `ContadoresAgenda`), `src/features/mas/FilasMas.tsx` y `PantallaMas.tsx`.
+**Tipo:** Modificado; Documentación (DECISIONES AD-082, DOCUMENTACION_FUNCIONAL Agenda y 5.6, COMPONENTES_UI 3.7e, 3.8s y 3.8s-bis, TAREAS 332).
+**Motivo:** encargo del 2026-10-13, paso 6 del rediseño móvil "1b Pulgar".
+**Qué cambia:** la Agenda abre con los tres contadores (los de Resolver, sin enlace), "Todo al día por hoy" en verde suave, Vencidos, Para hoy y Próximos con cabeceras a 15 px y conteo en mono, y al final la fila plegada "Sin fecha" ("Por revisar y en curso. No vencen.") con En curso y Por revisar del equipo; sin nada con fecha empieza abierta. Los contadores concuerdan en singular. Más y Herramientas de inventario: rótulos de grupo a 13,5 px en minúsculas y filas de 60 px.
+**Estructura de datos:** sin cambios. `agruparAgenda` no cambia.
+**Verificación:** `resolverYAgenda` (orden con "Sin fecha" y su despliegue, contadores en singular, abierta sin nada con fecha), `masInfraestructura` y `herramientasInventario` (selector del título); suite completa, `tsc -b`, lint y build en verde. En el navegador a 375 px: Agenda, Más y Resolver.
+**Impacto esperado:** lo que vence se ve primero y lo que no vence no ocupa la pantalla; Más se lee sin esfuerzo.
+
 ### Cambiado (facturación, tarea 331, segunda parte): la autorización en tres formas de dato
 
 **Área modificada:** `src/features/facturacion/AutorizacionPage.tsx`.

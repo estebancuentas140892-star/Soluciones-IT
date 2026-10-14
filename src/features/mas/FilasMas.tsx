@@ -13,10 +13,15 @@ import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 // 34 px alrededor del icono hacía que cada puerta pesara como una pantalla
 // principal. La variante `caja` conserva la forma de antes para quien la
 // monta dentro de otra lista (la puerta de Guías con preguntas en Guías).
+//
+// REDISEÑO MÓVIL "1b PULGAR" (tarea 332): misma estructura, más legible.
+// El rótulo del grupo pasa de 11 px en mayúsculas a 13,5 px en minúsculas
+// y la fila de índice, a 60 px con el título a 15,5 px y el conteo a
+// 13,5 px en IBM Plex Mono.
 
 export function TituloGrupo({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mb-0.5 px-0.5 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
+    <h2 className="pb-0.5 text-[13.5px] font-semibold leading-[1.3] text-noct-neutral-400">
       {children}
     </h2>
   )
@@ -29,7 +34,7 @@ export function TituloGrupo({ children }: { children: ReactNode }) {
 // que en Guías y Equipos y las cifras se alinean solas.
 export function ConteoFila({ valor }: { valor: number | null }) {
   if (valor === null) return null
-  return <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-400">{valor}</span>
+  return <span className="shrink-0 font-mono text-[13.5px] tabular-nums text-noct-neutral-400">{valor}</span>
 }
 
 export function FilaMas({
@@ -67,18 +72,18 @@ export function FilaMas({
       <Link
         to={to}
         state={estado}
-        className="flex min-h-[52px] items-center gap-3.5 px-0.5 py-2 text-noct-text hover:bg-noct-text/[.04]"
+        className="flex min-h-[60px] items-center gap-3.5 py-2 text-noct-text hover:bg-noct-text/[.04]"
       >
-        <Icono size={19} className="w-5 shrink-0 text-noct-neutral-400" aria-hidden />
+        <Icono size={20} className="w-5 shrink-0 text-noct-neutral-400" aria-hidden />
         <span className="min-w-0 flex-1">
-          <span className="block text-[15px] leading-[1.35]">{titulo}</span>
+          <span className="block text-[15.5px] font-[550] leading-[1.3]">{titulo}</span>
           {/* Sin recortar (tarea 268): en un teléfono estrecho, la línea
               pasa a una segunda antes que esconder lo que hay dentro. */}
-          <span className="block text-[12.5px] leading-[1.35] text-noct-neutral-500">{subtitulo}</span>
-          {nota && <span className="mt-0.5 block text-[11.5px] text-noct-neutral-500">{nota}</span>}
+          <span className="block text-[13px] leading-[1.35] text-noct-neutral-400">{subtitulo}</span>
+          {nota && <span className="mt-0.5 block text-[12px] text-noct-neutral-500">{nota}</span>}
         </span>
         <ConteoFila valor={conteo} />
-        <CaretRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />
+        <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
       </Link>
     )
   }

@@ -45,7 +45,7 @@ const RUTAS = [
 function fila(titulo: string): HTMLElement | null {
   return (
     Array.from(document.body.querySelectorAll<HTMLElement>('main a')).find(
-      (enlace) => (enlace.querySelector('.text-\\[15px\\]')?.textContent ?? '').trim() === titulo,
+      (enlace) => (enlace.querySelector('.text-\\[15\\.5px\\]')?.textContent ?? '').trim() === titulo,
     ) ?? null
   )
 }

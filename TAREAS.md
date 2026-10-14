@@ -61,7 +61,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 3 | Ficha de equipo | 329 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 4 | Dock de búsqueda, búsqueda y cabeceras de raíz | 330 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 5 | Mantenimiento y autorización (tres formas de dato) | 331 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
-| 6 | Agenda y Más | 332 | Pendiente |
+| 6 | Agenda y Más | 332 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 7 | Tema claro | 333 | Bloqueada: contradice la regla 12 y depende de RP-3 |
 | (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Pendiente de decisión |
 | (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | Pendiente de decisión |
@@ -116,6 +116,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Prioridad:** Alta. **Estado:** Integrada en `main` (2026-10-13, en dos partes con su commit y su despliegue) y desplegada, pendiente de la confirmación visual del usuario en producción; no se archiva hasta entonces. **Parte 1 hecha (2026-10-13): mantenimiento.** Pantalla `/dispositivos/:id/mantenimientos` (`MantenimientosPage.tsx` nuevo, `MantenimientosDelEquipo.tsx` reescrito) con las tres formas, estado vacío, "Programar mantenimiento" y "Cerrar mantenimiento" en hojas (`RegistrarDesenlace` exportado de `MantenimientoPage.tsx`); ruta en `src/App.tsx`, `padreDe` en `src/lib/navegacion.ts`; la fila de la ficha abre la pantalla (`DispositivoPage.tsx`). Cancelar se conserva como tercera respuesta. **Parte 2 hecha (2026-10-13): la autorización** (`AutorizacionPage.tsx`) en tres capas (documentado punteado, confirmado con barra verde, dato actual como instrumento), Editar abajo y Eliminar en el menú; reemplazada al 62 %. Facturación en la ficha sigue en hoja (lista de las autorizaciones del POS; cada una abre su pantalla). Sin marcar "No coincide" por campo: la autorización guarda una sola fuente (AD-081, decisión 4).
 - **Área afectada:** los archivos citados y sus pruebas (`facturacionFlujo.test.tsx`, las de mantenimiento).
 - **Dependencias:** 327; la ficha de la 329 enlaza a la pantalla de mantenimiento.
+
+### 332. Rediseño móvil, paso 6: Agenda y Más
+
+- **Título:** la Agenda agrupada por fecha y Más con rótulos legibles.
+- **Descripción:** Agenda (`src/features/inicio/AgendaPage.tsx`, `SeccionesAgenda.tsx`): contadores arriba; grupos con fecha (Vencidos, Para hoy, Próximos); "En curso" y "Por revisar del equipo" se agrupan en una fila plegada "Sin fecha" al final. `agruparAgenda` no cambia, solo dónde se pintan. Más (`src/features/mas/PantallaMas.tsx`, `FilasMas.tsx`): misma estructura; rótulos de grupo de 11 px en mayúsculas a 13.5/650 en minúsculas; filas de 60 px.
+- **Motivo:** encargo del 2026-10-13, paso 6.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Integrada en `main` (2026-10-13) y desplegada, pendiente de la confirmación visual del usuario en producción; no se archiva hasta entonces. **Hecho:** `ContadoresAgenda` (en `SeccionesAgenda.tsx`, compartido con `ResolverPage.tsx`) arriba de la Agenda en lugar de `ResumenDelDia` (retirado); "Todo al día por hoy" en verde suave; cabeceras de grupo a 15 px con conteo en mono; fila plegada "Sin fecha" al final con En curso y Por revisar del equipo (abierta si no hay nada con fecha); "Ver los otros N" a 14 px. Más (`FilasMas.tsx`, `PantallaMas.tsx`): rótulos a 13,5 px en minúsculas, filas de 60 px; Herramientas de inventario cambia con ellas. AD-082.
+- **Área afectada:** los archivos citados y sus pruebas (`masInfraestructura.test.tsx` y las de la Agenda).
+- **Dependencias:** 327.
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
@@ -573,16 +583,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 332. Rediseño móvil, paso 6: Agenda y Más
-
-- **Título:** la Agenda agrupada por fecha y Más con rótulos legibles.
-- **Descripción:** Agenda (`src/features/inicio/AgendaPage.tsx`, `SeccionesAgenda.tsx`): contadores arriba; grupos con fecha (Vencidos, Para hoy, Próximos); "En curso" y "Por revisar del equipo" se agrupan en una fila plegada "Sin fecha" al final. `agruparAgenda` no cambia, solo dónde se pintan. Más (`src/features/mas/PantallaMas.tsx`, `FilasMas.tsx`): misma estructura; rótulos de grupo de 11 px en mayúsculas a 13.5/650 en minúsculas; filas de 60 px.
-- **Motivo:** encargo del 2026-10-13, paso 6.
-- **Impacto:** medio.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** los archivos citados y sus pruebas (`masInfraestructura.test.tsx` y las de la Agenda).
-- **Dependencias:** 327.
 
 ### 333. Rediseño móvil, paso 7: tema claro (bloqueada)
 
