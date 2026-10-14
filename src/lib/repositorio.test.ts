@@ -366,6 +366,9 @@ describe('adjuntos', () => {
       nombre: 'manual-camara.pdf',
       tipo: 'application/pdf',
       referencia: 'adjuntos/manual-camara.pdf',
+      nota: '',
+      origen: '',
+      fechaDocumento: null,
     })
 
     const entrada = (await db.historial.toArray()).find((c) => c.campo === 'adjunto')

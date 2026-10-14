@@ -89,6 +89,9 @@ const MantenimientosPage = lazy(() =>
 const MantenimientoPage = lazy(() =>
   import('./features/mantenimientos/MantenimientoPage').then((m) => ({ default: m.MantenimientoPage })),
 )
+const DocumentoDelEquipoPage = lazy(() =>
+  import('./features/documentos/DocumentoDelEquipoPage').then((m) => ({ default: m.DocumentoDelEquipoPage })),
+)
 const AutorizacionesPage = lazy(() =>
   import('./features/facturacion/AutorizacionesPage').then((m) => ({ default: m.AutorizacionesPage })),
 )
@@ -576,6 +579,16 @@ function App() {
                 element={
                   <Suspense fallback={<Cargando />}>
                     <MantenimientoPage />
+                  </Suspense>
+                }
+              />
+              {/* Un adjunto del equipo (tarea 322): un documento que puede
+                  estar en varios equipos, con su nota en este. */}
+              <Route
+                path="dispositivos/:dispositivoId/adjuntos/:adjuntoId"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <DocumentoDelEquipoPage />
                   </Suspense>
                 }
               />

@@ -46,7 +46,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | (fuera de desarrollo) | Casos de datos y conflictos que no se resuelven por código | 319 | Pendiente (usuario y ChatGPT) |
 | B | Mantenimiento operativo | 320 | Hecha (archivada) |
 | C | Autorizaciones de facturación | 321 | Integrada y desplegada (`bef8da0`), pendiente de confirmación visual del usuario y de la carga de datos reales por ChatGPT |
-| D | Actas y documentos de equipos | 322 | Pendiente |
+| D | Actas y documentos de equipos | 322 | Implementada en la rama `feat/documentos-equipos`, pendiente de la aprobación del usuario y de aplicar el bloque 1.s en Production |
 | E | Compromisos operativos en Agenda | 323 | Pendiente |
 | F | Publicaciones institucionales | 324 | Pendiente |
 | G | Presentación de Datáfonos | 325 | Pendiente |
@@ -65,6 +65,21 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 7 | Tema claro | 333 | Decidido (claro opcional, oscuro por defecto); integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Decidido: verde lima; integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | Las tres integradas en `main` y desplegadas, pendiente de confirmación visual del usuario |
+
+### 322. Actas y documentos de equipos: un documento, varios equipos (fase D)
+
+- **Título:** que un documento exista una sola vez en Storage y se vincule a uno o varios equipos, con su página o nota de relación.
+- **Descripción:** hoy `Adjuntos` es por entidad y varias actas en PDF tienen páginas de distintos equipos. Evaluar la solución mínima compatible con `Adjuntos` y la sincronización sin conexión; si hace falta una relación muchos a muchos, implementarla en lugar de copiar bytes. Nombre, tipo, referencia, página o nota opcional, origen y fecha solo si están confirmados. Ninguna fila documental apunta a un archivo que no se subió. La ficha del equipo los muestra dentro de "Más del equipo".
+- **Análisis (2026-10-13):** los bytes ya existen una sola vez: desde la tarea 123 (decisión D3 de [PROPUESTA_JORNADA_TECNICO.md](PROPUESTA_JORNADA_TECNICO.md)) la referencia de un adjunto es el hash de su contenido (`compartidos/<sha256>`) y `referenciaEnUso` impide borrar del bucket un archivo que otra ficha usa. Cada fila de `adjuntos` con `entidad_tipo = 'dispositivo'` ya es, de hecho, un vínculo documento-equipo: el documento es su `referencia`. Faltan (a) lo propio de cada vínculo (la página o nota), (b) lo propio del documento (origen y fecha, solo si están confirmados), (c) vincular un documento ya subido a otro equipo sin volver a elegir el archivo, (d) ver en qué otros equipos está y (e) una garantía real: hoy, si Storage **rechaza** un archivo (no un corte de red), la fila del adjunto sube igual y apunta a un archivo que no existe (`subirCambiosPendientes` en `src/lib/sync.ts` ~269 no mira la cola de archivos). De paso: el historial de un adjunto quitado dice "Se agregó el adjunto: " vacío (`src/features/historial/textoHistorial.ts` ~82 no mira `valorAnterior`).
+- **Decisión:** sin tabla nueva. Tres columnas en `adjuntos` (`nota`, `origen`, `fecha_documento`) y el vínculo sigue siendo la fila. Una tabla `documentos` con su tabla puente duplicaría lo que la referencia por hash ya resuelve y añadiría dos tablas sincronizadas con su cola e historial. AD-086, RN-075.
+- **Hecho (2026-10-13, rama `feat/documentos-equipos`):** bloque 1.s de `schema.sql` (tres `add column if not exists`), Dexie versión 23 (índice `referencia` y relleno sin encolar), `tablas.ts`. En la ficha, cada adjunto es una tarjeta que abre su pantalla (`/dispositivos/:id/adjuntos/:adjuntoId`): "Abrir" (rellena), "Del documento" (origen y fecha o "Sin confirmar"), "En este equipo" (página o nota), "También en" (los otros equipos con su nota), "Vincular a otro equipo" (hoja con casillas fijas y la página de cada uno; no sube nada, funciona sin red), "Editar" (hoja: nombre, origen y fecha en todos los vínculos, la nota solo en este) y "Quitar de este equipo" en el menú (el archivo sigue mientras otro lo use). La fila de un adjunto ya no sube mientras su archivo siga en la cola (`cambioEsperaSuArchivo`). Corregido de paso: **crítico, latente desde la tarea 123**: el índice de búsqueda nombraba cada adjunto por su referencia, y el mismo archivo en dos fichas tumbaba Resolver entero ("No se pudo cargar la aplicación"); ahora el id es el de la fila y un id repetido se ignora (`src/features/busqueda/useIndiceBusqueda.ts`, encontrado por la prueba sin conexión real); el historial de un adjunto quitado ("Se quitó el adjunto: X"), "Cámara" y "+ Archivos" a 44 px y 14 px, y en la autorización (321) la evidencia no se repite ni se pierde con un documento vinculado a dos POS. En el navegador, el primer diseño de la hoja de vincular empujaba la lista al marcar un equipo y el siguiente toque caía en otro: se rehízo con casillas que no se mueven.
+- **Verificación:** pruebas nuevas (`src/features/documentos/documentosEquipo.test.ts`, `documentosFlujo.test.tsx`, `src/lib/db.upgrade23.test.ts`, una en `facturacionFlujo.test.tsx` y otra en `navegacion.test.ts`); suite completa (3355), `tsc -b`, lint y build en verde. Banco de pruebas local en el navegador: recorrido completo y auditoría de medida por código a 320, 375, 390 y 1280 px sin avisos (desbordes, texto < 12 px, verbos < 14 px, objetivos < 44 px). Prueba sin conexión real (`scripts/prueba-sin-conexion.mjs`, paso 4f nuevo): el 4f pasa entero, y la primera corrida destapó el fallo crítico del índice (con el acta del 4f, el desbloqueo del paso 5 abría "No se pudo cargar la aplicación"). Quedan 7 fallos en 4b, 4b2 y 4c, los mismos que da `origin/main` (`82dd99b`) sin ningún cambio de esta tarea: registrados como la 336.
+- **Fuera de alcance (posibles mejoras, sin hacer):** buscar un documento desde Resolver por su origen o su nota; "usar un documento que ya está en otro equipo" desde la ficha (hoy se vincula desde el documento, o se sube el mismo archivo y la deduplicación reutiliza los bytes); la misma espera para la foto del equipo (`dispositivos.foto`), que bloquearía cualquier otra edición del equipo.
+- **Motivo:** encargo del usuario del 2026-10-10, fase D.
+- **Impacto:** medio.
+- **Prioridad:** Media. **Estado:** Implementada en la rama `feat/documentos-equipos` (desde `82dd99b`), **pendiente de la aprobación del usuario para integrar a `main`**. Antes de integrar, el bloque 1.s de `schema.sql` se aplica en Supabase Production, solo con su autorización: sin él, ningún adjunto nuevo sube (espera en la cola).
+- **Área afectada:** `supabase/schema.sql` (bloque 1.s, ~978), `src/lib/db.ts` (`Adjunto` ~1227, versión 23 ~1844), `src/lib/tablas.ts` (`adjuntos` ~283), `src/lib/sync.ts` (`cambioEsperaSuArchivo` y `subirCambiosPendientes` ~285), `src/lib/archivosPendientes.ts` (`referenciaEnUso`, `referenciasEnColaDeSubida`), `src/features/documentos/` (nuevo: `documentosEquipo.ts`, `DocumentoDelEquipoPage.tsx`, `EditarDocumento.tsx`, `VincularDocumento.tsx`), `src/components/Adjuntos.tsx` (`alAbrir`, `DocumentoItem`), `src/features/dispositivos/DispositivoPage.tsx` (ancla `#adjuntos` ~102, hoja "Adjuntos" ~985), `src/App.tsx` (la ruta ~585) y `src/lib/navegacion.ts` (`padreDe` ~186), `src/features/historial/textoHistorial.ts` (~82), `src/features/facturacion/AutorizacionForm.tsx` (la evidencia ~100 y `alternarPos` ~146), `src/features/busqueda/useIndiceBusqueda.ts` (ids de adjuntos ~429 y ~497, `crearIndiceDesdeDocumentos` ~606), `scripts/prueba-sin-conexion.mjs` (paso 4f), `supabase/INSTRUCCIONES.md`.
+- **Dependencias:** ninguna; puede servir de evidencia a la 320 y la 321.
 
 ### 327. Rediseño móvil, paso 1: tokens cian, IBM Plex Mono local y botón primario relleno
 
@@ -614,6 +629,16 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 
 ## Por hacer
 
+### 336. La prueba sin conexión real falla en `main` en los pasos 4b, 4b2 y 4c
+
+- **Título:** que `scripts/prueba-sin-conexion.mjs` vuelva a pasar entera en `main`, o que se corrija lo que de verdad falle sin red en la ejecución de una guía.
+- **Descripción:** corrida el 2026-10-13 sobre `origin/main` (`82dd99b`, worktree aparte, sin ningún cambio de la 322): 7 fallos. 4b: "numerada de verdad y con la ubicación a la vista bajo su microacción" (`LISTA_COMO_HACERLO`, ~652). 4b2: "la última acción lleva a la comprobación final" tras "Completar y seguir" (~720), y por arrastre "Seguir vuelve a la comprobación" y "solo Finalizar la termina". 4c: "la acción resuelve la credencial de ese equipo sin red" (~765), y por arrastre los dos siguientes. Todo lo demás pasa (pantallas sin red, sesión vencida, mantenimiento, facturación, desbloqueo, cierre de sesión). Lo más probable es que el rediseño móvil (tarea 328, ejecución de guía: la credencial pasó a una fila "Ver la credencial: X" que abre una hoja, y "Cómo hacerlo" cambió de forma) dejara la prueba desactualizada, pero no está comprobado: puede haber una regresión real sin red. Hay que mirar cada caso en el navegador con la red cortada antes de tocar la prueba.
+- **Motivo:** hallazgo de la tarea 322 al correr la prueba sin conexión real (regla del encargo del 2026-10-10).
+- **Impacto:** alto: la prueba sin conexión es la única que comprueba la ejecución de una guía con el service worker y sin red; mientras falle, una regresión real en esos pasos no se distingue de una prueba desactualizada.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `scripts/prueba-sin-conexion.mjs` (pasos 4b ~559, 4b2 ~629 y 4c ~700); según lo que se encuentre, `src/features/soluciones/ModoFoco.tsx` y la credencial en hoja (`CredencialEnHoja`).
+- **Dependencias:** ninguna.
+
 ### 319. Casos de datos y conflictos de la conciliación que no se resuelven por código (usuario y ChatGPT)
 
 - **Título:** cerrar con una fuente actual los casos que la conciliación del 2026-10-10 dejó abiertos.
@@ -642,16 +667,6 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Siguientes mejoras posibles, sin hacer:** encontrar una autorización desde Resolver por su prefijo (hoy no se indexa) y enlazar la que reemplaza a otra (hoy se dice en las observaciones).
 - **Área afectada:** `src/lib/db.ts` (`AutorizacionFacturacion` y la versión 22), `src/lib/tablas.ts` (`autorizaciones_facturacion`), `supabase/schema.sql` (bloque 1.t, trigger, RLS, política y tiempo real), `scripts/respaldo-supabase.sh` y `supabase/RESPALDO.md`, `src/lib/autorizaciones.ts` (nuevo), `src/lib/repositorio.ts` (`entradasDeAutorizacion`), `src/features/facturacion/` (nuevo: `autorizacion.ts`, `AutorizacionesDelPos.tsx`, `AutorizacionesPage.tsx`, `AutorizacionPage.tsx`, `AutorizacionForm.tsx`, `PresentacionAutorizacion.tsx`), `src/features/inicio/pendientes.ts`, `usePendientes.ts` y `SeccionesAgenda.tsx`, `src/features/dispositivos/DispositivoPage.tsx` (la sección "Facturación"), `src/features/mas/PantallaMas.tsx` (la fila), `src/features/historial/textoHistorial.ts`, `src/App.tsx` y `src/lib/navegacion.ts` (las rutas), `src/pruebas/montaje.ts` (`navegarA`), `scripts/prueba-sin-conexion.mjs` (paso 4e).
 - **Dependencias:** la 320 (patrón de entidad sincronizada derivada en la Agenda). La carga de los datos reales depende de que el usuario apruebe el modelo.
-
-### 322. Actas y documentos de equipos: un documento, varios equipos (fase D)
-
-- **Título:** que un documento exista una sola vez en Storage y se vincule a uno o varios equipos, con su página o nota de relación.
-- **Descripción:** hoy `Adjuntos` es por entidad y varias actas en PDF tienen páginas de distintos equipos. Evaluar la solución mínima compatible con `Adjuntos` y la sincronización sin conexión; si hace falta una relación muchos a muchos, implementarla en lugar de copiar bytes. Nombre, tipo, referencia, página o nota opcional, origen y fecha solo si están confirmados. Ninguna fila documental apunta a un archivo que no se subió. La ficha del equipo los muestra dentro de "Más del equipo".
-- **Motivo:** encargo del usuario del 2026-10-10, fase D.
-- **Impacto:** medio.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/components/Adjuntos.tsx`, `src/lib/adjuntosOffline.ts`, `src/lib/archivosPendientes.ts`, `supabase/schema.sql` (`adjuntos`), la ficha del equipo.
-- **Dependencias:** ninguna; puede servir de evidencia a la 320 y la 321.
 
 ### 323. Compromisos operativos del área en la Agenda (fase E)
 

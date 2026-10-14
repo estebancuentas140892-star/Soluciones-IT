@@ -1233,7 +1233,21 @@ export interface Adjunto {
   entidadId: string
   nombre: string
   tipo: string
+  // El archivo en Storage. Desde la tarea 123 es el hash del contenido
+  // (`compartidos/<sha256>`): la misma referencia en dos filas es el
+  // mismo documento. Una fila de un equipo es un VINCULO de ese
+  // documento con ese equipo (tarea 322, AD-086).
   referencia: string
+  // Tarea 322. Lo propio de este vinculo: la pagina del acta o una nota
+  // de la relacion con su ficha ('' si no hay).
+  nota: string
+  // Tarea 322. Lo propio del documento, solo si esta confirmado: de
+  // donde viene ('' si no se sabe) y su fecha (YYYY-MM-DD, o null).
+  // Iguales en todos los vinculos de la misma referencia
+  // (src/lib/documentosEquipo.ts). Nunca se deducen del nombre del
+  // archivo ni de cuando se subio.
+  origen: string
+  fechaDocumento: string | null
   updatedAt: string
   updatedBy: string | null
   eliminadoEn: string | null
@@ -1824,6 +1838,28 @@ class SolucionesItDatabase extends Dexie {
     this.version(22).stores({
       autorizaciones_facturacion: 'id, *dispositivoIds, updatedAt',
     })
+
+    // Version 23 (2026-10-13, tarea 322): un documento, varios equipos.
+    // Dos cosas: (a) indice `referencia` en adjuntos, para listar los
+    // vinculos de un documento (y saber si un archivo sigue en uso) sin
+    // recorrer la tabla; (b) completa los adjuntos ya guardados con
+    // `nota` y `origen` vacios y `fechaDocumento` null, por el mismo
+    // motivo que las versiones 14, 18 a 20: las columnas nuevas del
+    // servidor no cambian el `updated_at` de las filas que ya viven en
+    // cada telefono. Solo rellena huecos, no deduce nada, no encola
+    // cambios y termina antes de que ninguna pantalla lea la base.
+    this.version(23)
+      .stores({
+        adjuntos: 'id, [entidadTipo+entidadId], referencia',
+      })
+      .upgrade(async (tx) => {
+        await tx
+          .table('adjuntos')
+          .toCollection()
+          .modify((fila: Record<string, unknown>) => {
+            normalizarEntidad('adjuntos', fila)
+          })
+      })
   }
 }
 

@@ -159,7 +159,12 @@ async function existeEnStorage(referencia: string, bucket: string = BUCKET_POR_D
 // conexion) y, al eliminar un adjunto, no borrar del bucket un archivo
 // que otra ficha todavia esta usando.
 export async function referenciaEnUso(referencia: string): Promise<boolean> {
-  const enAdjuntos = await db.adjuntos.filter((a) => !a.eliminadoEn && a.referencia === referencia).first()
+  // Indice `referencia` desde la version 23 (tarea 322).
+  const enAdjuntos = await db.adjuntos
+    .where('referencia')
+    .equals(referencia)
+    .filter((a) => !a.eliminadoEn)
+    .first()
   if (enAdjuntos) return true
   const enFotoDispositivo = await db.dispositivos
     .filter((d) => !d.eliminadoEn && d.foto?.referencia === referencia)
@@ -197,6 +202,13 @@ export async function subirConDeduplicacion(archivo: Blob, nombre: string): Prom
 
   const resultado = await subirOEncolarArchivo(referencia, archivo, nombre, BUCKET_POR_DEFECTO)
   return { referencia, resultado, reutilizado: false }
+}
+
+// Las referencias que todavia no estan en Storage: subiendo o
+// rechazadas. sync.ts no sube la fila de un adjunto mientras su archivo
+// siga aqui (tarea 322, `cambioEsperaSuArchivo`).
+export async function referenciasEnColaDeSubida(): Promise<Set<string>> {
+  return new Set((await db.archivosPendientes.toCollection().primaryKeys()) as string[])
 }
 
 export async function contarArchivosPendientes(): Promise<{ total: number; conError: number }> {

@@ -124,6 +124,14 @@ describe('padreDe', () => {
       })
     })
 
+    // Tarea 322: un adjunto del equipo vuelve a la ficha con su hoja abierta.
+    it('la pantalla de un adjunto vuelve a la ficha, con la hoja "Adjuntos" abierta', () => {
+      expect(padreDe('/dispositivos/cam-1/adjuntos/a-1')).toEqual({
+        to: '/dispositivos/cam-1#adjuntos',
+        etiqueta: 'Adjuntos',
+      })
+    })
+
     // Tarea 321: la lista cuelga de Más; registrar y la ficha, de la
     // lista; editar, de la ficha (regla 13).
     it('las autorizaciones de facturación: lista, registrar, ficha y editar', () => {

@@ -128,6 +128,9 @@ async function sembrarAdjunto(id: string, entidadId: string, nombre: string): Pr
     nombre,
     tipo: 'application/pdf',
     referencia: `pruebas/${id}.pdf`,
+    nota: '',
+    origen: '',
+    fechaDocumento: null,
     updatedAt: AHORA,
     updatedBy: null,
     eliminadoEn: null,
@@ -367,6 +370,31 @@ describe('el documento adjunto', () => {
     await tocar(control('Guardar autorización') as HTMLElement)
     await esperarQue(async () => (await db.autorizaciones_facturacion.count()) === 1, 'se guarda')
     expect((await db.autorizaciones_facturacion.toArray())[0].evidenciaAdjuntoId).toBe('adj-a')
+  })
+
+  // Tarea 322: el mismo documento vinculado a los dos POS son dos filas con
+  // la misma referencia. El selector lo ofrece una vez, y desmarcar el POS
+  // del vínculo elegido lo pasa al del otro POS en vez de soltarlo.
+  it('un documento vinculado a dos POS sale una vez y sobrevive a desmarcar uno', async () => {
+    await sembrarBase()
+    await sembrarAdjunto('adj-a', 'pos-a', 'acta-compartida.pdf')
+    await db.adjuntos.put({ ...(await db.adjuntos.get('adj-a'))!, id: 'adj-a-en-b', entidadId: 'pos-b', nota: 'Página 2' })
+    await montar(RUTAS, '/facturacion/nueva?equipo=pos-a')
+    await esperar(() => textoPantalla().includes('Lo que dice el documento'), 'el formulario')
+    await llenarLoDocumentado()
+    await tocar(casilla('POS de prueba B'))
+    const selector = await esperar(() => selectorDocumento(), 'el selector de documento')
+    await esperar(() => selector.options.length === 2, 'Ninguno y el documento, una sola vez')
+    await elegir(selector, 'adj-a')
+
+    await tocar(casilla('POS de prueba A'))
+    await esperar(() => selectorDocumento()?.value === 'adj-a-en-b', 'el documento pasa al vínculo de POS B')
+    expect(textoPantalla()).not.toContain('Se quitó el documento')
+
+    await tocar(control('Guardar autorización') as HTMLElement)
+    await esperarQue(async () => (await db.autorizaciones_facturacion.count()) === 1, 'se guarda')
+    const [guardada] = await db.autorizaciones_facturacion.toArray()
+    expect(guardada).toMatchObject({ dispositivoIds: ['pos-b'], evidenciaAdjuntoId: 'adj-a-en-b' })
   })
 
   it('al guardar, el documento de un POS que no está asociado no queda como referencia huérfana', async () => {

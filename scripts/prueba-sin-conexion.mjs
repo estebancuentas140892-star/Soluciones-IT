@@ -16,6 +16,9 @@
 //      dejando la intervencion y el cambio en la cola (tarea 320); y una
 //      autorizacion de facturacion confirmada avisa de su vencimiento en
 //      la Agenda y guarda sin red una lectura del consecutivo (tarea 321);
+//      y un acta cuyo archivo todavia espera en la cola de subida se
+//      vincula sin red a otro equipo, con su pagina y sin copiar el
+//      archivo (tarea 322);
 //   5. desbloqueo del dispositivo (tarea 278) con el autenticador virtual
 //      de Chromium: se activa sobre la contrasena, abre la app sin red con
 //      una credencial y una firma reales, y sin verificar al usuario o con
@@ -432,6 +435,63 @@ const SEMBRAR_AUTORIZACION = `
   base.close()
   return true
 `
+// Tarea 322: un acta del equipo A cuyo archivo todavia no subio (sigue en
+// la cola de archivos, como si se hubiera adjuntado sin red). Vincularla
+// sin red al equipo B tiene que crear un segundo vinculo al MISMO archivo,
+// con su pagina, y dejar un solo archivo en la cola.
+const ACTA_SIN_RED = { id: 'adj-sin-red', entidadTipo: 'dispositivo', entidadId: 'eq-sin-red-a', nombre: 'acta-de-prueba-sin-red.pdf', tipo: 'application/pdf', referencia: 'compartidos/acta-de-prueba-sin-red', nota: 'Página 1', origen: '', fechaDocumento: null, updatedAt: AHORA, updatedBy: null, eliminadoEn: null }
+const SEMBRAR_ACTA = `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  await new Promise((ok, mal) => {
+    const t = base.transaction(['adjuntos', 'archivosPendientes'], 'readwrite')
+    t.objectStore('adjuntos').put(${JSON.stringify(ACTA_SIN_RED)})
+    t.objectStore('archivosPendientes').put({ referencia: ${JSON.stringify(ACTA_SIN_RED.referencia)}, contenido: new Blob(['%PDF-1.4 prueba'], { type: 'application/pdf' }), tipo: 'application/pdf', nombre: ${JSON.stringify(ACTA_SIN_RED.nombre)}, bucket: 'adjuntos', creadoEn: ${JSON.stringify(AHORA)}, error: null, intentos: 0 })
+    t.oncomplete = () => ok()
+    t.onerror = () => mal(t.error)
+  })
+  base.close()
+  return true
+`
+const VINCULAR_ACTA = `
+  const fila = [...document.querySelectorAll('[role="dialog"] [role="checkbox"]')].find((b) => (b.textContent || '').includes('Impresora de prueba sin red B'))
+  if (!fila) return false
+  fila.click()
+  await new Promise((r) => setTimeout(r, 300))
+  const campo = [...document.querySelectorAll('[role="dialog"] label')].find((l) => (l.textContent || '').trim().startsWith('Página o nota en Impresora de prueba sin red B'))?.querySelector('input')
+  if (!campo) return false
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(campo, 'Página 2')
+  campo.dispatchEvent(new Event('input', { bubbles: true }))
+  await new Promise((r) => setTimeout(r, 300))
+  return true
+`
+const LEER_ACTA_SIN_RED = `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  const todos = (tabla) =>
+    new Promise((ok, mal) => {
+      const r = base.transaction([tabla], 'readonly').objectStore(tabla).getAll()
+      r.onsuccess = () => ok(r.result)
+      r.onerror = () => mal(r.error)
+    })
+  const adjuntos = (await todos('adjuntos')).filter((a) => a.referencia === ${JSON.stringify(ACTA_SIN_RED.referencia)} && !a.eliminadoEn)
+  const archivos = await todos('archivosPendientes')
+  const cola = await todos('cambiosPendientes')
+  base.close()
+  const deB = adjuntos.find((a) => a.entidadId === 'eq-sin-red-b')
+  return {
+    vinculos: adjuntos.length,
+    notaB: deB?.nota,
+    archivosEnCola: archivos.filter((a) => a.referencia === ${JSON.stringify(ACTA_SIN_RED.referencia)}).length,
+    vinculoEnCola: Boolean(deB) && cola.some((c) => c.tabla === 'adjuntos' && c.entidadId === deB.id),
+  }
+`
 // Escribe en los tres campos del consecutivo (por su rotulo) como lo
 // haria el teclado: React escucha el evento input.
 const LECTURA_SIN_RED = `
@@ -812,6 +872,27 @@ async function main() {
       autorizacionSinRed?.enCola > 0 && autorizacionSinRed?.historialEnCola === true,
       `la autorización y su entrada de historial esperan en la cola (${JSON.stringify(autorizacionSinRed)})`,
     )
+
+    paso('4f. Un acta sin red: se vincula a otro equipo con su página, sin copiar el archivo (tarea 322)')
+    comprobar(Boolean(await s.evaluar(SEMBRAR_ACTA)), 'acta inventada en el equipo A, con su archivo aún en la cola de subida')
+    await s.enviar('Page.navigate', { url: BASE + '/dispositivos/eq-sin-red-a/adjuntos/adj-sin-red' })
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Solo en este equipo.')`, 'la pantalla del acta', 30000)),
+      'la pantalla del acta abre sin red',
+    )
+    await s.tocar('Vincular a otro equipo')
+    comprobar(Boolean(await s.evaluar(VINCULAR_ACTA)), 'se marca el equipo B y se escribe su página')
+    await s.tocar('Vincular a 1 equipo')
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes('Impresora de prueba sin red B')`, 'B en "También en"')),
+      'la pantalla lo lista en "También en", sin red',
+    )
+    const actaSinRed = await s.evaluar(LEER_ACTA_SIN_RED)
+    comprobar(
+      actaSinRed?.vinculos === 2 && actaSinRed?.notaB === 'Página 2' && actaSinRed?.archivosEnCola === 1,
+      `dos vínculos al mismo archivo y un solo archivo en la cola (${JSON.stringify(actaSinRed)})`,
+    )
+    comprobar(actaSinRed?.vinculoEnCola === true, 'el vínculo nuevo espera en la cola de cambios')
 
     // Un autenticador de plataforma VIRTUAL de Chromium (DevTools
     // Protocol, dominio WebAuthn): crea credenciales y firma de verdad, con

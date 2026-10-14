@@ -100,6 +100,8 @@ const HOJA_POR_ANCLA: Record<string, HojaFicha> = {
   '#conexiones': 'conexiones',
   '#seguridad': 'seguridad',
   '#foto': 'adjuntos',
+  // Tarea 322: volver de la pantalla de un adjunto reabre su hoja.
+  '#adjuntos': 'adjuntos',
   '#facturacion': 'facturacion',
 }
 
@@ -982,7 +984,12 @@ export function DispositivoPage() {
 
       <HojaInferior abierta={hoja === 'adjuntos'} onCerrar={cerrarHoja} titulo="Adjuntos" contexto={dispositivo.nombre}>
         {dispositivo.foto && <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />}
-        <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} sinCabecera />
+        <Adjuntos
+          entidadTipo="dispositivo"
+          entidadId={dispositivoId}
+          sinCabecera
+          alAbrir={(adjunto) => navigate(`/dispositivos/${dispositivoId}/adjuntos/${adjunto.id}`)}
+        />
       </HojaInferior>
 
       {tieneFacturacion && (

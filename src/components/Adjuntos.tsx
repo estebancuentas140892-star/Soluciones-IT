@@ -2,9 +2,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, type ChangeEvent } from 'react'
 import { supabase, supabaseConfigured } from '../lib/supabase'
 import { db, type Adjunto } from '../lib/db'
-import { eliminarRegistro, guardarRegistro, nuevoId } from '../lib/repositorio'
+import { guardarRegistro, nuevoId } from '../lib/repositorio'
 import { comprimirImagen } from '../lib/comprimirImagen'
-import { eliminarArchivoPendiente, referenciaEnUso, subirConDeduplicacion } from '../lib/archivosPendientes'
+import { subirConDeduplicacion } from '../lib/archivosPendientes'
+import { adjuntoNuevo, quitarAdjunto, textoOtrosEquipos } from '../features/documentos/documentosEquipo'
 import { DialogoEliminar } from './DialogoEliminar'
 import { useUrlAdjunto } from './useUrlAdjunto'
 import { ImagenAmpliable } from './VisorImagen'
@@ -18,9 +19,22 @@ interface Props {
    * subida se conservan, alineados a la derecha.
    */
   sinCabecera?: boolean
+  /**
+   * Ficha de equipo (tarea 322): cada adjunto es un documento que puede
+   * estar vinculado a otros equipos. Con esta función el adjunto entero
+   * se toca para abrir su pantalla (ver, editar, vincular, quitar), y la
+   * tarjeta dice su nota y en cuántos equipos más está. Sin ella, la
+   * galería de siempre (artículos e intervenciones).
+   */
+  alAbrir?: (adjunto: Adjunto) => void
 }
 
-export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props) {
+// Las dos puertas de subida: 44 px de alto y 14 px de texto, como el
+// resto de verbos del rediseño móvil (tarea 322; antes 29 px y 12 px).
+const CLASE_SUBIR =
+  'inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-noct-divider px-3.5 text-[14px] text-noct-text hover:bg-noct-text/[.07]'
+
+export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false, alAbrir }: Props) {
   const adjuntos = useLiveQuery(
     () =>
       db.adjuntos
@@ -30,6 +44,23 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
         .toArray(),
     [entidadTipo, entidadId],
     [],
+  )
+
+  // En cuántos equipos MÁS está cada documento (misma referencia).
+  const referencias = (adjuntos ?? []).map((a) => a.referencia)
+  const otrosEquipos = useLiveQuery(
+    async () => {
+      const conteo = new Map<string, number>()
+      if (!alAbrir || referencias.length === 0) return conteo
+      const vinculos = await db.adjuntos.where('referencia').anyOf(referencias).toArray()
+      for (const v of vinculos) {
+        if (v.eliminadoEn || v.entidadTipo !== 'dispositivo' || v.entidadId === entidadId) continue
+        conteo.set(v.referencia, (conteo.get(v.referencia) ?? 0) + 1)
+      }
+      return conteo
+    },
+    [Boolean(alAbrir), entidadId, referencias.join('|')],
+    new Map<string, number>(),
   )
 
   const [progreso, setProgreso] = useState<string | null>(null)
@@ -56,6 +87,7 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
     const fallidos: string[] = []
     let encolados = 0
     let reutilizados = 0
+    let yaEstaban = 0
     for (let i = 0; i < archivos.length; i++) {
       setProgreso(archivos.length > 1 ? `Subiendo ${i + 1} de ${archivos.length}...` : 'Subiendo...')
       try {
@@ -70,6 +102,13 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
         // antes: la cola de sincronizacion lo sube sola al recuperar
         // señal.
         const { referencia, resultado, reutilizado } = await subirConDeduplicacion(archivoFinal, archivoFinal.name)
+        // Tarea 322: el mismo archivo no se repite en una ficha, y en un
+        // equipo toma los datos del documento si ya está en otro.
+        const nuevo = await adjuntoNuevo(entidadTipo, entidadId, referencia, archivoFinal.name)
+        if (nuevo.yaEsta) {
+          yaEstaban += 1
+          continue
+        }
         if (resultado === 'encolado') encolados += 1
         if (reutilizado) reutilizados += 1
 
@@ -77,9 +116,12 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
           id: nuevoId(),
           entidadTipo,
           entidadId,
-          nombre: archivoFinal.name,
+          nombre: nuevo.nombre,
           tipo: archivoFinal.type,
           referencia,
+          nota: '',
+          origen: nuevo.origen,
+          fechaDocumento: nuevo.fechaDocumento,
         })
       } catch {
         fallidos.push(archivos[i].name)
@@ -87,7 +129,9 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
     }
 
     if (fallidos.length > 0) setError(`No se pudo subir: ${fallidos.join(', ')}`)
-    if (encolados > 0) {
+    if (yaEstaban > 0 && encolados === 0 && reutilizados === 0) {
+      setAviso(yaEstaban === 1 ? 'Ese archivo ya está en esta ficha.' : `${yaEstaban} archivos ya estaban en esta ficha.`)
+    } else if (encolados > 0) {
       setAviso(
         encolados === 1
           ? 'Sin conexión: el archivo quedó guardado en este dispositivo y se subirá solo al recuperar señal.'
@@ -106,21 +150,9 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
   async function confirmarEliminar() {
     const adjunto = aEliminar
     if (!adjunto) return
-    await eliminarRegistro('adjuntos', adjunto.id)
-    // Con deduplicacion (tarea 123) la misma referencia puede seguir
-    // en uso desde otra ficha (otro adjunto, o la foto de un
-    // dispositivo): en ese caso no se toca ni la cola ni el archivo en
-    // Storage, que la otra ficha todavia necesita.
-    if (await referenciaEnUso(adjunto.referencia)) {
-      setAEliminar(null)
-      return
-    }
-    // Si el archivo seguia en la cola de subida, ya no hay que subirlo;
-    // tambien se libera su copia offline.
-    await eliminarArchivoPendiente(adjunto.referencia)
-    if (supabase && navigator.onLine) {
-      await supabase.storage.from('adjuntos').remove([adjunto.referencia])
-    }
+    // El archivo solo se borra si ya ninguna otra ficha lo usa
+    // (deduplicacion de la tarea 123, vinculos de la 322).
+    await quitarAdjunto(adjunto)
     setAEliminar(null)
   }
 
@@ -129,7 +161,7 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
       <div className={`flex items-center gap-2 ${sinCabecera ? 'justify-end' : 'justify-between'}`}>
         {!sinCabecera && <h2 className="text-sm font-medium text-noct-neutral-400">Adjuntos</h2>}
         <div className="flex gap-2">
-          <label className="cursor-pointer rounded-lg border border-noct-divider px-3 py-1.5 text-xs text-noct-text hover:bg-noct-text/[.07]">
+          <label className={CLASE_SUBIR}>
             {subiendo ? progreso : 'Cámara'}
             <input
               type="file"
@@ -141,7 +173,7 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
             />
           </label>
           {!subiendo && (
-            <label className="cursor-pointer rounded-lg border border-noct-divider px-3 py-1.5 text-xs text-noct-text hover:bg-noct-text/[.07]">
+            <label className={CLASE_SUBIR}>
               + Archivos
               <input
                 type="file"
@@ -162,9 +194,18 @@ export function Adjuntos({ entidadTipo, entidadId, sinCabecera = false }: Props)
       {adjuntos && adjuntos.length === 0 && <p className="text-xs text-noct-neutral-500">Sin adjuntos todavía</p>}
 
       <div className="grid grid-cols-2 gap-2">
-        {adjuntos?.map((adjunto) => (
-          <AdjuntoItem key={adjunto.id} adjunto={adjunto} onEliminar={() => setAEliminar(adjunto)} />
-        ))}
+        {adjuntos?.map((adjunto) =>
+          alAbrir ? (
+            <DocumentoItem
+              key={adjunto.id}
+              adjunto={adjunto}
+              otrosEquipos={otrosEquipos.get(adjunto.referencia) ?? 0}
+              onAbrir={() => alAbrir(adjunto)}
+            />
+          ) : (
+            <AdjuntoItem key={adjunto.id} adjunto={adjunto} onEliminar={() => setAEliminar(adjunto)} />
+          ),
+        )}
       </div>
 
       <DialogoEliminar
@@ -213,4 +254,58 @@ function AdjuntoItem({ adjunto, onEliminar }: { adjunto: Adjunto; onEliminar: ()
       )}
     </div>
   )
+}
+
+// Tarjeta de un documento de la ficha de un equipo (tarea 322): toda la
+// tarjeta abre su pantalla; ahí se amplía, se edita, se vincula o se
+// quita. Debajo de la miniatura, el nombre, la nota de este equipo y en
+// cuántos equipos más está.
+function DocumentoItem({
+  adjunto,
+  otrosEquipos,
+  onAbrir,
+}: {
+  adjunto: Adjunto
+  otrosEquipos: number
+  onAbrir: () => void
+}) {
+  const url = useUrlAdjunto(adjunto.referencia)
+  const esImagen = adjunto.tipo.startsWith('image/')
+
+  // El nombre accesible es lo que dice la tarjeta, sin la extensión que
+  // hace de miniatura: "acta.pdf, Página 3, En 1 equipo más".
+  const nombreAccesible = [adjunto.nombre, adjunto.nota, otrosEquipos > 0 ? textoOtrosEquipos(otrosEquipos) : '']
+    .filter(Boolean)
+    .join(', ')
+
+  return (
+    <button
+      type="button"
+      onClick={onAbrir}
+      aria-label={nombreAccesible}
+      className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-noct-divider bg-noct-surface text-left hover:bg-noct-text/[.04]"
+    >
+      {esImagen && url ? (
+        <img src={url} alt="" className="h-24 w-full object-cover" />
+      ) : (
+        <div aria-hidden className="flex h-24 w-full items-center justify-center bg-noct-text/[.03] px-2 text-[12px] uppercase tracking-wide text-noct-neutral-500">
+          {extension(adjunto.nombre, adjunto.tipo)}
+        </div>
+      )}
+      <div className="flex min-w-0 flex-col gap-0.5 px-2.5 py-2">
+        {/* Sin recorte (regla 23): dos actas se distinguen a veces solo por el final del nombre. */}
+        <span className="text-[13px] leading-snug text-noct-text [overflow-wrap:anywhere]">{adjunto.nombre}</span>
+        {adjunto.nota && <span className="text-[12px] leading-snug text-noct-neutral-400 [overflow-wrap:anywhere]">{adjunto.nota}</span>}
+        {otrosEquipos > 0 && <span className="text-[12px] leading-snug text-noct-accent-300">{textoOtrosEquipos(otrosEquipos)}</span>}
+      </div>
+    </button>
+  )
+}
+
+// "PDF", "JPG"... para la tarjeta de un documento sin miniatura.
+function extension(nombre: string, tipo: string): string {
+  const punto = nombre.lastIndexOf('.')
+  if (punto > 0 && punto < nombre.length - 1) return nombre.slice(punto + 1).slice(0, 5)
+  if (tipo === 'application/pdf') return 'pdf'
+  return 'Archivo'
 }

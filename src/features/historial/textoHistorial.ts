@@ -79,7 +79,12 @@ export function descripcionEntrada(entrada: EntradaDescriptible): string {
   if (entrada.campo === 'intervencion') return entrada.valorNuevo
   if (entrada.campo === 'creacion') return `Se creó: ${entrada.valorNuevo}`
   if (entrada.campo === 'eliminacion') return `Se eliminó: ${entrada.valorAnterior}`
-  if (entrada.campo === 'adjunto') return `Se agregó el adjunto: ${entrada.valorNuevo}`
+  // Quitar un adjunto deja el nombre en `valorAnterior` y nada en
+  // `valorNuevo` (repositorio.ts, entradasEliminacion); antes se leía
+  // "Se agregó el adjunto: " vacío (tarea 322).
+  if (entrada.campo === 'adjunto') {
+    return entrada.valorNuevo ? `Se agregó el adjunto: ${entrada.valorNuevo}` : `Se quitó el adjunto: ${entrada.valorAnterior}`
+  }
   // El procedimiento y los campos adicionales tienen su propia vista de
   // resumen (ver Historial.tsx); estos textos son solo un respaldo para
   // no volcar nunca el JSON crudo.

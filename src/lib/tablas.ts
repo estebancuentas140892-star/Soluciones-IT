@@ -290,8 +290,14 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       nombre: 'nombre',
       tipo: 'tipo',
       referencia: 'referencia',
+      // Tarea 322 (bloque 1.s de schema.sql). `fechaDocumento` no lleva
+      // default ni va en `camposOpcionales`: se puede vaciar desde el
+      // formulario, asi que viaja siempre, incluido null.
+      nota: 'nota',
+      origen: 'origen',
+      fechaDocumento: 'fecha_documento',
     },
-    porDefecto: { tipo: '' },
+    porDefecto: { tipo: '', nota: '', origen: '' },
   },
   historial: {
     columnaCursor: 'recibido_en',

@@ -1,7 +1,12 @@
 import type { RealtimeChannel } from '@supabase/supabase-js'
-import { db, storeDe, type CambioPendiente, type Perfil } from './db'
+import { db, storeDe, type Adjunto, type CambioPendiente, type Perfil } from './db'
 import { supabase } from './supabase'
-import { contarArchivosPendientes, esErrorDeRed, procesarArchivosPendientes } from './archivosPendientes'
+import {
+  contarArchivosPendientes,
+  esErrorDeRed,
+  procesarArchivosPendientes,
+  referenciasEnColaDeSubida,
+} from './archivosPendientes'
 import {
   aEntidadLocal,
   aFilaRemota,
@@ -276,12 +281,34 @@ function resumenErroresDeTabla(errores: string[]): string {
 // Subida (push)
 // ----------------------------------------------------------------
 
+// Tarea 322: ninguna fila de un adjunto llega al servidor apuntando a un
+// archivo que no se subio. Los archivos van antes que las filas (ver
+// ejecutarSync), pero un archivo que Storage RECHAZA (no un corte de
+// red) se queda en su cola con el error y, antes, su fila subia igual:
+// el resto del equipo veia un adjunto sin archivo. Ahora la fila espera
+// mientras su referencia siga en la cola de archivos. La cola de cambios
+// guarda un solo cambio por entidad (encolarCambioDeEntidad), asi que
+// esperar no desordena nada. Un adjunto quitado viaja igual: es un
+// borrado suave que nadie ve, y quitarlo ya saco su archivo de la cola
+// si ninguna otra ficha lo usa.
+export function cambioEsperaSuArchivo(
+  cambio: Pick<CambioPendiente, 'tabla' | 'payload'>,
+  referenciasEnCola: ReadonlySet<string>,
+): boolean {
+  if (cambio.tabla !== 'adjuntos') return false
+  const adjunto = cambio.payload as Partial<Adjunto> | null
+  if (!adjunto || adjunto.eliminadoEn || typeof adjunto.referencia !== 'string') return false
+  return referenciasEnCola.has(adjunto.referencia)
+}
+
 async function subirCambiosPendientes(): Promise<void> {
   if (!supabase) return
   const pendientes = await db.cambiosPendientes.orderBy('creadoEn').toArray()
   const conflictos: string[] = []
+  const archivosEnCola = await referenciasEnColaDeSubida()
 
   for (const cambio of pendientes) {
+    if (cambioEsperaSuArchivo(cambio, archivosEnCola)) continue
     const tabla = cambio.tabla as TablaSincronizada
     const config = configTablas[tabla]
     const fila = aFilaRemota(tabla, cambio.payload)

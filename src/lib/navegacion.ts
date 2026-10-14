@@ -177,11 +177,13 @@ export function padreDe(pathname: string): Padre | null {
       // /dispositivos/:id/editar, /dispositivos/:id/baja,
       // /dispositivos/:id/reemplazo y, desde la tarea 320,
       // /dispositivos/:id/mantenimientos -> ficha (y, desde la tarea 331,
-      // /dispositivos/:id/mantenimientos/:mid -> esa pantalla); el resto (nuevo,
-      // importar, etiquetas, :id) -> lista. La ficha de un equipo de red
-      // vuelve a Red: eso depende de datos en runtime (es_red), la
-      // pantalla lo resuelve con un override.
+      // /dispositivos/:id/mantenimientos/:mid -> esa pantalla); desde la
+      // tarea 322, /dispositivos/:id/adjuntos/:aid -> la ficha con su hoja
+      // "Adjuntos" abierta; el resto (nuevo, importar, etiquetas, :id) ->
+      // lista. La ficha de un equipo de red vuelve a Red: eso depende de
+      // datos en runtime (es_red), la pantalla lo resuelve con un override.
       if (b === 'mantenimientos' && c) return { to: `/dispositivos/${a}/mantenimientos`, etiqueta: 'Mantenimiento' }
+      if (b === 'adjuntos') return { to: `/dispositivos/${a}#adjuntos`, etiqueta: 'Adjuntos' }
       if (b === 'editar' || b === 'baja' || b === 'reemplazo' || b === 'mantenimientos') {
         return { to: `/dispositivos/${a}`, etiqueta: 'Volver' }
       }

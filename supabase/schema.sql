@@ -976,6 +976,42 @@ alter table public.autorizaciones_facturacion add constraint autorizaciones_conf
 create index if not exists idx_autorizaciones_facturacion_updated on public.autorizaciones_facturacion (updated_at);
 
 -- ----------------------------------------------------------------
+-- 1.s Un documento, varios equipos (2026-10-13, tarea 322).
+--
+--     Un acta en PDF puede tener paginas de varios equipos. El archivo
+--     ya existe una sola vez en Storage: desde la tarea 123 la
+--     `referencia` de un adjunto es el hash de su contenido
+--     (`compartidos/<sha256>`), y dos fichas que suben el mismo archivo
+--     comparten el objeto. Asi que cada fila de `adjuntos` con
+--     entidad_tipo 'dispositivo' es ya el VINCULO documento-equipo, y el
+--     documento es su referencia. No hay tabla `documentos` ni tabla
+--     puente: duplicarian lo que la referencia resuelve (AD-086).
+--
+--     Lo que faltaba, en tres columnas:
+--       - `nota`: lo propio de ESTE vinculo, la pagina o una nota de la
+--         relacion ("Pagina 3", "Hoja de entrega del monitor"). Cada
+--         equipo tiene la suya.
+--       - `origen` y `fecha_documento`: lo propio del DOCUMENTO, solo si
+--         estan confirmados (nunca se deduce una fecha del nombre del
+--         archivo ni de cuando se subio). La app los mantiene iguales en
+--         todos los vinculos de la misma referencia al editarlos.
+--
+--     No toca los datos existentes: las filas actuales quedan con '' y
+--     null. Del lado de la app, `nota` y `origen` llevan su default en
+--     `porDefecto` de src/lib/tablas.ts. Advertencia de despliegue
+--     (regla 17 de REGLAS.md): hasta aplicar este bloque, PostgREST
+--     rechaza la fila entera de un adjunto nuevo (espera en la cola de
+--     sincronizacion, no se pierde). Aplicarlo ANTES de desplegar la
+--     version que lo usa; una version anterior de la app sigue
+--     funcionando con el bloque aplicado (no envia las columnas nuevas y
+--     reciben su default).
+-- ----------------------------------------------------------------
+
+alter table public.adjuntos add column if not exists nota text not null default '';
+alter table public.adjuntos add column if not exists origen text not null default '';
+alter table public.adjuntos add column if not exists fecha_documento date;
+
+-- ----------------------------------------------------------------
 -- 2. Funciones y triggers
 -- ----------------------------------------------------------------
 

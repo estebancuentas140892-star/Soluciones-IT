@@ -134,8 +134,8 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 
 ### 2.2 `Adjuntos`
 - **Propósito:** galería de adjuntos de una ficha (subir desde cámara o archivo, ver, eliminar) con compresión, deduplicación por hash y cola offline.
-- **Props:** `{ entidadTipo: 'articulo' | 'dispositivo' | 'historial', entidadId, sinCabecera?: boolean = false }`. `sinCabecera` oculta el rótulo "Adjuntos" cuando el bloque va dentro de una `SeccionPlegable` que ya lo escribe con su conteo (ficha de equipo, M-014); los dos botones de subida se conservan, alineados a la derecha.
-- **Variantes:** decide imagen vs archivo genérico según el `tipo`; usa `VisorImagen` para imágenes.
+- **Props:** `{ entidadTipo: 'articulo' | 'dispositivo' | 'historial', entidadId, sinCabecera?: boolean = false, alAbrir?: (adjunto) => void }`. `sinCabecera` oculta el rótulo "Adjuntos" cuando el bloque va dentro de una `SeccionPlegable` que ya lo escribe con su conteo (ficha de equipo, M-014); los dos botones de subida se conservan, alineados a la derecha (44 px de alto y 14 px de texto desde la tarea 322). `alAbrir` (tarea 322, solo la ficha de equipo): cada adjunto es una tarjeta que se toca entera (`DocumentoItem`, con nombre accesible "nombre, nota, En N equipos más") y la función abre su pantalla; dice su nota y en cuántos equipos más está, sin "×".
+- **Variantes:** decide imagen vs archivo genérico según el `tipo`; usa `VisorImagen` para imágenes. Con `alAbrir`, la tarjeta de documento (miniatura o extensión, nombre entero, nota y "En N equipos más"). Quitar un adjunto pasa por `quitarAdjunto` (`src/features/documentos/documentosEquipo.ts`), que solo borra el archivo si ninguna otra ficha lo usa. Al subir, `adjuntoNuevo` evita repetir el mismo archivo en la ficha y, en un equipo, copia los datos del documento si ya está en otro.
 - **Dónde:** `DispositivoPage`, `ArticuloPage`, `Historial` (adjuntos de una intervención), `RegistrarIntervencion`, `AsistenteVista`.
 
 ### 2.2b `Avatar`
@@ -929,6 +929,12 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Props:** `{ tipo: TipoNodoVisual, className?: string = 'h-4 w-4' }`. `TipoNodoVisual` cubre router, switch, ap, punto, pc, impresora, pos, rack, camara, servidor, ups, generico.
 - **Variantes:** un SVG por tipo (set visual con `stroke`, distinto de `iconos.tsx`).
 - **Dónde:** `FilaDispositivo`, `TopologiaPage`, `TopologiaEquipoPage`, `CategoriaPage`.
+
+### 3.9 `documentos/EditarDocumento` y `documentos/VincularDocumento` (2026-10-13, tarea 322, AD-086)
+- **Propósito:** las dos hojas de la pantalla de un adjunto del equipo (`DocumentoDelEquipoPage`). `EditarDocumento` edita el nombre, el origen y la fecha del documento (en todos sus vínculos) y la página o nota de este equipo; `VincularDocumento` busca equipos, los marca con casillas fijas y pide la página o nota de cada uno.
+- **Props:** `EditarDocumento { adjunto, nombreEquipo, otrosEquipos: number, alTerminar }`; `VincularDocumento { adjunto, yaVinculados: string[], alTerminar }` (`yaVinculados` incluye el equipo de la pantalla: no se ofrecen).
+- **Variantes:** ninguna. Campos sobre superficie (`CLASE_CAMPO_SOBRE_SUPERFICIE`) y una acción rellena por hoja ("Guardar", "Vincular a N equipos"). Se montan solo abiertas: cada vez empiezan con los datos de ahora.
+- **Dónde:** `DocumentoDelEquipoPage` (`/dispositivos/:id/adjuntos/:adjuntoId`). La lógica vive en `documentos/documentosEquipo.ts` (`editarDocumento`, `vincularDocumento`, `vinculosDelDocumento`, `errorDeDocumento`, `quitarAdjunto`, `textoOtrosEquipos`).
 
 ## 4. Fuentes únicas de un patrón
 

@@ -12,6 +12,7 @@ import { db, type EstadoAutorizacion } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { hoyIso } from '../mantenimientos/mantenimiento'
+import { vinculosDelDocumento } from '../documentos/documentosEquipo'
 import {
   autorizacionDesdeDatos,
   DATOS_VACIOS,
@@ -100,16 +101,39 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
   }, [categorias, dispositivos, datos.dispositivoIds])
 
   // El documento se elige entre los adjuntos de los POS marcados: existe
-  // una sola vez, colgado de su equipo.
+  // una sola vez, colgado de su equipo. Desde la tarea 322 un mismo
+  // documento puede estar vinculado a dos de esos POS (dos filas con la
+  // misma referencia): sale una sola vez, la ya elegida o la de su primer
+  // POS marcado.
   const adjuntos = useLiveQuery(
     async () => {
       if (datos.dispositivoIds.length === 0) return []
       const todos = await db.adjuntos.where('[entidadTipo+entidadId]').anyOf(
         datos.dispositivoIds.map((d) => ['dispositivo', d]),
       ).toArray()
-      return todos.filter((a) => !a.eliminadoEn)
+      const orden = (a: (typeof todos)[number]) =>
+        a.id === datos.evidenciaAdjuntoId ? -1 : datos.dispositivoIds.indexOf(a.entidadId)
+      const vistos = new Set<string>()
+      return todos
+        .filter((a) => !a.eliminadoEn)
+        .sort((a, b) => orden(a) - orden(b))
+        .filter((a) => {
+          if (vistos.has(a.referencia)) return false
+          vistos.add(a.referencia)
+          return true
+        })
     },
-    [datos.dispositivoIds.join(',')],
+    [datos.dispositivoIds.join(','), datos.evidenciaAdjuntoId],
+    [],
+  )
+
+  // Los vínculos del documento elegido con cualquier equipo (tarea 322): al
+  // desmarcar su POS, el documento puede pasar a otro POS marcado que
+  // también lo tiene, sin esperar a la base en mitad del toque.
+  const referenciaEvidencia = adjuntos.find((a) => a.id === datos.evidenciaAdjuntoId)?.referencia ?? ''
+  const vinculosDeLaEvidencia = useLiveQuery(
+    () => (referenciaEvidencia ? vinculosDelDocumento(referenciaEvidencia) : []),
+    [referenciaEvidencia],
     [],
   )
 
@@ -130,6 +154,8 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
 
   // Desmarcar el POS del que cuelga el documento elegido lo quita de la
   // autorización, y se dice: el documento tiene que ser de uno de sus POS.
+  // Si el mismo documento está vinculado a otro POS que sigue marcado
+  // (tarea 322), pasa a ese vínculo y no se pierde.
   function alternarPos(dispositivoId: string) {
     const quitando = datos.dispositivoIds.includes(dispositivoId)
     const marcados = quitando
@@ -138,9 +164,14 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
     let evidencia = datos.evidenciaAdjuntoId
     const documento = adjuntos.find((a) => a.id === evidencia)
     if (quitando && documento && documento.entidadId === dispositivoId) {
-      evidencia = ''
-      const pos = candidatos.find((d) => d.id === dispositivoId)?.nombre ?? 'ese POS'
-      setAvisoEvidencia(`Se quitó el documento «${documento.nombre}»: es de ${pos}, que ya no está marcado.`)
+      const otroVinculo = vinculosDeLaEvidencia.find((v) => v.referencia === documento.referencia && marcados.includes(v.entidadId))
+      if (otroVinculo) {
+        evidencia = otroVinculo.id
+      } else {
+        evidencia = ''
+        const pos = candidatos.find((d) => d.id === dispositivoId)?.nombre ?? 'ese POS'
+        setAvisoEvidencia(`Se quitó el documento «${documento.nombre}»: es de ${pos}, que ya no está marcado.`)
+      }
     }
     setDatos({ ...datos, dispositivoIds: marcados, evidenciaAdjuntoId: evidencia })
   }

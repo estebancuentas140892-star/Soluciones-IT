@@ -404,6 +404,20 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: AutorizacionFacturacion, Dispositivo, HistorialEntrada, Adjunto. Dura en el código: `src/lib/autorizaciones.ts`, `src/lib/repositorio.ts` (`entradasDeAutorizacion`), `src/features/facturacion/` (`autorizacion.ts`, `AutorizacionesDelPos.tsx`, `AutorizacionesPage.tsx`, `AutorizacionPage.tsx`, `AutorizacionForm.tsx`, `PresentacionAutorizacion.tsx`), `src/features/inicio/pendientes.ts`.
 - Impacto: una tabla nueva sincronizada (`autorizaciones_facturacion`, bloque 1.t de `schema.sql`, que se aplica antes de desplegar, regla 17); ningún dato real cambia ni se carga.
 
+**RN-075. Un documento existe una sola vez y se vincula a uno o varios equipos; cada vínculo lleva su página o nota, y el origen y la fecha del documento solo se anotan si están confirmados.**
+- Motivo: tarea 322 (encargo del 2026-10-10, fase D; [DECISIONES.md](DECISIONES.md) AD-086). Varias actas en PDF tienen páginas de distintos equipos, y un adjunto era de una sola ficha.
+- Identidad: el documento es su referencia en Storage (`compartidos/<sha256>`, deduplicación de la tarea 123). Cada adjunto activo de un equipo con esa referencia es un vínculo. Un equipo no tiene dos vínculos del mismo documento.
+- Del vínculo: la página o nota (`nota`, opcional), propia de cada equipo.
+- Del documento: nombre (obligatorio), origen y fecha (opcionales, solo si están confirmados; la fecha no es futura). Son iguales en todos sus vínculos: editarlos en un equipo los cambia en todos. Nunca se deduce una fecha del nombre del archivo ni de cuándo se subió; sin confirmar, la pantalla dice "Sin confirmar".
+- Vincular: desde la pantalla del adjunto, "Vincular a otro equipo" crea un vínculo por equipo marcado, con la misma referencia: no se sube ni se copia ningún byte, y funciona sin conexión.
+- Subir: el mismo archivo no se repite en una ficha ("Ese archivo ya está en esta ficha."); subido a un equipo cuando ya está en otro, el vínculo nuevo toma el nombre, el origen y la fecha del documento (`adjuntoNuevo`).
+- Quitar: "Quitar de este equipo" quita solo ese vínculo; el archivo sigue mientras otro equipo, un artículo o la foto de un equipo lo use, y solo con el último se borra de la cola, de la copia sin conexión y del bucket.
+- Integridad: ninguna fila de un adjunto llega al servidor apuntando a un archivo que no se subió: mientras su archivo siga en la cola de subida (subiendo o rechazado), la fila espera (`cambioEsperaSuArchivo`).
+- Historial: vincular deja "Se agregó el adjunto" en el equipo que lo recibe; quitar, "Se quitó el adjunto" en el que lo deja. Editar los datos o la nota no deja entrada (como antes: un adjunto se agrega o se quita).
+- Evidencia de una autorización (RN-074): el formulario ofrece cada documento una sola vez aunque esté vinculado a varios de sus POS, y al desmarcar el POS del vínculo elegido pasa al vínculo de otro POS marcado antes de soltarlo.
+- Entidades: Adjunto, Dispositivo, HistorialEntrada, AutorizacionFacturacion. Dura en el código: `src/features/documentos/` (`documentosEquipo.ts`, `DocumentoDelEquipoPage.tsx`, `EditarDocumento.tsx`, `VincularDocumento.tsx`), `src/components/Adjuntos.tsx`, `src/lib/sync.ts` (`cambioEsperaSuArchivo`), `src/lib/archivosPendientes.ts` (`referenciasEnColaDeSubida`), `src/features/facturacion/AutorizacionForm.tsx`.
+- Impacto: tres columnas en `adjuntos` (bloque 1.s de `schema.sql`, que se aplica antes de desplegar, regla 17); ningún dato real cambia.
+
 ---
 
 **RN-042. El buscador prioriza la intención de resolver: una guía que coincide en el título va primero, publicada o no.**
@@ -580,6 +594,7 @@ erDiagram
 | Dispositivo | reemplaza | Dispositivo | 1 : 0..1 | FK `reemplaza_a` (autorreferencia, fija una vez) |
 | Dispositivo | contiene | Campo protegido | 1 : N | `dispositivo_id` (nullable, sin FK) |
 | Dispositivo | se le programa | Mantenimiento | 1 : N | `mantenimientos.dispositivo_id` (sin FK). Cerrado como realizado, `historial_id` apunta a la intervención del historial del equipo (0..1), de la que cuelga la evidencia (RN-073) |
+| Documento (adjunto) | se vincula a | Dispositivo | N : M | una fila de `adjuntos` por vínculo (`entidad_tipo` 'dispositivo', `entidad_id` sin FK), unidas por la misma `referencia` de Storage; cada una con su `nota`. Sin tabla de documentos ni tabla puente (RN-075) |
 | Autorización de facturación | la usa | Dispositivo (POS) | N : M | lista `autorizaciones_facturacion.dispositivo_ids` (`uuid[]` sin FK); puede estar vacía (una fuente que no identifica el equipo). Su documento, `evidencia_adjunto_id` (un adjunto de uno de sus POS, sin FK) (RN-074) |
 | Dispositivo | conexión | Dispositivo | N : M | tabla puente `conexiones` (dos FK duras) con atributos |
 | Credencial | da acceso | Dispositivo | N : M | JSON `credenciales.dispositivos` `{id,nombre}[]` |
