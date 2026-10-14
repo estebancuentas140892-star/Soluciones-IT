@@ -649,7 +649,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Descripción:** hoy `Adjuntos` es por entidad y varias actas en PDF tienen páginas de distintos equipos. Evaluar la solución mínima compatible con `Adjuntos` y la sincronización sin conexión; si hace falta una relación muchos a muchos, implementarla en lugar de copiar bytes. Nombre, tipo, referencia, página o nota opcional, origen y fecha solo si están confirmados. Ninguna fila documental apunta a un archivo que no se subió. La ficha del equipo los muestra dentro de "Más del equipo".
 - **Motivo:** encargo del usuario del 2026-10-10, fase D.
 - **Impacto:** medio.
-- **Prioridad:** Media. **Estado:** Pendiente.
+- **Prioridad:** Media. **Estado:** Implementada en la rama `feat/documentos-equipos`, pendiente de la aprobación del usuario y de aplicar el bloque 1.s de `schema.sql` en Production. **Su hallazgo crítico ya está en `main`** (`216f597`, 2026-10-13, aprobado por el usuario): el índice de búsqueda nombraba cada adjunto por su referencia y el mismo archivo en dos fichas tumbaba Resolver (`src/features/busqueda/useIndiceBusqueda.ts`, CHANGELOG del 2026-10-13).
 - **Área afectada:** `src/components/Adjuntos.tsx`, `src/lib/adjuntosOffline.ts`, `src/lib/archivosPendientes.ts`, `supabase/schema.sql` (`adjuntos`), la ficha del equipo.
 - **Dependencias:** ninguna; puede servir de evidencia a la 320 y la 321.
 

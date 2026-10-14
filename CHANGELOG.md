@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Corregido (búsqueda, hallazgo de la tarea 322): un mismo archivo en dos fichas ya no tumba Resolver
+
+**Área modificada:** `src/features/busqueda/useIndiceBusqueda.ts` (ids de los adjuntos y `crearIndiceDesdeDocumentos`), `src/features/busqueda/adjuntosEnIndice.test.ts` (nueva).
+**Tipo:** Corregido; Documentación (BUSCADOR casos límite, TAREAS 322).
+**Motivo:** fallo crítico latente desde la tarea 123, encontrado por la prueba sin conexión real de la tarea 322. Integrado a `main` antes que la 322, con la aprobación del usuario del 2026-10-13.
+**Qué cambia:** el índice nombraba cada adjunto por su referencia de Storage (`adjunto:<referencia>`). Con la deduplicación por hash, el mismo archivo en dos fichas (subido a dos equipos o artículos, o en dos pasos de guía) son dos filas con la misma referencia: MiniSearch recibía dos veces el mismo id, lanzaba "duplicate ID" y Resolver caía entero en "No se pudo cargar la aplicación". Ahora el adjunto de la tabla se nombra por su fila (`adjunto:<id>`), el de la galería de un paso por artículo, paso y referencia, y cualquier id repetido se ignora en vez de romper el índice. El mismo archivo en dos fichas sale dos veces en la búsqueda, cada una con su ficha.
+**Estructura de datos:** sin cambios.
+**Verificación:** `adjuntosEnIndice.test.ts` falla sobre `82dd99b` con "MiniSearch: duplicate ID" y pasa con el arreglo; la suite de búsqueda (357), `tsc -b`, lint y build en verde sobre `main`.
+**Impacto esperado:** Resolver no puede volver a caerse por un archivo repetido.
+
 ### Agregado (tema, tarea 333): tema claro opcional, oscuro por defecto
 
 **Área modificada:** `src/index.css` (tokens claros), `src/lib/tema.ts` (nuevo), `public/tema.js` (nuevo), `index.html`, `src/main.tsx`, `src/features/autenticacion/ElegirTema.tsx` (nuevo) y `CuentaPage.tsx`; ajustes de contraste en `src/features/busqueda/ChipsDeAlcance.tsx` y `src/components/FilaDispositivo.tsx`.
