@@ -22,6 +22,7 @@ import { DispositivoPage } from '../dispositivos/DispositivoPage'
 import { AgendaPage } from '../inicio/AgendaPage'
 import { antecedenteDesdeCronograma } from './antecedentes'
 import { MantenimientoPage } from './MantenimientoPage'
+import { MantenimientosPage } from './MantenimientosPage'
 
 // MANTENIMIENTO OPERATIVO, DE PUNTA A PUNTA (tarea 320, encargo del
 // 2026-10-10, fase B). Lo que solo se ve montando las pantallas:
@@ -41,8 +42,16 @@ import { MantenimientoPage } from './MantenimientoPage'
 const RUTAS = [
   { ruta: '/agenda', elemento: <AgendaPage /> },
   { ruta: '/dispositivos/:dispositivoId', elemento: <DispositivoPage /> },
+  { ruta: '/dispositivos/:dispositivoId/mantenimientos', elemento: <MantenimientosPage /> },
   { ruta: '/dispositivos/:dispositivoId/mantenimientos/:mantenimientoId', elemento: <MantenimientoPage /> },
 ]
+
+/** El botón de enviar de la hoja abierta (el de "Programar mantenimiento" de la hoja, no el de la pantalla). */
+function enviarDeLaHoja(): HTMLElement {
+  const boton = document.body.querySelector<HTMLElement>('[role="dialog"] button[type="submit"]')
+  if (!boton) throw new Error('Sin hoja con formulario')
+  return boton
+}
 
 const AHORA = '2026-10-10T12:00:00.000Z'
 
@@ -132,18 +141,22 @@ describe('programar desde la ficha del equipo', () => {
     await montar(RUTAS, '/dispositivos/pc')
     const seccion = await esperar(() => control(/^Mantenimiento/), 'la fila Mantenimiento')
     expect(seccion.textContent).toContain('Ninguno')
+    // Mantenimiento se trabaja en su pantalla (tarea 331): la fila la abre.
+    expect(seccion.getAttribute('aria-haspopup')).toBeNull()
     await tocar(seccion)
-    await tocar(await esperar(() => control('Programar'), 'Programar'))
+    await esperar(() => textoPantalla().includes('Sin mantenimientos'), 'su pantalla, vacía')
+    await tocar(await esperar(() => control('Programar mantenimiento'), 'Programar mantenimiento'))
+    await esperar(() => document.body.querySelector('[role="dialog"]'), 'la hoja de programar')
 
     // Sin fecha no se guarda, y lo dice.
-    await tocar(control('Programar mantenimiento') as HTMLElement)
+    await tocar(enviarDeLaHoja())
     await esperar(() => textoPantalla().includes('Elige la fecha en que toca.'), 'el aviso')
     expect(await db.mantenimientos.count()).toBe(0)
 
     await tocar(opcion('Correctivo'))
     await rellenar(campoDe('Fecha en que toca'), fechaRelativa(5))
     await rellenar(campoDe('Observaciones'), 'Revisar ventilador')
-    await tocar(control('Programar mantenimiento') as HTMLElement)
+    await tocar(enviarDeLaHoja())
 
     await esperarQue(async () => (await db.mantenimientos.count()) === 1, 'se guarda')
     const [guardado] = await db.mantenimientos.toArray()
@@ -155,7 +168,9 @@ describe('programar desde la ficha del equipo', () => {
       validacion: 'confirmado',
       observaciones: 'Revisar ventilador',
     })
-    await esperar(() => control(/^Mantenimiento correctivo/), 'la fila del programado')
+    // Programado: su tarjeta, con "Cerrar mantenimiento".
+    await esperar(() => control(/^Mantenimiento correctivo/), 'la tarjeta del programado')
+    expect(control('Cerrar mantenimiento: Mantenimiento correctivo')).not.toBeNull()
     // Queda en la cola para subir, con su constancia en el historial del equipo.
     const cola = await db.cambiosPendientes.toArray()
     expect(cola.map((c) => c.tabla).sort()).toEqual(['historial', 'mantenimientos'])
@@ -174,13 +189,56 @@ describe('programar desde la ficha del equipo', () => {
     // No es trabajo pendiente: la fila sigue diciendo "Ninguno".
     expect(seccion.textContent).toContain('Ninguno')
     await tocar(seccion)
-    await esperar(() => textoPantalla().includes('Antecedentes por validar'), 'el bloque aparte')
-    expect(textoPantalla()).toContain('Por validar · Cronograma de prueba 2025')
+    await esperar(() => textoPantalla().includes('Documentado, por validar'), 'el bloque aparte')
+    expect(textoPantalla()).toContain('Según Cronograma de prueba 2025')
 
     await tocar(control(/Cronograma de prueba 2025/) as HTMLElement)
     await esperar(() => textoPantalla().includes('Antecedente por validar'), 'su pantalla')
     expect(control('Cerrar y registrar en el equipo')).toBeNull()
     expect(document.body.querySelector('[role="radio"]')).toBeNull()
+  })
+})
+
+describe('la pantalla de mantenimiento del equipo (tarea 331)', () => {
+  it('enseña las tres formas, y "Cerrar mantenimiento" lo cierra en su hoja sin salir de la pantalla', async () => {
+    await sembrarBase()
+    await sembrarMantenimiento({ id: 'm-abierto', tipo: 'correctivo' })
+    await sembrarMantenimiento({
+      id: 'm-hecho',
+      estado: 'realizado',
+      fechaRealizada: fechaRelativa(-30),
+      tecnico: 'Técnico de prueba',
+      resultado: 'Limpieza de prueba',
+      historialId: 'h-prueba',
+    })
+    await sembrarMantenimiento({ id: 'ant', fechaProgramada: '2025-03-12', validacion: 'documentado_por_validar', fuente: 'Cronograma de prueba' })
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos')
+
+    await esperar(() => textoPantalla().includes('Realizado y confirmado'), 'la pantalla')
+    const texto = textoPantalla()
+    expect(texto.indexOf('Programado')).toBeLessThan(texto.indexOf('Realizado y confirmado'))
+    expect(texto.indexOf('Realizado y confirmado')).toBeLessThan(texto.indexOf('Documentado, por validar'))
+    expect(texto).toContain('Limpieza de prueba')
+    expect(texto).toContain('Técnico de prueba')
+    expect(texto).toContain('Según Cronograma de prueba')
+
+    await tocar(await esperar(() => control('Cerrar mantenimiento: Mantenimiento correctivo'), 'Cerrar mantenimiento'))
+    const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja')
+    expect(hoja.querySelector('[role="radiogroup"]')).not.toBeNull()
+    await rellenar(campoDe('Quién lo hizo'), 'Técnico de prueba')
+    // Sin decir qué se hizo no se cierra, y lo dice en línea.
+    await tocar(hoja.querySelector<HTMLElement>('button[type="submit"]') as HTMLElement)
+    await esperar(() => hoja.querySelector('[role="alert"]'), 'el error en línea')
+    expect((await db.mantenimientos.get('m-abierto'))?.estado).toBe('programado')
+
+    await rellenar(campoDe('Qué se hizo y cómo quedó'), 'Cambio de prueba')
+    await tocar(hoja.querySelector<HTMLElement>('button[type="submit"]') as HTMLElement)
+    await esperarQue(async () => (await db.mantenimientos.get('m-abierto'))?.estado === 'realizado', 'se cierra')
+    await esperar(() => !document.body.querySelector('[role="dialog"]'), 'la hoja cerrada')
+    // Sigue en la misma pantalla, ya entre lo realizado.
+    expect(ubicacionActual().pathname).toBe('/dispositivos/pc/mantenimientos')
+    await esperar(() => textoPantalla().includes('Cambio de prueba'), 'el realizado nuevo')
+    expect(control(/^Cerrar mantenimiento/)).toBeNull()
   })
 })
 
@@ -297,8 +355,8 @@ describe('la pantalla de un antecedente por validar', () => {
     // Y en la lista del equipo sigue en su bloque aparte.
     await montar(RUTAS, '/dispositivos/pc')
     await tocar(await esperar(() => control(/^Mantenimiento/), 'la fila Mantenimiento'))
-    await esperar(() => textoPantalla().includes('Antecedentes por validar'), 'el bloque aparte')
-    expect(textoPantalla()).toContain('Por validar · Acta de prueba 2025')
+    await esperar(() => textoPantalla().includes('Documentado, por validar'), 'el bloque aparte')
+    expect(textoPantalla()).toContain('Según Acta de prueba 2025')
   })
 
   it('nunca entra en la Agenda, aunque traiga fecha, técnico y resultado', async () => {

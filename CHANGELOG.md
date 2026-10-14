@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Cambiado (mantenimiento, tarea 331, primera parte): el mantenimiento del equipo tiene su pantalla, con tres formas de dato
+
+**Área modificada:** `src/features/mantenimientos/MantenimientosPage.tsx` (nuevo), `MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx` (`RegistrarDesenlace` exportado, salida a la pantalla nueva), `src/App.tsx` (ruta), `src/lib/navegacion.ts` (`padreDe`), `src/features/dispositivos/DispositivoPage.tsx` (la fila abre la pantalla).
+**Tipo:** Modificado y Agregado; Documentación (DECISIONES AD-081, DOCUMENTACION_FUNCIONAL 5.3.1, COMPONENTES_UI, TAREAS 331).
+**Motivo:** encargo del 2026-10-13, paso 5 del rediseño móvil "1b Pulgar".
+**Qué cambia:** la fila "Mantenimiento" de la ficha abre `/dispositivos/:id/mantenimientos`: lo programado en tarjetas con "Cerrar mantenimiento" (hoja con el formulario de siempre), lo realizado y confirmado con barra verde, y lo documentado por validar con borde punteado y "según" su fuente; estado vacío y "Programar mantenimiento" abajo, en su hoja. La pantalla de un mantenimiento sube a esta.
+**Estructura de datos:** sin cambios.
+**Verificación:** `mantenimientoFlujo` (con una prueba nueva de las tres formas y el cierre en hoja) y `navegacion` actualizadas; suite completa, `tsc -b`, lint y build en verde. En el navegador a 375 px.
+**Impacto esperado:** ver de un vistazo qué toca, qué se hizo y qué solo dice una fuente vieja, y cerrar sin perder la lista.
+
 ### Cambiado (búsqueda, tarea 330, tercera parte): chips de alcance y el buscador global con el campo abajo
 
 **Área modificada:** `src/features/busqueda/alcanceBusqueda.ts`, `ChipsDeAlcance.tsx` y `useIdsDeRed.ts` (nuevos), `BuscadorGlobal.tsx`, `src/features/inicio/ResolverPage.tsx`, `src/components/useAltoDelTeclado.ts` (nuevo, sale de `DockBusqueda.tsx`).

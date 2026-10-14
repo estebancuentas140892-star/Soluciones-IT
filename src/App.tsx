@@ -83,6 +83,9 @@ const DarDeBajaPage = lazy(() =>
 const ReemplazoPage = lazy(() =>
   import('./features/dispositivos/ReemplazoPage').then((m) => ({ default: m.ReemplazoPage })),
 )
+const MantenimientosPage = lazy(() =>
+  import('./features/mantenimientos/MantenimientosPage').then((m) => ({ default: m.MantenimientosPage })),
+)
 const MantenimientoPage = lazy(() =>
   import('./features/mantenimientos/MantenimientoPage').then((m) => ({ default: m.MantenimientoPage })),
 )
@@ -555,8 +558,19 @@ function App() {
                   </Suspense>
                 }
               />
+              {/* El mantenimiento del equipo, su pantalla (tarea 331): lo
+                  programado, lo realizado y los antecedentes por validar. */}
+              <Route
+                path="dispositivos/:dispositivoId/mantenimientos"
+                element={
+                  <Suspense fallback={<Cargando />}>
+                    <MantenimientosPage />
+                  </Suspense>
+                }
+              />
               {/* Un mantenimiento del equipo (tarea 320): decir cómo
-                  terminó. Nivel tarea, con salida a la ficha del equipo. */}
+                  terminó. Nivel tarea, con salida a la pantalla de
+                  mantenimiento del equipo (tarea 331). */}
               <Route
                 path="dispositivos/:dispositivoId/mantenimientos/:mantenimientoId"
                 element={

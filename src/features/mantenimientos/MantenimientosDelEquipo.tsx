@@ -2,29 +2,52 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Campo, CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
-import { Plus } from '../../components/iconos'
-import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO } from '../../components/nocturne'
+import { HojaInferior } from '../../components/HojaInferior'
+import { Check, ClockCountdown, ClockCounterClockwise, Note, Plus, SealCheck, User, Wrench } from '../../components/iconos'
+import { BTN_GHOST, BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
 import { db, type Mantenimiento, type TipoMantenimiento } from '../../lib/db'
 import { esPorValidar, fechaConAnio, nombreMantenimiento } from '../../lib/mantenimientos'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { diasDeCalendario } from '../../lib/vencimiento'
 import { entraEnAgenda, errorDeProgramacion, hoyIso, textoProgramado } from './mantenimiento'
+import { RegistrarDesenlace } from './MantenimientoPage'
 import { SelectorTipoMantenimiento } from './SelectorTipoMantenimiento'
 
-// "MANTENIMIENTO" DENTRO DE "MÁS DEL EQUIPO" (tarea 320).
+// EL MANTENIMIENTO DE UN EQUIPO, EN SU PANTALLA (rediseño móvil "1b
+// Pulgar", tarea 331, AD-081; hasta entonces, un pliegue dentro de "Más del
+// equipo", tarea 320).
 //
-// Lo que se hace aquí es programar. Cada mantenimiento abierto es una
-// fila que lleva a su pantalla, donde se dice cómo terminó (una pantalla,
-// una acción). Lo realizado no se repite: ya es una intervención en el
-// historial del equipo, con su evidencia. Los antecedentes sacados de
-// documentación histórica se enseñan aparte y dicen que están por
-// validar: no son trabajo pendiente.
+// Tres formas que no se confunden aunque no se lea el rótulo:
+//
+//   Programado         tarjeta sobre superficie, con cuándo toca y
+//                      "Cerrar mantenimiento", que abre su hoja.
+//   Realizado y confirmado
+//                      superficie sólida con barra verde, qué se hizo,
+//                      quién y si está en el historial.
+//   Documentado, por validar
+//                      borde punteado y sin relleno, "Según {fuente}" y
+//                      la pastilla "Por validar": no es trabajo pendiente
+//                      ni hecho, es lo que dice una fuente histórica.
+//
+// Sin ninguno, un estado vacío que dice qué aparecerá. Programar va abajo,
+// delineado (no hace avanzar nada: la acción rellena es la del cierre).
 
 function porFechaProgramada(a: Mantenimiento, b: Mantenimiento): number {
   return (a.fechaProgramada ?? '').localeCompare(b.fechaProgramada ?? '')
 }
 
-export function MantenimientosDelEquipo({ dispositivoId }: { dispositivoId: string }) {
+function porFechaRealizadaDesc(a: Mantenimiento, b: Mantenimiento): number {
+  return (b.fechaRealizada ?? '').localeCompare(a.fechaRealizada ?? '')
+}
+
+export function MantenimientosDelEquipo({
+  dispositivoId,
+  nombreEquipo,
+}: {
+  dispositivoId: string
+  /** El nombre del equipo, para el contexto de las hojas. */
+  nombreEquipo: string
+}) {
   const mantenimientos = useLiveQuery(
     () =>
       db.mantenimientos
@@ -35,92 +58,195 @@ export function MantenimientosDelEquipo({ dispositivoId }: { dispositivoId: stri
     [dispositivoId],
   )
   const [programando, setProgramando] = useState(false)
+  const [cerrando, setCerrando] = useState<Mantenimiento | null>(null)
 
   if (!mantenimientos) return null
   const abiertos = mantenimientos.filter(entraEnAgenda).sort(porFechaProgramada)
+  const realizados = mantenimientos
+    .filter((m) => m.estado === 'realizado' && !esPorValidar(m))
+    .sort(porFechaRealizadaDesc)
   const antecedentes = mantenimientos.filter(esPorValidar).sort(porFechaProgramada)
+  const vacio = abiertos.length === 0 && realizados.length === 0 && antecedentes.length === 0
 
   return (
-    <div className="flex flex-col gap-2.5">
-      {programando ? (
-        <FormularioProgramar dispositivoId={dispositivoId} alTerminar={() => setProgramando(false)} />
+    <div className="flex flex-1 flex-col">
+      {vacio ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-[20px] bg-noct-text/[.06] text-noct-neutral-400">
+            <Wrench size={30} aria-hidden />
+          </span>
+          <h2 className="text-[19px] font-semibold">Sin mantenimientos</h2>
+          <p className="max-w-[280px] text-[14.5px] leading-[1.5] text-noct-neutral-400">
+            Ni programados, ni realizados, ni antecedentes por validar. Programa el próximo y aparecerá en Atención
+            cuando toque.
+          </p>
+        </div>
       ) : (
-        <button type="button" onClick={() => setProgramando(true)} className={`${BTN_GHOST_ACENTO} min-h-11 self-start`}>
-          <Plus size={13} aria-hidden />
-          Programar
-        </button>
-      )}
+        <div className="flex flex-col gap-[26px] pb-4">
+          {abiertos.length > 0 && (
+            <section aria-labelledby="mant-programado" className="flex flex-col gap-2.5">
+              <h2 id="mant-programado" className="flex items-center gap-2 text-[15px] font-semibold">
+                <ClockCountdown size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+                Programado
+              </h2>
+              {abiertos.map((m) => (
+                <TarjetaProgramado key={m.id} mantenimiento={m} onCerrar={() => setCerrando(m)} />
+              ))}
+            </section>
+          )}
 
-      {abiertos.length > 0 && (
-        <ul className="flex flex-col divide-y divide-noct-divider">
-          {abiertos.map((m) => (
-            <li key={m.id}>
-              <FilaMantenimiento mantenimiento={m} />
-            </li>
-          ))}
-        </ul>
-      )}
+          {realizados.length > 0 && (
+            <section aria-labelledby="mant-realizado" className="flex flex-col gap-2.5">
+              <h2 id="mant-realizado" className="flex items-center gap-2 text-[15px] font-semibold">
+                <SealCheck size={17} className="shrink-0 text-noct-exito" aria-hidden />
+                Realizado y confirmado
+              </h2>
+              {realizados.map((m) => (
+                <TarjetaRealizado key={m.id} mantenimiento={m} />
+              ))}
+            </section>
+          )}
 
-      {abiertos.length === 0 && !programando && (
-        <p className="text-[12.5px] text-noct-neutral-500">Ningún mantenimiento programado.</p>
-      )}
-
-      {antecedentes.length > 0 && (
-        <div className="flex flex-col gap-1">
-          <p className="text-[12px] font-medium text-noct-neutral-400">Antecedentes por validar</p>
-          <ul className="flex flex-col divide-y divide-noct-divider">
-            {antecedentes.map((m) => (
-              <li key={m.id}>
-                <FilaAntecedente mantenimiento={m} />
-              </li>
-            ))}
-          </ul>
+          {antecedentes.length > 0 && (
+            <section aria-labelledby="mant-antecedentes" className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-0.5">
+                <h2 id="mant-antecedentes" className="flex items-center gap-2 text-[15px] font-semibold">
+                  <Note size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+                  Documentado, por validar
+                </h2>
+                <p className="text-[13px] leading-[1.45] text-noct-neutral-400">
+                  Marcas de una fuente histórica. No dicen técnico, resultado ni evidencia: no son mantenimientos
+                  hechos ni pendientes.
+                </p>
+              </div>
+              {antecedentes.map((m) => (
+                <TarjetaAntecedente key={m.id} mantenimiento={m} />
+              ))}
+            </section>
+          )}
         </div>
       )}
+
+      {/* PROGRAMAR, ABAJO Y DELINEADO: no hace avanzar nada. */}
+      <div className="sticky bottom-[calc(65px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:bottom-0">
+        <button
+          type="button"
+          onClick={() => setProgramando(true)}
+          aria-haspopup="dialog"
+          className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[15px] border-[1.5px] border-noct-text/25 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.05]"
+        >
+          <Plus size={17} aria-hidden />
+          Programar mantenimiento
+        </button>
+      </div>
+
+      <HojaInferior abierta={programando} onCerrar={() => setProgramando(false)} titulo="Programar mantenimiento" contexto={nombreEquipo}>
+        <FormularioProgramar dispositivoId={dispositivoId} alTerminar={() => setProgramando(false)} />
+      </HojaInferior>
+
+      <HojaInferior
+        abierta={cerrando !== null}
+        onCerrar={() => setCerrando(null)}
+        titulo="Cerrar mantenimiento"
+        contexto={cerrando ? `${nombreMantenimiento(cerrando.tipo)} · ${nombreEquipo}` : nombreEquipo}
+      >
+        {cerrando && <RegistrarDesenlace mantenimiento={cerrando} alTerminar={() => setCerrando(null)} />}
+      </HojaInferior>
     </div>
   )
 }
 
-function FilaMantenimiento({ mantenimiento }: { mantenimiento: Mantenimiento }) {
+/** Un mantenimiento programado (o pospuesto): cuándo toca y su cierre. */
+function TarjetaProgramado({ mantenimiento, onCerrar }: { mantenimiento: Mantenimiento; onCerrar: () => void }) {
   const fecha = mantenimiento.fechaProgramada as string
   const restantes = diasDeCalendario(fecha, new Date()) ?? 0
   const razon = textoProgramado(fecha, restantes)
+  const ruta = `/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`
+  return (
+    <div className="overflow-hidden rounded-2xl border border-noct-divider bg-noct-surface">
+      <Link to={ruta} className="flex flex-col gap-1.5 p-3.5 text-noct-text hover:bg-noct-text/[.03]">
+        <span className="flex items-baseline justify-between gap-2.5">
+          <span className="text-[16.5px] font-semibold">{nombreMantenimiento(mantenimiento.tipo)}</span>
+          <span className="shrink-0 whitespace-nowrap font-mono text-[13.5px] text-noct-neutral-300">{fechaConAnio(fecha)}</span>
+        </span>
+        <span className={`text-[14px] font-semibold ${restantes <= 0 ? 'text-noct-precaucion' : 'text-noct-neutral-300'}`}>
+          {razon}
+          {mantenimiento.estado === 'pospuesto' && <span className="font-normal text-noct-neutral-400"> · Pospuesto</span>}
+        </span>
+        {mantenimiento.observaciones && (
+          <span className="text-[14px] leading-[1.45] text-noct-neutral-300 [overflow-wrap:anywhere]">{mantenimiento.observaciones}</span>
+        )}
+      </Link>
+      <button
+        type="button"
+        onClick={onCerrar}
+        aria-haspopup="dialog"
+        aria-label={`Cerrar mantenimiento: ${nombreMantenimiento(mantenimiento.tipo)}`}
+        className="flex min-h-[52px] w-full items-center justify-center gap-2 border-t border-noct-divider bg-noct-accent/[.14] text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.2]"
+      >
+        <Check size={17} aria-hidden />
+        Cerrar mantenimiento
+      </button>
+    </div>
+  )
+}
+
+/** Un mantenimiento realizado y confirmado: superficie sólida y barra verde. */
+function TarjetaRealizado({ mantenimiento }: { mantenimiento: Mantenimiento }) {
   return (
     <Link
       to={`/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`}
-      className="flex min-h-12 items-center gap-3 py-1.5 text-noct-text hover:bg-noct-text/[.05]"
+      className="flex flex-col gap-1.5 rounded-2xl border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-3 text-noct-text hover:bg-noct-text/[.03]"
     >
-      <span className="min-w-0 flex-1">
-        <span className="block text-[13.5px] font-medium leading-[1.35]">{nombreMantenimiento(mantenimiento.tipo)}</span>
-        <span className={`block text-[12.5px] ${restantes <= 0 ? 'text-noct-precaucion' : 'text-noct-neutral-400'}`}>
-          {razon}
-          {mantenimiento.estado === 'pospuesto' && <span className="text-noct-neutral-500"> · Pospuesto</span>}
-        </span>
+      <span className="flex items-baseline justify-between gap-2.5">
+        <span className="text-[15.5px] font-semibold">{nombreMantenimiento(mantenimiento.tipo)}</span>
+        {mantenimiento.fechaRealizada && (
+          <span className="shrink-0 whitespace-nowrap font-mono text-[13px] text-noct-neutral-300">
+            {fechaConAnio(mantenimiento.fechaRealizada)}
+          </span>
+        )}
       </span>
-      <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300" aria-hidden>
-        Abrir
+      {mantenimiento.resultado && (
+        <span className="text-[14px] leading-[1.45] [overflow-wrap:anywhere]">{mantenimiento.resultado}</span>
+      )}
+      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-noct-neutral-400">
+        {mantenimiento.tecnico && (
+          <span className="inline-flex items-center gap-1">
+            <User size={13} aria-hidden />
+            {mantenimiento.tecnico}
+          </span>
+        )}
+        {mantenimiento.historialId && (
+          <span className="inline-flex items-center gap-1">
+            <ClockCounterClockwise size={13} aria-hidden />
+            en el historial
+          </span>
+        )}
       </span>
     </Link>
   )
 }
 
-function FilaAntecedente({ mantenimiento }: { mantenimiento: Mantenimiento }) {
+/** Un antecedente documentado por validar: borde punteado, sin relleno, "según" su fuente. */
+function TarjetaAntecedente({ mantenimiento }: { mantenimiento: Mantenimiento }) {
   const cuando = mantenimiento.fechaProgramada ? fechaConAnio(mantenimiento.fechaProgramada) : 'Sin fecha'
   return (
     <Link
       to={`/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`}
-      className="flex min-h-12 items-center gap-3 py-1.5 text-noct-text hover:bg-noct-text/[.05]"
+      className="flex flex-col gap-1.5 rounded-2xl border-[1.5px] border-dashed border-noct-text/25 px-3.5 py-3 text-noct-text hover:bg-noct-text/[.03]"
     >
-      <span className="min-w-0 flex-1">
-        <span className="block text-[13.5px] leading-[1.35] text-noct-neutral-300">
-          {nombreMantenimiento(mantenimiento.tipo)} · {cuando}
-        </span>
-        <span className="block text-[12px] text-noct-neutral-500 [overflow-wrap:anywhere]">
-          Por validar · {mantenimiento.fuente}
-        </span>
+      <span className="flex items-baseline justify-between gap-2.5">
+        <span className="text-[15px] font-[550] text-noct-neutral-200">{nombreMantenimiento(mantenimiento.tipo)}</span>
+        <span className="shrink-0 whitespace-nowrap font-mono text-[13px] text-noct-neutral-400">{cuando}</span>
       </span>
-      <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300" aria-hidden>
-        Ver
+      <span className="text-[13px] text-noct-neutral-400 [overflow-wrap:anywhere]">Según {mantenimiento.fuente}</span>
+      <span className="flex items-center justify-between gap-2.5">
+        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-noct-precaucion px-2.5 py-px text-[12px] font-semibold text-noct-precaucion">
+          Por validar
+        </span>
+        <span className="text-[14px] font-semibold text-noct-accent-300" aria-hidden>
+          Ver
+        </span>
       </span>
     </Link>
   )
@@ -161,7 +287,7 @@ function FormularioProgramar({ dispositivoId, alTerminar }: { dispositivoId: str
     <form
       onSubmit={programar}
       noValidate
-      className="flex flex-col gap-2.5 rounded-lg border border-noct-divider bg-noct-surface p-3"
+      className="flex flex-col gap-2.5"
     >
       <SelectorTipoMantenimiento valor={tipo} alCambiar={setTipo} />
       <Campo etiqueta="Fecha en que toca">
@@ -189,7 +315,7 @@ function FormularioProgramar({ dispositivoId, alTerminar }: { dispositivoId: str
         </p>
       )}
       <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={guardando} className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}>
+        <button type="submit" disabled={guardando} className={`${BTN_PRIMARIO_RELLENO} flex-1`}>
           {guardando ? 'Guardando...' : 'Programar mantenimiento'}
         </button>
         <button type="button" onClick={alTerminar} className={`${BTN_GHOST} min-h-11 px-4`}>

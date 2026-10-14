@@ -113,10 +113,14 @@ describe('padreDe', () => {
       })
     })
 
-    it('un mantenimiento (tarea 320) vuelve a la ficha del dispositivo', () => {
-      expect(padreDe('/dispositivos/cam-1/mantenimientos/m-1')).toEqual({
+    it('la pantalla de mantenimiento (tarea 331) vuelve a la ficha, y un mantenimiento, a esa pantalla', () => {
+      expect(padreDe('/dispositivos/cam-1/mantenimientos')).toEqual({
         to: '/dispositivos/cam-1',
         etiqueta: 'Volver',
+      })
+      expect(padreDe('/dispositivos/cam-1/mantenimientos/m-1')).toEqual({
+        to: '/dispositivos/cam-1/mantenimientos',
+        etiqueta: 'Mantenimiento',
       })
     })
 

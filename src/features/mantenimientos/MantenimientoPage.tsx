@@ -5,7 +5,7 @@ import { Chasis } from '../../app/Chasis'
 import { Adjuntos } from '../../components/Adjuntos'
 import { Campo, CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 import { CheckCircle } from '../../components/iconos'
-import { BTN_PRIMARIO, BTN_PRIMARIO_PELIGRO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO_PELIGRO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { OpcionRadio } from '../../components/OpcionRadio'
 import { db, type Mantenimiento } from '../../lib/db'
 import {
@@ -68,9 +68,11 @@ export function MantenimientoPage() {
       modo="tarea"
       rotulo="Mantenimiento"
       titulo={dispositivo?.nombre ?? 'Equipo'}
-      salidaA={ficha}
-      vuelta="La ficha del equipo"
-      salidaEtiqueta="Volver al equipo"
+      // Sube a la pantalla de mantenimiento del equipo (tarea 331), que es
+      // de donde se llega y la que lista los demás.
+      salidaA={`${ficha}/mantenimientos`}
+      vuelta="Mantenimiento"
+      salidaEtiqueta="Volver al mantenimiento del equipo"
     >
       <main className="flex flex-1 flex-col gap-4 px-4 pb-12 pt-[18px]">
         <Resumen mantenimiento={mantenimiento} />
@@ -215,7 +217,16 @@ const RESPUESTAS: { valor: Respuesta; texto: string }[] = [
   { valor: 'cancelado', texto: 'Se cancela' },
 ]
 
-function RegistrarDesenlace({ mantenimiento }: { mantenimiento: Mantenimiento }) {
+// Exportado desde la tarea 330 (rediseño móvil "1b Pulgar", tarea 331): la
+// pantalla de mantenimiento del equipo lo abre en una hoja ("Cerrar
+// mantenimiento"); `alTerminar` la cierra después de guardar.
+export function RegistrarDesenlace({
+  mantenimiento,
+  alTerminar,
+}: {
+  mantenimiento: Mantenimiento
+  alTerminar?: () => void
+}) {
   const perfil = usePerfilVivo()
   const idPregunta = useId()
   const [desenlace, setDesenlace] = useState<Respuesta>('realizado')
@@ -259,6 +270,7 @@ function RegistrarDesenlace({ mantenimiento }: { mantenimiento: Mantenimiento })
       await guardarRegistro('mantenimientos', { ...mantenimiento, estado: 'cancelado' }, motivo.trim())
     }
     setGuardando(false)
+    alTerminar?.()
   }
 
   return (
@@ -353,7 +365,9 @@ function RegistrarDesenlace({ mantenimiento }: { mantenimiento: Mantenimiento })
       <button
         type="submit"
         disabled={guardando}
-        className={`${desenlace === 'cancelado' ? BTN_PRIMARIO_PELIGRO : BTN_PRIMARIO} min-h-11 self-start px-4 disabled:opacity-50`}
+        // Guardar el desenlace hace avanzar: es la acción rellena de la
+        // pantalla (regla 30). Cancelar es destructivo y va delineado en rojo.
+        className={desenlace === 'cancelado' ? `${BTN_PRIMARIO_PELIGRO} min-h-11 self-start px-4 disabled:opacity-50` : `${BTN_PRIMARIO_RELLENO} w-full`}
       >
         {guardando
           ? 'Guardando...'

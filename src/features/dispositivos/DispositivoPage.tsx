@@ -76,7 +76,6 @@ import { HojaAsignarPersona } from '../personas/HojaAsignarPersona'
 import { esDeBaja, responsablePorValidar } from '../personas/cicloPersona'
 import { useResponsablesAnteriores } from '../personas/useAsignaciones'
 import { conteoDeMantenimientos } from '../mantenimientos/mantenimiento'
-import { MantenimientosDelEquipo } from '../mantenimientos/MantenimientosDelEquipo'
 import { conteoDeFacturacion, esCategoriaPos } from '../facturacion/autorizacion'
 import { AutorizacionesDelPos } from '../facturacion/AutorizacionesDelPos'
 
@@ -89,7 +88,6 @@ type HojaFicha =
   | 'credenciales'
   | 'seguridad'
   | 'adjuntos'
-  | 'mantenimiento'
   | 'facturacion'
   | 'intervenciones'
   | 'resolver'
@@ -102,7 +100,6 @@ const HOJA_POR_ANCLA: Record<string, HojaFicha> = {
   '#conexiones': 'conexiones',
   '#seguridad': 'seguridad',
   '#foto': 'adjuntos',
-  '#mantenimiento': 'mantenimiento',
   '#facturacion': 'facturacion',
 }
 
@@ -858,11 +855,13 @@ export function DispositivoPage() {
               valor={totalAdjuntos === 0 ? 'Ninguno' : `${totalAdjuntos}`}
               onAbrir={() => setHoja('adjuntos')}
             />
+            {/* Mantenimiento se trabaja: abre su pantalla (tarea 331). */}
             <FilaIndice
               Icono={Wrench}
               titulo="Mantenimiento"
               valor={conteoDeMantenimientos(mantenimientos)}
-              onAbrir={() => setHoja('mantenimiento')}
+              abre="pantalla"
+              onAbrir={() => navigate(`/dispositivos/${dispositivoId}/mantenimientos`, { state: origenEsteEquipo })}
             />
             {tieneFacturacion && (
               <FilaIndice
@@ -984,12 +983,6 @@ export function DispositivoPage() {
       <HojaInferior abierta={hoja === 'adjuntos'} onCerrar={cerrarHoja} titulo="Adjuntos" contexto={dispositivo.nombre}>
         {dispositivo.foto && <FotoDispositivo referencia={dispositivo.foto.referencia} nombre={dispositivo.nombre} />}
         <Adjuntos entidadTipo="dispositivo" entidadId={dispositivoId} sinCabecera />
-      </HojaInferior>
-
-      {/* Lo que toca hacerle al equipo (tarea 320): programar aquí; cerrar,
-          en la pantalla de cada mantenimiento. */}
-      <HojaInferior abierta={hoja === 'mantenimiento'} onCerrar={cerrarHoja} titulo="Mantenimiento" contexto={dispositivo.nombre}>
-        <MantenimientosDelEquipo dispositivoId={dispositivoId} />
       </HojaInferior>
 
       {tieneFacturacion && (

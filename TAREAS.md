@@ -60,7 +60,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 2 | Ejecución de guía | 328 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 3 | Ficha de equipo | 329 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | 4 | Dock de búsqueda, búsqueda y cabeceras de raíz | 330 | Integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
-| 5 | Mantenimiento y autorización (tres formas de dato) | 331 | Pendiente |
+| 5 | Mantenimiento y autorización (tres formas de dato) | 331 | **En proceso**: mantenimiento integrado en `main`; falta la autorización |
 | 6 | Agenda y Más | 332 | Pendiente |
 | 7 | Tema claro | 333 | Bloqueada: contradice la regla 12 y depende de RP-3 |
 | (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Pendiente de decisión |
@@ -106,6 +106,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Prioridad:** Alta. **Estado:** Integrada en `main` (2026-10-13, en tres partes, cada una con su commit y su despliegue) y desplegada, pendiente de la confirmación visual del usuario en producción; no se archiva hasta entonces. **Parte 1 hecha (2026-10-13):** `DockBusqueda` (nuevo, `src/components/DockBusqueda.tsx`) con el buscador de cada pantalla abajo en Resolver, Equipos y Bóveda, escáner al lado y teclado con `visualViewport`; `CampoBusqueda` variante `dock`; título de raíz a 25 px (`CabeceraColapsable`); en Resolver se retiran la pregunta y la línea de ayuda (`ResolverPage.tsx`). **Parte 2 hecha (2026-10-13):** "Necesita atención" con tres contadores que abren la Agenda, `FilaAgenda` con barra lateral de 4 px e icono neutro (`SeccionesAgenda.tsx`), "Seguir donde ibas" (`BloqueSeguir`) y "Guías" con chips con conteo (`ResolverPage.tsx`); sin "Todo al día" de adorno y con las demás recientes en "Recientes" (AD-080, decisión 4). **Parte 3 hecha (2026-10-13):** chips de alcance con conteo que solo filtran la vista (`alcanceBusqueda.ts`, `ChipsDeAlcance.tsx`, `useIdsDeRed.ts`) en Resolver y en `BuscadorGlobal.tsx`, que pasa a tener el regreso arriba y el campo abajo pegado al teclado (`useAltoDelTeclado.ts`). Las filas de `ResultadosBusqueda.tsx` no cambian (ya agrupan por tipo con su conteo). Sin chip "Facturación" (las autorizaciones no se indexan, tarea 321). Prueba nueva `alcanceBusqueda.test.tsx`.
 - **Área afectada:** `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `src/components/CampoBusqueda.tsx`, `ResolverPage.tsx`, `SeccionesAgenda.tsx` (`FilaAgenda`), `BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx`, las raíces de Equipos y Bóveda y sus pruebas (`nombresSinRecorte.test.tsx` incluida).
 - **Dependencias:** 327.
+
+### 331. Rediseño móvil, paso 5: mantenimiento y autorización con tres formas de dato
+
+- **Título:** documentado, confirmado y dato actual con tres formas que no se confunden.
+- **Descripción:** Mantenimiento (`src/features/mantenimientos/MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`): pantalla propia desde la ficha (hoy es un pliegue dentro de un pliegue) con Programado (tarjeta con "Cerrar mantenimiento"), Realizado y confirmado (superficie sólida, barra verde, sello, técnico y evidencia) y Documentado, por validar (borde punteado, sin relleno, "Según {fuente}", pastilla "Por validar"); estado vacío que explica qué aparecerá; cerrar en hoja con Realizado o Pospuesto, fecha y "Qué se hizo" (obligatorio si es Realizado, error en línea). Autorización (`src/features/facturacion/AutorizacionPage.tsx`, `PresentacionAutorizacion.tsx`): prefijo en mono 30 px y pastilla de estado; "1 · Lo documentado" (una caja punteada por fuente; en conflicto, el campo que choca en rojo con "No coincide" en las dos fuentes); "2 · Lo confirmado" (superficie sólida con barra verde, o "Sin verificar con una fuente actual" y "Registrar verificación", que abre el formulario actual); "3 · Dato actual" (número grande en mono, barra de rango, "leído el … en …"; sin lectura, guion y "No se estima por fechas ni por consumo"). Reemplazada al 62 % de opacidad; Editar abajo delineado; Eliminar al menú "···".
+- **Motivo:** encargo del 2026-10-13, paso 5.
+- **Impacto:** medio y alto: hace legible la confianza del dato (AD-075, AD-076). Ningún cambio en `src/lib/autorizaciones.ts` ni en el modelo.
+- **Prioridad:** Alta. **Estado:** En progreso, en dos partes con su commit y su despliegue. **Parte 1 hecha (2026-10-13): mantenimiento.** Pantalla `/dispositivos/:id/mantenimientos` (`MantenimientosPage.tsx` nuevo, `MantenimientosDelEquipo.tsx` reescrito) con las tres formas, estado vacío, "Programar mantenimiento" y "Cerrar mantenimiento" en hojas (`RegistrarDesenlace` exportado de `MantenimientoPage.tsx`); ruta en `src/App.tsx`, `padreDe` en `src/lib/navegacion.ts`; la fila de la ficha abre la pantalla (`DispositivoPage.tsx`). Cancelar se conserva como tercera respuesta. **Falta parte 2: la autorización** (`AutorizacionPage.tsx`, `PresentacionAutorizacion.tsx`) y que Facturación en la ficha abra pantalla.
+- **Área afectada:** los archivos citados y sus pruebas (`facturacionFlujo.test.tsx`, las de mantenimiento).
+- **Dependencias:** 327; la ficha de la 329 enlaza a la pantalla de mantenimiento.
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
@@ -563,16 +573,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 331. Rediseño móvil, paso 5: mantenimiento y autorización con tres formas de dato
-
-- **Título:** documentado, confirmado y dato actual con tres formas que no se confunden.
-- **Descripción:** Mantenimiento (`src/features/mantenimientos/MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`): pantalla propia desde la ficha (hoy es un pliegue dentro de un pliegue) con Programado (tarjeta con "Cerrar mantenimiento"), Realizado y confirmado (superficie sólida, barra verde, sello, técnico y evidencia) y Documentado, por validar (borde punteado, sin relleno, "Según {fuente}", pastilla "Por validar"); estado vacío que explica qué aparecerá; cerrar en hoja con Realizado o Pospuesto, fecha y "Qué se hizo" (obligatorio si es Realizado, error en línea). Autorización (`src/features/facturacion/AutorizacionPage.tsx`, `PresentacionAutorizacion.tsx`): prefijo en mono 30 px y pastilla de estado; "1 · Lo documentado" (una caja punteada por fuente; en conflicto, el campo que choca en rojo con "No coincide" en las dos fuentes); "2 · Lo confirmado" (superficie sólida con barra verde, o "Sin verificar con una fuente actual" y "Registrar verificación", que abre el formulario actual); "3 · Dato actual" (número grande en mono, barra de rango, "leído el … en …"; sin lectura, guion y "No se estima por fechas ni por consumo"). Reemplazada al 62 % de opacidad; Editar abajo delineado; Eliminar al menú "···".
-- **Motivo:** encargo del 2026-10-13, paso 5.
-- **Impacto:** medio y alto: hace legible la confianza del dato (AD-075, AD-076). Ningún cambio en `src/lib/autorizaciones.ts` ni en el modelo.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** los archivos citados y sus pruebas (`facturacionFlujo.test.tsx`, las de mantenimiento).
-- **Dependencias:** 327; la ficha de la 329 enlaza a la pantalla de mantenimiento.
 
 ### 332. Rediseño móvil, paso 6: Agenda y Más
 
