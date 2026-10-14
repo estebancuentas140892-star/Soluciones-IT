@@ -426,6 +426,56 @@ describe('la lista y la ficha', () => {
   })
 })
 
+describe('la ficha en tres formas (tarea 331)', () => {
+  it('lo documentado punteado y según su fuente, lo confirmado con su vencimiento y el dato actual como lectura; Eliminar en el menú', async () => {
+    await sembrarBase()
+    await sembrarAutorizacion({
+      id: 'conf',
+      prefijo: 'CNF',
+      estado: 'confirmada',
+      verificadoEn: '2026-10-09',
+      verificacionFuente: 'Consulta de prueba',
+      vencimientoConfirmado: '2028-05-14',
+      consecutivoActual: 5500,
+      consecutivoLeidoEn: '2026-10-09',
+      consecutivoFuente: 'Caja de prueba',
+    })
+    await montar(RUTAS, '/facturacion/conf')
+
+    await esperar(() => textoPantalla().includes('1 · Lo documentado'), 'la ficha')
+    const texto = textoPantalla()
+    expect(texto).toContain('Según Documento de prueba')
+    expect(texto).toContain('2 · Lo confirmado')
+    expect(texto).toContain('Vence14 may 2028')
+    expect(texto).toContain('3 · Dato actual')
+    expect(texto).toContain('5.500')
+    expect(texto).toContain('Quedan 2.500 números según esa lectura.')
+    expect(texto).toContain('Leído el 9 oct 2026 en Caja de prueba')
+    // El prefijo, en grande y en monoespaciada.
+    const prefijo = document.body.querySelector('main h1')
+    expect(prefijo?.textContent).toBe('CNF')
+    expect(prefijo?.classList.contains('font-mono')).toBe(true)
+    // Eliminar no va junto a Editar: vive en el menú.
+    expect(control('Editar')).not.toBeNull()
+    expect(control('Eliminar')).toBeNull()
+    await tocar(await esperar(() => control(/^Más acciones/), 'el menú'))
+    expect(control('Eliminar')).not.toBeNull()
+  })
+
+  it('sin verificar ni lectura lo dice, con sus dos accesos al formulario, y una reemplazada se lee atenuada', async () => {
+    await sembrarBase()
+    await sembrarAutorizacion({ id: 'vieja', prefijo: 'OLD', estado: 'reemplazada' })
+    await montar(RUTAS, '/facturacion/vieja')
+    await esperar(() => textoPantalla().includes('Sin verificar con una fuente actual.'), 'la ficha')
+    expect(textoPantalla()).toContain('Sin lectura. No se estima por fechas ni por consumo.')
+    expect(control('Registrar verificación')?.getAttribute('href')).toBe('/facturacion/vieja/editar')
+    expect(control('Registrar lectura')?.getAttribute('href')).toBe('/facturacion/vieja/editar')
+    let capa = document.getElementById('aut-documentado')?.parentElement ?? null
+    while (capa && !capa.className.includes('opacity-[.62]')) capa = capa.parentElement
+    expect(capa).not.toBeNull()
+  })
+})
+
 describe('la Agenda', () => {
   it('avisa del vencimiento confirmado y nunca del que solo da la fuente', async () => {
     await sembrarBase()

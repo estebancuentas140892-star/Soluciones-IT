@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-13
 
+### Cambiado (facturación, tarea 331, segunda parte): la autorización en tres formas de dato
+
+**Área modificada:** `src/features/facturacion/AutorizacionPage.tsx`.
+**Tipo:** Modificado; Documentación (DECISIONES AD-081 decisión 4, DOCUMENTACION_FUNCIONAL facturación y 5.3.1, COMPONENTES_UI, TAREAS 331).
+**Motivo:** encargo del 2026-10-13, paso 5 del rediseño móvil "1b Pulgar".
+**Qué cambia:** el prefijo en IBM Plex Mono a 30 px; "1 · Lo documentado" en caja punteada "Según {fuente}"; "2 · Lo confirmado" sólido con barra verde o "Registrar verificación"; "3 · Dato actual" como lectura de instrumento (número grande, barra del rango, cuántos quedan y cuándo se leyó) o un guion con "Registrar lectura"; POS en filas; reemplazada atenuada; "Editar" abajo y "Eliminar" en el menú "···".
+**Estructura de datos:** sin cambios.
+**Verificación:** `facturacionFlujo` con dos pruebas nuevas (las tres formas, el menú, sin verificar ni lectura y la reemplazada); suite completa, `tsc -b`, lint y build en verde. En el navegador a 375 px con una autorización de prueba en la base local del banco, retirada al terminar.
+**Impacto esperado:** saber de un vistazo qué es documento, qué está confirmado y cuánto queda, sin confundirlos.
+
 ### Cambiado (mantenimiento, tarea 331, primera parte): el mantenimiento del equipo tiene su pantalla, con tres formas de dato
 
 **Área modificada:** `src/features/mantenimientos/MantenimientosPage.tsx` (nuevo), `MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx` (`RegistrarDesenlace` exportado, salida a la pantalla nueva), `src/App.tsx` (ruta), `src/lib/navegacion.ts` (`padreDe`), `src/features/dispositivos/DispositivoPage.tsx` (la fila abre la pantalla).
