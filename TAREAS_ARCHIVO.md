@@ -1,5 +1,30 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-15: remate de fidelidad móvil "1b Pulgar" (hallazgo posterior a la auditoría del handoff móvil original)
+
+### 341. Remate de fidelidad móvil "1b Pulgar"
+
+**Estado:** Completada (2026-10-15). Implementada, con pruebas completas, **revisión visual aprobada por el usuario el 2026-10-15** ("se ve bien", sobre la rama antes de integrar), integrada en `main` por avance rápido, desplegada y verificada en Production. Hallazgo posterior a la auditoría del handoff móvil del 2026-10-13 ("Preguntas sobre identidad visual") contra `main`: **el rediseño aprobado sigue vigente, esta tarea solo completó fidelidad e interacción del teléfono, las 327 a 340 no se reabrieron y las reglas superadas del handoff original no vuelven** ([DECISIONES.md](DECISIONES.md) AD-089).
+
+**Qué cambió (solo por debajo de 768 px; desde 768, nada):**
+1. **Hoja inferior:** `Modal` (diálogo y hoja) pegado abajo, de lado a lado, radio 22 arriba, asa, `noct-velo` sin desenfoque, sombra del handoff; sube en 260 ms, el velo en 200, sale en 200 desde donde la dejó el dedo; deslizar hacia abajo la cierra (`gestoHoja.ts`), nunca desde un campo. La X, el velo y Esc cierran igual y el foco sigue atrapado. `HojaInferior`: título 18/650 y X redonda con tinte. Desde 768, el panel lateral de siempre, sin lógica duplicada.
+2. **Respuesta al tocar:** `max-md:active:bg-noct-presionado` en las filas de Resolver, Agenda, Más, la búsqueda, la ficha, `FilaDispositivo`, el responsable y la X de la hoja.
+3. **Aviso flotante:** `avisosFlotantes.ts` y `AvisoFlotante.tsx` (2,4 s, sobre el pie fijo, `role="status"`, sin foco ni toques, "reducir movimiento" respetado, nunca errores ni secretos): IP copiada, avance guardado, Bóveda desbloqueada y mantenimiento realizado guardado en el historial.
+4. **Mínimos:** texto de 12 px o más, verbos de 14, campos de 16 y objetivos de 44 (`btn-tactil`, `max-md:min-h-11`, `toque-amplio`). La etiqueta impresa no cambia.
+5. **Acción dominante:** `BTN_PRIMARIO_DOMINANTE` (relleno en el teléfono, `BTN_PRIMARIO` desde 768) en "Guardar" y "Desbloquear" donde son la única acción que ejecuta.
+6. **Pantalla final de la guía:** "Guía completada", resumen con pasos y comprobaciones, hora del cierre en mono y el pie en el tercio inferior ("Salir de la guía" rellena, RP-1 y "Empezar de nuevo"); sin "Ir a Resolver". Desde 768, "Guía terminada" como siempre.
+7. **Tokens:** `--color-noct-divider-fuerte`, `-tinte`, `-presionado` y `-velo` con su valor claro; los claros aprobados (AD-085, AD-088) no cambian.
+
+**Integración:** `bc5a94b` (implementación y pruebas) y `40a6d90` (documentación), en la rama `fix/remate-fidelidad-movil` desde `cf77a58`; entraron en `main` por **avance rápido** (`cf77a58..40a6d90`), sin commit de fusión ni squash. Este cierre documental va en un commit propio encima.
+
+**Verificación:** antes de integrar, suite completa (223 archivos, 3408 pruebas), `tsc -b`, lint, build y `verificar-precache` en verde; prueba sin conexión real 73 de 80, los mismos 7 fallos de la 336 y ninguno nuevo; capturas a 320, 375, 390 y 767 en oscuro y claro (sin objetivos por debajo de 44 px; `main` tenía 20) y desde 768 a 768, 1024, 1280 y 1680 en oscuro y claro contra `cf77a58` (481 de 528 idénticas píxel a píxel; el resto, ruido de renderizado que también aparece entre dos capturas de la propia rama); el gesto de la hoja, con toques reales de Chrome. **Después de integrar (reglas 14 y 21):** CI en verde para `40a6d90` (ejecución `38786956034`: pruebas, lint y build con `tsc -b`); Vercel "success" (despliegue de Production `7101146665`); `/version.json` de producción `40a6d90` (compilado el 2026-10-15 a las 18:36 UTC); por contenido, en los trozos que precachea `sw.js`: "Guía completada", `data-hoja-movil`, `data-aviso-flotante`, "Avance guardado", "IP copiada", "Bóveda desbloqueada", `hoja-sube`, `btn-tactil`, `toque-amplio` y `--color-noct-velo`; las reglas del teléfono bajo `not all and (width>=48rem)`, y desde 768 el panel lateral (`md:w-[420px]`) y "Guía terminada" intactos. La sesión del navegador de la verificación no tenía cuenta del equipo, así que la comprobación visual en Production con sesión queda al usuario; su aprobación visual se hizo sobre la rama.
+
+**No se tocó (a criterio del usuario):** "Crear y vincular" del acceso rápido y "Guardar" del editor de guías; los tintes de fila de escritorio (.04 a .07), los del acento y la superficie secundaria; "Ir a Resolver".
+
+**Relación con la 285 y la 336:** la 341 dejó en 44 px dos grupos de controles que lista la 285 (tachados allí); la 285 sigue abierta. La prueba sin conexión de la 336 busca "Guía terminada" a 390 px y se adapta a "Guía completada" al integrarla.
+
+**Área afectada:** `src/components/Modal.tsx`, `gestoHoja.ts` (nuevo), `HojaInferior.tsx`, `useEsAncho.ts`, `avisosFlotantes.ts` y `AvisoFlotante.tsx` (nuevos), `src/App.tsx`, `nocturne.tsx`, `campos.tsx`, `FilaDato.tsx`, `src/index.css`, `src/features/soluciones/AsistenteVista.tsx`, `guiaCompletada.ts` (nuevo), `sinTerminar.ts`, `AsistentePage.tsx`, `src/app/Chasis.tsx`, `src/components/BarraTarea.tsx`, `src/features/mantenimientos/MantenimientoPage.tsx`, los desbloqueos y formularios de "Guardar", y clases `max-md:` de tamaño en unos 70 archivos más; pruebas nuevas `hojaMovil.test.tsx`, `gestoHoja.test.ts`, `avisoFlotante.test.tsx`, `finalGuiaMovil.test.tsx` y `guiaCompletada.test.ts`, y ampliadas `sinTerminar.test.ts` y `sistemaVisual.test.ts`.
+
 ## Encargo del 2026-10-14: el sistema "1b Pulgar" en tableta y escritorio
 
 ### 340. El foco no entra al panel lateral ni a los diálogos al abrirlos (hallazgo de la 339)

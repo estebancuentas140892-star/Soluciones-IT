@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-15
 
+### Integrado y cerrado (tarea 341): el remate de fidelidad móvil "1b Pulgar" llega a `main`
+
+**Área modificada:** la rama `fix/remate-fidelidad-movil` (`bc5a94b` y `40a6d90`, detallados en la entrada de abajo) entra en `main` por avance rápido desde `cf77a58`, sin commit de fusión ni squash; la 341 sale del tablero y pasa a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); AD-089 pasa a Vigente.
+**Tipo:** Cambiado.
+**Motivo:** el usuario revisó la 341 en el teléfono y la aprobó ("se ve bien"), y autorizó integrarla (reglas 11, 14 y 21).
+**Estructura de datos:** sin cambios (ni Supabase, ni `schema.sql`, ni Dexie, ni la sincronización, ni datos): no hay SQL que aplicar.
+**Impacto esperado:** en el teléfono, hojas que se deslizan, respuesta al tocar, avisos breves de lo hecho, controles legibles y tocables y la pantalla "Guía completada"; desde 768, nada. Los dispositivos con la app instalada la reciben al aceptar "Actualización disponible" (en escritorio, recargando).
+**Verificación y estado:** CI en verde para `40a6d90` (pruebas, lint y build); Vercel "success"; `/version.json` de producción en `40a6d90`; en los trozos que precachea `sw.js`, el contenido nuevo ("Guía completada", `data-hoja-movil`, `data-aviso-flotante`, "Avance guardado", "IP copiada", `btn-tactil`) y, desde 768, el panel lateral y "Guía terminada" intactos. **Completada y archivada.**
+
 ### Cambiado (tarea 341, en la rama `fix/remate-fidelidad-movil`, sin integrar): remate de fidelidad móvil "1b Pulgar"
 
 **Área modificada:** el teléfono (<768 px). La hoja (`src/components/Modal.tsx`, `HojaInferior.tsx`, `gestoHoja.ts` nuevo), el aviso flotante (`src/components/avisosFlotantes.ts` y `AvisoFlotante.tsx`, nuevos, montado en `src/App.tsx`), los botones y campos (`src/components/nocturne.tsx`, `campos.tsx`), los tokens y el movimiento (`src/index.css`), la pantalla final de la guía (`src/features/soluciones/AsistenteVista.tsx`, `guiaCompletada.ts` nuevo) y el aviso al salir (`sinTerminar.ts`, `AsistentePage.tsx`, `Chasis.tsx`, `BarraTarea.tsx`), más clases `max-md:` en unos 90 archivos de pantallas. Documentación: [TAREAS.md](TAREAS.md), [DECISIONES.md](DECISIONES.md) (AD-089), [COMPONENTES_UI.md](COMPONENTES_UI.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) y [ARQUITECTURA.md](ARQUITECTURA.md).
