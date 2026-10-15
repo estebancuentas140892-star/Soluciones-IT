@@ -131,7 +131,7 @@ export function ReferenciaFicha() {
       contexto={info.pestana}
       barra={
         <div className="px-4 pb-3 pt-0.5">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold uppercase tracking-[.08em] text-noct-accent-300">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.08em] text-noct-accent-300">
             <Icono size={14} className="shrink-0" aria-hidden />
             {info.etiqueta}
             {esHerramienta && referencia.categoria && (

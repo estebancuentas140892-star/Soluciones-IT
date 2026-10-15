@@ -163,7 +163,7 @@ export function HojaEnviarAEquipo({
         </ul>
       )}
 
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
+      <p className="mb-2 text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
         Así se verá en el equipo
       </p>
       {contenido ? (

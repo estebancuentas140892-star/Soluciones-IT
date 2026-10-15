@@ -37,13 +37,7 @@ import {
   WarningOctagon,
   X,
 } from '../../components/iconos'
-import {
-  BTN_GHOST_ACENTO,
-  BTN_GHOST_PELIGRO,
-  BTN_PRIMARIO,
-  BTN_SECUNDARIO,
-  TituloSeccion,
-} from '../../components/nocturne'
+import { BTN_GHOST_ACENTO, BTN_GHOST_PELIGRO, BTN_PRIMARIO_DOMINANTE, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { iconoDeCategoria } from '../soluciones/iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from '../soluciones/coloresCategoria'
 import { Historial } from '../historial/Historial'
@@ -254,7 +248,7 @@ export function DiagnosticoForm() {
                       className="min-w-0 truncate text-[13.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400"
                     >
                       {similar.titulo}
-                      <span className="ml-1.5 text-[11px] font-normal text-noct-neutral-500">
+                      <span className="ml-1.5 text-[11px] max-md:text-[12px] font-normal text-noct-neutral-500">
                         {similar.tipo === 'diagnostico' ? 'Diagnóstico' : 'Artículo'}
                       </span>
                     </Link>
@@ -285,7 +279,7 @@ export function DiagnosticoForm() {
                     type="button"
                     aria-pressed={activa}
                     onClick={() => setCategoriaId(c.id)}
-                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors max-md:min-h-11 ${
                       activa
                         ? claseActivaDeCategoria(c)
                         : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
@@ -342,7 +336,7 @@ export function DiagnosticoForm() {
                 {advertencia}
               </p>
             ))}
-            <p className="ml-6 text-[11px] leading-[1.5] text-noct-neutral-500">
+            <p className="ml-6 text-[11px] max-md:text-[12px] leading-[1.5] text-noct-neutral-500">
               No impide guardar (puede ser un artículo que aún no sincronizó), pero en el diagnóstico real esa
               rama quedaría sin el procedimiento.
             </p>
@@ -376,7 +370,7 @@ export function DiagnosticoForm() {
             type="button"
             disabled={guardando}
             onClick={() => void guardar()}
-            className={`flex-1 ${BTN_PRIMARIO} py-[11px] text-sm disabled:opacity-50`}
+            className={`flex-1 ${BTN_PRIMARIO_DOMINANTE} py-[11px] text-sm disabled:opacity-50`}
           >
             <FloppyDisk size={15} aria-hidden />
             {guardando ? 'Guardando...' : 'Guardar diagnóstico'}
@@ -484,7 +478,7 @@ function NodosEditor({
     <section>
       <div className="mb-2.5 flex items-baseline justify-between">
         <TituloSeccion>Preguntas</TituloSeccion>
-        <span className="text-[11px] text-noct-neutral-600">{resumen}</span>
+        <span className="text-[11px] max-md:text-[12px] text-noct-neutral-600">{resumen}</span>
       </div>
 
       <div className="flex flex-col gap-3.5">
@@ -549,14 +543,14 @@ function NodosEditor({
               value={nodo.pregunta}
               onChange={(e) => actualizarNodo(indice, { pregunta: e.target.value })}
               placeholder="La pregunta: ¿La impresora está encendida?"
-              className="box-border min-h-11 w-full rounded-md border border-noct-divider bg-noct-bg px-3 py-2.5 text-[14.5px] font-medium text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
+              className="box-border min-h-11 w-full rounded-md border border-noct-divider bg-noct-bg px-3 py-2.5 text-[14.5px] max-md:text-[16px] font-medium text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
             />
             <input
               type="text"
               value={nodo.descripcion}
               onChange={(e) => actualizarNodo(indice, { descripcion: e.target.value })}
               placeholder="Cómo comprobarlo (opcional)"
-              className="box-border min-h-[38px] w-full rounded-md border border-transparent bg-transparent px-3 py-2 text-[13px] text-noct-neutral-300 outline-none focus:border-noct-divider focus:bg-noct-bg placeholder:text-noct-neutral-600"
+              className="box-border min-h-[38px] w-full rounded-md border border-transparent bg-transparent px-3 py-2 text-[13px] max-md:text-[16px] text-noct-neutral-300 outline-none focus:border-noct-divider focus:bg-noct-bg placeholder:text-noct-neutral-600"
             />
 
             <div className="flex flex-col gap-2 border-t border-noct-divider pt-2.5">
@@ -578,7 +572,7 @@ function NodosEditor({
                         value={opcion.etiqueta}
                         onChange={(e) => actualizarOpcion(indice, indiceOpcion, { etiqueta: e.target.value })}
                         placeholder="Respuesta: Sí, No, otra..."
-                        className="box-border min-h-10 min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
+                        className="box-border min-h-10 min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-sm max-md:text-[16px] text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
                       />
                       <button
                         type="button"
@@ -603,7 +597,7 @@ function NodosEditor({
                           onChange={(e) =>
                             actualizarOpcion(indice, indiceOpcion, { siguienteNodoId: e.target.value || null })
                           }
-                          className={`box-border min-h-[38px] w-full appearance-none rounded-md border border-transparent bg-transparent py-1.5 pl-2.5 pr-8 text-[12.5px] outline-none hover:border-noct-divider hover:bg-noct-surface focus:border-noct-accent ${destinoColor}`}
+                          className={`box-border min-h-[38px] w-full appearance-none rounded-md border border-transparent bg-transparent py-1.5 pl-2.5 pr-8 text-[12.5px] max-md:text-[16px] outline-none hover:border-noct-divider hover:bg-noct-surface focus:border-noct-accent ${destinoColor}`}
                         >
                           <option value="">Termina aquí (con un resultado, un mensaje o una guía)</option>
                           {nodos.map(
@@ -636,7 +630,7 @@ function NodosEditor({
                             value={opcion.mensajeFinal}
                             onChange={(e) => actualizarOpcion(indice, indiceOpcion, { mensajeFinal: e.target.value })}
                             placeholder="Mensaje final: Encender y probar de nuevo"
-                            className="box-border min-h-[38px] min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-[13px] text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
+                            className="box-border min-h-[38px] min-w-0 flex-1 rounded-md border border-noct-divider bg-noct-surface px-2.5 py-2 text-[13px] max-md:text-[16px] text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600"
                           />
                         </div>
                         {/* CÓMO TERMINA (tarea 263): llegar al final no es
@@ -657,7 +651,7 @@ function NodosEditor({
                               onChange={(e) =>
                                 actualizarOpcion(indice, indiceOpcion, { resultado: resultadoValido(e.target.value) })
                               }
-                              className={`box-border min-h-[38px] w-full appearance-none rounded-md border border-transparent bg-transparent py-1.5 pl-2.5 pr-8 text-[12.5px] outline-none hover:border-noct-divider hover:bg-noct-surface focus:border-noct-accent ${opcion.resultado ? 'text-noct-accent-300' : 'text-noct-neutral-400'}`}
+                              className={`box-border min-h-[38px] w-full appearance-none rounded-md border border-transparent bg-transparent py-1.5 pl-2.5 pr-8 text-[12.5px] max-md:text-[16px] outline-none hover:border-noct-divider hover:bg-noct-surface focus:border-noct-accent ${opcion.resultado ? 'text-noct-accent-300' : 'text-noct-neutral-400'}`}
                             >
                               <option value="">Cómo termina: sin indicar</option>
                               {RESULTADOS_RECORRIDO.map((r) => (
@@ -705,7 +699,7 @@ function NodosEditor({
                               actualizarOpcion(indice, indiceOpcion, { articuloId: a.id, articuloTitulo: a.titulo })
                               setEligiendoId(null)
                             }}
-                            className="flex min-h-[42px] w-full items-center gap-[9px] rounded-md border border-noct-divider bg-noct-surface px-2.5 text-left text-[13px] text-noct-text hover:border-noct-accent"
+                            className="flex min-h-[42px] w-full items-center gap-[9px] max-md:min-h-11 rounded-md border border-noct-divider bg-noct-surface px-2.5 text-left text-[13px] text-noct-text hover:border-noct-accent"
                           >
                             <BookOpen size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
                             <span className="min-w-0 truncate">{a.titulo}</span>
@@ -723,7 +717,7 @@ function NodosEditor({
                       <button
                         type="button"
                         onClick={() => setEligiendoId(opcion.id)}
-                        className="ml-[26px] inline-flex min-h-[34px] items-center gap-[7px] self-start whitespace-nowrap rounded-md border border-dashed border-noct-neutral-700 px-2.5 text-xs text-noct-neutral-500 hover:border-noct-accent hover:text-noct-accent-300"
+                        className="ml-[26px] inline-flex min-h-[34px] items-center max-md:min-h-11 gap-[7px] self-start whitespace-nowrap rounded-md border border-dashed border-noct-neutral-700 px-2.5 text-xs text-noct-neutral-500 hover:border-noct-accent hover:text-noct-accent-300"
                       >
                         <BookOpen size={13} aria-hidden />
                         Vincular procedimiento

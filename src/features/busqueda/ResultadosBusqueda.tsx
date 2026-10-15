@@ -248,7 +248,7 @@ export function FilaResultado({
           alSaltar()
           onNavegar?.()
         }}
-        className={`${CLASE_FILA} hover:bg-noct-text/[.05]`}
+        className={`${CLASE_FILA} hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado`}
       >
         {cuerpo}
         <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
@@ -269,7 +269,7 @@ export function FilaResultado({
         onClick={() => alternarVista(resultado.id)}
         // Abierta, desde 768 la fila queda marcada con el tinte y el filo de
         // acento (T6): en la paleta la vista se ve al lado, no debajo.
-        className={`${CLASE_FILA} w-full text-left hover:bg-noct-text/[.05] ${
+        className={`${CLASE_FILA} w-full text-left hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado ${
           abierta ? 'md:bg-noct-accent/[.11] md:shadow-[inset_3px_0_0_var(--color-noct-accent)]' : ''
         }`}
       >
@@ -530,9 +530,9 @@ export function ResultadosBusqueda({
                 <seccion.Icono size={14} className={seccion.tonoIcono} aria-hidden />
                 <TituloSeccion>{seccion.nombre}</TituloSeccion>
                 {seccion.sinCuenta ? null : seccion.cuenta ? (
-                  <span className="text-[11px] text-noct-neutral-500">{seccion.cuenta}</span>
+                  <span className="text-[11px] max-md:text-[12px] text-noct-neutral-500">{seccion.cuenta}</span>
                 ) : (
-                  <span className="text-[11px] text-noct-neutral-600">{seccion.items.length}</span>
+                  <span className="text-[11px] max-md:text-[12px] text-noct-neutral-600">{seccion.items.length}</span>
                 )}
               </div>
               <div className="-mx-2 grid grid-cols-1 @2xl:grid-cols-2">

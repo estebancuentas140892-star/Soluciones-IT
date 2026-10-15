@@ -336,7 +336,7 @@ export function ProcedimientoVista({
                       type="button"
                       onClick={() => abrirPaso(indice, paso.id)}
                       aria-label={`Abrir el paso ${indice + 1}. Solo lo muestra, no lo da por hecho`}
-                      className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border text-[12.5px] font-medium ${
+                      className={`toque-amplio relative flex h-7 w-7 cursor-pointer items-center justify-center rounded-full border text-[12.5px] font-medium ${
                         hecho
                           ? 'border-noct-accent bg-noct-accent/15 text-noct-accent-300'
                           : indice === indiceActual
@@ -615,7 +615,7 @@ export function ProcedimientoVista({
 
       {verificacionFinal.length > 0 && pasosCompletados && (
         <section className="rounded-lg border border-noct-accent/30 bg-noct-accent/[.08] p-3.5">
-          <h2 className="mb-1 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-accent-300">
+          <h2 className="mb-1 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.08em] text-noct-accent-300">
             Verificación final
           </h2>
           <div className="flex flex-col gap-[9px]">

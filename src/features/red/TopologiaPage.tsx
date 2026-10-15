@@ -285,14 +285,14 @@ function NodoFila({
               </span>
             )}
           </span>
-          {detalle && <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">{detalle}</span>}
+          {detalle && <span className="mt-px block truncate text-[11.5px] max-md:text-[12px] text-noct-neutral-500">{detalle}</span>}
         </Link>
 
         {impacto >= 2 && (
           <Link
             to={`/red/topologia/${nodo.dispositivoId}`}
             title="Ver la topología desde este equipo"
-            className="inline-flex min-h-11 shrink-0 items-center px-1.5 text-[11px] text-noct-neutral-500 hover:text-noct-accent-300"
+            className="inline-flex min-h-11 shrink-0 items-center px-1.5 text-[11px] max-md:text-[12px] text-noct-neutral-500 hover:text-noct-accent-300"
           >
             +{impacto}
           </Link>
@@ -328,7 +328,7 @@ function NodoFila({
 
 function LeyendaEstado({ clase, etiqueta }: { clase: string; etiqueta: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-[11.5px] text-noct-neutral-400">
+    <span className="inline-flex items-center gap-1.5 text-[11.5px] max-md:text-[12px] text-noct-neutral-400">
       <span className={`h-[7px] w-[7px] rounded-full bg-current ${clase}`} />
       {etiqueta}
     </span>

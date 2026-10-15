@@ -193,7 +193,7 @@ export function DiagnosticosPage() {
               <Play size={18} aria-hidden />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
+              <span className="block text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
                 Diagnóstico en curso
               </span>
               <span className="mt-[3px] block text-[14.5px] font-medium leading-[1.3]">

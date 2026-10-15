@@ -126,7 +126,7 @@ export function TarjetaAdvertencia({ alertas, loQueSigue, onContinuar }: Props &
       </h3>
       <TextosDelRiesgo alertas={alertas} clase="text-[14.5px] leading-[1.45] text-noct-text" />
       <p className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-[11.5px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">Lo que sigue</span>
+        <span className="text-[11.5px] max-md:text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">Lo que sigue</span>
         <span className="text-[14.5px] leading-snug text-pretty text-noct-neutral-200 [overflow-wrap:anywhere]">
           {loQueSigue}
         </span>

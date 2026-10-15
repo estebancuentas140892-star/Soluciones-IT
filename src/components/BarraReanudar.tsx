@@ -177,7 +177,7 @@ export function BarraReanudar({
                 decía "Continuar donde quedaste"): es el dato que decide
                 si vale la pena retomarlo ahora, y en el rótulo se lee
                 antes que en la línea del progreso. */}
-            <span className="block text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
+            <span className="block text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
               Sigues en el {paso}
             </span>
             <span className="mt-[3px] block text-[15px] font-medium leading-[1.3] [text-wrap:pretty]">
@@ -211,7 +211,7 @@ export function BarraReanudar({
           <IndicadorAvance hechos={hechos} total={total} size={26} className="shrink-0" />
           <span className="hidden min-w-0 flex-1 xl:block">
             <span className="block truncate text-[12.5px] font-medium leading-[1.25]">{articulo.titulo}</span>
-            <span className="mt-0.5 block truncate text-[11px] text-noct-neutral-400">
+            <span className="mt-0.5 block truncate text-[11px] max-md:text-[12px] text-noct-neutral-400">
               <Icono size={11} className={`mr-1 inline-block align-[-1px] ${colorIconoDeTipo(articulo.tipo)}`} aria-hidden />
               {Paso}
               {minutosRestantes != null && ` · ~${minutosRestantes} min`}
@@ -259,7 +259,7 @@ export function BarraReanudar({
             <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium leading-[1.25]">
               {articulo.titulo}
             </span>
-            <span className="shrink-0 text-[11.5px] tabular-nums text-noct-neutral-400">
+            <span className="shrink-0 text-[11.5px] max-md:text-[12px] tabular-nums text-noct-neutral-400">
               {Paso}
             </span>
           </Link>
@@ -272,13 +272,13 @@ export function BarraReanudar({
               <IndicadorAvance hechos={hechos} total={total} size={30} className="shrink-0" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-medium leading-[1.25]">{articulo.titulo}</span>
-                <span className="mt-0.5 block truncate text-[11.5px] text-noct-neutral-400">
+                <span className="mt-0.5 block truncate text-[11.5px] max-md:text-[12px] text-noct-neutral-400">
                   <Icono size={11} className={`mr-1 inline-block align-[-1px] ${colorIconoDeTipo(articulo.tipo)}`} aria-hidden />
                   {Paso}
                   {minutosRestantes != null && ` · ~${minutosRestantes} min`}
                 </span>
               </span>
-              <span className="flex shrink-0 items-center gap-1 rounded-md border border-noct-accent px-2 py-1 text-[11.5px] font-medium text-noct-accent">
+              <span className="flex shrink-0 items-center gap-1 rounded-md border border-noct-accent px-2 py-1 text-[11.5px] max-md:text-[12px] font-medium text-noct-accent">
                 <Play size={11} aria-hidden />
                 Seguir
               </span>
@@ -287,7 +287,7 @@ export function BarraReanudar({
               type="button"
               onClick={onDescartar}
               aria-label={`Descartar el aviso para continuar "${articulo.titulo}"`}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-noct-neutral-500 hover:bg-noct-text/[.08] hover:text-noct-text"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-noct-neutral-500 hover:bg-noct-text/[.08] hover:text-noct-text max-md:-m-1.5 max-md:h-11 max-md:w-11"
             >
               <X size={14} aria-hidden />
             </button>

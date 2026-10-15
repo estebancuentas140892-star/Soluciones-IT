@@ -41,14 +41,14 @@ export function TarjetaGuiaVinculada({
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-noct-divider bg-noct-surface/60 p-3.5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
+        <span className="inline-flex items-center gap-1.5 text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
           <BookOpen size={14} className="shrink-0" aria-hidden />
           {kicker}
         </span>
         {/* EL ESTADO, CON PALABRAS. Sustituye al anillo de avance: "Sin
             iniciar", "Paso 3 de 5" o "Completada". */}
         <span
-          className={`inline-flex h-[26px] items-center rounded-full border px-2.5 text-[11.5px] font-medium ${claseEstado}`}
+          className={`inline-flex h-[26px] items-center rounded-full border px-2.5 text-[11.5px] max-md:text-[12px] font-medium ${claseEstado}`}
         >
           {estado.texto}
         </span>

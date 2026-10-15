@@ -16,7 +16,7 @@ import {
   X,
   type IconoProps,
 } from '../../components/iconos'
-import { BTN_GHOST_ACENTO, BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_GHOST_ACENTO, BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
 import {
   db,
   type ArticuloRelacionado,
@@ -701,7 +701,7 @@ export function ReferenciaForm() {
           <button
             type="submit"
             disabled={guardando || titulo.trim() === ''}
-            className={`mt-1 ${BTN_PRIMARIO} min-h-11 disabled:opacity-50`}
+            className={`mt-1 ${BTN_PRIMARIO_DOMINANTE} min-h-11 disabled:opacity-50`}
           >
             <FloppyDisk size={15} aria-hidden />
             {guardando ? 'Guardando...' : 'Guardar ficha'}

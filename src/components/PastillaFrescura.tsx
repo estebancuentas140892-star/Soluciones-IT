@@ -33,7 +33,7 @@ export function PastillaFrescura({
 }) {
   const estado = useSyncExternalStore(suscribirSync, obtenerEstadoSync)
   const sustantivo = total === 1 ? singular : plural
-  const base = `inline-flex items-center gap-[5px] text-[11.5px] ${className}`
+  const base = `inline-flex items-center gap-[5px] text-[11.5px] max-md:text-[12px] ${className}`
 
   // Prioridad de los tres mensajes: lo que el técnico necesita saber
   // primero es si algo SUYO todavía no salió del teléfono (puede perderse

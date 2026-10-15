@@ -253,11 +253,11 @@ export function ImportarDispositivosPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-md border border-noct-exito/35 bg-noct-exito/[.08] p-2.5 text-center">
                     <p className="text-[20px] font-medium text-noct-exito">{mapeo.importables.length}</p>
-                    <p className="mt-0.5 text-[11px] leading-[1.35] text-noct-neutral-400">nuevos</p>
+                    <p className="mt-0.5 text-[11px] max-md:text-[12px] leading-[1.35] text-noct-neutral-400">nuevos</p>
                   </div>
                   <div className="rounded-md border border-noct-precaucion/35 bg-noct-precaucion/[.08] p-2.5 text-center">
                     <p className="text-[20px] font-medium text-noct-precaucion">{mapeo.omitidas.length}</p>
-                    <p className="mt-0.5 text-[11px] leading-[1.35] text-noct-neutral-400">se omiten</p>
+                    <p className="mt-0.5 text-[11px] max-md:text-[12px] leading-[1.35] text-noct-neutral-400">se omiten</p>
                   </div>
                 </div>
 
@@ -313,7 +313,7 @@ export function ImportarDispositivosPage() {
                             key={fila.numeroFila}
                             className="flex min-h-12 items-center gap-[11px] border-b border-noct-divider py-2.5 last:border-b-0"
                           >
-                            <span className="inline-flex min-h-[22px] shrink-0 items-center whitespace-nowrap rounded-full border border-noct-exito/40 px-2 text-[10.5px] font-medium text-noct-exito">
+                            <span className="inline-flex min-h-[22px] shrink-0 items-center whitespace-nowrap rounded-full border border-noct-exito/40 px-2 text-[10.5px] max-md:text-[12px] font-medium text-noct-exito">
                               Nuevo
                             </span>
                             <span className="min-w-0 flex-1">
@@ -321,7 +321,7 @@ export function ImportarDispositivosPage() {
                                 {fila.datos.nombre}
                               </span>
                               {detalle && (
-                                <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">
+                                <span className="mt-px block truncate text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
                                   {detalle}
                                 </span>
                               )}
@@ -362,7 +362,7 @@ export function ImportarDispositivosPage() {
         {fase.paso === 'terminado' && (
           <>
             <div className="rounded-md border border-noct-exito/35 bg-noct-exito/[.09] p-3.5">
-              <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-noct-exito">
+              <p className="text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.07em] text-noct-exito">
                 Importación completada
               </p>
               <p className="mt-1.5 text-[14.5px] leading-[1.5]">

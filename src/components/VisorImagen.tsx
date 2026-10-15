@@ -324,7 +324,7 @@ export function ImagenAmpliable({
         {/* LA INVITACIÓN, VISIBLE (encargo del 2026-09-10, tarea 3).
             Sin ella, poder ampliar equivale a no poder: nadie toca una
             imagen que no promete nada. */}
-        <span className="pointer-events-none absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] font-medium text-white">
+        <span className="pointer-events-none absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1 text-[11px] max-md:text-[12px] font-medium text-white">
           <MagnifyingGlassPlus size={13} aria-hidden />
           {etiqueta}
         </span>

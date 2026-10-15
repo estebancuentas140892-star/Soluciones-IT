@@ -1087,7 +1087,7 @@ export function ArticuloForm() {
                 <span className="block text-[13.5px] font-medium text-noct-precaucion">
                   {resumenApoyosPendientes(pendientes.length)}
                 </span>
-                <span className="block text-[11.5px] leading-snug text-noct-precaucion/85">
+                <span className="block text-[11.5px] max-md:text-[12px] leading-snug text-noct-precaucion/85">
                   {yaPublicado
                     ? 'Contenido de una versión anterior. Sigue funcionando: se muestra al entrar al paso.'
                     : 'Di si cada uno pertenece a una tarea o a todo el paso para poder publicar.'}
@@ -1112,7 +1112,7 @@ export function ArticuloForm() {
                       }}
                       className="flex min-h-11 w-full items-center gap-2 rounded-lg px-2 text-left hover:bg-noct-precaucion/10"
                     >
-                      <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.06em] text-noct-precaucion/85">
+                      <span className="shrink-0 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.06em] text-noct-precaucion/85">
                         Paso {pendiente.numeroPaso}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-[12.5px] text-noct-neutral-200">
@@ -1393,7 +1393,7 @@ export function ArticuloForm() {
             <section>
               <div className="mb-2.5 flex items-baseline justify-between">
                 <TituloSeccion>Pasos</TituloSeccion>
-                <span className="text-[11px] text-noct-neutral-600">{resumenPasos}</span>
+                <span className="text-[11px] max-md:text-[12px] text-noct-neutral-600">{resumenPasos}</span>
               </div>
               {revisarRutas && porCorregir.length > 0 && (
                 <div role="alert" className="mb-3 rounded-xl border border-noct-error/45 bg-noct-error/[.08] px-3.5 py-3">
@@ -1415,7 +1415,7 @@ export function ArticuloForm() {
                             }}
                             className="flex min-h-11 w-full items-center gap-2 rounded-lg px-1.5 text-left hover:bg-noct-error/10"
                           >
-                            <span className="shrink-0 text-[11px] font-medium uppercase tracking-[0.06em] text-noct-error/85">
+                            <span className="shrink-0 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.06em] text-noct-error/85">
                               Paso {numero}
                             </span>
                             <span className="min-w-0 flex-1 text-[12.5px] leading-snug text-noct-neutral-200">
@@ -1561,7 +1561,7 @@ export function ArticuloForm() {
                         ])
                       }
                     }}
-                    className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+                    className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] max-md:text-[16px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
                   >
                     <option value="">Vincular artículo relacionado (opcional)</option>
                     {relacionadosDisponibles.map((a) => (
@@ -1853,7 +1853,7 @@ function EquiposDondeAplica({
               const equipo = disponibles.find((d) => d.id === e.target.value)
               if (equipo) onChange([...elegidos, { id: equipo.id, nombre: equipo.nombre }])
             }}
-            className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
+            className="flex min-h-11 w-full appearance-none rounded-md border border-dashed border-noct-neutral-700 bg-transparent pl-9 pr-3 text-[13px] max-md:text-[16px] text-noct-neutral-400 outline-none hover:border-noct-neutral-500 hover:text-noct-text"
           >
             <option value="">Vincular un equipo donde aplica (opcional)</option>
             {disponibles.map((d) => (
@@ -2090,7 +2090,7 @@ function EtiquetasEditor({
               key={sugerencia.texto}
               type="button"
               onClick={() => agregar(sugerencia.texto)}
-              className="inline-flex items-center gap-1 rounded-md border border-dashed border-noct-neutral-700 px-2.5 py-[3px] text-[11px] text-noct-neutral-400 hover:border-noct-accent hover:text-noct-accent-300"
+              className="inline-flex items-center gap-1 rounded-md border border-dashed border-noct-neutral-700 px-2.5 py-[3px] text-[11px] max-md:text-[12px] text-noct-neutral-400 hover:border-noct-accent hover:text-noct-accent-300"
             >
               <Plus size={10} aria-hidden />
               {sugerencia.texto}
@@ -2155,7 +2155,7 @@ function PortadaEditor({
           {portada && url ? (
             <img src={url} alt="Portada del procedimiento" className="h-full w-full object-cover" />
           ) : (
-            <span className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-noct-neutral-700 text-center text-[11px] text-noct-neutral-500 hover:border-noct-neutral-500 hover:text-noct-text">
+            <span className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-noct-neutral-700 text-center text-[11px] max-md:text-[12px] text-noct-neutral-500 hover:border-noct-neutral-500 hover:text-noct-text">
               {subiendo ? 'Subiendo...' : 'Portada'}
             </span>
           )}

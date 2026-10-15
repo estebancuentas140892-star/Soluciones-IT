@@ -5,7 +5,8 @@ import { db, ID_VERIFICADOR } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { LockSimple } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO, BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
+import { avisar } from '../../components/avisosFlotantes'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import {
   desbloquear,
@@ -76,7 +77,7 @@ function AccesoRestringido() {
 }
 
 const CAMPO_PASS =
-  'min-h-12 w-full rounded-md border bg-noct-surface px-3.5 py-3 text-center text-[15px] text-noct-text outline-none transition-colors placeholder:text-noct-neutral-600 focus:border-noct-accent'
+  'min-h-12 w-full rounded-md border bg-noct-surface px-3.5 py-3 text-center text-[15px] text-noct-text outline-none transition-colors placeholder:text-noct-neutral-600 focus:border-noct-accent max-md:text-[16px]'
 
 function PantallaDesbloqueo() {
   // El formulario depende del estado CONFIRMADO de la contraseña
@@ -121,6 +122,8 @@ function PantallaDesbloqueo() {
     const resultado = await desbloquear(contrasena)
     setAbriendo(false)
     if (resultado) setError(resultado)
+    // Lo de debajo no se desmonta; el aviso dice que ya está (tarea 341).
+    else avisar('Bóveda desbloqueada', 'candado')
   }
 
   const descripcion =
@@ -171,7 +174,7 @@ function PantallaDesbloqueo() {
                 placeholder="Confirma la contraseña"
                 className={`${CAMPO_PASS} ${error ? 'border-noct-error/55' : 'border-noct-divider'}`}
               />
-              <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+              <p className="text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
                 Esta contraseña quedará registrada como la contraseña maestra del equipo, asociada a
                 la cuenta y válida en todos los dispositivos: acuérdenla entre todos y guárdenla bien,
                 sin ella no se puede recuperar el contenido.
@@ -184,13 +187,13 @@ function PantallaDesbloqueo() {
           <button
             type="submit"
             disabled={abriendo}
-            className={`${BTN_PRIMARIO} min-h-12 justify-center disabled:opacity-50`}
+            className={`${BTN_PRIMARIO_DOMINANTE} min-h-12 justify-center disabled:opacity-50`}
           >
             {abriendo ? 'Desbloqueando...' : 'Desbloquear'}
           </button>
 
           {modo === 'verificar' && (
-            <p className="mt-0.5 text-[11.5px] leading-relaxed text-noct-neutral-600">
+            <p className="mt-0.5 text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
               Se vuelve a bloquear sola tras {obtenerMinutosAutobloqueo()} minutos sin actividad.
             </p>
           )}

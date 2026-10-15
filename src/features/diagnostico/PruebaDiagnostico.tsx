@@ -57,7 +57,7 @@ export function PruebaDiagnostico({ nodos, titulo, ejecutables, onCerrar }: Prop
       <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-noct-divider bg-noct-bg/[.92] px-4 py-3 backdrop-blur-[12px]">
         <p className="flex items-center gap-2 text-sm font-medium text-noct-text">
           Probar diagnóstico
-          <span className="rounded-full border border-noct-precaucion/50 bg-noct-precaucion/[.14] px-2 py-0.5 text-[10px] text-noct-precaucion">
+          <span className="rounded-full border border-noct-precaucion/50 bg-noct-precaucion/[.14] px-2 py-0.5 text-[10px] max-md:text-[12px] text-noct-precaucion">
             Modo prueba
           </span>
         </p>

@@ -10,7 +10,7 @@ import type { ReactNode } from 'react'
 export function TituloSeccion({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <h2
-      className={`text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500 ${className}`}
+      className={`text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500 ${className}`}
     >
       {children}
     </h2>
@@ -21,7 +21,7 @@ export function TituloSeccion({ children, className = '' }: { children: ReactNod
 export function TagNeutral({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <span
-      className={`inline-flex items-center gap-[5px] rounded-md bg-noct-neutral-800 px-2.5 py-[3px] text-[11px] tracking-[0.02em] text-noct-neutral-100 ${className}`}
+      className={`inline-flex items-center gap-[5px] rounded-md bg-noct-neutral-800 px-2.5 py-[3px] text-[11px] max-md:text-[12px] tracking-[0.02em] text-noct-neutral-100 ${className}`}
     >
       {children}
     </span>
@@ -57,8 +57,14 @@ export const BAJA_CON_LAS_PESTANAS =
 // Botones .btn del sistema: el primario va delineado en el acento y el
 // secundario con el divisor. Delineado es lo normal: Editar, Programar,
 // Registrar lectura y cualquier acción que no hace avanzar.
-const BTN_BASE =
+// EN EL TELÉFONO, 44 PX Y EL VERBO A 14 (tarea 341, mínimos del handoff
+// móvil "1b Pulgar"). `btn-tactil` (index.css) da el alto mínimo desde la
+// capa de componentes, así que el alto que escriba cada pantalla
+// (`min-h-12`, `min-h-[46px]`) sigue mandando; el texto sube con `max-md:`.
+// Desde 768 el botón es el de siempre.
+const BTN_FORMA =
   'inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border text-[13px] font-medium leading-tight'
+const BTN_BASE = `btn-tactil ${BTN_FORMA} max-md:text-[14px]`
 export const BTN_PRIMARIO = `${BTN_BASE} border-noct-accent px-2.5 py-[7px] text-noct-accent hover:bg-noct-accent/10 active:bg-noct-accent/20`
 // La ÚNICA acción rellena de una pantalla (regla 30 de REGLAS.md,
 // rediseño móvil "1b Pulgar", 2026-10-13): la que hace avanzar o ejecutar
@@ -75,6 +81,14 @@ export const BTN_PRIMARIO = `${BTN_BASE} border-noct-accent px-2.5 py-[7px] text
 // de una cabecera con ratón.
 export const BTN_PRIMARIO_RELLENO =
   'inline-flex min-h-[54px] cursor-pointer items-center justify-center gap-2 rounded-[15px] border border-transparent bg-noct-accent px-4 text-[16px] font-semibold leading-tight text-noct-on-accent hover:bg-noct-accent-300 active:bg-noct-accent-500 disabled:cursor-not-allowed disabled:opacity-45 md:min-h-12 md:rounded-[14px] md:text-[15.5px] xl:min-h-10 xl:rounded-[11px] xl:px-[15px] xl:text-[14px]'
+// "GUARDAR" Y "DESBLOQUEAR" DONDE SON LA ACCIÓN DOMINANTE (tarea 341, regla
+// 30 en el teléfono). En el teléfono es la rellena de 54 · 16 · radio 15; desde
+// 768 sigue siendo exactamente el `BTN_PRIMARIO` delineado que esas pantallas
+// tenían, porque lo aprobado para tableta y escritorio no cambia. Se arma
+// sobre la forma del botón sin el texto de 14 del teléfono de `BTN_BASE`,
+// para que dos tamaños de letra no compitan. Solo para la acción que manda
+// en su pantalla u hoja: nunca dos rellenas a la vista.
+export const BTN_PRIMARIO_DOMINANTE = `${BTN_FORMA} border-noct-accent px-2.5 py-[7px] text-noct-accent hover:bg-noct-accent/10 active:bg-noct-accent/20 max-md:min-h-[54px] max-md:gap-2 max-md:rounded-[15px] max-md:border-transparent max-md:bg-noct-accent max-md:px-4 max-md:text-[16px] max-md:font-semibold max-md:text-noct-on-accent max-md:active:bg-noct-accent-500`
 // La acción principal DELINEADA de una cabecera de documento desde 768 px
 // (tarea 339): la que no hace avanzar nada pero manda en la pantalla
 // ("Programar mantenimiento", "Editar" una autorización, "Credenciales" de

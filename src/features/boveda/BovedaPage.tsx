@@ -504,7 +504,7 @@ export function BovedaPage() {
                   type="button"
                   aria-pressed={activa}
                   onClick={() => setCategoria((v) => (v === chip.valor ? '' : chip.valor))}
-                  className={`inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                  className={`inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors max-md:h-11 ${
                     activa
                       ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
                       : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
@@ -512,7 +512,7 @@ export function BovedaPage() {
                 >
                   {chip.nombre}
                   <span
-                    className={`text-[11px] ${activa ? 'text-noct-accent-400' : 'text-noct-neutral-600'}`}
+                    className={`text-[11px] max-md:text-[12px] ${activa ? 'text-noct-accent-400' : 'text-noct-neutral-600'}`}
                   >
                     {chip.count}
                   </span>
@@ -604,7 +604,7 @@ export function BovedaPage() {
                       </p>
                     </div>
                     {estado === 'proxima' && (
-                      <span className="inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap rounded-full border border-noct-precaucion/40 px-[9px] py-[3px] text-[11px] font-medium text-noct-precaucion">
+                      <span className="inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap rounded-full border border-noct-precaucion/40 px-[9px] py-[3px] text-[11px] max-md:text-[12px] font-medium text-noct-precaucion">
                         <ClockCountdown size={12} aria-hidden />
                         Vence pronto
                       </span>
@@ -688,7 +688,7 @@ export function BovedaPage() {
                   type="button"
                   aria-pressed={activo}
                   onClick={() => cambiarMinutos(m)}
-                  className={`inline-flex h-8 items-center rounded-full border px-2.5 text-[12px] transition-colors ${
+                  className={`inline-flex h-8 items-center rounded-full border px-2.5 text-[12px] transition-colors max-md:h-11 ${
                     activo
                       ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
                       : 'border-noct-divider text-noct-neutral-500 hover:bg-noct-text/[.05]'
@@ -747,7 +747,7 @@ export function BovedaPage() {
             </div>
           )}
 
-          <p className="mx-1.5 mt-1.5 text-[11.5px] leading-relaxed text-noct-neutral-600">
+          <p className="mx-1.5 mt-1.5 text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
             Las opciones especiales están ahí solo cuando las necesites.
           </p>
         </HojaInferior>
@@ -766,7 +766,7 @@ export function BovedaPage() {
                 {credencialMenu.titulo}
               </p>
               <p
-                className={`mt-0.5 text-[11.5px] ${avisoCopia ? 'text-noct-precaucion' : 'text-noct-neutral-600'}`}
+                className={`mt-0.5 text-[11.5px] max-md:text-[12px] ${avisoCopia ? 'text-noct-precaucion' : 'text-noct-neutral-600'}`}
               >
                 {avisoCopia ??
                   (ETIQUETA_COPIA[tipoDe(credencialMenu)]
@@ -813,7 +813,7 @@ export function BovedaPage() {
                 <Key size={18} className="w-[26px] shrink-0 text-center text-noct-neutral-400" aria-hidden />
               )}
               <span className="flex-1 text-sm font-medium">{ETIQUETA_COPIA[tipoDe(credencialMenu)]}</span>
-              <span className="text-[11.5px] text-noct-neutral-600">sin mostrarla</span>
+              <span className="text-[11.5px] max-md:text-[12px] text-noct-neutral-600">sin mostrarla</span>
             </button>
           )}
 
@@ -840,7 +840,7 @@ export function BovedaPage() {
           >
             <TrashSimple size={18} className="w-[26px] shrink-0 text-center" aria-hidden />
             <span className="flex-1 text-sm font-medium">Eliminar</span>
-            <span className="text-[11.5px] text-noct-neutral-600">pide la contraseña maestra</span>
+            <span className="text-[11.5px] max-md:text-[12px] text-noct-neutral-600">pide la contraseña maestra</span>
           </button>
         </HojaInferior>
       )}

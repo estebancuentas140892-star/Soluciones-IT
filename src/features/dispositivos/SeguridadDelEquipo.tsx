@@ -19,7 +19,7 @@ import {
   TrashSimple,
   X,
 } from '../../components/iconos'
-import { BTN_GHOST_ACENTO, BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { BTN_GHOST_ACENTO, BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO, BTN_PRIMARIO_DOMINANTE, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { useGrafo } from '../../components/useGrafo'
 import { db, type CampoProtegido, type TipoCampoProtegido } from '../../lib/db'
 import { generarContrasena } from '../../lib/generarContrasena'
@@ -31,6 +31,7 @@ import { cifrarValor, desbloquear, descifrarValor } from '../boveda/sesionBoveda
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { Historial } from '../historial/Historial'
 import { CLASE_CAMPO } from '../../components/campos'
+import { avisar } from '../../components/avisosFlotantes'
 import {
   camposDeDispositivo,
   esOcultoPorDefecto,
@@ -97,14 +98,14 @@ export function SeguridadDelEquipo({
   return (
     <section>
       {sinCabecera ? (
-        <p className="mb-2 inline-flex items-center gap-1.5 text-[11.5px] text-noct-neutral-500">
+        <p className="mb-2 inline-flex items-center gap-1.5 text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
           <LockSimple size={12} aria-hidden />
           Cifrado en el dispositivo
         </p>
       ) : (
         <div className="mb-2 flex items-center justify-between gap-2">
           <TituloSeccion>Seguridad</TituloSeccion>
-          <span className="inline-flex items-center gap-1.5 text-[11.5px] text-noct-neutral-500">
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
             <LockSimple size={12} aria-hidden />
             Cifrado en el dispositivo
           </span>
@@ -243,13 +244,13 @@ function FilaCampoProtegido({
         <LockSimple size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13.5px] font-medium leading-tight">{campo.nombre}</span>
-          <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">
+          <span className="mt-px block truncate text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
             {etiquetaTipo(campo.tipo)}
           </span>
         </span>
         {vencimiento && (
           <span
-            className={`inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap rounded-full border px-[9px] py-[3px] text-[11px] font-medium ${
+            className={`inline-flex shrink-0 items-center gap-[5px] whitespace-nowrap rounded-full border px-[9px] py-[3px] text-[11px] max-md:text-[12px] font-medium ${
               vencimiento === 'vencida'
                 ? 'border-noct-error/40 text-noct-error'
                 : 'border-noct-precaucion/40 text-noct-precaucion'
@@ -285,21 +286,21 @@ function FilaCampoProtegido({
           </div>
           {usadoEn.length > 0 && (
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-noct-neutral-500">
+              <span className="text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.06em] text-noct-neutral-500">
                 Usado en
               </span>
               {usadoEn.map((origen) => (
                 <Link
                   key={`${origen.tipo}:${origen.id}`}
                   to={origen.ruta}
-                  className="flex min-h-9 items-center gap-2 rounded-md px-1.5 text-[12.5px] text-noct-text hover:bg-noct-text/[.05]"
+                  className="flex min-h-9 items-center gap-2 rounded-md px-1.5 text-[12.5px] text-noct-text hover:bg-noct-text/[.05] max-md:min-h-11"
                 >
                   <BookOpen size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
                   <span className="min-w-0 flex-1 truncate">{origen.titulo}</span>
                   <CaretRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />
                 </Link>
               ))}
-              <p className="px-1.5 text-[11.5px] text-noct-neutral-600">
+              <p className="px-1.5 text-[11.5px] max-md:text-[12px] text-noct-neutral-600">
                 Si se elimina este dato, esos pasos quedan sin él.
               </p>
             </div>
@@ -537,7 +538,7 @@ function EditorCampo({
             revelado={verValor}
             value={valor}
             onChange={(e) => setValor(e.target.value)}
-            className="min-h-11 min-w-0 flex-1 box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 font-mono text-sm text-noct-text outline-none focus:border-noct-accent"
+            className="min-h-11 min-w-0 flex-1 box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 font-mono text-sm max-md:text-[16px] text-noct-text outline-none focus:border-noct-accent"
           />
           <button
             type="button"
@@ -562,7 +563,7 @@ function EditorCampo({
           )}
         </div>
         {!cargado && (
-          <p className="text-[11.5px] text-noct-neutral-500">Cargando el valor actual...</p>
+          <p className="text-[11.5px] max-md:text-[12px] text-noct-neutral-500">Cargando el valor actual...</p>
         )}
       </div>
 
@@ -592,7 +593,7 @@ function EditorCampo({
       {error && <p className="text-[12px] text-noct-error">{error}</p>}
 
       <div className="flex gap-1.5">
-        <button type="submit" disabled={guardando} className={`${BTN_PRIMARIO} disabled:opacity-50`}>
+        <button type="submit" disabled={guardando} className={`${BTN_PRIMARIO_DOMINANTE} disabled:opacity-50`}>
           <LockSimple size={13} aria-hidden />
           {guardando ? 'Guardando...' : 'Guardar'}
         </button>
@@ -620,6 +621,8 @@ function FormularioDesbloqueo() {
     const resultado = await desbloquear(contrasena)
     setAbriendo(false)
     if (resultado) setError(resultado)
+    // Lo de debajo no se desmonta; el aviso dice que ya está (tarea 341).
+    else avisar('Bóveda desbloqueada', 'candado')
   }
 
   return (
@@ -634,9 +637,9 @@ function FormularioDesbloqueo() {
           value={contrasena}
           onChange={(e) => setContrasena(e.target.value)}
           placeholder="Contraseña maestra"
-          className="min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
+          className="min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm max-md:text-[16px] text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
         />
-        <button type="submit" disabled={abriendo} className={`shrink-0 ${BTN_PRIMARIO} disabled:opacity-45`}>
+        <button type="submit" disabled={abriendo} className={`shrink-0 ${BTN_PRIMARIO_DOMINANTE} disabled:opacity-45`}>
           <Key size={14} aria-hidden />
           {abriendo ? 'Abriendo...' : 'Desbloquear'}
         </button>

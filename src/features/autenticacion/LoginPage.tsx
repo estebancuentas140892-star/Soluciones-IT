@@ -125,7 +125,7 @@ export function LoginPage() {
         <button
           type="submit"
           disabled={enviando || !supabaseConfigured}
-          className={`${BTN_PRIMARIO} mt-1 min-h-[52px] justify-center text-[15px] disabled:opacity-50`}
+          className={`${BTN_PRIMARIO} mt-1 min-h-[52px] justify-center text-[15px] max-md:text-[15px] disabled:opacity-50`}
         >
           {enviando ? 'Ingresando...' : 'Ingresar'}
         </button>

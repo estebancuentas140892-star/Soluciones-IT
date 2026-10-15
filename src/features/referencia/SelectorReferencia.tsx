@@ -134,7 +134,7 @@ export function SelectorReferencia({ abierto, onCerrar, tipo, referencias, onEle
           onChange={(e) => setConsulta(e.target.value)}
           placeholder={`Buscar o escribir ${info.etiqueta.toLowerCase()}`}
           aria-label={`Buscar ${info.plural.toLowerCase()}`}
-          className="min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500 [&::-webkit-search-cancel-button]:hidden"
+          className="min-w-0 flex-1 bg-transparent text-[15px] max-md:text-[16px] text-noct-text outline-none placeholder:text-noct-neutral-500 [&::-webkit-search-cancel-button]:hidden"
         />
       </label>
 

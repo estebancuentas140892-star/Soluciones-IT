@@ -5,7 +5,7 @@ import { db, ID_BLOQUEO_APP, type ConfigBloqueoApp } from '../../lib/db'
 import { Cargando } from '../../components/Cargando'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { LockSimple } from '../../components/iconos'
-import { BTN_PRIMARIO, BTN_GHOST_TENUE } from '../../components/nocturne'
+import { BTN_GHOST_TENUE, BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
 import { useAuth } from '../autenticacion/authContext'
 import {
   desbloquearApp,
@@ -133,7 +133,7 @@ function PantallaBloqueo({ config }: { config: ConfigBloqueoApp }) {
             type="button"
             onClick={() => void usarDispositivo()}
             disabled={esperandoDispositivo}
-            className={`${BTN_PRIMARIO} min-h-12 justify-center disabled:opacity-50`}
+            className={`${BTN_PRIMARIO_DOMINANTE} min-h-12 justify-center disabled:opacity-50`}
           >
             {esperandoDispositivo ? 'Esperando al dispositivo...' : 'Desbloquear'}
           </button>
@@ -163,13 +163,13 @@ function PantallaBloqueo({ config }: { config: ConfigBloqueoApp }) {
             value={contrasena}
             onChange={(e) => setContrasena(e.target.value)}
             placeholder="Contraseña de desbloqueo"
-            className={`min-h-12 w-full rounded-md border bg-noct-surface px-3.5 py-3 text-center text-[15px] text-noct-text outline-none transition-colors placeholder:text-noct-neutral-600 focus:border-noct-accent ${error ? 'border-noct-error/55' : 'border-noct-divider'}`}
+            className={`min-h-12 w-full rounded-md border bg-noct-surface px-3.5 py-3 text-center text-[15px] max-md:text-[16px] text-noct-text outline-none transition-colors placeholder:text-noct-neutral-600 focus:border-noct-accent ${error ? 'border-noct-error/55' : 'border-noct-divider'}`}
           />
           {error && <p className="text-[12.5px] text-noct-error">{error}</p>}
           <button
             type="submit"
             disabled={abriendo}
-            className={`${BTN_PRIMARIO} min-h-12 justify-center disabled:opacity-50`}
+            className={`${BTN_PRIMARIO_DOMINANTE} min-h-12 justify-center disabled:opacity-50`}
           >
             {abriendo ? 'Desbloqueando...' : 'Desbloquear'}
           </button>
@@ -208,7 +208,7 @@ function PantallaBloqueo({ config }: { config: ConfigBloqueoApp }) {
             <button
               type="button"
               onClick={() => void restablecerYCerrar()}
-              className={`${BTN_GHOST_TENUE} min-h-9 justify-center`}
+              className={`${BTN_GHOST_TENUE} min-h-9 justify-center max-md:min-h-11`}
             >
               Cerrar sesión y quitar el bloqueo
             </button>

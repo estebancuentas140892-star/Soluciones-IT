@@ -7,7 +7,8 @@ import { Modal } from './Modal'
 // que se mira sin dejar la pantalla (los datos de un equipo, sus conexiones,
 // sus adjuntos, la credencial de una acción) se abre aquí, encima, y al
 // cerrarla todo sigue donde estaba. Se apoya en `Modal`, que en el teléfono
-// ya se ancla abajo, y le añade la cabecera de siempre: de qué es (12 px),
+// es la hoja del handoff (pegada abajo, radio 22, asa, sube y se desliza
+// para cerrar: tarea 341), y le añade la cabecera de siempre: de qué es (12 px),
 // el título y una X de 44 px. Una sola hoja a la vez: quien la usa guarda
 // cuál está abierta.
 //
@@ -41,15 +42,20 @@ export function HojaInferior({
       <div className="mb-2 flex items-start gap-2 md:mb-0 md:min-h-[68px] md:shrink-0 md:items-center md:gap-3 md:border-b md:border-noct-divider md:py-3 md:pl-[22px] md:pr-4">
         <div className="min-w-0 flex-1 pt-1.5 md:pt-0">
           {contexto && <p className="text-[12px] leading-snug text-noct-neutral-500 [overflow-wrap:anywhere]">{contexto}</p>}
-          <h2 id={idTitulo} className="text-[17px] font-semibold leading-snug [overflow-wrap:anywhere]">
+          {/* En el teléfono, 18/650 como la hoja del handoff móvil (tarea 341). */}
+          <h2
+            id={idTitulo}
+            className="text-[17px] font-semibold leading-snug [overflow-wrap:anywhere] max-md:text-[18px] max-md:font-[650] max-md:leading-[1.25]"
+          >
             {titulo}
           </h2>
         </div>
+        {/* En el teléfono, la X es redonda y con tinte (tarea 341). */}
         <button
           type="button"
           onClick={onCerrar}
           aria-label={etiquetaCerrar}
-          className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text md:m-0 md:rounded-[10px] md:border md:border-noct-divider xl:h-9 xl:w-9"
+          className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text max-md:-mr-1 max-md:rounded-full max-md:bg-noct-tinte max-md:active:bg-noct-presionado md:m-0 md:rounded-[10px] md:border md:border-noct-divider xl:h-9 xl:w-9"
         >
           <X size={19} aria-hidden />
         </button>

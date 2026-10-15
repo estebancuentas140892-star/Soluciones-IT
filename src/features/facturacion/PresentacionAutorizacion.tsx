@@ -23,7 +23,7 @@ const TONO_ESTADO: Record<EstadoAutorizacion, string> = {
 export function PastillaEstadoAutorizacion({ estado }: { estado: EstadoAutorizacion }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-full border px-2 py-px text-[11.5px] font-medium leading-[1.5] ${TONO_ESTADO[estado]}`}
+      className={`inline-flex shrink-0 items-center rounded-full border px-2 py-px text-[11.5px] max-md:text-[12px] font-medium leading-[1.5] ${TONO_ESTADO[estado]}`}
     >
       {etiquetaEstadoAutorizacion(estado)}
     </span>

@@ -19,8 +19,12 @@ import { BTN_GHOST_ACENTO } from './nocturne'
 // puede escribir `${CLASE_CAMPO} w-2/5` porque las dos utilidades de
 // ancho tienen la misma especificidad y decide el orden de emision de
 // Tailwind, no el del atributo (ver la nota de la variante de fondo).
+//
+// EN EL TELÉFONO, 16 PX (tarea 341, mínimos del handoff móvil "1b Pulgar"):
+// con menos, iOS amplía la pantalla al enfocar el campo y el técnico pierde
+// el sitio. Desde 768, los 14 de siempre.
 export const CLASE_CAMPO_SIN_ANCHO =
-  'box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
+  'box-border rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600 max-md:text-base'
 
 // Campo de texto sobre el fondo normal de un formulario.
 export const CLASE_CAMPO = `w-full ${CLASE_CAMPO_SIN_ANCHO}`
@@ -36,7 +40,7 @@ export const CLASE_CAMPO = `w-full ${CLASE_CAMPO_SIN_ANCHO}`
 // Tailwind emite mas tarde en la hoja. Tailwind ordena por nombre, asi
 // que `bg-noct-surface` saldria despues de `bg-noct-bg` y lo taparia.
 export const CLASE_CAMPO_SOBRE_SUPERFICIE =
-  'w-full box-border rounded-md border border-noct-divider bg-noct-bg px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600'
+  'w-full box-border rounded-md border border-noct-divider bg-noct-bg px-3 py-2.5 text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600 max-md:text-base'
 
 // Modificadores que SI se pueden concatenar detras de las constantes de
 // arriba, porque no compiten con ninguna utilidad que ellas ya traigan:

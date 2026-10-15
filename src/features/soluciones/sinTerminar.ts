@@ -1,6 +1,7 @@
-import type { Articulo, ProgresoPasos } from '../../lib/db'
+import type { Articulo, Procedimiento, ProgresoPasos } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { avanceDeLaRuta } from '../../lib/rutaProcedimiento'
+import { guiaTerminada } from './cierrePaso'
 
 // Los procedimientos que este técnico dejó a medias, para el bloque
 // "Sin terminar" de la lista de Soluciones.
@@ -83,4 +84,22 @@ export function articulosSinTerminar(
  */
 export function pasoDeTotal(numero: number, total: number, totalAbierto: boolean): string {
   return totalAbierto ? `paso ${numero}` : `paso ${numero} de ${total}`
+}
+
+/**
+ * EL AVISO AL SALIR DE UNA GUÍA CON LA X (tarea 341, handoff móvil "1b
+ * Pulgar": "Salir con la X guarda el avance y avisa"). El avance ya se
+ * guardaba solo (vive en Dexie); lo nuevo es decirlo, para que salir no
+ * parezca perderlo: "Avance guardado: paso 3 de 5", o "falta la
+ * comprobación final" con todos los pasos hechos. Sin nada hecho, o con la
+ * guía terminada, no hay avance que guardar y no se dice nada (null).
+ */
+export function avisoAlSalirDeLaGuia(procedimiento: Procedimiento, progreso: ProgresoPasos | undefined): string | null {
+  if (!progreso) return null
+  const { pasosHechos, verificacionHecha, elecciones, cierrePendiente } = progreso
+  if (guiaTerminada(procedimiento, pasosHechos, verificacionHecha, elecciones, cierrePendiente)) return null
+  const { hechos, total, totalAbierto, pasosListos } = avanceDeLaRuta(procedimiento, progreso)
+  if (pasosListos) return 'Avance guardado: falta la comprobación final'
+  if (hechos === 0 && !progreso.instruccionesHechas?.length) return null
+  return `Avance guardado: ${pasoDeTotal(Math.min(hechos + 1, total), total, totalAbierto)}`
 }

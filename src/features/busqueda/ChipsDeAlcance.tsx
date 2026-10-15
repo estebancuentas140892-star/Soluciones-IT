@@ -32,7 +32,7 @@ export function ChipsDeAlcance({
             className={`inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-[13.5px] font-semibold transition-colors ${
               activo
                 ? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300'
-                : 'border-noct-text/25 text-noct-neutral-200 hover:bg-noct-text/[.05]'
+                : 'border-noct-text/25 text-noct-neutral-200 hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado'
             }`}
           >
             {chip.etiqueta}

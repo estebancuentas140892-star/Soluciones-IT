@@ -26,7 +26,7 @@ export function AvisosConsistencia({
       aria-label={titulo}
       className="flex flex-col gap-2 rounded-lg border border-noct-divider bg-noct-surface p-3"
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
+      <p className="text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
         {titulo} ({avisos.length})
       </p>
       {avisos.map((aviso, indice) => {

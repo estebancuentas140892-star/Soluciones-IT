@@ -5,7 +5,7 @@ import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
 import { Campo, CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 import { Check, FloppyDisk } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
 import { OpcionRadio } from '../../components/OpcionRadio'
 import { etiquetaEstadoAutorizacion, ESTADOS_AUTORIZACION } from '../../lib/autorizaciones'
 import { db, type EstadoAutorizacion } from '../../lib/db'
@@ -409,7 +409,7 @@ function FormularioAutorizacion({ autorizacionId }: { autorizacionId: string | u
               {mostrarError.mensaje}
             </p>
           )}
-          <button type="submit" disabled={guardando} className={`${BTN_PRIMARIO} min-h-11 disabled:opacity-50`}>
+          <button type="submit" disabled={guardando} className={`${BTN_PRIMARIO_DOMINANTE} min-h-11 disabled:opacity-50`}>
             <FloppyDisk size={15} aria-hidden />
             {guardando ? 'Guardando...' : 'Guardar autorización'}
           </button>

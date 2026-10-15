@@ -43,7 +43,7 @@ export function AyudaAtajos({
       <div className="flex flex-col gap-3.5">
         {grupos.map((grupo) => (
           <div key={grupo}>
-            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[.08em] text-noct-neutral-500">
+            <p className="mb-1 text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.08em] text-noct-neutral-500">
               {grupo}
             </p>
             <dl className="flex flex-col">
@@ -72,7 +72,7 @@ function FilaAtajo({ atajo }: { atajo: AtajoApp }) {
       <dt className="flex shrink-0 items-center gap-1">
         {atajo.teclas.map((tecla, indice) => (
           <span key={indice} className="flex items-center gap-1">
-            {indice > 0 && <span className="text-[11px] text-noct-neutral-600">luego</span>}
+            {indice > 0 && <span className="text-[11px] max-md:text-[12px] text-noct-neutral-600">luego</span>}
             <Tecla>{tecla}</Tecla>
           </span>
         ))}

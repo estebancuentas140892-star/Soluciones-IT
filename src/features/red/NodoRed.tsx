@@ -59,7 +59,7 @@ export function NodoRed({
                   <FlechaCodoArriba className="w-6 shrink-0 text-noct-neutral-500" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13.5px] font-medium leading-[1.3]">{p.nombre}</span>
-                    <span className="mt-px block text-[11.5px] text-noct-neutral-500">{p.via}</span>
+                    <span className="mt-px block text-[11.5px] max-md:text-[12px] text-noct-neutral-500">{p.via}</span>
                   </span>
                   <CaretRight size={14} className="shrink-0 text-noct-neutral-600" aria-hidden />
                 </Link>
@@ -103,7 +103,7 @@ export function NodoRed({
         <section>
           <div className="mb-2 flex items-center justify-between">
             <TituloSeccion>Dependen de este equipo</TituloSeccion>
-            <span className="text-[11px] text-noct-neutral-600">
+            <span className="text-[11px] max-md:text-[12px] text-noct-neutral-600">
               {totalDependientes} {totalDependientes === 1 ? 'equipo depende' : 'equipos dependen'}
             </span>
           </div>
@@ -214,7 +214,7 @@ function FilaArbol({
               </span>
             )}
           </span>
-          {detalle && <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">{detalle}</span>}
+          {detalle && <span className="mt-px block truncate text-[11.5px] max-md:text-[12px] text-noct-neutral-500">{detalle}</span>}
         </Link>
         <span
           title={estado.etiqueta}

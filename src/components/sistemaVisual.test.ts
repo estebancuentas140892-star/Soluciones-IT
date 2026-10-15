@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { BTN_PRIMARIO, BTN_PRIMARIO_RELLENO } from './nocturne'
+import { BTN_PRIMARIO, BTN_PRIMARIO_DOMINANTE, BTN_PRIMARIO_RELLENO } from './nocturne'
 
 // Guarda del sistema visual del rediseño móvil "1b Pulgar" (tarea 327,
 // AD-077, regla 30).
@@ -176,5 +176,52 @@ describe('el tema claro (tarea 333)', () => {
     expect(script).toContain(`'${COLOR_BARRA.claro}'`)
     expect(script).toContain(`'${COLOR_BARRA.oscuro}'`)
     expect(html).toContain(`<meta name="theme-color" content="${COLOR_BARRA.oscuro}" />`)
+  })
+})
+
+describe('el remate móvil "1b Pulgar" (tarea 341)', () => {
+  const inicioTema = css.indexOf('@theme {')
+  const tema = css.slice(inicioTema, css.indexOf('\n}', inicioTema))
+
+  // Lo que el handoff móvil nombraba y no tenía token: el asa y los bordes
+  // fuertes, el tinte de un control, la respuesta al tocar y el velo de la
+  // hoja. Valores oscuros del handoff (el claro lo vigila "el tema claro").
+  it('los tokens del teléfono tienen los valores oscuros del handoff', () => {
+    expect(tema).toMatch(/--color-noct-divider-fuerte:\s*rgb\(233 233 237 \/ 0\.24\);/)
+    expect(tema).toMatch(/--color-noct-tinte:\s*rgb\(233 233 237 \/ 0\.06\);/)
+    expect(tema).toMatch(/--color-noct-presionado:\s*rgb\(233 233 237 \/ 0\.1\);/)
+    expect(tema).toMatch(/--color-noct-velo:\s*rgb\(6 7 12 \/ 0\.62\);/)
+  })
+
+  // La hoja que sube, su velo, el aviso y la marca de "Guía completada" se
+  // animan solo en el teléfono y solo si nadie pidió reducir el movimiento.
+  it('el movimiento es solo del teléfono y respeta "reducir movimiento"', () => {
+    const regla = /@media \(width < 48rem\) and \(prefers-reduced-motion: no-preference\) \{([\s\S]*?)\n\}/.exec(css)
+    expect(regla).not.toBeNull()
+    for (const pieza of ['[data-hoja-movil]', '[data-velo-movil]', '[data-aviso-flotante]', '[data-marca-completada]']) {
+      expect(regla?.[1]).toContain(pieza)
+      // Ninguna otra regla las anima.
+      expect(css.split(`${pieza} {`).length - 1).toBe(1)
+    }
+  })
+
+  it('los 44 px de objetivo solo existen por debajo de 768', () => {
+    const capa = /@layer components \{\s*@media \(width < 48rem\) \{([\s\S]*?)\n {2}\}\n\}/.exec(css)
+    expect(capa).not.toBeNull()
+    expect(capa?.[1]).toMatch(/\.btn-tactil \{\s*min-height: 2\.75rem;/)
+    expect(capa?.[1]).toMatch(/\.toque-amplio::after \{[\s\S]*width: max\(100%, 2\.75rem\);[\s\S]*height: max\(100%, 2\.75rem\);/)
+    expect(css.split('.btn-tactil').length - 1).toBe(1)
+  })
+
+  // "Guardar" y "Desbloquear" donde mandan: rellenos en el teléfono y, desde
+  // 768, exactamente el delineado que esas pantallas tenían.
+  it('BTN_PRIMARIO_DOMINANTE es relleno en el teléfono y el primario de siempre desde 768', () => {
+    const dominante = BTN_PRIMARIO_DOMINANTE.split(/\s+/)
+    const telefono = dominante.filter((c) => c.startsWith('max-md:'))
+    for (const clase of ['max-md:bg-noct-accent', 'max-md:text-noct-on-accent', 'max-md:min-h-[54px]', 'max-md:rounded-[15px]', 'max-md:text-[16px]']) {
+      expect(telefono).toContain(clase)
+    }
+    const sinTelefono = (clases: string[]) => clases.filter((c) => !c.startsWith('max-md:') && c !== 'btn-tactil').sort()
+    expect(sinTelefono(dominante)).toEqual(sinTelefono(BTN_PRIMARIO.split(/\s+/)))
   })
 })

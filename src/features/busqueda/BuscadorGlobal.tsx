@@ -360,4 +360,4 @@ export function BuscadorGlobal({
 
 // La tecla, dibujada (la misma que el disparador de la barra superior).
 const KBD =
-  'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-md border border-b-2 border-noct-divider bg-noct-bg px-1.5 font-mono text-[11.5px] font-medium leading-none text-noct-neutral-400'
+  'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-md border border-b-2 border-noct-divider bg-noct-bg px-1.5 font-mono text-[11.5px] max-md:text-[12px] font-medium leading-none text-noct-neutral-400'

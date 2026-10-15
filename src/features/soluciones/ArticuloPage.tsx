@@ -202,7 +202,7 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
               la fecha. La categoría ya no se repite aquí: la nombra el
               botón de regreso (R13). */}
           <p
-            className={`text-[11px] font-semibold uppercase tracking-[0.08em] ${colorIconoDeTipo(articulo.tipo)}`}
+            className={`text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[0.08em] ${colorIconoDeTipo(articulo.tipo)}`}
           >
             {etiquetaDeTipo(articulo.tipo)}
           </p>

@@ -184,7 +184,7 @@ export function VistaRapidaCredencial({
         </p>
       ) : (
         <>
-          <p className="text-[11.5px] leading-snug text-noct-neutral-500">
+          <p className="text-[11.5px] max-md:text-[12px] leading-snug text-noct-neutral-500">
             Cada consulta, revelado y copia queda registrada.
           </p>
           {datos === undefined ? (

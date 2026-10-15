@@ -236,7 +236,7 @@ function AvanceArticulo({ articulo }: { articulo: Articulo }) {
 
   return (
     <span
-      className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] ${
+      className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] max-md:text-[12px] ${
         pasosListos
           ? 'border-noct-exito/40 bg-noct-exito/10 text-noct-exito'
           : 'border-noct-precaucion/40 bg-noct-precaucion/10 text-noct-precaucion'

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { registrarIntervencion } from '../../lib/repositorio'
 import { Adjuntos } from '../../components/Adjuntos'
 import { Plus } from '../../components/iconos'
-import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
 import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 
 interface Props {
@@ -91,7 +91,7 @@ export function RegistrarIntervencion({ dispositivoId }: Props) {
         <button
           type="submit"
           disabled={guardando || !descripcion.trim()}
-          className={`${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`}
+          className={`${BTN_PRIMARIO_DOMINANTE} min-h-11 px-4 disabled:opacity-50`}
         >
           {guardando ? 'Guardando...' : 'Guardar intervención'}
         </button>

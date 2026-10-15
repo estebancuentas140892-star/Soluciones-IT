@@ -109,7 +109,7 @@ export function ResumenGuia({
           key={rotulo}
           className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-noct-divider bg-noct-surface px-3 py-2.5"
         >
-          <dt className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-[.06em] text-noct-neutral-500">
+          <dt className="flex items-center gap-1.5 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[.06em] text-noct-neutral-500">
             <Icono size={13} className="shrink-0" aria-hidden />
             {rotulo}
           </dt>

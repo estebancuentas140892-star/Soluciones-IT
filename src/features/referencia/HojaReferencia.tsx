@@ -65,13 +65,13 @@ export function HojaReferencia({ abierto, onCerrar, referenciaId, tituloRespaldo
             <button
               type="button"
               onClick={() => setActualId(referenciaId)}
-              className="-ml-1 mb-1 flex min-h-9 items-center gap-1.5 rounded-md px-1 text-[12px] font-medium text-noct-neutral-400 hover:text-noct-text"
+              className="-ml-1 mb-1 flex min-h-9 items-center max-md:min-h-11 gap-1.5 rounded-md px-1 text-[12px] font-medium text-noct-neutral-400 hover:text-noct-text"
             >
               <ArrowLeft size={13} aria-hidden />
               Volver a «{nombreVivo(mapaTitulos(referencias), referenciaId, tituloRespaldo)}»
             </button>
           )}
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.08em] text-noct-accent-300">
+          <p className="flex items-center gap-1.5 text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.08em] text-noct-accent-300">
             <Icono size={13} aria-hidden />
             {tipo ? INFO_TIPO[tipo].etiqueta : 'Centro de consulta'}
           </p>

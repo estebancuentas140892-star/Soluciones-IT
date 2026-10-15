@@ -147,7 +147,7 @@ describe('los avisos acompañan, no detienen', () => {
 
     // Y la acción se hace como siempre: es la última, así que termina.
     await tocar((await esperar(() => principal('Completar y terminar'), 'Completar y terminar en la última acción')) as HTMLElement)
-    await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía queda terminada')
+    await esperar(() => textoPantalla().includes('Guía completada'), 'la guía queda terminada')
     expect(control('Salir de la guía')).not.toBeNull()
   })
 })
@@ -165,7 +165,7 @@ describe('retomar y volver a empezar', () => {
     await montar(RUTAS, RUTA)
 
     await esperar(() => textoPantalla().includes('Abrir el programa de caja'), 'el paso 1')
-    expect(textoPantalla()).not.toContain('Guía terminada')
+    expect(textoPantalla()).not.toContain('Guía completada')
     await esperarQue(async () => (await db.progresoPasos.get('guia-caja')) === undefined, 'el avance viejo se borra')
   })
 

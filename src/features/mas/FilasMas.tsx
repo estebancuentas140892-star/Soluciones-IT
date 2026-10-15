@@ -80,7 +80,7 @@ export function FilaMas({
       <Link
         to={to}
         state={estado}
-        className={`flex min-h-[60px] items-center gap-3.5 py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-14 xl:min-h-[46px] ${
+        className={`flex min-h-[60px] items-center gap-3.5 py-2 text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado md:min-h-14 xl:min-h-[46px] ${
           unaLinea ? 'xl:-mx-2 xl:rounded-lg xl:px-2 xl:py-1' : ''
         }`}
       >
@@ -109,7 +109,7 @@ export function FilaMas({
     <Link
       to={to}
       state={estado}
-      className="flex min-h-[58px] items-center gap-[13px] rounded-md px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05]"
+      className="flex min-h-[58px] items-center gap-[13px] rounded-md px-2 py-[11px] text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado"
     >
       <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-300">
         <Icono size={17} aria-hidden />
@@ -120,7 +120,7 @@ export function FilaMas({
             subtítulo pasa a una segunda línea antes que esconder lo que
             hay dentro de la puerta. */}
         <span className="mt-0.5 block text-[12px] leading-[1.4] text-noct-neutral-400">{subtitulo}</span>
-        {nota && <span className="mt-0.5 block text-[11.5px] text-noct-neutral-500">{nota}</span>}
+        {nota && <span className="mt-0.5 block text-[11.5px] max-md:text-[12px] text-noct-neutral-500">{nota}</span>}
       </span>
       <ConteoFila valor={conteo} />
       <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />

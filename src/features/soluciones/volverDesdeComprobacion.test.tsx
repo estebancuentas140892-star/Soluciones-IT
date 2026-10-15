@@ -224,7 +224,7 @@ describe('guía lineal: A → B → C → comprobación final', () => {
     await montar(RUTAS, RUTA_LINEAL)
     await lineaHastaLaComprobacion()
 
-    expect(textoPantalla()).not.toContain('Guía terminada')
+    expect(textoPantalla()).not.toContain('Guía completada')
     const avance = await fila('guia-lineal')
     expect(avance?.pasosHechos).toEqual(['lin-a', 'lin-b', 'lin-c'])
     expect(avance?.verificacionHecha).toEqual([])
@@ -336,7 +336,7 @@ describe('solo "Terminar" termina la ejecución', () => {
     expect(finalizar.hasAttribute('disabled')).toBe(false)
     // Con todo marcado, la guía TODAVÍA no está terminada: falta "Terminar".
     expect(textoPantalla()).toContain(COMPROBACION)
-    expect(textoPantalla()).not.toContain('Guía terminada')
+    expect(textoPantalla()).not.toContain('Guía completada')
     await esperarQue(async () => (await fila('guia-lineal'))?.cierrePendiente === true, 'la comprobación abierta')
     expect(await terminada('guia-lineal')).toBe(false)
     // Para la ficha y las listas, la ejecución sigue abierta, en la comprobación.
@@ -345,18 +345,18 @@ describe('solo "Terminar" termina la ejecución', () => {
     expect(accion.estado).toBe('continuar')
     expect(accion.pendiente).toEqual({ tipo: 'verificacion' })
 
-    // Volver a revisar con todo marcado: es una acción, no "Guía terminada".
+    // Volver a revisar con todo marcado: es una acción, no "Guía completada".
     const antes = await fila('guia-lineal')
     await tocar(await anterior())
     await esperar(() => textoPantalla().includes(ACCION_C2), 'la última acción')
-    expect(textoPantalla()).not.toContain('Guía terminada')
+    expect(textoPantalla()).not.toContain('Guía completada')
     await tocar(await esperarControl('Seguir'))
     await enLaComprobacion()
     expect(casillas().map((c) => c.getAttribute('aria-checked'))).toEqual(['true', 'true'])
     expect(await fila('guia-lineal')).toEqual(antes)
 
     await tocar(await esperar(() => principal('Terminar'), '"Terminar"'))
-    await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía terminada')
+    await esperar(() => textoPantalla().includes('Guía completada'), 'la guía terminada')
     await esperarQue(async () => (await fila('guia-lineal'))?.cierrePendiente === false, 'la comprobación cerrada')
     expect(await terminada('guia-lineal')).toBe(true)
   })

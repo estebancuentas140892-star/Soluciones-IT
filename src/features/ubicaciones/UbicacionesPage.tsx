@@ -146,7 +146,7 @@ export function UbicacionesPage() {
                       type="button"
                       aria-pressed={activo}
                       onClick={() => setNuevoPadre(p.id)}
-                      className={`inline-flex min-h-9 items-center whitespace-nowrap rounded-full border px-3 text-[12.5px] transition-colors ${
+                      className={`inline-flex min-h-9 items-center whitespace-nowrap rounded-full border px-3 text-[12.5px] transition-colors max-md:min-h-11 ${
                         activo
                           ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
                           : 'border-noct-divider text-noct-neutral-400 hover:bg-noct-text/[.05]'

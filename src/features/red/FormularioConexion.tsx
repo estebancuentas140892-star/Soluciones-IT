@@ -14,7 +14,7 @@ import {
 import { idsDeRed } from '../../lib/categorias'
 import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { Monitor, Plus } from '../../components/iconos'
-import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { BTN_GHOST, BTN_GHOST_ACENTO, BTN_PRIMARIO, BTN_PRIMARIO_DOMINANTE, BTN_SECUNDARIO } from '../../components/nocturne'
 import { CLASE_CAMPO, CLASE_CAMPO_SOBRE_SUPERFICIE, CLASE_ETIQUETA as CLASE_ETIQUETA_BASE } from '../../components/campos'
 
 // Aquí el rótulo se aplica al propio `<label>`, que además apila el
@@ -268,7 +268,7 @@ export function FormularioConexion({
               </button>
             ))}
           </div>
-          <p className="text-[11.5px] leading-normal text-noct-neutral-600">{tipoActual?.ayuda}</p>
+          <p className="text-[11.5px] max-md:text-[12px] leading-normal text-noct-neutral-600">{tipoActual?.ayuda}</p>
         </div>
       )}
 
@@ -345,7 +345,7 @@ export function FormularioConexion({
           {coincidencias.length > 0 && (
             <div className="flex flex-col gap-1">
               {!busqueda.trim() && (
-                <p className="text-[11.5px] text-noct-neutral-500">
+                <p className="text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
                   Sugeridos por ubicación o tipo de red
                 </p>
               )}
@@ -374,7 +374,7 @@ export function FormularioConexion({
                   >
                     <Monitor size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
                     <span className="min-w-0 flex-1 truncate text-[13px]">{d.nombre}</span>
-                    {d.ip && <span className="font-mono text-[11px] text-noct-neutral-600">{d.ip}</span>}
+                    {d.ip && <span className="font-mono text-[11px] max-md:text-[12px] text-noct-neutral-600">{d.ip}</span>}
                   </button>
                 ),
               )}
@@ -540,8 +540,8 @@ export function FormularioConexion({
           disabled={!otro || guardando}
           className={
             variante === 'ficha'
-              ? `${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-50`
-              : `${BTN_PRIMARIO} min-h-11 px-4 disabled:opacity-55`
+              ? `${BTN_PRIMARIO_DOMINANTE} min-h-11 px-4 disabled:opacity-50`
+              : `${BTN_PRIMARIO_DOMINANTE} min-h-11 px-4 disabled:opacity-55`
           }
         >
           {guardando ? 'Guardando...' : 'Guardar conexión'}

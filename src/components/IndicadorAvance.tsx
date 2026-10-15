@@ -75,7 +75,7 @@ export function IndicadorAvance({
 
   if (variante === 'texto') {
     return (
-      <span className={`text-[11.5px] ${clases.texto} ${className}`}>
+      <span className={`text-[11.5px] max-md:text-[12px] ${clases.texto} ${className}`}>
         {hechosSeguro} de {totalSeguro} pasos
       </span>
     )

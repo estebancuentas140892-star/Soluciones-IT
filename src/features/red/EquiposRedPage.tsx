@@ -125,10 +125,10 @@ export function EquiposRedPage() {
               <section key={grupo.clave}>
                 <div className="mb-1.5 flex items-center gap-2 px-0.5">
                   <MapPin size={14} className="text-noct-neutral-400" aria-hidden />
-                  <h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
+                  <h2 className="text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
                     {grupo.nombre}
                   </h2>
-                  <span className="text-[11px] text-noct-neutral-500">{grupo.cuenta}</span>
+                  <span className="text-[11px] max-md:text-[12px] text-noct-neutral-500">{grupo.cuenta}</span>
                 </div>
                 <div className="flex flex-col">
                   {grupo.equipos.map((d) => (

@@ -231,7 +231,7 @@ export function DispositivosPage() {
                 >
                   {chip.nombre}
                   <span
-                    className={`text-[11.5px] ${activo ? 'text-noct-accent-400' : 'text-noct-neutral-600'}`}
+                    className={`text-[11.5px] max-md:text-[12px] ${activo ? 'text-noct-accent-400' : 'text-noct-neutral-600'}`}
                   >
                     {chip.count}
                   </span>

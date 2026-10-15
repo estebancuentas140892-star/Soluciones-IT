@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { FloppyDisk } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { idsDescendientes, mapaPorId, ordenarPorRuta, rutaUbicacion } from './arbol'
@@ -138,7 +138,7 @@ export function UbicacionForm() {
           <button
             type="submit"
             disabled={guardando || nombre.trim() === ''}
-            className={`mt-1 ${BTN_PRIMARIO} min-h-11 disabled:opacity-50`}
+            className={`mt-1 ${BTN_PRIMARIO_DOMINANTE} min-h-11 disabled:opacity-50`}
           >
             <FloppyDisk size={15} aria-hidden />
             {guardando ? 'Guardando...' : 'Guardar ubicación'}

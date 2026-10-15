@@ -708,8 +708,8 @@ describe('un solo flujo: varias guías seguidas (el computador nuevo, fase 3)', 
     sinArquitectura()
     // Con esto termina de verdad la guía que se abrió.
     await tocar(await esperarControl('Completar y terminar'))
-    await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía terminada')
-    await esperar(() => document.activeElement?.textContent === 'Guía terminada', 'el foco en el cierre')
+    await esperar(() => textoPantalla().includes('Guía completada'), 'la guía terminada')
+    await esperar(() => document.activeElement?.textContent === 'Guía completada', 'el foco en el cierre')
 
     // Por el camino no apareció ningún requisito de dentro ni su numeración.
     for (const texto of vistos) {

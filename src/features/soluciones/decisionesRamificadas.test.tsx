@@ -199,7 +199,7 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
     await tocar(await esperar(() => principal('Completar y seguir'), 'cerrar el paso común'))
     await esperar(() => textoPantalla().includes('Copiar el archivo a la carpeta de la persona'), 'el último paso')
     await tocar(await esperar(() => principal('Completar y terminar'), 'terminar'))
-    await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía terminada')
+    await esperar(() => textoPantalla().includes('Guía completada'), 'la guía terminada')
     expect(textoPantalla()).toContain('4 pasos')
   })
 

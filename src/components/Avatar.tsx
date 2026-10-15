@@ -10,7 +10,7 @@ import { User } from './iconos'
 export function Avatar({
   nombre,
   correo,
-  className = 'h-[30px] w-[30px] text-[11px]',
+  className = 'h-[30px] w-[30px] text-[11px] max-md:text-[12px]',
 }: {
   nombre?: string | null
   correo?: string | null

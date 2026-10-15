@@ -205,7 +205,7 @@ export function DiagnosticoRunPage() {
                   style={{ width: `${porcentaje}%` }}
                 />
               </span>
-              <span className="shrink-0 text-[11.5px] text-noct-neutral-500">{etiquetaProgreso}</span>
+              <span className="shrink-0 text-[11.5px] max-md:text-[12px] text-noct-neutral-500">{etiquetaProgreso}</span>
             </div>
           )}
           {/* LO QUE RESPONDISTE ANTES, A LA VISTA (tarea 207, hallazgo
@@ -589,7 +589,7 @@ function Resultado({
 
       {camino.length > 0 && (
         <section>
-          <h2 className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
+          <h2 className="mb-2 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
             Camino recorrido
           </h2>
           <div className="flex flex-col gap-[7px]">
@@ -685,7 +685,7 @@ function Resultado({
                   value={solucionPropuesta}
                   onChange={(e) => setSolucionPropuesta(e.target.value)}
                   placeholder="Qué funcionó, para revisarlo e incorporarlo a la base de conocimiento"
-                  className="w-full resize-y rounded-lg border border-noct-divider bg-noct-bg px-3 py-2.5 text-[13.5px] leading-[1.5] text-noct-text outline-none placeholder:text-noct-neutral-500 focus:border-noct-accent"
+                  className="w-full resize-y rounded-lg border border-noct-divider bg-noct-bg px-3 py-2.5 text-[13.5px] max-md:text-[16px] leading-[1.5] text-noct-text outline-none placeholder:text-noct-neutral-500 focus:border-noct-accent"
                 />
               )}
 

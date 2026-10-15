@@ -39,7 +39,7 @@ const CLASES_POR_TONO: Record<TonoPastilla, string> = {
 }
 
 const BASE =
-  'inline-flex shrink-0 items-center gap-[5px] rounded-full border px-[9px] py-[3px] text-[11px] font-medium leading-[1.35]'
+  'inline-flex shrink-0 items-center gap-[5px] rounded-full border px-[9px] py-[3px] text-[11px] max-md:text-[12px] font-medium leading-[1.35]'
 
 export function PastillaEstado({
   tono,

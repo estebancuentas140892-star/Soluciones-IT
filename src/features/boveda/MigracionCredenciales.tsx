@@ -198,7 +198,7 @@ export function MigracionCredenciales() {
                     <span className="block truncate text-[13.5px] font-medium leading-tight">
                       {candidato.credencialTitulo}
                     </span>
-                    <span className="mt-0.5 flex items-center gap-1 text-[11.5px] text-noct-neutral-500">
+                    <span className="mt-0.5 flex items-center gap-1 text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
                       {candidato.motivo === 'vinculo' ? (
                         <LinkSimple size={11} className="shrink-0" aria-hidden />
                       ) : (
@@ -274,12 +274,12 @@ export function MigracionCredenciales() {
                       </>
                     )}
                     {datos?.ip && (
-                      <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                      <p className="text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
                         Se descarta la dirección IP heredada ({datos.ip}): ya vive sin cifrar en la
                         ficha del equipo.
                       </p>
                     )}
-                    <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                    <p className="text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
                       Al migrar, este secreto se elimina de la Bóveda: el contenido pasa a la sección
                       "Seguridad" del equipo.
                     </p>
@@ -298,7 +298,7 @@ export function MigracionCredenciales() {
           })}
 
         {sinLeer > 0 && (
-          <p className="px-0.5 text-[11.5px] leading-relaxed text-noct-neutral-600">
+          <p className="px-0.5 text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
             {sinLeer} {sinLeer === 1 ? 'secreto detectado no se pudo' : 'secretos detectados no se pudieron'} leer
             con la contraseña maestra actual, así que no se pueden migrar todavía.
           </p>

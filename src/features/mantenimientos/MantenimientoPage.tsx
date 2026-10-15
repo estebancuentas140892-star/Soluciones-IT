@@ -3,6 +3,7 @@ import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { Adjuntos } from '../../components/Adjuntos'
+import { avisar } from '../../components/avisosFlotantes'
 import { Campo, CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 import { CheckCircle } from '../../components/iconos'
 import { BTN_PRIMARIO_PELIGRO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
@@ -145,7 +146,7 @@ function AntecedentePorValidar({ mantenimiento }: { mantenimiento: Mantenimiento
           aria-label="Documentado en la fuente, por validar"
           className="flex flex-col rounded-md border border-dashed border-noct-neutral-700 px-3 py-1.5"
         >
-          <p className="pt-1 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
+          <p className="pt-1 text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
             Documentado en la fuente · por validar
           </p>
           <dl className="divide-y divide-noct-divider">
@@ -261,6 +262,8 @@ export function RegistrarDesenlace({
     setGuardando(true)
     if (desenlace === 'realizado') {
       await cerrarMantenimiento(mantenimiento.id, { fechaRealizada, tecnico, resultado })
+      // Dice dónde quedó lo que se hizo (tarea 341, handoff móvil).
+      avisar('Guardado. Queda en el historial del equipo', 'historial')
     } else if (desenlace === 'pospuesto') {
       await guardarRegistro('mantenimientos', { ...mantenimiento, estado: 'pospuesto', fechaProgramada: nuevaFecha }, motivo.trim())
       setNuevaFecha('')

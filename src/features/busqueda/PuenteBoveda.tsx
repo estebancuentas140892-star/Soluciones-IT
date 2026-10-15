@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { Key, LockSimple } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
+import { avisar } from '../../components/avisosFlotantes'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { desbloquear, estadoInicialBoveda, type EstadoInicialBoveda } from '../boveda/sesionBoveda'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
@@ -103,7 +104,7 @@ export function PuenteBoveda({
               type="button"
               onClick={() => setAbierto(true)}
               aria-label="Desbloquear y buscar"
-              className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-[12.5px] font-medium text-noct-accent-300 hover:text-noct-accent-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
+              className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-[12.5px] font-medium max-md:text-[14px] text-noct-accent-300 hover:text-noct-accent-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
             >
               <Key size={14} className="shrink-0" aria-hidden />
               Desbloquear
@@ -139,7 +140,7 @@ export function PuenteBoveda({
         <button
           type="button"
           onClick={() => setAbierto(true)}
-          className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[9px] border border-noct-accent bg-noct-accent/10 px-3 text-[13.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.22] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
+          className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-[9px] border border-noct-accent bg-noct-accent/10 px-3 text-[13.5px] font-medium max-md:text-[14px] text-noct-accent-300 hover:bg-noct-accent/[.22] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent"
         >
           <Key size={16} className="shrink-0" aria-hidden />
           Desbloquear y buscar
@@ -152,7 +153,7 @@ export function PuenteBoveda({
 }
 
 const CAMPO =
-  'min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-[15px] text-noct-text caret-noct-accent outline-none placeholder:text-noct-neutral-600 focus:border-noct-accent'
+  'min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-[15px] text-noct-text caret-noct-accent outline-none placeholder:text-noct-neutral-600 focus:border-noct-accent max-md:text-[16px]'
 
 /**
  * El formulario de la contrasena maestra, en linea. No implementa nada
@@ -199,6 +200,8 @@ function FormularioDesbloqueo({
       setError(resultado)
       return
     }
+    // El aviso dice que ya está (tarea 341).
+    avisar('Bóveda desbloqueada', 'candado')
     onDesbloqueada?.()
   }
 
@@ -219,7 +222,7 @@ function FormularioDesbloqueo({
         {modoBuscador === 'normal' ? (
           <Link
             to="/boveda"
-            className="flex min-h-11 items-center justify-center rounded-[9px] border border-noct-divider px-3 text-[13.5px] font-medium text-noct-text hover:bg-noct-text/[.07]"
+            className="flex min-h-11 items-center justify-center rounded-[9px] border border-noct-divider px-3 text-[13.5px] font-medium max-md:text-[14px] text-noct-text hover:bg-noct-text/[.07]"
           >
             Ir a Bóveda
           </Link>
@@ -227,7 +230,7 @@ function FormularioDesbloqueo({
           <button
             type="button"
             onClick={onCerrar}
-            className="min-h-11 self-start px-1 text-[12.5px] font-medium text-noct-neutral-400 hover:text-noct-text"
+            className="min-h-11 self-start px-1 text-[12.5px] font-medium max-md:text-[14px] text-noct-neutral-400 hover:text-noct-text"
           >
             Entendido
           </button>
@@ -253,7 +256,7 @@ function FormularioDesbloqueo({
         <button
           type="submit"
           disabled={abriendo}
-          className={`${BTN_PRIMARIO} min-h-11 shrink-0 px-3 disabled:opacity-50`}
+          className={`${BTN_PRIMARIO_DOMINANTE} min-h-11 shrink-0 px-3 disabled:opacity-50`}
         >
           <Key size={15} aria-hidden />
           {abriendo ? 'Abriendo...' : 'Desbloquear'}
@@ -263,7 +266,7 @@ function FormularioDesbloqueo({
       <button
         type="button"
         onClick={onCerrar}
-        className="min-h-11 self-start px-1 text-[12.5px] font-medium text-noct-neutral-400 hover:text-noct-text"
+        className="min-h-11 self-start px-1 text-[12.5px] font-medium max-md:text-[14px] text-noct-neutral-400 hover:text-noct-text"
       >
         Cancelar
       </button>

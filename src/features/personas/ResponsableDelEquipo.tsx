@@ -119,7 +119,7 @@ export function ResponsableDelEquipo({
         <button
           type="button"
           onClick={() => setCambiando(true)}
-          className="min-h-11 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+          className="min-h-11 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06] max-md:text-[14px] max-md:active:bg-noct-presionado"
         >
           Cambiar
         </button>
@@ -160,7 +160,7 @@ export function ResponsableDelEquipo({
       <button
         type="button"
         onClick={() => setAsignando(true)}
-        className="min-h-11 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/10"
+        className="min-h-11 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/10 max-md:text-[14px] max-md:active:bg-noct-presionado"
       >
         Asignar
       </button>

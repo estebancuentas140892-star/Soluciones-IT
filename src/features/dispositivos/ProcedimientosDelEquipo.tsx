@@ -59,7 +59,7 @@ export function ProcedimientosDelEquipo({
 
       {deCategoria.length > 0 && (
         <>
-          <p className="px-2 pb-0.5 pt-1.5 text-[11px] text-noct-neutral-500">
+          <p className="px-2 pb-0.5 pt-1.5 text-[11px] max-md:text-[12px] text-noct-neutral-500">
             {hayAmbos ? 'Más de la categoría' : 'De la categoría'}
             {categoriaNombre ? ` ${categoriaNombre}` : ''}
           </p>
@@ -69,7 +69,7 @@ export function ProcedimientosDelEquipo({
           {deCategoria.length > visiblesCategoria.length && (
             <Link
               to={`/soluciones?categoria=${categoriaId}`}
-              className="flex min-h-9 items-center gap-1.5 px-2 text-[12px] text-noct-accent-300 hover:text-noct-accent-400"
+              className="flex min-h-9 items-center gap-1.5 px-2 text-[12px] text-noct-accent-300 hover:text-noct-accent-400 max-md:min-h-11"
             >
               Ver los {deCategoria.length} de la categoría
               <CaretRight size={12} aria-hidden />

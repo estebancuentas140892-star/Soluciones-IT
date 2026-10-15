@@ -28,7 +28,9 @@ export function AvisoPestana(props: PropsPunto | PropsNumero) {
   if (props.valor <= 0) return null
   return (
     <span
-      className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-noct-precaucion px-1 text-[10px] font-semibold text-noct-bg ring-2 ring-noct-bg"
+      // En el teléfono, la pastilla de 18 px del handoff con su número a 12
+      // (tarea 341); desde 768, la de siempre.
+      className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-noct-precaucion px-1 text-[10px] max-md:text-[12px] font-semibold text-noct-bg ring-2 ring-noct-bg max-md:h-[18px] max-md:min-w-[18px]"
       aria-hidden
     >
       {props.valor > 9 ? '9+' : props.valor}

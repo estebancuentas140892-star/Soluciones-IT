@@ -57,7 +57,7 @@ export function BorradoresCoincidentes({
     <section className="rounded-lg border border-noct-divider bg-noct-surface/60 p-3">
       <div className="mb-1.5 flex items-baseline justify-between gap-2 px-0.5">
         <TituloSeccion>Borradores coincidentes</TituloSeccion>
-        <span className="shrink-0 text-[11px] tabular-nums text-noct-neutral-400">{borradores.length}</span>
+        <span className="shrink-0 text-[11px] max-md:text-[12px] tabular-nums text-noct-neutral-400">{borradores.length}</span>
       </div>
       <p className="mb-2 px-0.5 text-[12.5px] leading-relaxed text-noct-neutral-400">
         {fraseBorradores(borradores.length)} con lo que buscaste. Todavía no son procedimientos del equipo:

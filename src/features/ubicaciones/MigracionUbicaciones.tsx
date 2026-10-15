@@ -265,7 +265,7 @@ export function MigracionUbicaciones() {
                           Son distintos
                         </button>
                       </div>
-                      <p className="text-[11.5px] text-noct-neutral-500">Mientras no lo decidas, este texto no se migra.</p>
+                      <p className="text-[11.5px] max-md:text-[12px] text-noct-neutral-500">Mientras no lo decidas, este texto no se migra.</p>
                     </div>
                   ))
                 ) : final === '' ? (

@@ -1118,7 +1118,7 @@ export function PasosEditor({
                 <button
                   type="button"
                   onClick={() => setVinculosPasoId(null)}
-                  className="flex min-h-10 w-full items-center gap-2 px-0.5 py-1 text-left text-[12.5px] text-noct-neutral-400"
+                  className="flex min-h-10 w-full items-center gap-2 px-0.5 py-1 text-left text-[12.5px] text-noct-neutral-400 max-md:min-h-11"
                 >
                   <LinkSimple size={15} />
                   Vínculos del paso
@@ -1431,7 +1431,7 @@ function BotonAnadir({
       type="button"
       onClick={onClick}
       aria-label={descripcion}
-      className="flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-[3px] rounded-[9px] text-[11.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.12] active:bg-noct-accent/[.2]"
+      className="flex h-14 flex-1 cursor-pointer flex-col items-center justify-center gap-[3px] rounded-[9px] text-[11.5px] max-md:text-[12px] font-medium text-noct-accent-300 hover:bg-noct-accent/[.12] active:bg-noct-accent/[.2]"
     >
       <Icono size={20} />
       {children}
@@ -2145,7 +2145,7 @@ function BloqueEditor({
                 <button
                   type="button"
                   onClick={() => setHojaDecisionAbierta(true)}
-                  className="relative ml-1 flex min-h-9 w-[calc(100%-4px)] items-center rounded-md border border-dashed border-noct-neutral-700 bg-transparent py-1 pl-8 pr-3 text-left text-[12.5px] text-noct-neutral-500 hover:border-noct-neutral-500 hover:text-noct-text"
+                  className="relative ml-1 flex min-h-9 w-[calc(100%-4px)] max-md:min-h-11 items-center rounded-md border border-dashed border-noct-neutral-700 bg-transparent py-1 pl-8 pr-3 text-left text-[12.5px] text-noct-neutral-500 hover:border-noct-neutral-500 hover:text-noct-text"
                 >
                   <ArrowElbowDownRight
                     size={13}
@@ -2216,7 +2216,7 @@ function BloqueEditor({
               }}
               onChange={(e) => onCambiar({ texto: e.target.value })}
               placeholder="Texto del aviso"
-              className="block min-h-14 w-full resize-y border-none bg-transparent px-3 py-2.5 text-[14.5px] leading-[1.45] text-noct-text outline-none"
+              className="block min-h-14 w-full resize-y border-none bg-transparent px-3 py-2.5 text-[14.5px] max-md:text-[16px] leading-[1.45] text-noct-text outline-none"
             />
           </div>
         </div>
@@ -2289,7 +2289,7 @@ function BloqueEditor({
           value={bloque.texto}
           onChange={(e) => onCambiar({ texto: e.target.value })}
           placeholder="Para qué sirve este archivo (opcional)"
-          className="min-h-11 border-none bg-transparent px-0.5 py-1 text-xs text-noct-neutral-400 outline-none"
+          className="min-h-11 border-none bg-transparent px-0.5 py-1 text-xs max-md:text-[16px] text-noct-neutral-400 outline-none"
         />
         {selectorDestino}
       </div>
@@ -2516,14 +2516,14 @@ function SugerenciasDeTermino({
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 pl-1">
-      <span className="text-[11.5px] text-noct-neutral-500">Está en el glosario:</span>
+      <span className="text-[11.5px] max-md:text-[12px] text-noct-neutral-500">Está en el glosario:</span>
       {sugeridos.map((referencia) => (
         <button
           key={referencia.id}
           type="button"
           onClick={() => onVincular(referencia)}
           aria-label={`Vincular el término ${referencia.titulo} a esta tarea`}
-          className="inline-flex min-h-9 items-center gap-1 rounded-full border border-dashed border-noct-neutral-700 px-2.5 text-[12px] text-noct-neutral-300 hover:border-noct-accent/60 hover:text-noct-text"
+          className="inline-flex min-h-9 items-center gap-1 rounded-full border border-dashed max-md:min-h-11 border-noct-neutral-700 px-2.5 text-[12px] text-noct-neutral-300 hover:border-noct-accent/60 hover:text-noct-text"
         >
           <Plus size={11} className="shrink-0 text-noct-accent-300" aria-hidden />
           {referencia.titulo}
@@ -2588,7 +2588,7 @@ function CabeceraApoyo({
       {/* La explicación va en su propia línea: a 360 px, al lado de la
           pastilla, se partía en cinco renglones de dos palabras. */}
       {sinAsignar && (
-        <p className="text-[11.5px] leading-snug text-noct-precaucion/90">
+        <p className="text-[11.5px] max-md:text-[12px] leading-snug text-noct-precaucion/90">
           Viene de una versión anterior y no dice a qué tarea pertenece. Se muestra al entrar al paso hasta que
           lo asignes.
         </p>
@@ -2629,7 +2629,7 @@ function PastillaTipo({
       className={`flex h-14 shrink-0 cursor-pointer items-center gap-1.5 rounded-[9px] border-[1.5px] px-[11px] hover:brightness-125 ${clasePastilla}`}
     >
       <Icono size={18} className={`shrink-0 ${claseIcono}`} />
-      <span className={`text-[9.5px] font-semibold uppercase tracking-[.04em] ${claseIcono}`}>
+      <span className={`text-[9.5px] max-md:text-[12px] font-semibold uppercase tracking-[.04em] ${claseIcono}`}>
         {palabra}
       </span>
     </button>
@@ -2699,7 +2699,7 @@ function EditorDebesVer({
           onChange={(e) => onCambiarDescripcion(e.target.value)}
           placeholder="Qué se ve (opcional, para quien no ve la imagen)"
           aria-label={`Descripción de la imagen de «${ROTULO_DEBES_VER}»`}
-          className="min-h-11 min-w-0 flex-1 border-none bg-transparent px-0.5 py-1 text-[12.5px] text-noct-neutral-300 outline-none"
+          className="min-h-11 min-w-0 flex-1 border-none bg-transparent px-0.5 py-1 text-[12.5px] max-md:text-[16px] text-noct-neutral-300 outline-none"
         />
         <BotonQuitar onClick={onQuitar} etiqueta={`Quitar la imagen de «${ROTULO_DEBES_VER}»`} />
       </div>
@@ -2742,7 +2742,7 @@ function ImagenBloque({
           value={bloque.texto}
           onChange={(e) => onCambiarPie(e.target.value)}
           placeholder="Pie de imagen (opcional)"
-          className="min-h-8 min-w-0 flex-1 border-none bg-transparent px-0.5 py-1 text-xs text-noct-neutral-400 outline-none"
+          className="min-h-8 min-w-0 flex-1 border-none bg-transparent px-0.5 py-1 text-xs max-md:text-[16px] text-noct-neutral-400 outline-none"
         />
         <button
           type="button"

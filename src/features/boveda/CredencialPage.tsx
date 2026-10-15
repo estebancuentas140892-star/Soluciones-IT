@@ -655,7 +655,7 @@ function TextoFila({ titulo, detalle }: { titulo: string; detalle: string }) {
     <span className="min-w-0 flex-1">
       <span className="block truncate text-[13.5px] font-medium leading-tight">{titulo}</span>
       {detalle && (
-        <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">{detalle}</span>
+        <span className="mt-px block truncate text-[11.5px] max-md:text-[12px] text-noct-neutral-500">{detalle}</span>
       )}
     </span>
   )
@@ -682,7 +682,7 @@ function FilaActividad({ evento }: { evento: EventoLinea }) {
       <Icono size={15} className="mt-0.5 shrink-0 text-noct-neutral-500" aria-hidden />
       <div className="min-w-0">
         <p className="text-[13px] leading-[1.45]">{texto}</p>
-        <p className="mt-px text-[11.5px] text-noct-neutral-500">
+        <p className="mt-px text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
           {[quien, fechaHoraCorta(fechaHora), motivo && `"${motivo}"`].filter(Boolean).join(' · ')}
         </p>
       </div>

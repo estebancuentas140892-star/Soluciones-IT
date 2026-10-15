@@ -54,6 +54,7 @@ import {
 } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
+import { useEsAncho } from '../../components/useEsAncho'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { AccionVinculo, EnlaceVinculo, FilaVinculo, VinculoInerte } from './FilaVinculo'
@@ -79,6 +80,7 @@ import {
   useEjecucion,
   useEnVistaPrevia,
 } from './contextoEjecucion'
+import { fechaHoraDeCierre, resumenDeGuiaCompletada } from './guiaCompletada'
 import { IntervencionAlTerminar } from './IntervencionAlTerminar'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { estadoVinculo, kickerVinculo } from './estadoVinculo'
@@ -185,6 +187,15 @@ export function AsistenteVista({
   // historial.
   const equipoEjecucion = useEjecucion()?.equipoId ?? null
   const enVistaPreviaGuia = useEnVistaPrevia()
+  // La pantalla final del teléfono (tarea 341) dice en qué equipo se hizo.
+  const esAncho = useEsAncho()
+  const equipoDeLaEjecucion = useLiveQuery(
+    () => (nivel === 0 && equipoEjecucion ? db.dispositivos.get(equipoEjecucion) : undefined),
+    [nivel, equipoEjecucion],
+  )
+  // ...y cuándo: la fila raíz del avance guarda la hora del último cambio,
+  // que al terminar es la del cierre.
+  const filaRaiz = useLiveQuery(() => (nivel === 0 ? db.progresoPasos.get(articuloId) : undefined), [nivel, articuloId])
 
   // DÓNDE ESTÁ EL TÉCNICO AHORA MISMO. Una guía vinculada que no se
   // puede desplegar aquí se abre en su propia pantalla, y hasta ahora
@@ -626,6 +637,61 @@ export function AsistenteVista({
   }
 
   if (indiceActual === null || todoCompletado) {
+    // LA PANTALLA FINAL EN EL TELÉFONO (tarea 341, handoff móvil "1b
+    // Pulgar"): la marca de 84 que crece una vez, "Guía completada", qué se
+    // hizo y dónde ("… en POSPN01. 4 pasos y 2 comprobaciones."), la hora del
+    // cierre en mono y las acciones en el pie, en el tercio inferior, como en
+    // cada acción de la guía. Lo que se puede hacer no cambia: salir (la única
+    // rellena), dejarlo en el historial del equipo (RP-1) y empezar de nuevo.
+    // Desde 768 sigue la pantalla aprobada de siempre, abajo.
+    if (nivel === 0 && !esAncho) {
+      const fecha = fechaHoraDeCierre(filaRaiz?.actualizadoEn)
+      return (
+        <div className="flex flex-1 flex-col">
+          <div className="flex flex-1 flex-col items-center justify-center gap-3.5 py-6 text-center">
+            <span
+              aria-hidden
+              data-marca-completada
+              className="flex h-[84px] w-[84px] items-center justify-center rounded-full bg-noct-exito/(--tinte-estado) text-noct-exito"
+            >
+              <Check size={40} />
+            </span>
+            <EncabezadoConFoco className="text-[26px] font-[650] leading-tight tracking-[-0.015em] text-noct-text">
+              Guía completada
+            </EncabezadoConFoco>
+            <p className="max-w-[300px] text-[15px] leading-normal text-noct-neutral-300">
+              {resumenDeGuiaCompletada(
+                articulo?.titulo ?? '',
+                equipoDeLaEjecucion && !equipoDeLaEjecucion.eliminadoEn ? equipoDeLaEjecucion.nombre : null,
+                pasos.length,
+                verificacionFinal.length,
+              )}
+            </p>
+            {fecha && <p className="font-mono text-[13px] text-noct-neutral-500">{fecha}</p>}
+          </div>
+          <div className="sticky bottom-0 z-10 -mx-4 flex flex-none flex-col items-center gap-1.5 border-t border-noct-divider bg-noct-bg px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3">
+            <div ref={huecoAvisoActualizacion} className="w-full max-w-xs empty:hidden" />
+            {salida && (
+              <Link
+                to={salida.to}
+                state={salida.estado}
+                // La única acción rellena de la pantalla (regla 30).
+                className={`w-full max-w-xs ${BTN_PRIMARIO_RELLENO}`}
+              >
+                Salir de la guía
+              </Link>
+            )}
+            {salida && equipoEjecucion && !enVistaPreviaGuia && articulo && (
+              <IntervencionAlTerminar equipoId={equipoEjecucion} tituloGuia={articulo.titulo} />
+            )}
+            <button type="button" onClick={() => void reiniciarYVolver()} className={`${BTN_SECUNDARIO} min-h-11`}>
+              <ArrowsClockwise size={15} aria-hidden />
+              Empezar de nuevo
+            </button>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="flex flex-col gap-4 pt-3">
         <Encabezado porcentaje={100} completado />

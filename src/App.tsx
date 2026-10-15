@@ -5,6 +5,7 @@ import { RequireAuth } from './features/autenticacion/RequireAuth'
 import { Cargando } from './components/Cargando'
 import { useEffect } from 'react'
 import { ActualizacionDisponible } from './components/ActualizacionDisponible'
+import { AvisoFlotante } from './components/AvisoFlotante'
 import { iniciarCoordinador } from './lib/actualizacionApp'
 
 // Cada pantalla se carga en su propio trozo (chunk) bajo demanda. Asi
@@ -197,6 +198,9 @@ function App() {
   return (
     <AuthProvider>
       <ActualizacionDisponible />
+      {/* Fuera de las rutas: un aviso sigue a la vista aunque la acción
+          que lo dio navegue (tarea 341). */}
+      <AvisoFlotante />
       <BrowserRouter>
         <Routes>
           <Route

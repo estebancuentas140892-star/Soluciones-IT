@@ -342,7 +342,7 @@ export function ReferenciaPage() {
             aria-haspopup="dialog"
             className="flex flex-col gap-1.5 rounded-lg border border-noct-divider bg-noct-surface p-3 text-left text-noct-text transition-colors hover:bg-noct-text/[.04]"
           >
-            <span className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[.06em] text-noct-neutral-400">
+            <span className="flex items-center gap-2 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[.06em] text-noct-neutral-400">
               <Keyboard size={14} className="shrink-0 text-noct-accent-300" aria-hidden />
               Soluciones IT
             </span>
@@ -499,7 +499,7 @@ function TarjetaConsulta({ referencia, origen }: { referencia: Referencia; orige
       className="flex flex-col gap-1.5 rounded-lg border border-noct-divider bg-noct-surface p-3 text-noct-text transition-colors hover:bg-noct-text/[.04]"
     >
       {meta.length > 0 && (
-        <span className="flex items-start gap-2 text-[11px] font-medium uppercase tracking-[.06em] text-noct-neutral-400">
+        <span className="flex items-start gap-2 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[.06em] text-noct-neutral-400">
           <Icono size={14} className="shrink-0 text-noct-accent-300" aria-hidden />
           <span className="min-w-0">{meta.join(' · ')}</span>
         </span>
@@ -544,7 +544,7 @@ function TarjetaTeclas({ referencia, origen }: { referencia: Referencia; origen:
   return (
     <div className="relative flex flex-col gap-2 rounded-lg border border-noct-divider bg-noct-surface p-3 text-noct-text transition-colors hover:bg-noct-text/[.04] has-[a:focus-visible]:outline-2 has-[a:focus-visible]:outline-noct-accent">
       {referencia.plataforma && (
-        <span className="flex items-start gap-2 text-[11px] font-medium uppercase tracking-[.06em] text-noct-neutral-400">
+        <span className="flex items-start gap-2 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[.06em] text-noct-neutral-400">
           <Icono size={14} className="shrink-0 text-noct-accent-300" aria-hidden />
           <span className="min-w-0">{referencia.plataforma}</span>
         </span>

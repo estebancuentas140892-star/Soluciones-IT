@@ -53,6 +53,11 @@ interface Props {
    * de descartar cambios). Si se pasa, la X deja de ser un enlace.
    */
   alSalir?: () => void
+  /**
+   * Se llama al tocar la X, sin impedir que navegue (tarea 341): la
+   * ejecución de una guía avisa con él de que el avance quedó guardado.
+   */
+  alPulsarSalida?: () => void
   /** Banda propia de la tarea: pestañas del editor, progreso, avisos. */
   children?: ReactNode
   /**
@@ -94,6 +99,7 @@ export function BarraTarea({
   salidaEstado,
   salidaEtiqueta = 'Salir sin guardar',
   alSalir,
+  alPulsarSalida,
   children,
   compacta = false,
   trailing,
@@ -124,6 +130,7 @@ export function BarraTarea({
             <Link
               to={destino}
               state={salidaEstado}
+              onClick={alPulsarSalida}
               aria-label={salidaEtiqueta}
               title={salidaEtiqueta}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text"
@@ -155,7 +162,7 @@ export function BarraTarea({
               {/* La tecla que ya existe, a la vista donde hay teclado (desde 1280). */}
               <kbd
                 aria-hidden
-                className="hidden h-[22px] min-w-[22px] items-center justify-center rounded-md border border-b-2 border-noct-divider bg-noct-bg px-1.5 font-mono text-[11.5px] font-medium leading-none text-noct-neutral-400 xl:inline-flex"
+                className="hidden h-[22px] min-w-[22px] items-center justify-center rounded-md border border-b-2 border-noct-divider bg-noct-bg px-1.5 font-mono text-[11.5px] max-md:text-[12px] font-medium leading-none text-noct-neutral-400 xl:inline-flex"
               >
                 /
               </kbd>
@@ -172,7 +179,7 @@ export function BarraTarea({
     <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-surface/[.95] backdrop-blur-[12px]">
       <div className="flex items-start gap-2 py-2.5 pl-4 pr-1.5">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase leading-[1.2] tracking-[.08em] text-noct-accent-300">
+          <p className="text-[11px] max-md:text-[12px] font-semibold uppercase leading-[1.2] tracking-[.08em] text-noct-accent-300">
             {rotulo}
           </p>
           <h1 className="mt-[3px] truncate text-[16px] font-medium leading-[1.25]">{titulo}</h1>
@@ -198,6 +205,7 @@ export function BarraTarea({
           <Link
             to={destino}
             state={salidaEstado}
+            onClick={alPulsarSalida}
             aria-label={salidaEtiqueta}
             title={salidaEtiqueta}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text"

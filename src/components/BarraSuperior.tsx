@@ -126,7 +126,7 @@ export function BarraSuperior({
             <span className="min-w-0 flex-1 truncate">Buscar en Soluciones IT</span>
             <kbd
               aria-hidden
-              className="hidden h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-md border border-b-2 border-noct-divider bg-noct-bg px-1.5 font-mono text-[11.5px] font-medium leading-none text-noct-neutral-400 xl:inline-flex"
+              className="hidden h-[22px] min-w-[22px] shrink-0 items-center justify-center rounded-md border border-b-2 border-noct-divider bg-noct-bg px-1.5 font-mono text-[11.5px] max-md:text-[12px] font-medium leading-none text-noct-neutral-400 xl:inline-flex"
             >
               /
             </kbd>

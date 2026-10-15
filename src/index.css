@@ -92,6 +92,18 @@
   --color-noct-text: #e9e9ed;
   /* color-mix(in srgb, #e9e9ed 16%, transparent) del sistema original */
   --color-noct-divider: rgb(233 233 237 / 0.16);
+  /* LO QUE EL HANDOFF MÓVIL NOMBRABA Y NO TENÍA TOKEN (tarea 341, remate
+     de fidelidad del rediseño "1b Pulgar"; valores de "Sistema visual
+     movil"). El divisor fuerte es el asa de la hoja; el tinte, el fondo de
+     un control redondo sobre la superficie; el presionado, la respuesta al
+     tocar una fila en el teléfono; el velo, lo que oscurece la pantalla
+     detrás de la hoja del teléfono. Los demás tintes del código (del .04 al
+     .07, y los del acento) no se unificaron: cambiaría lo aprobado desde
+     768 px. */
+  --color-noct-divider-fuerte: rgb(233 233 237 / 0.24);
+  --color-noct-tinte: rgb(233 233 237 / 0.06);
+  --color-noct-presionado: rgb(233 233 237 / 0.1);
+  --color-noct-velo: rgb(6 7 12 / 0.62);
 
   --color-noct-neutral-100: #f3f5fe;
   --color-noct-neutral-200: #e4e7f5;
@@ -277,6 +289,10 @@
   --color-noct-surface: #ffffff;
   --color-noct-text: #191b28;
   --color-noct-divider: rgb(25 27 40 / 0.14);
+  --color-noct-divider-fuerte: rgb(25 27 40 / 0.24);
+  --color-noct-tinte: rgb(25 27 40 / 0.05);
+  --color-noct-presionado: rgb(25 27 40 / 0.09);
+  --color-noct-velo: rgb(20 22 35 / 0.38);
 
   --color-noct-neutral-100: #1f2231;
   --color-noct-neutral-200: #2a2d3e;
@@ -464,6 +480,93 @@ body {
 @media (prefers-reduced-motion: reduce) {
   [data-transicion] {
     animation: none;
+  }
+}
+
+/* EL MOVIMIENTO DEL TELÉFONO (tarea 341, handoff móvil "1b Pulgar"). Solo
+   por debajo de 768 px y solo si nadie pidió reducir el movimiento: desde
+   768 la hoja es el panel lateral de la tarea 339, que no se anima. La hoja
+   sube en 260 ms y su velo aparece en 200; la salida la anima `Modal` en
+   JavaScript, porque tiene que partir de donde la dejó el dedo. */
+@keyframes hoja-sube {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes velo-aparece {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+/* El aviso flotante (`AvisoFlotante`) entra desde 8 px más abajo. */
+@keyframes aviso-aparece {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* La marca de "Guía completada" crece una vez. */
+@keyframes marca-crece {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@media (width < 48rem) and (prefers-reduced-motion: no-preference) {
+  [data-hoja-movil] {
+    animation: hoja-sube 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  [data-velo-movil] {
+    animation: velo-aparece 200ms ease-out;
+  }
+  [data-aviso-flotante] {
+    animation: aviso-aparece 200ms ease-out;
+  }
+  [data-marca-completada] {
+    animation: marca-crece 420ms cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  }
+}
+
+/* EL OBJETIVO TÁCTIL DE LOS BOTONES DE TEXTO EN EL TELÉFONO (tarea 341):
+   44 px como mínimo. Va en la capa de componentes a propósito: cualquier
+   utilidad de alto que escriba la pantalla (`min-h-12`, `min-h-[46px]`)
+   sigue mandando, así que esto solo sube los que no decían nada. Desde 768
+   no cambia nada. La marca la pone `BTN_BASE` (nocturne.tsx). */
+@layer components {
+  @media (width < 48rem) {
+    .btn-tactil {
+      min-height: 2.75rem;
+    }
+    /* Un control pequeño que no puede crecer sin romper su dibujo (la X de
+       una miniatura o de un chip, el número de un paso): su área de toque
+       llega a 44 × 44, centrada e invisible. El control tiene que estar
+       posicionado (`relative` o `absolute`). */
+    .toque-amplio::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: max(100%, 2.75rem);
+      height: max(100%, 2.75rem);
+      transform: translate(-50%, -50%);
+    }
   }
 }
 

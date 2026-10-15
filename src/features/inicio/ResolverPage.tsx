@@ -425,7 +425,7 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
         to={guia.ruta}
         state={ORIGEN_RESOLVER}
         aria-label={`Continuar ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
-        className="flex flex-col gap-2.5 rounded-2xl border border-noct-text/25 bg-noct-surface p-3.5 text-noct-text shadow-[var(--shadow-noct-elevacion)] hover:bg-noct-text/[.04]"
+        className="flex flex-col gap-2.5 rounded-2xl border border-noct-text/25 bg-noct-surface p-3.5 text-noct-text shadow-[var(--shadow-noct-elevacion)] hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
       >
         <span className="flex items-center gap-2 text-[12.5px] text-noct-neutral-400">
           <Icono size={14} className="shrink-0" aria-hidden />
@@ -548,7 +548,7 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
       aria-label={`${accion} ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
       // 56 en el teléfono, 52 en la tableta y 48 desde 1280 (filas densas
       // del escritorio, T3).
-      className="-mx-2 flex min-h-14 items-center gap-3 rounded-lg px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05] md:min-h-[52px] xl:min-h-12 xl:py-1.5"
+      className="-mx-2 flex min-h-14 items-center gap-3 rounded-lg px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado md:min-h-[52px] xl:min-h-12 xl:py-1.5"
     >
       <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent-300">
         <Icono size={17} aria-hidden />
@@ -622,7 +622,7 @@ function BloqueAccesos({ accesos }: { accesos: AccesoRapido[] }) {
               state={ORIGEN_RESOLVER}
               aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
               // Desde 1280, el chip denso del escritorio (34 px, con puntero).
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-noct-text/25 px-3.5 text-[14.5px] font-[550] text-noct-text hover:bg-noct-text/[.05] xl:min-h-[34px] xl:rounded-[10px] xl:px-3 xl:text-[13.5px] @[1100px]:-mx-2 @[1100px]:min-h-10 @[1100px]:gap-2.5 @[1100px]:rounded-lg @[1100px]:border-0 @[1100px]:px-2 @[1100px]:text-[14px] @[1100px]:font-medium"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-noct-text/25 px-3.5 text-[14.5px] font-[550] text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado xl:min-h-[34px] xl:rounded-[10px] xl:px-3 xl:text-[13.5px] @[1100px]:-mx-2 @[1100px]:min-h-10 @[1100px]:gap-2.5 @[1100px]:rounded-lg @[1100px]:border-0 @[1100px]:px-2 @[1100px]:text-[14px] @[1100px]:font-medium"
             >
               <BookOpen size={15} className="hidden shrink-0 text-noct-neutral-500 @[1100px]:block" aria-hidden />
               {acceso.nombre}

@@ -70,7 +70,7 @@ export function TarjetaComando({
     <div className="flex flex-col gap-2.5 rounded-xl border border-noct-divider bg-noct-surface p-3">
       {!sinTitulo && (
         <div className="flex flex-col gap-0.5">
-          <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
+          <span className="flex items-center gap-1.5 text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.06em] text-noct-accent-300">
             <Icono size={13} className="shrink-0" aria-hidden />
             {esAtajo ? 'Atajo' : 'Comando'}
             {referencia.plataforma && (
@@ -155,7 +155,7 @@ export function TarjetaComando({
 function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <div className="flex flex-col gap-px">
-      <dt className="text-[11px] font-medium uppercase tracking-[.06em] text-noct-neutral-500">
+      <dt className="text-[11px] max-md:text-[12px] font-medium uppercase tracking-[.06em] text-noct-neutral-500">
         {etiqueta}
       </dt>
       <dd className="text-pretty text-[13px] leading-normal text-noct-neutral-200">{valor}</dd>

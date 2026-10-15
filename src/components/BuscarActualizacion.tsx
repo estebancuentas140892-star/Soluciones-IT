@@ -88,7 +88,7 @@ export function BuscarActualizacion() {
       {/* DIAGNÓSTICO, discreto: es lo que permite decir por teléfono
           "tengo la b518231 y el servidor anuncia la c0ffee1" en vez de
           "creo que no me actualizó". */}
-      <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 pl-[32px] text-[11px] leading-snug text-noct-neutral-500">
+      <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 pl-[32px] text-[11px] max-md:text-[12px] leading-snug text-noct-neutral-500">
         <dt>Instalada</dt>
         <dd className="font-mono tabular-nums">{estado.versionInstalada}</dd>
         <dt>En el servidor</dt>

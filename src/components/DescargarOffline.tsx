@@ -22,7 +22,7 @@ export function DescargarOffline() {
           <DownloadSimple size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
           <div>
             <p className="text-[13.5px] font-medium text-noct-text">Descargar todo para offline</p>
-            <p className="text-[11.5px] text-noct-neutral-500">
+            <p className="text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
               Fotos y manuales listos antes de salir sin señal
             </p>
           </div>

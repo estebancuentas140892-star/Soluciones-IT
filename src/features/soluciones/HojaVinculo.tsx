@@ -103,7 +103,7 @@ export function HojaVinculo({
           onChange={(e) => setConsulta(e.target.value)}
           placeholder={placeholderBuscar}
           aria-label={placeholderBuscar}
-          className="min-w-0 flex-1 bg-transparent text-[15px] text-noct-text outline-none placeholder:text-noct-neutral-500"
+          className="min-w-0 flex-1 bg-transparent text-[15px] max-md:text-[16px] text-noct-text outline-none placeholder:text-noct-neutral-500"
         />
       </label>
 
@@ -125,7 +125,7 @@ export function HojaVinculo({
         {gruposFiltrados.map((grupo, indice) => (
           <div key={grupo.etiqueta ?? indice}>
             {grupo.etiqueta && (
-              <p className="mb-1 mt-3 px-1 text-[11px] font-semibold uppercase tracking-[.06em] text-noct-neutral-500 first:mt-0">
+              <p className="mb-1 mt-3 px-1 text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-500 first:mt-0">
                 {grupo.etiqueta}
               </p>
             )}

@@ -1,5 +1,7 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { cierraAlSoltar, empiezaArrastre } from './gestoHoja'
+import { ANCHO_TABLETA, coincide } from './useEsAncho'
 
 interface Props {
   abierto: boolean
@@ -25,14 +27,41 @@ const VELO_PANEL =
 const PANEL =
   'md:flex md:h-full md:max-h-none md:w-[420px] md:max-w-none md:flex-col md:overflow-hidden md:rounded-none md:border-y-0 md:border-r-0 md:p-0 md:shadow-[var(--shadow-noct-panel)] xl:w-[440px] 3xl:w-[480px]'
 
+// LA HOJA DEL TELÉFONO (tarea 341, remate del handoff móvil "1b Pulgar"):
+// por debajo de 768 px el diálogo y la hoja son la misma hoja del handoff,
+// pegada al borde de abajo y de lado a lado, con radio 22 arriba, el velo
+// del sistema sin desenfoque y la sombra que la separa de la pantalla. Antes
+// era una tarjeta flotante a 16 px de los bordes, y desde 640 px se
+// centraba. Todo va con `max-md:`, así que desde 768 nada cambia: el diálogo
+// sigue centrado y la hoja sigue siendo el panel lateral.
+const VELO_TELEFONO = 'max-md:bg-noct-velo max-md:p-0 max-md:backdrop-blur-none'
+const HOJA_TELEFONO =
+  'max-md:max-h-[88dvh] max-md:max-w-none max-md:rounded-b-none max-md:rounded-t-[22px] max-md:border-0 max-md:px-[18px] max-md:pt-0 max-md:pb-[calc(1.125rem+env(safe-area-inset-bottom))] max-md:shadow-[0_-12px_40px_rgb(0_0_0/0.35)] max-md:overscroll-contain'
+
 // Lo que el tabulador puede alcanzar dentro del diálogo.
 const ENFOCABLES =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]'
 
-// Ventana modal centrada con el fondo oscurecido. Se cierra con la
-// tecla Escape o tocando fuera de la tarjeta. En movil aparece como
-// hoja inferior; en pantallas grandes queda centrada. Reutilizable
-// para confirmaciones y otros dialogos.
+// Donde un dedo que baja escribe o elige, no cierra la hoja.
+const SIN_ARRASTRE = 'input, textarea, select, [contenteditable="true"]'
+
+function movimientoReducido(): boolean {
+  return coincide('(prefers-reduced-motion: reduce)')
+}
+
+/**
+ * ¿Se anima la salida? Solo en el teléfono, sin "reducir movimiento" y si
+ * la hoja tiene caja de verdad: sin maquetación (las pruebas) no hay nada
+ * que animar, y el cierre es inmediato como siempre.
+ */
+function animaLaSalida(caja: HTMLElement | null): boolean {
+  return caja !== null && !coincide(ANCHO_TABLETA) && !movimientoReducido() && caja.getBoundingClientRect().height > 0
+}
+
+// Ventana modal con el fondo oscurecido. Se cierra con la tecla Escape o
+// tocando fuera. En el teléfono es la hoja inferior del handoff (arriba);
+// desde 768 px, el diálogo queda centrado y la hoja es el panel lateral.
+// Reutilizable para confirmaciones y otros dialogos.
 //
 // EL FOCO VIVE DENTRO MIENTRAS ESTÁ ABIERTO (tarea 340, hallazgo de la 339;
 // el handoff de tableta y escritorio da el panel por "foco atrapado"). Al
@@ -40,8 +69,58 @@ const ENFOCABLES =
 // se respeta); Tab y Mayús+Tab dan la vuelta dentro sin salir a la pantalla
 // de detrás del velo; al cerrar vuelve a lo que lo abrió, si sigue en la
 // página. Con dos diálogos abiertos, solo el de encima atrapa.
+//
+// EN EL TELÉFONO SE DESLIZA (tarea 341): la hoja sube al abrirse, baja al
+// cerrarse y se cierra también arrastrándola hacia abajo desde cualquier
+// parte que no sea un campo, con su contenido arriba del todo. El gesto es
+// un atajo: la X, el velo y Esc siguen cerrándola igual, así que nada que
+// dependa del teclado o de un lector de pantalla cambia. El asa es solo la
+// pista visual del gesto (oculta para el lector).
 export function Modal({ abierto, onCerrar, tituloId, variante = 'dialogo', children }: Props) {
   const dialogo = useRef<HTMLDivElement>(null)
+  const velo = useRef<HTMLDivElement>(null)
+  const alCerrar = useRef(onCerrar)
+  useEffect(() => {
+    alCerrar.current = onCerrar
+  })
+
+  // LA SALIDA (tarea 341). Al cerrarse, la hoja del teléfono sigue montada
+  // 200 ms mientras baja; lo decide el mismo render que la cierra, porque
+  // en el siguiente ya no estaría en la página. Mientras sale no recibe
+  // toques ni existe para el lector de pantalla.
+  const [saliendo, setSaliendo] = useState(false)
+  const [abiertoAntes, setAbiertoAntes] = useState(abierto)
+  if (abierto !== abiertoAntes) {
+    setAbiertoAntes(abierto)
+    setSaliendo(!abierto && animaLaSalida(dialogo.current))
+  }
+
+  useLayoutEffect(() => {
+    if (!saliendo) return
+    const caja = dialogo.current
+    const fondo = velo.current
+    if (!caja || !fondo) {
+      setSaliendo(false)
+      return
+    }
+    // Parte de donde esté: si el dedo la bajó, desde ahí.
+    const desde = caja.style.transform || 'translateY(0)'
+    const hoja = caja.animate([{ transform: desde }, { transform: 'translateY(100%)' }], {
+      duration: 200,
+      easing: 'cubic-bezier(0.4, 0, 1, 1)',
+      fill: 'forwards',
+    })
+    const sombra = fondo.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease-in', fill: 'forwards' })
+    let vigente = true
+    void Promise.allSettled([hoja.finished, sombra.finished]).then(() => {
+      if (vigente) setSaliendo(false)
+    })
+    return () => {
+      vigente = false
+      hoja.cancel()
+      sombra.cancel()
+    }
+  }, [saliendo])
 
   useEffect(() => {
     if (!abierto) return
@@ -99,7 +178,83 @@ export function Modal({ abierto, onCerrar, tituloId, variante = 'dialogo', child
     }
   }, [abierto])
 
-  if (!abierto) return null
+  // DESLIZAR PARA CERRAR (tarea 341), solo en el teléfono. Escuchas nativas
+  // y no las de React: para que el dedo arrastre la hoja en vez de tirar de
+  // la página hay que poder cancelar `touchmove`, y React las registra
+  // pasivas.
+  useEffect(() => {
+    const caja = dialogo.current
+    if (!abierto || !caja) return
+    let inicio: { x: number; y: number; t: number } | null = null
+    let arrastrando = false
+    let desplazamiento = 0
+
+    function alTocar(evento: TouchEvent) {
+      inicio = null
+      if (evento.touches.length !== 1 || coincide(ANCHO_TABLETA) || !caja) return
+      if (evento.target instanceof Element && evento.target.closest(SIN_ARRASTRE)) return
+      const toque = evento.touches[0]
+      inicio = { x: toque.clientX, y: toque.clientY, t: performance.now() }
+      arrastrando = false
+      desplazamiento = 0
+    }
+    function alMover(evento: TouchEvent) {
+      if (!inicio || !caja) return
+      const toque = evento.touches[0]
+      const dy = toque.clientY - inicio.y
+      const dx = toque.clientX - inicio.x
+      if (!arrastrando) {
+        if (!empiezaArrastre(dx, dy, caja.scrollTop)) {
+          // Hacia arriba, de lado o con contenido por encima: es desplazar.
+          if (dy < 0 || Math.abs(dx) > 8 || caja.scrollTop > 0) inicio = null
+          return
+        }
+        arrastrando = true
+      }
+      evento.preventDefault()
+      desplazamiento = Math.max(0, dy)
+      caja.style.transition = 'none'
+      caja.style.transform = `translateY(${desplazamiento}px)`
+    }
+    function alSoltar() {
+      if (!inicio || !caja) return
+      const duracion = performance.now() - inicio.t
+      inicio = null
+      if (!arrastrando) return
+      arrastrando = false
+      if (cierraAlSoltar(desplazamiento, duracion, caja.offsetHeight)) {
+        // Un toque que acabó en un arrastre no es un toque: que no active
+        // lo que hubiera debajo del dedo.
+        caja.addEventListener('click', anularClic, { capture: true, once: true })
+        alCerrar.current()
+        return
+      }
+      caja.style.transition = movimientoReducido() ? 'none' : 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)'
+      caja.style.transform = ''
+    }
+
+    caja.addEventListener('touchstart', alTocar, { passive: true })
+    caja.addEventListener('touchmove', alMover, { passive: false })
+    caja.addEventListener('touchend', alSoltar)
+    caja.addEventListener('touchcancel', alSoltar)
+    return () => {
+      caja.removeEventListener('touchstart', alTocar)
+      caja.removeEventListener('touchmove', alMover)
+      caja.removeEventListener('touchend', alSoltar)
+      caja.removeEventListener('touchcancel', alSoltar)
+    }
+  }, [abierto])
+
+  // Al volver a abrirse, la hoja empieza en su sitio aunque la última vez
+  // la cerrara el dedo.
+  useLayoutEffect(() => {
+    const caja = dialogo.current
+    if (!abierto || !caja) return
+    caja.style.transform = ''
+    caja.style.transition = ''
+  }, [abierto])
+
+  if (!abierto && !saliendo) return null
 
   // Va SIEMPRE colgado de <body> mediante un portal, nunca donde lo
   // escribio quien lo usa. Motivo (bug reportado por el usuario el
@@ -119,7 +274,10 @@ export function Modal({ abierto, onCerrar, tituloId, variante = 'dialogo', child
   // dentro de cualquier cabecera con desenfoque.
   return createPortal(
     <div
-      className={`nocturne fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-4 font-inter backdrop-blur-sm sm:items-center ${variante === 'hoja' ? VELO_PANEL : ''}`}
+      ref={velo}
+      data-velo-movil
+      aria-hidden={saliendo || undefined}
+      className={`nocturne fixed inset-0 z-[60] flex items-end justify-center bg-black/70 p-4 font-inter backdrop-blur-sm ${VELO_TELEFONO} ${variante === 'hoja' ? VELO_PANEL : 'md:items-center'} ${saliendo ? 'pointer-events-none' : ''}`}
       onClick={onCerrar}
     >
       <div
@@ -132,12 +290,22 @@ export function Modal({ abierto, onCerrar, tituloId, variante = 'dialogo', child
         // dentro: no es un control, así que sin anillo (la regla de
         // `[data-foco-lectura]` en index.css). Lo de dentro sí lo dibuja.
         data-foco-lectura
+        data-hoja-movil
         onClick={(evento) => evento.stopPropagation()}
-        className={`max-h-[calc(100dvh-2rem)] w-full outline-none max-w-sm overflow-y-auto rounded-2xl border border-noct-divider bg-noct-surface p-5 text-noct-text shadow-2xl ${variante === 'hoja' ? PANEL : ''}`}
+        className={`max-h-[calc(100dvh-2rem)] w-full outline-none max-w-sm overflow-y-auto rounded-2xl border border-noct-divider bg-noct-surface p-5 text-noct-text shadow-2xl ${HOJA_TELEFONO} ${variante === 'hoja' ? PANEL : ''}`}
       >
+        {/* El asa: la pista del gesto de deslizar, solo en el teléfono. */}
+        <div aria-hidden className="flex justify-center pb-2 pt-2 md:hidden">
+          <span className="h-[5px] w-[38px] rounded-[3px] bg-noct-divider-fuerte" />
+        </div>
         {children}
       </div>
     </div>,
     document.body,
   )
+}
+
+function anularClic(evento: MouseEvent) {
+  evento.preventDefault()
+  evento.stopPropagation()
 }

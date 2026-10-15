@@ -159,7 +159,7 @@ export function ConectarPage() {
                   aria-describedby={error ? 'conectar-error' : undefined}
                   aria-invalid={error ? true : undefined}
                   placeholder="000 000"
-                  className={`${CLASE_CAMPO_MONO} h-14 text-center text-[26px] tracking-[.18em]`}
+                  className={`${CLASE_CAMPO_MONO} h-14 text-center text-[26px] tracking-[.18em] max-md:text-[26px]`}
                 />
               </label>
 
@@ -179,7 +179,7 @@ export function ConectarPage() {
               <button
                 type="submit"
                 disabled={codigo.length !== 6 || !enLinea || conectando || !usuario}
-                className={`min-h-12 justify-center text-[15px] ${BTN_PRIMARIO} disabled:opacity-40`}
+                className={`min-h-12 justify-center text-[15px] max-md:text-[15px] ${BTN_PRIMARIO} disabled:opacity-40`}
               >
                 {conectando ? 'Conectando…' : desdeQr ? `Conectar con ${formatoCodigo(codigo)}` : 'Conectar'}
               </button>

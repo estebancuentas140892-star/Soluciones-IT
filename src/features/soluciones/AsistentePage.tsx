@@ -8,9 +8,11 @@ import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/proc
 import { registrarVisita } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
+import { avisar } from '../../components/avisosFlotantes'
 import { esIdDeEquipo } from '../boveda/credencialDelEquipo'
 import { AsistenteVista } from './AsistenteVista'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
+import { avisoAlSalirDeLaGuia } from './sinTerminar'
 
 // Pantalla del modo ejecucion (asistente): nivel 3 del chasis (tarea
 // 185), una tarea con salida. Es de los pocos sitios donde la barra de
@@ -110,6 +112,12 @@ export function AsistentePage() {
       titulo={articulo.titulo}
       contexto={contexto}
       salidaEtiqueta="Salir de la guía"
+      // Salir con la X no pierde nada, y se dice (tarea 341): "Avance
+      // guardado: paso 3 de 5". Lo guardado ya estaba en Dexie.
+      alPulsarSalida={() => {
+        const texto = procedimiento ? avisoAlSalirDeLaGuia(procedimiento, filaAvance) : null
+        if (texto) avisar(texto)
+      }}
     >
       {/* Sin relleno inferior propio: la acción dominante fija de
           `AsistenteVista` (M-011) es el último elemento del flujo y ya

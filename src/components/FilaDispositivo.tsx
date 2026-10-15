@@ -115,7 +115,7 @@ export function FilaDispositivo({
       to={`/dispositivos/${dispositivo.id}`}
       state={estado}
       onClick={alAbrir}
-      className="flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 text-noct-text hover:bg-noct-text/[.05]"
+      className="flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado"
     >
       <span
         className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-400 ${

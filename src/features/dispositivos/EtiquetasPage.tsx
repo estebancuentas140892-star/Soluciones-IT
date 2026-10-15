@@ -95,7 +95,7 @@ export function EtiquetasPage() {
                     type="button"
                     aria-pressed={activa}
                     onClick={() => setCategoriaId(c.id)}
-                    className={`inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                    className={`inline-flex min-h-9 shrink-0 items-center whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors max-md:min-h-11 ${
                       activa
                         ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
                         : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
@@ -202,8 +202,8 @@ function EtiquetaTarjeta({
         <ImagenQr valor={url} alt={`Etiqueta QR de ${dispositivo.nombre}`} className="h-[88px] w-[88px]" />
       </span>
       <span className="text-pretty text-[12.5px] font-medium leading-[1.3]">{dispositivo.nombre}</span>
-      {codigo && <span className="break-all font-mono text-[10.5px] text-noct-neutral-500">{codigo}</span>}
-      {dispositivo.ubicacion && <span className="text-[10.5px] text-noct-neutral-500">{dispositivo.ubicacion}</span>}
+      {codigo && <span className="break-all font-mono text-[10.5px] max-md:text-[12px] text-noct-neutral-500">{codigo}</span>}
+      {dispositivo.ubicacion && <span className="text-[10.5px] max-md:text-[12px] text-noct-neutral-500">{dispositivo.ubicacion}</span>}
     </button>
   )
 }

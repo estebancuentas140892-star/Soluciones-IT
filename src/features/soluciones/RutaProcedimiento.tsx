@@ -55,7 +55,7 @@ function MarcaNodo({ resumen }: { resumen: ResumenPaso }) {
   return (
     <span
       aria-hidden
-      className={`shrink-0 font-mono text-[11.5px] ${
+      className={`shrink-0 font-mono text-[11.5px] max-md:text-[12px] ${
         resumen.estado === 'actual' ? 'text-noct-accent-300' : 'text-noct-neutral-500'
       }`}
     >
@@ -94,7 +94,7 @@ export function RutaProcedimiento({
               // holgado desde `lg`, donde sobra sitio. Lo que no quepa se
               // lee entero en `title` y en el nombre accesible (y, fuera de
               // la acción a la vez, el del paso actual, justo debajo).
-              className={`inline-flex min-h-8 max-w-[24ch] items-center gap-1.5 rounded-full border px-2.5 text-[13px] hover:bg-noct-text/[.06] lg:max-w-[34ch] ${clasesNodo(resumen.estado)}`}
+              className={`inline-flex min-h-8 max-w-[24ch] items-center max-md:min-h-11 gap-1.5 rounded-full border px-2.5 text-[13px] hover:bg-noct-text/[.06] lg:max-w-[34ch] ${clasesNodo(resumen.estado)}`}
             >
               <MarcaNodo resumen={resumen} />
               <span className="truncate">{etiquetaDeRuta(resumen.titulo)}</span>

@@ -11,7 +11,8 @@ import {
 import { registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { CaretRight, Key, LockSimple } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
+import { avisar } from '../../components/avisosFlotantes'
 import { FilaVinculo } from '../soluciones/FilaVinculo'
 import { HojaVinculo } from '../soluciones/HojaVinculo'
 import { useEjecucion } from '../soluciones/contextoEjecucion'
@@ -484,6 +485,8 @@ function FormularioDesbloqueo() {
     const resultado = await desbloquear(contrasena)
     setAbriendo(false)
     if (resultado) setError(resultado)
+    // Lo de debajo no se desmonta; el aviso dice que ya está (tarea 341).
+    else avisar('Bóveda desbloqueada', 'candado')
   }
 
   return (
@@ -498,10 +501,10 @@ function FormularioDesbloqueo() {
           value={contrasena}
           onChange={(e) => setContrasena(e.target.value)}
           placeholder="Contraseña maestra"
-          className="min-h-11 min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
+          className="min-h-11 min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm max-md:text-[16px] text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
         />
         {/* De dedo, 44 px (R6): se desbloquea de pie, en medio de una guía. */}
-        <button type="submit" disabled={abriendo} className={`min-h-11 shrink-0 ${BTN_PRIMARIO} disabled:opacity-45`}>
+        <button type="submit" disabled={abriendo} className={`min-h-11 shrink-0 ${BTN_PRIMARIO_DOMINANTE} disabled:opacity-45`}>
           <Key size={14} aria-hidden />
           {abriendo ? 'Abriendo...' : 'Desbloquear'}
         </button>

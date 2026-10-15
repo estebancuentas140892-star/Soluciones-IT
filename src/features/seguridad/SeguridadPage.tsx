@@ -176,7 +176,7 @@ function PanelConfigurado({ config }: { config: ConfigBloqueoApp }) {
         <select
           value={minutosSel}
           onChange={(e) => cambiarMinutos(Number(e.target.value))}
-          className="rounded-md border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text outline-none focus:border-noct-accent"
+          className="rounded-md border border-noct-divider bg-noct-bg px-3 py-2 text-sm max-md:text-[16px] text-noct-text outline-none focus:border-noct-accent"
         >
           {OPCIONES_AUTOBLOQUEO_APP_MIN.map((m) => (
             <option key={m} value={m}>

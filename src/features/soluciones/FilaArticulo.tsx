@@ -127,7 +127,7 @@ export function FilaArticulo({
         {coincidencia ? (
           <span className="flex flex-wrap items-center gap-1.5 text-[12px] text-noct-neutral-400">
             Coincide en {coincidencia.donde}
-            <span className="rounded-full bg-noct-neutral-800 px-[7px] py-px text-[11px] text-noct-neutral-200">
+            <span className="rounded-full bg-noct-neutral-800 px-[7px] py-px text-[11px] max-md:text-[12px] text-noct-neutral-200">
               {coincidencia.valor}
             </span>
           </span>

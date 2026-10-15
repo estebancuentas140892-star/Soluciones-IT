@@ -852,7 +852,7 @@ export function DispositivoPage() {
                   {dispositivo.ip}
                 </p>
               </div>
-              <BotonCopiar etiqueta="Dirección IP" texto={dispositivo.ip} destacado />
+              <BotonCopiar etiqueta="Dirección IP" texto={dispositivo.ip} destacado aviso={`IP copiada: ${dispositivo.ip}`} />
             </div>
           )}
 
@@ -1121,7 +1121,7 @@ const ICONO_PASO: Record<PasoSiguiente['clave'], typeof Camera> = {
 function QueSigue({ pasos, dispositivoId }: { pasos: PasoSiguiente[]; dispositivoId: string }) {
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3.5">
-      <p className="text-[11px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">¿Qué sigue?</p>
+      <p className="text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">¿Qué sigue?</p>
       <div className="flex flex-col">
         {pasos.map((paso) => {
           const Icono = ICONO_PASO[paso.clave]

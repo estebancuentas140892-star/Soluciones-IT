@@ -199,7 +199,7 @@ function FilaConexion({
   return (
     <li className="flex items-center gap-1 rounded-md border border-noct-divider bg-noct-surface py-1.5 pl-3 pr-1.5">
       <Link to={`/dispositivos/${otroId}`} className="min-w-0 flex-1 py-1">
-        {esEnlace && <p className="truncate text-[11px] text-noct-neutral-500">{direccion}</p>}
+        {esEnlace && <p className="truncate text-[11px] max-md:text-[12px] text-noct-neutral-500">{direccion}</p>}
         <p className="truncate text-sm font-medium text-noct-text">{nombre}</p>
         {(detalle || conexion.notas) && (
           <p className="truncate text-xs text-noct-neutral-400">{detalle || conexion.notas}</p>

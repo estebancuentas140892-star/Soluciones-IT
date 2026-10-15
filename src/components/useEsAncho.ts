@@ -24,7 +24,12 @@ export const ANCHO_ESCRITORIO = '(min-width: 80rem)'
 export const ANCHO_TABLETA_HORIZONTAL = '(min-width: 64rem)'
 export const ANCHO_AMPLIO = '(min-width: 105rem)'
 
-function coincide(consulta: string): boolean {
+/**
+ * ¿La ventana cumple `consulta` AHORA? Para decidir en un gesto o al cerrar
+ * (la hoja del teléfono, tarea 341), donde no hace falta suscribirse. Sin
+ * `matchMedia`, nunca: es el teléfono.
+ */
+export function coincide(consulta: string): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
   return window.matchMedia(consulta).matches
 }

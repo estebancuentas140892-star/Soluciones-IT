@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { Chasis } from '../../app/Chasis'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { ArrowsClockwise, CaretDown, Eye, EyeSlash, LockSimple, Paperclip, Plus, X } from '../../components/iconos'
-import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO_DOMINANTE, BTN_SECUNDARIO } from '../../components/nocturne'
 import {
   Campo,
   CampoConSugerencias,
@@ -475,7 +475,7 @@ export function CredencialForm() {
       salidaEtiqueta="Cancelar y volver"
       barra={
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 px-4 pb-2.5">
-          <span className="inline-flex shrink-0 items-center gap-1.5 text-[11.5px] text-noct-neutral-400">
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-[11.5px] max-md:text-[12px] text-noct-neutral-400">
             <LockSimple size={13} aria-hidden />
             Se guarda cifrada
           </span>
@@ -628,7 +628,7 @@ export function CredencialForm() {
                 {errorDe('contrasena') && (
                   <span className="text-[12px] text-noct-error">{errorDe('contrasena')}</span>
                 )}
-                <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                <p className="text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
                   Generar crea 16 caracteres sin los que se confunden entre sí (O/0, l/1).
                 </p>
               </div>
@@ -676,7 +676,7 @@ export function CredencialForm() {
                 {!errorArchivo && errorDe('archivo') && (
                   <span className="text-[12px] text-noct-error">{errorDe('archivo')}</span>
                 )}
-                <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                <p className="text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
                   Se cifra en este teléfono antes de subirse: ni el servidor ni un técnico sin acceso
                   a la Bóveda pueden leerlo.
                 </p>
@@ -756,7 +756,7 @@ export function CredencialForm() {
                         </option>
                       ))}
                     </select>
-                    <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                    <span className="text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
                       {DESCRIPCION_TIPO[tipo]}
                     </span>
                   </label>
@@ -775,7 +775,7 @@ export function CredencialForm() {
                       autoComplete="off"
                       className={`min-h-11 ${CLASE_CAMPO_MONO}`}
                     />
-                    <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                    <span className="text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
                       Este tipo no suele usar usuario. Se conserva tal cual hasta que lo quites.
                     </span>
                   </label>
@@ -800,7 +800,7 @@ export function CredencialForm() {
                         {verContrasena ? <EyeSlash size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
                       </button>
                     </div>
-                    <span className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                    <span className="text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
                       Este tipo no suele usar contraseña. Se conserva tal cual hasta que la quites.
                     </span>
                   </div>
@@ -880,7 +880,7 @@ export function CredencialForm() {
                     onVincular={(d) => setDispositivos((actuales) => [...actuales, { id: d.id, nombre: d.nombre }])}
                     onQuitar={(id) => setDispositivos((actuales) => actuales.filter((d) => d.id !== id))}
                   />
-                  <p className="text-[11.5px] leading-relaxed text-noct-neutral-600">
+                  <p className="text-[11.5px] max-md:text-[12px] leading-relaxed text-noct-neutral-600">
                     El vencimiento y el vínculo con equipos no son el secreto: no se cifran, para
                     poder avisar y navegar con la bóveda cerrada.
                   </p>
@@ -943,7 +943,7 @@ export function CredencialForm() {
             <button
               type="submit"
               disabled={guardando}
-              className={`${BTN_PRIMARIO} min-h-[46px] px-4 disabled:opacity-50`}
+              className={`${BTN_PRIMARIO_DOMINANTE} min-h-[46px] px-4 disabled:opacity-50`}
               style={{ opacity: valido ? undefined : 0.55 }}
             >
               <LockSimple size={15} aria-hidden />
@@ -984,7 +984,7 @@ function EquiposVinculadosEditor({
             type="button"
             onClick={() => onQuitar(vinculo.id)}
             aria-label={`Quitar ${vinculo.nombre}`}
-            className="flex h-[26px] w-[26px] items-center justify-center rounded-full text-noct-neutral-500 hover:text-noct-text"
+            className="toque-amplio relative flex h-[26px] w-[26px] items-center justify-center rounded-full text-noct-neutral-500 hover:text-noct-text"
           >
             <X size={12} aria-hidden />
           </button>
@@ -1002,7 +1002,7 @@ function EquiposVinculadosEditor({
               const dispositivo = disponibles.find((d) => d.id === e.target.value)
               if (dispositivo) onVincular(dispositivo)
             }}
-            className="absolute inset-0 cursor-pointer opacity-0"
+            className="absolute inset-0 cursor-pointer opacity-0 max-md:text-[16px]"
           >
             <option value="">Agregar equipo</option>
             {disponibles.map((d) => (

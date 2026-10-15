@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { FloppyDisk } from '../../components/iconos'
-import { BTN_PRIMARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
 import { db } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { esFechaValida, estadoDePersona } from './cicloPersona'
@@ -195,7 +195,7 @@ export function PersonaForm() {
           <button
             type="submit"
             disabled={guardando || !valido}
-            className={`mt-1 ${BTN_PRIMARIO} min-h-11 disabled:opacity-50`}
+            className={`mt-1 ${BTN_PRIMARIO_DOMINANTE} min-h-11 disabled:opacity-50`}
           >
             <FloppyDisk size={15} aria-hidden />
             {guardando ? 'Guardando...' : 'Guardar persona'}

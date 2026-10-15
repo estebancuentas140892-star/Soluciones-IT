@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { Articulo, ProgresoPasos } from '../../lib/db'
-import { articulosSinTerminar } from './sinTerminar'
+import type { Articulo, Procedimiento, ProgresoPasos } from '../../lib/db'
+import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { articulosSinTerminar, avisoAlSalirDeLaGuia } from './sinTerminar'
 
 // Un artículo con procedimiento de `nPasos` pasos con ids predecibles
 // ("p1", "p2"...), que es lo único que mira la función.
@@ -96,5 +97,39 @@ describe('articulosSinTerminar', () => {
       [progreso('viejo', ['p1'], AYER), progreso('nuevo', ['p1'], HOY)],
     )
     expect(resultado.map((r) => r.articulo.id)).toEqual(['nuevo', 'viejo'])
+  })
+})
+
+// EL AVISO AL SALIR CON LA X (tarea 341): decir que el avance quedó guardado.
+describe('avisoAlSalirDeLaGuia', () => {
+  function procedimiento(nPasos: number, comprobaciones: string[] = []): Procedimiento {
+    const normalizado = normalizarProcedimiento({
+      pasos: Array.from({ length: nPasos }, (_, i) => ({ id: `p${i + 1}`, titulo: `Paso ${i + 1}`, bloques: [] })),
+      verificacionFinal: comprobaciones,
+    })
+    if (!normalizado) throw new Error('Procedimiento inválido')
+    return normalizado
+  }
+
+  it('dice en qué paso se retoma', () => {
+    expect(avisoAlSalirDeLaGuia(procedimiento(5), progreso('a', ['p1', 'p2'], HOY))).toBe('Avance guardado: paso 3 de 5')
+  })
+
+  it('con todos los pasos hechos, dice que falta la comprobación final', () => {
+    const fila = { ...progreso('a', ['p1', 'p2'], HOY), verificacionHecha: [] }
+    expect(avisoAlSalirDeLaGuia(procedimiento(2, ['Imprime una página']), fila)).toBe(
+      'Avance guardado: falta la comprobación final',
+    )
+  })
+
+  it('sin nada hecho, o con la guía terminada, no hay avance que decir', () => {
+    expect(avisoAlSalirDeLaGuia(procedimiento(3), undefined)).toBeNull()
+    expect(avisoAlSalirDeLaGuia(procedimiento(3), progreso('a', [], HOY))).toBeNull()
+    expect(avisoAlSalirDeLaGuia(procedimiento(2), progreso('a', ['p1', 'p2'], HOY))).toBeNull()
+  })
+
+  it('una tarea marcada del primer paso ya es avance', () => {
+    const fila = { ...progreso('a', [], HOY), instruccionesHechas: ['p1-t1'] }
+    expect(avisoAlSalirDeLaGuia(procedimiento(4), fila)).toBe('Avance guardado: paso 1 de 4')
   })
 })

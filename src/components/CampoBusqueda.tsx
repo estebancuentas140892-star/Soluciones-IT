@@ -126,7 +126,8 @@ export function CampoBusqueda({
               ? 'text-[18px] font-medium'
               : destacada
                 ? 'text-[16px]'
-                : 'text-[15px]'
+                : // En el teléfono, 16 para que iOS no amplíe al enfocar (tarea 341).
+                  'text-[15px] max-md:text-[16px]'
         }`}
       />
       {buscando && (

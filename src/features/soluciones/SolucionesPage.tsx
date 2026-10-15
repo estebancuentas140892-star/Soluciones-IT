@@ -655,7 +655,7 @@ export function SolucionesPage() {
                 <div className="mb-1.5 flex items-center gap-2 px-0.5">
                   <FlagBanner size={14} className="text-noct-neutral-400" aria-hidden />
                   <TituloSeccion>Para empezar</TituloSeccion>
-                  <span className="text-[11px] text-noct-neutral-400">{rutaAprendizaje.length}</span>
+                  <span className="text-[11px] max-md:text-[12px] text-noct-neutral-400">{rutaAprendizaje.length}</span>
                 </div>
                 <ol className="flex flex-col">
                   {rutaAprendizaje.map((articulo, indice) => (
@@ -720,7 +720,7 @@ export function SolucionesPage() {
                     ? `${total} ${total === 1 ? 'artículo coincide' : 'artículos coinciden'}`
                     : 'Todos los artículos'}
                 </TituloSeccion>
-                {!buscando && <span className="text-[11px] text-noct-neutral-400">{total}</span>}
+                {!buscando && <span className="text-[11px] max-md:text-[12px] text-noct-neutral-400">{total}</span>}
               </div>
             )}
 
@@ -738,7 +738,7 @@ export function SolucionesPage() {
                             aria-hidden
                           />
                           <TituloSeccion>{grupo.nombre}</TituloSeccion>
-                          <span className="text-[11px] text-noct-neutral-400">{grupo.count}</span>
+                          <span className="text-[11px] max-md:text-[12px] text-noct-neutral-400">{grupo.count}</span>
                         </div>
                       )}
                       {filasDe(grupo.articulos)}

@@ -120,7 +120,7 @@ export function ContenidoReferencia({
 function Bloque({ titulo, children }: { titulo: string; children: ReactNode }) {
   return (
     <div>
-      <p className="mb-1 text-[11px] font-medium uppercase tracking-[.08em] text-noct-neutral-500">{titulo}</p>
+      <p className="mb-1 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[.08em] text-noct-neutral-500">{titulo}</p>
       {children}
     </div>
   )

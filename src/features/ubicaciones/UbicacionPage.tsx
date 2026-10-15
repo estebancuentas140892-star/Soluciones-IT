@@ -115,7 +115,7 @@ export function UbicacionPage() {
       barra={
         <div className="px-4 pb-3 pt-0.5">
           {ancestros.length > 0 && (
-            <nav className="mb-1 flex flex-wrap items-center gap-1 text-[11.5px] text-noct-neutral-500">
+            <nav className="mb-1 flex flex-wrap items-center gap-1 text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
               {ancestros.map((a) => (
                 <span key={a.id} className="flex items-center gap-1">
                   <Link

@@ -253,6 +253,8 @@ interface PropsTarea extends PropsComunes {
   salidaEtiqueta?: string
   /** Reemplaza la navegación de la X (confirmar antes de descartar). */
   alSalir?: () => void
+  /** Al tocar la X, sin impedir que navegue (tarea 341). */
+  alPulsarSalida?: () => void
   /** Banda bajo la barra de tarea: pestañas del editor, progreso. */
   barra?: ReactNode
   /**
@@ -444,6 +446,7 @@ export function Chasis(props: Props) {
             salidaEstado={props.salidaA ? undefined : estadoDeRegreso(origen)}
             salidaEtiqueta={props.salidaEtiqueta}
             alSalir={props.alSalir}
+            alPulsarSalida={props.alPulsarSalida}
             compacta={props.compacta}
             onBuscar={props.compacta && props.conBusqueda ? () => setBuscadorTarea(true) : undefined}
             // La ranura de `BandaTarea` cambia de sitio según la altura
@@ -704,7 +707,7 @@ export function Chasis(props: Props) {
                 {numeroPendientes > 0 && (
                   <span
                     aria-hidden
-                    className="ml-auto hidden h-5 min-w-5 items-center justify-center rounded-full bg-noct-precaucion px-1.5 font-mono text-[11.5px] font-semibold leading-none text-noct-bg xl:flex"
+                    className="ml-auto hidden h-5 min-w-5 items-center justify-center rounded-full bg-noct-precaucion px-1.5 font-mono text-[11.5px] max-md:text-[12px] font-semibold leading-none text-noct-bg xl:flex"
                   >
                     {numeroPendientes > 9 ? '9+' : numeroPendientes}
                   </span>
@@ -729,12 +732,12 @@ export function Chasis(props: Props) {
             title={usuario?.nombre || 'Ajustes'}
             className="flex items-center justify-center gap-2.5 rounded-md p-1.5 hover:bg-noct-text/[.05] xl:justify-start"
           >
-            <Avatar nombre={usuario?.nombre} correo={usuario?.correo} className="h-[30px] w-[30px] shrink-0 text-[11px]" />
+            <Avatar nombre={usuario?.nombre} correo={usuario?.correo} className="h-[30px] w-[30px] shrink-0 text-[11px] max-md:text-[12px]" />
             <span className="hidden min-w-0 flex-1 xl:block">
               <span className="block truncate text-[12.5px] font-medium leading-[1.2]">
                 {usuario?.nombre || 'Ajustes'}
               </span>
-              <span className="mt-0.5 block text-[11px] text-noct-neutral-400">Ajustes</span>
+              <span className="mt-0.5 block text-[11px] max-md:text-[12px] text-noct-neutral-400">Ajustes</span>
             </span>
             <CaretRight size={13} className="hidden shrink-0 text-noct-neutral-400 xl:block" aria-hidden />
           </Link>

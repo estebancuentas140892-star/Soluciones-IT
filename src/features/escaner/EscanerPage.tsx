@@ -345,7 +345,7 @@ export function EscanerPage() {
                 type="button"
                 onClick={() => setLeidos(reiniciarConteo())}
                 title="Reiniciar el conteo"
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-noct-divider bg-noct-bg/65 px-3 text-[12px] font-medium text-noct-neutral-300 backdrop-blur-[8px] hover:text-noct-text"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-full border max-md:min-h-11 border-noct-divider bg-noct-bg/65 px-3 text-[12px] font-medium text-noct-neutral-300 backdrop-blur-[8px] hover:text-noct-text"
               >
                 <Check size={14} className="text-noct-exito" aria-hidden />
                 {leidos.length} {leidos.length === 1 ? 'leído' : 'leídos'}
@@ -359,7 +359,7 @@ export function EscanerPage() {
               type="button"
               onClick={() => void alternarLinterna()}
               aria-pressed={linterna.encendida}
-              className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium backdrop-blur-[8px] ${
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border max-md:min-h-11 px-3 text-[12px] font-medium backdrop-blur-[8px] ${
                 linterna.encendida
                   ? 'border-noct-precaucion/50 bg-noct-precaucion/[.12] text-noct-precaucion'
                   : 'border-noct-divider bg-noct-bg/65 text-noct-neutral-300'
@@ -421,7 +421,7 @@ export function EscanerPage() {
               onChange={(evento) => setCodigoManual(evento.target.value)}
               placeholder="O escribir la placa o el serial"
               aria-label="Buscar por placa o serial"
-              className="min-h-[46px] min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-surface px-3.5 text-[14px] text-noct-text outline-none placeholder:text-noct-neutral-600 focus:border-noct-accent"
+              className="min-h-[46px] min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-surface px-3.5 text-[14px] max-md:text-[16px] text-noct-text outline-none placeholder:text-noct-neutral-600 focus:border-noct-accent"
             />
             <button type="submit" className={`min-h-[46px] px-4 ${BTN_PRIMARIO}`}>
               Buscar
@@ -482,7 +482,7 @@ export function EscanerPage() {
                       {dispositivo.nombre}
                     </span>
                     {dispositivo.ubicacion && (
-                      <span className="mt-px block truncate text-[11.5px] text-noct-neutral-500">
+                      <span className="mt-px block truncate text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
                         {dispositivo.ubicacion}
                       </span>
                     )}

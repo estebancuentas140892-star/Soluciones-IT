@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { Camera, CaretDown, CaretUp, FloppyDisk, TrashSimple, Warning } from '../../components/iconos'
-import { BTN_PRIMARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
+import { BTN_PRIMARIO_DOMINANTE, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import {
   Campo,
   CampoConSugerencias,
@@ -366,7 +366,7 @@ export function DispositivoForm() {
                     type="button"
                     aria-pressed={activa}
                     onClick={() => setCategoriaId(c.id)}
-                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors max-md:min-h-11 ${
                       activa
                         ? claseActivaDeCategoria(c)
                         : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
@@ -490,7 +490,7 @@ export function DispositivoForm() {
               value={ip}
               onChange={(e) => setIp(e.target.value)}
               placeholder="192.168.1.10"
-              className={`min-h-11 w-full box-border rounded-md border bg-noct-surface px-3 py-2.5 font-mono text-sm text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600 ${
+              className={`min-h-11 w-full box-border rounded-md border bg-noct-surface px-3 py-2.5 font-mono text-sm max-md:text-[16px] text-noct-text outline-none focus:border-noct-accent placeholder:text-noct-neutral-600 ${
                 ipValida ? 'border-noct-divider' : 'border-noct-precaucion/55'
               }`}
             />
@@ -524,7 +524,7 @@ export function DispositivoForm() {
                     type="button"
                     aria-pressed={activo}
                     onClick={() => setEstado(valor)}
-                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors ${
+                    className={`inline-flex min-h-[38px] items-center gap-[7px] whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors max-md:min-h-11 ${
                       activo
                         ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
                         : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
@@ -548,10 +548,10 @@ export function DispositivoForm() {
             aria-expanded={masAbierto}
             className="flex min-h-[52px] w-full items-center gap-2.5 px-0.5 py-1.5 text-left"
           >
-            <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
+            <span className="text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
               Más información
             </span>
-            <span className="text-[11px] text-noct-neutral-600">{resumenMas}</span>
+            <span className="text-[11px] max-md:text-[12px] text-noct-neutral-600">{resumenMas}</span>
             {masAbierto ? (
               <CaretUp size={14} className="ml-auto text-noct-neutral-500" aria-hidden />
             ) : (
@@ -605,7 +605,7 @@ export function DispositivoForm() {
             type="button"
             disabled={guardando}
             onClick={() => void guardar()}
-            className={`${BTN_PRIMARIO} min-h-[46px] px-4 disabled:opacity-50`}
+            className={`${BTN_PRIMARIO_DOMINANTE} min-h-[46px] px-4 disabled:opacity-50`}
             style={{ opacity: valido ? undefined : 0.55 }}
           >
             <FloppyDisk size={15} aria-hidden />
@@ -676,7 +676,7 @@ function FotoEditor({
           ) : (
             <span className="flex h-full w-full flex-col items-center justify-center gap-0.5 text-noct-neutral-500">
               <Camera size={18} aria-hidden />
-              <span className="text-[10px]">{subiendo ? '...' : 'Foto'}</span>
+              <span className="text-[10px] max-md:text-[12px]">{subiendo ? '...' : 'Foto'}</span>
             </span>
           )}
           <input

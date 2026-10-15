@@ -188,7 +188,7 @@ function AdjuntoItem({ adjunto, onEliminar }: { adjunto: Adjunto; onEliminar: ()
         type="button"
         onClick={onEliminar}
         aria-label={`Eliminar ${adjunto.nombre}`}
-        className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-noct-bg/80 text-xs text-noct-text"
+        className="toque-amplio absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-noct-bg/80 text-xs text-noct-text"
       >
         ×
       </button>

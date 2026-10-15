@@ -301,7 +301,7 @@ export function SeccionesAgenda({
               onClick={() => setSinFechaElegido(!sinFechaAbierto)}
               aria-expanded={sinFechaAbierto}
               aria-controls={idSinFecha}
-              className="flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04]"
+              className="flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
             >
               <span className="min-w-0 flex-1">
                 <span className="block text-[15px] font-semibold leading-[1.3]">Sin fecha</span>
@@ -456,7 +456,7 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
     <Link
       to={item.ruta}
       aria-label={`${accion} ${item.titulo} · ${ETIQUETA_ESTADO[estado]}`}
-      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-14 xl:min-h-[52px] xl:gap-[11px] xl:py-1.5"
+      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado md:min-h-14 xl:min-h-[52px] xl:gap-[11px] xl:py-1.5"
     >
       <span aria-hidden data-barra-estado className={`my-1 w-1 shrink-0 self-stretch rounded-sm ${BARRA_PENDIENTE[item.tono]}`} />
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300 xl:h-8 xl:w-8 xl:rounded-[9px]">

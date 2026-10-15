@@ -108,7 +108,7 @@ export function HojaFiltro<T extends string>({
               {Icono && <Icono size={17} className={`shrink-0 ${opcion.claseIcono ?? ''}`} aria-hidden />}
               <span className="min-w-0 flex-1 text-pretty">{opcion.etiqueta}</span>
               {opcion.count != null && (
-                <span className="shrink-0 text-[11.5px] text-noct-neutral-400">{opcion.count}</span>
+                <span className="shrink-0 text-[11.5px] max-md:text-[12px] text-noct-neutral-400">{opcion.count}</span>
               )}
               {activa && opcion.count == null && (
                 <Check size={14} className="shrink-0 text-noct-accent-300" aria-hidden />

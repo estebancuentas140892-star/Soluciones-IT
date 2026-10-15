@@ -97,7 +97,7 @@ export function RedPage() {
         {equipo ? (
           <>
             <section>
-              <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
+              <p className="mb-2 text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500">
                 Estás recorriendo
               </p>
               <div className="flex items-center gap-3 rounded-xl border border-noct-accent/[.35] bg-noct-accent/[.08] px-3.5 py-3">

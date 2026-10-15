@@ -80,7 +80,7 @@ export function Historial({ entidadTipo, entidadId }: Props) {
         className="flex min-h-[52px] w-full items-center gap-2.5 px-0.5 py-1.5 text-left"
       >
         <TituloSeccion>Historial</TituloSeccion>
-        <span className="text-[11px] text-noct-neutral-600">
+        <span className="text-[11px] max-md:text-[12px] text-noct-neutral-600">
           {eventos.length === 0 ? 'Sin cambios' : `${eventos.length} ${eventos.length === 1 ? 'cambio' : 'cambios'}`}
         </span>
         {abierto ? (
@@ -281,7 +281,7 @@ function BloqueJson({
   return (
     <div>
       <p className="mb-1 font-medium text-noct-neutral-400">{titulo}</p>
-      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-noct-divider bg-noct-bg p-2 text-[11px] text-noct-neutral-400">
+      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg border border-noct-divider bg-noct-bg p-2 text-[11px] max-md:text-[12px] text-noct-neutral-400">
         {jsonBonito(valor, valorVacio)}
       </pre>
     </div>

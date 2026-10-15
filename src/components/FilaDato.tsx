@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { copiarAlPortapapeles } from '../lib/portapapeles'
+import { avisar } from './avisosFlotantes'
 import { Check, Copy } from './iconos'
 
 // Fila de etiqueta y valor de una ficha, y el piso de legibilidad del
@@ -105,11 +106,17 @@ export function BotonCopiar({
   texto,
   destacado = false,
   conTexto = false,
+  aviso,
 }: {
   etiqueta: string
   texto: string
   destacado?: boolean
   conTexto?: boolean
+  /**
+   * El aviso flotante al copiar ("IP copiada: 10.0.0.5", tarea 341). Solo
+   * para lo que se puede leer en voz alta: nunca un secreto.
+   */
+  aviso?: string
 }) {
   const [copiado, setCopiado] = useState(false)
 
@@ -117,14 +124,16 @@ export function BotonCopiar({
     if (await copiarAlPortapapeles(texto)) {
       setCopiado(true)
       setTimeout(() => setCopiado(false), 1400)
+      if (aviso) avisar(aviso, 'copiado')
     }
   }
 
+  // En el teléfono, 44 px de objetivo y el verbo a 14 (tarea 341).
   const clase = conTexto
-    ? 'gap-1.5 bg-noct-text/[.07] px-2.5 text-[12.5px] font-medium text-noct-neutral-200 hover:bg-noct-text/[.13]'
+    ? 'gap-1.5 bg-noct-text/[.07] px-2.5 text-[12.5px] font-medium text-noct-neutral-200 hover:bg-noct-text/[.13] max-md:text-[14px]'
     : destacado
       ? 'w-11 bg-noct-text/[.06] text-noct-neutral-300 hover:bg-noct-text/[.11]'
-      : 'w-9 text-noct-neutral-400 hover:bg-noct-text/[.05]'
+      : 'w-9 text-noct-neutral-400 hover:bg-noct-text/[.05] max-md:w-11'
   const tamano = destacado || conTexto ? 17 : 16
 
   return (

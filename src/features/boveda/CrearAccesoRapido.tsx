@@ -3,8 +3,9 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Modal } from '../../components/Modal'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { ArrowsClockwise, Eye, EyeSlash, Key, LockSimple, X } from '../../components/iconos'
-import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { BTN_ICONO_SECUNDARIO, BTN_PRIMARIO, BTN_PRIMARIO_DOMINANTE, BTN_SECUNDARIO } from '../../components/nocturne'
 import { Campo, CampoConSugerencias, CLASE_CAMPO, CLASE_CAMPO_MONO, CLASE_ETIQUETA } from '../../components/campos'
+import { avisar } from '../../components/avisosFlotantes'
 import { db } from '../../lib/db'
 import { generarContrasena } from '../../lib/generarContrasena'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
@@ -150,7 +151,7 @@ export function CrearAccesoRapido({ abierto, onCerrar, tituloInicial = '', onCre
         <DesbloqueoEnLinea />
       ) : (
         <form onSubmit={manejarEnvio} className="flex max-h-[60vh] flex-col gap-3 overflow-y-auto px-0.5 pb-0.5">
-          <p className="inline-flex items-center gap-1.5 text-[11.5px] text-noct-neutral-500">
+          <p className="inline-flex items-center gap-1.5 text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
             <LockSimple size={12} aria-hidden />
             Se guarda cifrada y queda vinculada a esta tarea
           </p>
@@ -278,6 +279,8 @@ function DesbloqueoEnLinea() {
     const resultado = await desbloquear(contrasena)
     setAbriendo(false)
     if (resultado) setError(resultado)
+    // Lo de debajo no se desmonta; el aviso dice que ya está (tarea 341).
+    else avisar('Bóveda desbloqueada', 'candado')
   }
 
   return (
@@ -293,9 +296,9 @@ function DesbloqueoEnLinea() {
           value={contrasena}
           onChange={(e) => setContrasena(e.target.value)}
           placeholder="Contraseña maestra"
-          className="min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
+          className="min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm max-md:text-[16px] text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
         />
-        <button type="submit" disabled={abriendo} className={`shrink-0 ${BTN_PRIMARIO} disabled:opacity-45`}>
+        <button type="submit" disabled={abriendo} className={`shrink-0 ${BTN_PRIMARIO_DOMINANTE} disabled:opacity-45`}>
           <Key size={14} aria-hidden />
           {abriendo ? 'Abriendo...' : 'Desbloquear'}
         </button>

@@ -96,7 +96,7 @@ export function FilaIndice({
         onClick={onAbrir}
         aria-haspopup={abre === 'hoja' ? 'dialog' : undefined}
         aria-expanded={abre === 'hoja' ? abierta : undefined}
-        className={`flex min-h-[52px] w-full items-center gap-3 border-b border-noct-divider text-left text-noct-text hover:bg-noct-text/[.04] xl:min-h-11 ${
+        className={`flex min-h-[52px] w-full items-center gap-3 border-b border-noct-divider text-left text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado xl:min-h-11 ${
           abierta ? 'md:-mx-1.5 md:w-[calc(100%+12px)] md:rounded-[9px] md:border-transparent md:bg-noct-accent/[.12] md:px-1.5' : ''
         }`}
       >
@@ -183,7 +183,7 @@ export function ResolverConEsteEquipo({
             <Link
               to={item.ruta}
               // 64 en el teléfono, 60 en la tableta y 54 desde 1280 (densa).
-              className="flex min-h-16 items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-[60px] xl:min-h-[54px] xl:py-1.5"
+              className="flex min-h-16 items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado md:min-h-[60px] xl:min-h-[54px] xl:py-1.5"
             >
               <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] bg-noct-text/[.06] text-noct-neutral-300 xl:h-[34px] xl:w-[34px] xl:rounded-[10px]">
                 <item.Icono size={19} aria-hidden />
@@ -327,7 +327,7 @@ export function BarraAccionEquipo({
             onClick={onCredenciales}
             aria-haspopup="dialog"
             aria-label="Credenciales del equipo"
-            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[15px] border-[1.5px] border-noct-text/25 text-noct-text hover:bg-noct-text/[.06]"
+            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[15px] border-[1.5px] border-noct-text/25 text-noct-text hover:bg-noct-text/[.06] max-md:active:bg-noct-presionado"
           >
             <Key size={21} aria-hidden />
           </button>

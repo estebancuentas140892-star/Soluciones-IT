@@ -118,7 +118,7 @@ export function PanelSync({ abierto, onCerrar }: Props) {
                 className="flex flex-col gap-2 rounded-lg border border-noct-error/35 bg-noct-error/[.08] px-3 py-2.5"
               >
                 <p className="text-xs text-noct-error">{grupo.explicacion}</p>
-                <p className="text-[11px] text-noct-neutral-400">
+                <p className="text-[11px] max-md:text-[12px] text-noct-neutral-400">
                   {grupo.cambios.length === 1
                     ? 'Afecta a 1 ficha:'
                     : `Afecta a ${grupo.cambios.length} fichas:`}
@@ -155,7 +155,7 @@ export function PanelSync({ abierto, onCerrar }: Props) {
                         <button
                           type="button"
                           onClick={() => setDescartando(cambio.id)}
-                          className="self-start text-[11px] text-noct-neutral-500 underline underline-offset-2"
+                          className="self-start text-[11px] max-md:text-[12px] text-noct-neutral-500 underline underline-offset-2"
                         >
                           Descartar ({descripcion.intentos} intentos)
                         </button>

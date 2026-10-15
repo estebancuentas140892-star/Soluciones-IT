@@ -81,7 +81,7 @@ export function ChipReferencia({
         >
           <Icono size={13} className="shrink-0 text-noct-accent-300" aria-hidden />
           <span className="min-w-0 truncate">{rotulo ?? titulo}</span>
-          {!disponible && <span className="shrink-0 text-[11px]">no disponible</span>}
+          {!disponible && <span className="shrink-0 text-[11px] max-md:text-[12px]">no disponible</span>}
         </span>
       </button>
 
