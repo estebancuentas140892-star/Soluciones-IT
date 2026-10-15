@@ -1,5 +1,66 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-14: el sistema "1b Pulgar" en tableta y escritorio
+
+### 340. El foco no entra al panel lateral ni a los diálogos al abrirlos (hallazgo de la 339)
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), junto con la 339. Hallazgo de la 339.
+
+**Causa:** `src/components/Modal.tsx` declaraba `role="dialog"` y `aria-modal="true"`, cerraba con Esc y con un clic fuera y bloqueaba el desplazamiento del fondo, pero no movía el foco al abrir, no lo atrapaba ni lo devolvía al cerrar. El handoff de tableta y escritorio daba por hecho "foco atrapado como hoy"; con el panel al costado (339), Tab recorría la pantalla de detrás del velo.
+
+**Qué cambió:** el foco entra al abrir (al diálogo, o al campo con `autoFocus` si ya lo tomó), Tab y Mayús+Tab dan la vuelta dentro (solo el diálogo de encima) y al cerrar vuelve a lo que lo abrió (en un teléfono, nunca a un campo de texto). El diálogo lleva `data-foco-lectura` para no dibujar anillo al recibir el foco.
+
+**Paridad móvil:** comprobada con las capturas de la 339 a 320, 375, 390 y 767 px en oscuro frente a `main`: 152 de 176 idénticas píxel a píxel; las 24 restantes eran el anillo de foco del diálogo, corregido con `data-foco-lectura` (`40f733d`).
+
+**Integración:** `1b297d1` (2026-10-14, complemento de T2) y `40f733d` (2026-10-15), en la rama `feat/responsive-pulgar`; entraron en `main` con la 339 en el mismo avance rápido (`c6ebefb..8aa3e0c`). CI, Vercel y `/version.json`, los de la 339.
+
+**Verificación:** prueba en `src/app/chasisPorAncho.test.tsx`, dentro de la suite completa de la 339 (218 archivos, 3372 pruebas), `tsc -b`, lint y build en verde; producción comprobada con la 339 (reglas 14 y 21). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `src/components/Modal.tsx` (lo heredan `HojaInferior`, `DialogoEliminar`, `PanelSync` y `HojaFiltro`); prueba en `src/app/chasisPorAncho.test.tsx`.
+
+### 339. Tableta y escritorio, T1 a T11: el sistema "1b Pulgar" en todos los anchos
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), tras revisar la versión publicada. Encargo del usuario del 2026-10-14: extender a tableta y escritorio el sistema móvil aprobado (327 a 335), sin volver al escritorio anterior y sin una tercera identidad, con el artifact de Claude Design "Soluciones IT · Tableta y escritorio" como fuente de verdad de UX/UI ([DECISIONES.md](DECISIONES.md) AD-088).
+
+**Qué cambió:** solo composición y presentación por ancho, en once pasos con su commit cada uno:
+
+- **T1 y T2, chasis y panel lateral:** el buscador de cada raíz (Resolver, Equipos, Bóveda) en un solo punto de montaje decidido con `useEsAncho` (el dock por debajo de 768 px, la barra superior desde 768; nunca dos `CampoBusqueda` vivos); el disparador del buscador global con forma de campo y la tecla "/" desde 1280; la acción principal de un documento en su cabecera desde 768 (`accionPrincipal`); botones y filas por banda; margen por banda y barra lateral del lienzo; `HojaInferior` como panel lateral derecho de 420, 440 y 480 px.
+- **T3 a T9, las pantallas:** Resolver en tres zonas por contenedor y filas densas; la ficha de equipo en dos columnas en tableta y como documento con índice en escritorio; la guía con columna de trabajo 576/640, pie por banda e índice persistente desde 1280; el buscador global arriba en tableta y como paleta 880/960 con vista rápida al lado en escritorio; la Agenda con fecha | sin fecha abierto y actividad desde 1024; Mantenimiento en tabla con lo documentado aparte y Facturación en tres capas en paralelo; Más con el directorio y Mis favoritos en su columna desde 1280.
+- **T10, zonas de 1680:** la ficha entre la lista de Equipos y su índice; Resolver y Agenda en tres.
+- **T11, tema claro:** profundidad por sombra, punteado de lo documentado, tintes al 11 % y auditoría de contraste.
+- El teléfono no cambia.
+
+**Integración:** rama `feat/responsive-pulgar` desde `c6ebefb`, un commit por paso; T1 y T2 reutilizan el commit `45a439b` de la rama `feat/pulgar-tableta-escritorio-t1-t2` (misma base), revisado contra el handoff (`0ef50cc` en `main`). El usuario revisó las capturas y autorizó integrar: entró en `main` el 2026-10-15 por avance rápido, sin rebase, squash ni commit de merge (`c6ebefb..8aa3e0c`; último commit de código `40f733d`), con el registro documental en `8aa3e0c`, `ab5a45d` y `f94e4ab`. CI en verde (runs 38727915989 para `8aa3e0c`, 38728205143 para `ab5a45d` y 38729458160 para `f94e4ab`), Vercel Production con el despliegue completado (7091380048 para `8aa3e0c` y 7091638723 para `f94e4ab`) y `/version.json` sirviendo `{"version":"f94e4ab","compiladoEn":"2026-10-15T11:45:28.858Z"}` antes de este cierre.
+
+**Verificación:**
+
+- **2026-10-14 (T1 y T2):** suite completa (214 archivos, 3353 pruebas), `tsc -b`, lint y build en verde. A 390 px, las capturas comparadas con `c6ebefb`: las distintas eran la hoja inferior, que había perdido su sombra y su centrado desde 640 px (corregido, con una guarda nueva en `sistemaVisual.test.ts`), y el cursor que parpadea en `guia-lupa` (ruido). Revisadas a mano en el navegador a 1280 y 768.
+- **2026-10-15 (T1 a T11):** suite completa (218 archivos, 3372 pruebas), `tsc -b`, lint, build y `verificar-precache` en verde. Prueba sin conexión idéntica a `c6ebefb` línea a línea (73 OK; los 7 fallos ya estaban en `main`).
+- **Revisión responsive:** capturas de 320, 375, 390, 767, 768 x 1024, 1024 x 768, 1280 x 832 y 1680 x 1050 en oscuro y claro, sin desbordes ni hallazgos nuevos frente a `main`; a 320/375/390/767 en oscuro, 152 de 176 idénticas píxel a píxel a `main` (las 24 restantes, el anillo de foco de la 340). Contraste a 1280 en los dos temas sin regresiones.
+- **Producción (reglas 14 y 21):** `/version.json` con `8aa3e0c` y después `f94e4ab`, estado de Vercel `success` y, por contenido, los trozos que precachea `sw.js` con `data-margen-banda`, `data-zona-documento`, "buscar desde cualquier pantalla", "Pasos de la guía" y `--tinte-estado`. Integración continua en verde.
+- **Revisión visual del usuario: aprobada en Production el 2026-10-15** (teléfono, tableta y escritorio).
+
+**No se hizo, a propósito:** las recomendaciones de producto RP-A a RP-G del handoff. Ningún cambio en Supabase, `schema.sql`, Dexie, la sincronización, datos, permisos, reglas de negocio, textos ni marcadores.
+
+**Área afectada:** `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `DockBusqueda.tsx`, `CampoBusqueda.tsx`, `CabeceraColapsable.tsx`, `HojaInferior.tsx`, `Modal.tsx`, `nocturne.tsx`, `useEsAncho.ts` (nuevo), `src/index.css`, `src/pruebas/setup.ts` y las pantallas de `src/features/` que recompone cada paso (detalle por paso en el [CHANGELOG.md](CHANGELOG.md) del 2026-10-14); `scripts/capturas-moviles.mjs`; pruebas `src/app/chasisPorAncho.test.tsx` (nueva) y `src/components/sistemaVisual.test.ts`; documentación en DECISIONES.md (AD-088), COMPONENTES_UI.md, DOCUMENTACION_FUNCIONAL.md y ARQUITECTURA.md.
+
+### 338. Limitar "1b Pulgar" al teléfono (rama `fix/pulgar-solo-movil`)
+
+**Estado:** Superada (2026-10-14), sin integrar. **Tarea 338: dirección visual superada por decisión posterior del usuario.** No es un fallo técnico: la rama hacía lo que se le pidió; lo que cambió fue la dirección.
+
+**Historia:**
+
+- Al principio, el rediseño "1b Pulgar" (tareas 327 a 335) se interpretó como un diseño exclusivo para el teléfono (por debajo de 768 px).
+- Como sus tokens y sus clases también habían cambiado tableta y escritorio, se preparó una corrección para recuperar el escritorio anterior: la rama `fix/pulgar-solo-movil`, con un solo commit (`1b324d0`, 2026-10-14, sobre `c6ebefb`) que llevaba los tokens del rediseño a `@media (width < 48rem)` y devolvía tableta y escritorio al lenguaje visual de antes, con su propia decisión (AD-087) y una regla 31 que solo existen en esa rama.
+- Después, el mismo 2026-10-14, el usuario aprobó extender la nueva identidad a toda la aplicación.
+- Claude Design produjo el handoff específico de tableta y escritorio ("Soluciones IT · Tableta y escritorio").
+- La implementación final se hizo con las tareas 339 y 340, cerradas el 2026-10-15.
+- Por eso la 338 no se integra.
+
+**Rama:** `fix/pulgar-solo-movil` (`1b324d0`, local y en `origin`), sin integrar y congelada. Con su worktree (`C:\Users\ecardona\dev\sit-pulgar-solo-movil`) se conserva, sin borrar, hasta la limpieza controlada, que necesita la autorización expresa del usuario. No guarda trabajo que haga falta recuperar.
+
+**Área afectada:** ninguna en `main`. AD-087 y la regla 31 de esa rama no existen en `main` y no se aplican.
+
 ## Encargo del 2026-10-10: siguiente fase después de la conciliación de datos
 
 ### 326. Guardar sin red con el token vencido no espera 25 segundos ni pierde el autor

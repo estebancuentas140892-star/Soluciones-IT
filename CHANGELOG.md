@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-15
 
+### Documentación (tareas 338, 339 y 340): cierre del rediseño responsive tras la aprobación visual del usuario
+
+**Área modificada:** [TAREAS.md](TAREAS.md) (encargo del 2026-10-14 cerrado, 339 y 340 retiradas del tablero, 322 preparada para retomarse), [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (339, 340 y 338), [DECISIONES.md](DECISIONES.md) (estado de AD-088), [ARQUITECTURA.md](ARQUITECTURA.md) y [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (estado de la sección de tableta y escritorio).
+**Tipo:** Modificado (documentación).
+**Motivo:** el usuario revisó en Production la versión publicada (`f94e4ab`) y la aprobó ("se ve bien"): con esa confirmación quedan aprobadas visualmente la 339 y la 340.
+**Qué cambia:**
+- La 339 (tableta y escritorio, T1 a T11) y la 340 (el foco del panel y los diálogos) quedan cerradas y archivadas: implementadas, integradas en `main`, desplegadas en Production, con la integración continua y Vercel verificados, la revisión responsive hecha y la aprobación visual del usuario.
+- La 338 queda archivada como **"Tarea 338: dirección visual superada por decisión posterior del usuario"**, no como fallo técnico: su rama `fix/pulgar-solo-movil` no se integra.
+- Las ramas y los worktrees del encargo se conservan, sin borrar, hasta una limpieza controlada con autorización expresa del usuario; después se retoma la 322.
+**Estructura de datos:** sin cambios. Solo documentación: ni código, ni Supabase, ni `schema.sql`, ni Dexie, ni la sincronización, ni datos.
+**Impacto esperado:** ninguno en la app; el tablero refleja el estado real.
+
 ### Integrado (tarea 339 y 340): el sistema "1b Pulgar" en tableta y escritorio llega a `main`
 
 **Área modificada:** la rama `feat/responsive-pulgar` (pasos T1 a T11 y la tarea 340, detallados abajo, en las entradas del 2026-10-14) entra en `main` por avance rápido desde `c6ebefb`.
