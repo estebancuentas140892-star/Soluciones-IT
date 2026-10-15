@@ -12,7 +12,7 @@ import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
 import { DockBusqueda } from '../components/DockBusqueda'
 import { Marca } from '../components/Marca'
-import { ANCHO_ESCRITORIO, useEsAncho } from '../components/useEsAncho'
+import { ANCHO_AMPLIO, ANCHO_ESCRITORIO, useEsAncho } from '../components/useEsAncho'
 import { huecoAvisoActualizacionChasis } from '../components/ranuraAvisoActualizacion'
 import { CapaAtajos } from './CapaAtajos'
 import { ProveedorBandaBajoTarea, ProveedorBandaTarea } from './bandaTarea'
@@ -222,6 +222,16 @@ interface PropsDocumento extends PropsComunes {
   accionPrincipal?: ReactNode
   /** Banda bajo la fila de regreso: título, buscador, pestañas internas. */
   barra?: ReactNode
+  /**
+   * LAS TRES ZONAS DE 1680 (tarea 199, presupuesto del chasis; tarea 339,
+   * T10): desde 1680 px el documento se lee entre su `lista` (de dónde
+   * viene: la lista de su sección) y su `contexto` (su índice), en
+   * 322 + 720 + 252 = 1294 px. La cabecera y el documento van en la zona
+   * del medio, que lleva el nombre siempre a la vista (la lista ya dice de
+   * dónde viene). Por debajo de 1680 las zonas no se montan: la pantalla
+   * sigue pintando lo suyo donde siempre (`useEsAncho(ANCHO_AMPLIO)`).
+   */
+  zonas?: { lista?: ReactNode; contexto?: ReactNode }
 }
 
 interface PropsTarea extends PropsComunes {
@@ -363,6 +373,8 @@ export function Chasis(props: Props) {
   // Escritorio (desde 1280): la columna del índice de una tarea `amplio`
   // existe o no existe (es otro punto de montaje, T5).
   const escritorio = useEsAncho(ANCHO_ESCRITORIO)
+  // Escritorio amplio (desde 1680): las zonas de un documento (T10).
+  const amplio = useEsAncho(ANCHO_AMPLIO)
   const conIndice = props.modo === 'tarea' && Boolean(props.amplio) && escritorio
   useLayoutEffect(() => {
     // La cabecera es el bloque pegajoso que contiene la ranura de abajo.
@@ -520,6 +532,10 @@ export function Chasis(props: Props) {
   const volverA = props.modo === 'documento' ? (origen?.to ?? props.volverA) : undefined
   const volverEtiqueta = props.modo === 'documento' ? (origen?.etiqueta ?? props.volverEtiqueta) : undefined
   const contexto = props.modo === 'documento' ? (origen?.etiqueta ?? props.contexto) : undefined
+  // Las tres zonas, solo desde 1680 y solo si el documento las trae.
+  const zonas = props.modo === 'documento' && amplio ? props.zonas : undefined
+  // Con la lista al lado, el nombre va siempre en la cabecera.
+  const tituloVisible = props.modo === 'documento' ? (zonas ? true : props.tituloVisible) : undefined
 
   // El regreso de una sección que no es raíz de pestaña (ver arriba).
   const padreSeccion = props.modo === 'documento' ? null : padreDe(location.pathname)
@@ -558,7 +574,12 @@ export function Chasis(props: Props) {
             principal de 48 de la tableta sin tocar los bordes. */}
         {/* Su margen es el de la banda (T1): el regreso, 10 px antes del
             margen del contenido, para que su icono caiga en la misma línea. */}
-        <div className="flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5 md:min-h-[60px] md:gap-2.5 md:pl-3.5 md:pr-6 md:pt-0 lg:pl-[22px] lg:pr-8 xl:pl-[30px] xl:pr-10">
+        <div
+          className={`flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5 md:min-h-[60px] md:gap-2.5 md:pl-3.5 md:pr-6 md:pt-0 lg:pl-[22px] lg:pr-8 ${
+            // En la zona del medio de 1680, el margen de esa zona (32).
+            zonas ? 'xl:pl-[22px] xl:pr-8' : 'xl:pl-[30px] xl:pr-10'
+          }`}
+        >
           {props.titulo ? (
             <div className="flex min-w-0 flex-1 items-center gap-0.5">
               <BotonVolver to={volverA} soloIcono estado={estadoDeRegreso(origen)}>
@@ -568,7 +589,7 @@ export function Chasis(props: Props) {
                 {/* Mientras la pantalla enseña el nombre en grande, aquí solo
                     a dónde se vuelve (tarea 329). Es texto de apoyo: el
                     regreso ya tiene su nombre accesible. */}
-                {props.tituloVisible === false && (
+                {tituloVisible === false && (
                   <p
                     aria-hidden
                     className="absolute inset-0 flex items-center truncate text-[15px] text-noct-neutral-400"
@@ -578,7 +599,7 @@ export function Chasis(props: Props) {
                 )}
                 <h1
                   className={`min-w-0 transition-opacity duration-150 motion-reduce:transition-none ${
-                    props.tituloVisible === false ? 'opacity-0' : 'opacity-100'
+                    tituloVisible === false ? 'opacity-0' : 'opacity-100'
                   }`}
                 >
                   {contexto && (
@@ -735,8 +756,34 @@ export function Chasis(props: Props) {
           data-margen-banda
           className={`mx-auto flex w-full flex-1 flex-col ${ANCHO_CONTENIDO} ${ALTO_PESTANAS}`}
         >
-          {cabecera}
-          {props.children}
+          {zonas ? (
+            // LAS TRES ZONAS (desde 1680, T10): la lista y el contexto,
+            // pegados arriba con su propio desplazamiento; el documento en
+            // medio, con su cabecera y su margen de 32 (`data-zona-documento`).
+            <div className="grid flex-1 grid-cols-[322px_720px_252px]">
+              <aside
+                aria-label="Lista"
+                className="sticky top-0 h-svh overflow-y-auto border-r border-noct-divider"
+              >
+                {zonas.lista}
+              </aside>
+              <div data-zona-documento className="flex min-w-0 flex-col">
+                {cabecera}
+                {props.children}
+              </div>
+              <aside
+                aria-label="Contexto"
+                className="sticky top-0 h-svh overflow-y-auto border-l border-noct-divider px-4 py-5"
+              >
+                {zonas.contexto}
+              </aside>
+            </div>
+          ) : (
+            <>
+              {cabecera}
+              {props.children}
+            </>
+          )}
           {dock}
           {/* FRANJA DEL AVISO DE VERSIÓN NUEVA (tarea 274). La pastilla
               flotaba sobre el contenido y al final de Resolver tapaba los

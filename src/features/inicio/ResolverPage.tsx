@@ -325,9 +325,10 @@ export function ResolverPage() {
           // de lectura no cambia nunca; el ancho del contenedor decide cuántas
           // caben lado a lado. Por debajo de 880 px, una columna (teléfono y
           // tableta vertical); desde 880, A | B y C debajo, de lado a lado
-          // tras una línea (tableta horizontal y escritorio). Sin bloques
-          // nuevos.
-          <div className="flex flex-col gap-[22px] md:gap-[30px] @[880px]:grid @[880px]:grid-cols-2 @[880px]:items-start @[880px]:gap-x-10">
+          // tras una línea (tableta horizontal y escritorio). Desde 1100 de
+          // contenido (1680, T10), las tres lado a lado, con C como un índice
+          // vertical de 252. Sin bloques nuevos.
+          <div className="flex flex-col gap-[22px] md:gap-[30px] @[880px]:grid @[880px]:grid-cols-2 @[880px]:items-start @[880px]:gap-x-10 @[1100px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_252px] @[1100px]:gap-x-11">
             {!agendaCargando && <BloqueAtencion agenda={agenda} />}
             {(seguir || otrasRecientes.length > 0) && (
               <div className="flex flex-col gap-[22px] md:gap-[26px]">
@@ -338,7 +339,7 @@ export function ResolverPage() {
                 <BloqueRecientes recientes={otrasRecientes} />
               </div>
             )}
-            <div className="@[880px]:col-span-2 @[880px]:border-t @[880px]:border-noct-divider @[880px]:pt-5">
+            <div className="@[880px]:col-span-2 @[880px]:border-t @[880px]:border-noct-divider @[880px]:pt-5 @[1100px]:col-span-1 @[1100px]:border-t-0 @[1100px]:pt-0">
               <BloqueAccesos accesos={accesos} />
             </div>
 
@@ -347,7 +348,7 @@ export function ResolverPage() {
                 empujar nada, se retira sola en cuanto hay trabajo real y,
                 cumplida, no vuelve. */}
             {consultasListas && (
-              <div className="empty:hidden @[880px]:col-span-2">
+              <div className="empty:hidden @[880px]:col-span-2 @[1100px]:col-span-3">
                 <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
               </div>
             )}
@@ -416,7 +417,7 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
           lo mismo que la de al lado, que lleva el enlace a la Agenda. */}
       <h2
         id="resolver-seguir"
-        className="text-[17px] font-semibold tracking-[-.01em] @[880px]:flex @[880px]:min-h-11 @[880px]:items-center xl:min-h-0"
+        className="text-[17px] font-semibold tracking-[-.01em] @[880px]:flex @[880px]:items-center lg:min-h-11 xl:min-h-0"
       >
         Seguir donde ibas
       </h2>
@@ -611,7 +612,9 @@ function BloqueAccesos({ accesos }: { accesos: AccesoRapido[] }) {
         </Link>
       </div>
       {accesos.length > 0 && (
-        <div className="flex flex-wrap gap-2">
+        // Desde 1100 de contenido (1680), un índice vertical: una fila por
+        // categoría con su libro y cuántas guías tiene, a la derecha (T10).
+        <div className="flex flex-wrap gap-2 @[1100px]:flex-col @[1100px]:flex-nowrap @[1100px]:gap-0">
           {accesos.map((acceso) => (
             <Link
               key={acceso.categoriaId}
@@ -619,10 +622,11 @@ function BloqueAccesos({ accesos }: { accesos: AccesoRapido[] }) {
               state={ORIGEN_RESOLVER}
               aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
               // Desde 1280, el chip denso del escritorio (34 px, con puntero).
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-noct-text/25 px-3.5 text-[14.5px] font-[550] text-noct-text hover:bg-noct-text/[.05] xl:min-h-[34px] xl:rounded-[10px] xl:px-3 xl:text-[13.5px]"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-noct-text/25 px-3.5 text-[14.5px] font-[550] text-noct-text hover:bg-noct-text/[.05] xl:min-h-[34px] xl:rounded-[10px] xl:px-3 xl:text-[13.5px] @[1100px]:-mx-2 @[1100px]:min-h-10 @[1100px]:gap-2.5 @[1100px]:rounded-lg @[1100px]:border-0 @[1100px]:px-2 @[1100px]:text-[14px] @[1100px]:font-medium"
             >
+              <BookOpen size={15} className="hidden shrink-0 text-noct-neutral-500 @[1100px]:block" aria-hidden />
               {acceso.nombre}
-              <span className="font-mono text-[12.5px] text-noct-neutral-500">{acceso.guias}</span>
+              <span className="font-mono text-[12.5px] text-noct-neutral-500 @[1100px]:ml-auto">{acceso.guias}</span>
             </Link>
           ))}
         </div>

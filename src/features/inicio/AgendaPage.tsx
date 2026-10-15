@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Chasis } from '../../app/Chasis'
-import { ANCHO_TABLETA_HORIZONTAL, useEsAncho } from '../../components/useEsAncho'
+import { ANCHO_AMPLIO, ANCHO_TABLETA_HORIZONTAL, useEsAncho } from '../../components/useEsAncho'
 import { ActividadDelEquipo } from '../historial/ActividadDelEquipo'
 import { agruparAgenda, fechaDeHoy } from './agenda'
 import { ContadoresAgenda, SeccionesAgenda } from './SeccionesAgenda'
@@ -34,7 +34,10 @@ export function AgendaPage() {
   // y "Sin fecha", abierto, con la actividad del equipo en su columna. Cambia
   // la estructura (un pliegue o una columna), así que se decide aquí.
   const enColumnas = useEsAncho(ANCHO_TABLETA_HORIZONTAL)
-  const disposicion = enColumnas ? 'dos' : 'columna'
+  // Desde 1680, tres columnas de lectura (T10): lo que urge, lo que viene
+  // (todos los próximos) y lo que no vence.
+  const enTres = useEsAncho(ANCHO_AMPLIO)
+  const disposicion = enTres ? 'tres' : enColumnas ? 'dos' : 'columna'
 
   return (
     // Nivel documento: se consulta y se vuelve. Sube a Resolver (padreDe).

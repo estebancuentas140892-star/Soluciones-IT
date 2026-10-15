@@ -22,7 +22,7 @@ import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { BotonCopiar, FilaDato } from '../../components/FilaDato'
 import { HojaInferior } from '../../components/HojaInferior'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
-import { useEsAncho } from '../../components/useEsAncho'
+import { ANCHO_AMPLIO, useEsAncho } from '../../components/useEsAncho'
 import { useGrafo } from '../../components/useGrafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
@@ -65,6 +65,7 @@ import { problemasDeCategoria, problemasDeDispositivo } from './problemasDeDispo
 import { Historial } from '../historial/Historial'
 import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
 import { AvisosDelEquipo, BarraAccionEquipo, FilaIndice, ResolverConEsteEquipo, type AvisoEquipo, type ItemResolver } from './PiezasFicha'
+import { ZonaListaEquipos } from './ZonaListaEquipos'
 import { rutaGuiaConEquipo } from '../soluciones/contextoEjecucion'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { CredencialesDelEquipo } from './CredencialesDelEquipo'
@@ -194,6 +195,9 @@ export function DispositivoPage() {
   // "Resolver un problema" va en la barra fija del teléfono y, desde 768 px,
   // en la cabecera del documento (tarea 339): una sola vez por ventana.
   const ancho = useEsAncho()
+  // Desde 1680, la ficha entre la lista de Equipos y su índice (T10): el
+  // índice deja el documento y pasa a su zona, una sola vez por ventana.
+  const amplio = useEsAncho(ANCHO_AMPLIO)
   // EL NOMBRE SUBE A LA CABECERA AL DESPLAZARSE (tarea 329): mientras el
   // carnet está a la vista, la cabecera dice solo a dónde se vuelve; cuando
   // el nombre grande sale por arriba, aparece en ella (M-R1 se cumple: el
@@ -546,6 +550,92 @@ export function DispositivoPage() {
       ? { onAbrir: () => setHoja('resolver') }
       : null
 
+  // MÁS DEL EQUIPO: un índice de un solo nivel (antes, un pliegue con
+  // pliegues dentro). Cada fila dice lo que guarda y abre su hoja;
+  // una sola a la vez. En dos columnas en la tableta y, desde 1280,
+  // en su columna de 344, pegado bajo la cabecera (T4). Desde 1680, en la
+  // zona de contexto del chasis, que ya va pegada y se desplaza sola (T10).
+  const masDelEquipo = (
+    <section
+      aria-labelledby="mas-del-equipo"
+      className="flex flex-col xl:sticky xl:top-[84px] xl:col-start-2 xl:row-span-2 xl:row-start-1 3xl:static"
+    >
+      <h2 id="mas-del-equipo" className="pb-1 text-[17px] font-semibold tracking-[-.01em] xl:pb-1.5">
+        Más del equipo
+      </h2>
+      <ul className="flex flex-col md:grid md:grid-cols-2 md:gap-x-7 xl:flex">
+        <FilaIndice Icono={Info} titulo="Más datos" valor={`${totalMasDatos}`} abierta={hoja === 'datos'} onAbrir={() => setHoja('datos')} />
+        {hayImpacto && (
+          <FilaIndice
+            Icono={WarningOctagon}
+            titulo="Si falla, caen"
+            valor={`${equiposEnRiesgo} ${equiposEnRiesgo === 1 ? 'equipo' : 'equipos'}`}
+            tono="precaucion"
+            abierta={hoja === 'impacto'}
+            onAbrir={() => setHoja('impacto')}
+          />
+        )}
+        <FilaIndice
+          Icono={PlugsConnected}
+          titulo="Conexiones"
+          valor={totalConexiones === 0 ? 'Ninguna' : `${totalConexiones}`}
+          abierta={hoja === 'conexiones'}
+          onAbrir={() => setHoja('conexiones')}
+        />
+        {conCredenciales && (
+          <FilaIndice
+            Icono={Key}
+            titulo="Credenciales"
+            valor={totalCredenciales === 0 ? 'Ninguna' : `${totalCredenciales}`}
+            abierta={hoja === 'credenciales'}
+            onAbrir={() => setHoja('credenciales')}
+          />
+        )}
+        {conCredenciales && (
+          <FilaIndice
+            Icono={LockSimple}
+            titulo="Datos protegidos"
+            valor={totalCamposProtegidos === 0 ? 'Ninguno' : `${totalCamposProtegidos}`}
+            abierta={hoja === 'seguridad'}
+            onAbrir={() => setHoja('seguridad')}
+          />
+        )}
+        <FilaIndice
+          Icono={Paperclip}
+          titulo="Adjuntos"
+          valor={totalAdjuntos === 0 ? 'Ninguno' : `${totalAdjuntos}`}
+          abierta={hoja === 'adjuntos'}
+          onAbrir={() => setHoja('adjuntos')}
+        />
+        {/* Mantenimiento se trabaja: abre su pantalla (tarea 331). */}
+        <FilaIndice
+          Icono={Wrench}
+          titulo="Mantenimiento"
+          valor={conteoDeMantenimientos(mantenimientos)}
+          abre="pantalla"
+          onAbrir={() => navigate(`/dispositivos/${dispositivoId}/mantenimientos`, { state: origenEsteEquipo })}
+        />
+        {tieneFacturacion && (
+          <FilaIndice
+            Icono={Storefront}
+            titulo="Facturación"
+            valor={facturacion.texto}
+            tono={facturacion.revisar ? 'precaucion' : 'neutro'}
+            abierta={hoja === 'facturacion'}
+            onAbrir={() => setHoja('facturacion')}
+          />
+        )}
+        <FilaIndice
+          Icono={ClockCounterClockwise}
+          titulo="Intervenciones"
+          valor={intervencionesValor}
+          abierta={hoja === 'intervenciones'}
+          onAbrir={() => setHoja('intervenciones')}
+        />
+      </ul>
+    </section>
+  )
+
   return (
     // Nivel 2 del chasis (tarea 185): documento. Conserva las pestañas
     // (R19) y el regreso es contextual: un equipo de red vuelve a Red,
@@ -562,6 +652,8 @@ export function DispositivoPage() {
       contexto={[esRed ? 'Red' : 'Equipos', ubicacionNombre].filter(Boolean).join(' · ')}
       tituloVisible={!nombreALaVista}
       pestanasSeOcultanAlBajar
+      // Desde 1680: la lista de Equipos y el índice a los lados (T10).
+      zonas={amplio ? { lista: <ZonaListaEquipos actualId={dispositivoId} />, contexto: masDelEquipo } : undefined}
       // Desde 768 px, la acción de la barra fija sube a la cabecera, detrás
       // del menú (tarea 339). El chasis solo la pinta desde 768.
       accionPrincipal={
@@ -674,7 +766,7 @@ export function DispositivoPage() {
           desplazarse. Es la misma lista de piezas: en el teléfono la
           envoltura del documento no existe (`contents`) y el orden de lectura
           no cambia. */}
-      <main className="@container flex flex-1 flex-col gap-6 px-4 pb-4 pt-2 lg:px-10 md:gap-[26px] xl:grid xl:grid-cols-[minmax(0,1fr)_344px] xl:items-start xl:gap-x-12 xl:gap-y-7">
+      <main className="@container flex flex-1 flex-col gap-6 px-4 pb-4 pt-2 lg:px-10 md:gap-[26px] xl:grid xl:grid-cols-[minmax(0,1fr)_344px] xl:items-start xl:gap-x-12 xl:gap-y-7 3xl:flex 3xl:gap-7">
         <div className="contents xl:col-start-1 xl:row-start-1 xl:flex xl:min-w-0 xl:flex-col xl:gap-7">
         {/* Migracion pendiente (hallazgos L2/L3): este equipo reemplaza a
             otro que todavia tiene conexiones, credenciales o campos
@@ -834,88 +926,7 @@ export function DispositivoPage() {
         />
         </div>
 
-        {/* MÁS DEL EQUIPO: un índice de un solo nivel (antes, un pliegue con
-            pliegues dentro). Cada fila dice lo que guarda y abre su hoja;
-            una sola a la vez. En dos columnas en la tableta y, desde 1280,
-            en su columna de 344, pegado bajo la cabecera (T4). */}
-        <section
-          aria-labelledby="mas-del-equipo"
-          className="flex flex-col xl:sticky xl:top-[84px] xl:col-start-2 xl:row-span-2 xl:row-start-1"
-        >
-          <h2 id="mas-del-equipo" className="pb-1 text-[17px] font-semibold tracking-[-.01em] xl:pb-1.5">
-            Más del equipo
-          </h2>
-          <ul className="flex flex-col md:grid md:grid-cols-2 md:gap-x-7 xl:flex">
-            <FilaIndice Icono={Info} titulo="Más datos" valor={`${totalMasDatos}`} abierta={hoja === 'datos'} onAbrir={() => setHoja('datos')} />
-            {hayImpacto && (
-              <FilaIndice
-                Icono={WarningOctagon}
-                titulo="Si falla, caen"
-                valor={`${equiposEnRiesgo} ${equiposEnRiesgo === 1 ? 'equipo' : 'equipos'}`}
-                tono="precaucion"
-                abierta={hoja === 'impacto'}
-                onAbrir={() => setHoja('impacto')}
-              />
-            )}
-            <FilaIndice
-              Icono={PlugsConnected}
-              titulo="Conexiones"
-              valor={totalConexiones === 0 ? 'Ninguna' : `${totalConexiones}`}
-              abierta={hoja === 'conexiones'}
-              onAbrir={() => setHoja('conexiones')}
-            />
-            {conCredenciales && (
-              <FilaIndice
-                Icono={Key}
-                titulo="Credenciales"
-                valor={totalCredenciales === 0 ? 'Ninguna' : `${totalCredenciales}`}
-                abierta={hoja === 'credenciales'}
-                onAbrir={() => setHoja('credenciales')}
-              />
-            )}
-            {conCredenciales && (
-              <FilaIndice
-                Icono={LockSimple}
-                titulo="Datos protegidos"
-                valor={totalCamposProtegidos === 0 ? 'Ninguno' : `${totalCamposProtegidos}`}
-                abierta={hoja === 'seguridad'}
-                onAbrir={() => setHoja('seguridad')}
-              />
-            )}
-            <FilaIndice
-              Icono={Paperclip}
-              titulo="Adjuntos"
-              valor={totalAdjuntos === 0 ? 'Ninguno' : `${totalAdjuntos}`}
-              abierta={hoja === 'adjuntos'}
-              onAbrir={() => setHoja('adjuntos')}
-            />
-            {/* Mantenimiento se trabaja: abre su pantalla (tarea 331). */}
-            <FilaIndice
-              Icono={Wrench}
-              titulo="Mantenimiento"
-              valor={conteoDeMantenimientos(mantenimientos)}
-              abre="pantalla"
-              onAbrir={() => navigate(`/dispositivos/${dispositivoId}/mantenimientos`, { state: origenEsteEquipo })}
-            />
-            {tieneFacturacion && (
-              <FilaIndice
-                Icono={Storefront}
-                titulo="Facturación"
-                valor={facturacion.texto}
-                tono={facturacion.revisar ? 'precaucion' : 'neutro'}
-                abierta={hoja === 'facturacion'}
-                onAbrir={() => setHoja('facturacion')}
-              />
-            )}
-            <FilaIndice
-              Icono={ClockCounterClockwise}
-              titulo="Intervenciones"
-              valor={intervencionesValor}
-              abierta={hoja === 'intervenciones'}
-              onAbrir={() => setHoja('intervenciones')}
-            />
-          </ul>
-        </section>
+        {!amplio && masDelEquipo}
 
         {/* La puerta única de documentar (M-016, M-031, regla M-R10). Desde
             1280, en la columna del documento, bajo lo demás. */}

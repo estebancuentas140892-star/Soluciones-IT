@@ -235,6 +235,12 @@
     padding-top: 1.75rem;
   }
 }
+/* En la zona del documento de 1680 (tarea 339, T10), entre la lista y el
+   contexto, el margen es de 32. */
+[data-zona-documento] > main {
+  padding-inline: 2rem;
+  padding-top: 1.75rem;
+}
 
 /* TEMA CLARO "A PLENO SOL, TAQUILLA" (tarea 333, paso 7 del rediseño movil
    "1b Pulgar"; regla 12 desde el 2026-10-13: oscuro por defecto, claro
