@@ -53,7 +53,10 @@ export function CampoBusqueda({
   // sin red..."). La etiqueta accesible sigue diciendo el alcance.
   textoAlternativo?: string
   refCampo?: Ref<HTMLInputElement>
-  variante?: 'normal' | 'destacada' | 'dock'
+  // `paleta` (tarea 339, T6): el campo de la paleta del buscador global
+  // desde 1280. Sin caja: es la cabecera de la paleta, que ya es la
+  // superficie; la lupa en acento y el texto a 18 px.
+  variante?: 'normal' | 'destacada' | 'dock' | 'paleta'
   className?: string
 }) {
   const enBarra = useContext(CampoEnBarraContexto)
@@ -62,18 +65,23 @@ export function CampoBusqueda({
   // (52 px), más redondo, con borde y sombra: flota sobre la lista.
   const dock = variante === 'dock' && !enBarra
   const destacada = (variante === 'destacada' || variante === 'dock') && !enBarra
+  const paleta = variante === 'paleta' && !enBarra
 
   // En la barra (tarea 339): 44 px en tableta y 48 desde 1280, con el
   // borde neutro fuerte del dock y la elevación del tema claro. Lo de
   // dentro (icono, texto, borrar) a la medida de un campo con ratón.
   const forma = enBarra
     ? 'h-11 gap-2.5 rounded-xl pl-3.5 pr-1.5 shadow-[var(--shadow-noct-elevacion)] xl:h-12 xl:rounded-[13px] xl:pl-4'
+    : paleta
+      ? 'h-16 min-w-0 flex-1 gap-3'
     : dock
       ? 'h-[52px] gap-2.5 rounded-2xl pl-4 pr-3.5 shadow-[0_6px_20px_rgba(0,0,0,.16)]'
       : destacada
         ? 'h-[52px] gap-3 rounded-[10px] pl-4 pr-3.5'
         : 'h-[46px] gap-2.5 rounded-lg px-3.5'
-  const borde = buscando
+  const borde = paleta
+    ? ''
+    : buscando
     ? 'border-noct-accent'
     : dock || enBarra
       ? 'border-noct-text/25'
@@ -90,11 +98,15 @@ export function CampoBusqueda({
       // borde más `ring-1`: 2 px de acento, tan visibles como el anillo
       // global que sustituyen, y distintos del borde de 1 px que queda
       // cuando hay texto escrito pero el foco está en otra parte.
-      className={`flex items-center border bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent ${forma} ${borde} ${className}`}
+      className={`flex items-center ${
+        paleta
+          ? ''
+          : 'border bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent'
+      } ${forma} ${borde} ${className}`}
     >
       <MagnifyingGlass
-        size={destacada ? 20 : 18}
-        className={`shrink-0 ${buscando || dock || enBarra ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
+        size={destacada || paleta ? 20 : 18}
+        className={`shrink-0 ${buscando || dock || enBarra || paleta ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
         aria-hidden
       />
       <input
@@ -108,7 +120,13 @@ export function CampoBusqueda({
         // La "x" nativa de WebKit se oculta siempre: duplicaba el botón
         // de borrar y medía la mitad.
         className={`min-w-0 flex-1 bg-transparent text-noct-text outline-none placeholder:text-noct-neutral-400 [&::-webkit-search-cancel-button]:hidden ${
-          enBarra ? 'text-[15px] xl:text-[15.5px]' : destacada ? 'text-[16px]' : 'text-[15px]'
+          enBarra
+            ? 'text-[15px] xl:text-[15.5px]'
+            : paleta
+              ? 'text-[18px] font-medium'
+              : destacada
+                ? 'text-[16px]'
+                : 'text-[15px]'
         }`}
       />
       {buscando && (
@@ -117,7 +135,7 @@ export function CampoBusqueda({
           onClick={() => onCambiar('')}
           aria-label="Borrar la búsqueda"
           className={`flex shrink-0 items-center justify-center text-noct-neutral-300 hover:text-noct-text ${
-            enBarra ? 'h-9 w-9 rounded-[9px] hover:bg-noct-text/[.05]' : '-mr-3 h-11 w-11'
+            enBarra || paleta ? 'h-9 w-9 rounded-[9px] hover:bg-noct-text/[.05]' : '-mr-3 h-11 w-11'
           }`}
         >
           <XCircleFill size={destacada ? 19 : 18} aria-hidden />

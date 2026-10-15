@@ -1,4 +1,5 @@
 import { Fragment, useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
 import { CaretDown, CaretRight, CaretUp, Crosshair } from '../../components/iconos'
 import { TituloSeccion } from '../../components/nocturne'
@@ -23,6 +24,7 @@ import { prominenciaPuenteBoveda } from './reglasPuenteBoveda'
 import { agruparResultados, partirTitulo, VISUAL_POR_TIPO } from './resultados'
 import type { ResultadoBusqueda } from './useIndiceBusqueda'
 import { VistaRapidaResultado } from './VistaRapida'
+import { useRanuraVistaRapida } from './ranuraVistaRapida'
 
 // Presentacion compartida de los resultados del buscador global. El
 // catalogo y el agrupado viven en resultados.ts; el ranking global, en
@@ -109,6 +111,8 @@ export function FilaResultado({
   const fila = useRef<HTMLElement | null>(null)
   const vista = vistaRapidaDe(resultado, modo)
   const abierta = vista !== null && vistaAbierta === resultado.id
+  // Desde 1280, dentro de la paleta, la vista va en su columna (T6).
+  const ranuraVista = useRanuraVistaRapida()
 
   // Recoger la vista devuelve el foco a la fila de la que salió: el
   // técnico sigue en el mismo punto de la lista, no al principio.
@@ -263,7 +267,11 @@ export function FilaResultado({
         aria-expanded={abierta}
         aria-controls={abierta ? idPanel : undefined}
         onClick={() => alternarVista(resultado.id)}
-        className={`${CLASE_FILA} w-full text-left hover:bg-noct-text/[.05]`}
+        // Abierta, desde 768 la fila queda marcada con el tinte y el filo de
+        // acento (T6): en la paleta la vista se ve al lado, no debajo.
+        className={`${CLASE_FILA} w-full text-left hover:bg-noct-text/[.05] ${
+          abierta ? 'md:bg-noct-accent/[.11] md:shadow-[inset_3px_0_0_var(--color-noct-accent)]' : ''
+        }`}
       >
         {cuerpo}
         {abierta ? (
@@ -298,14 +306,25 @@ export function FilaResultado({
         </div>
       )}
 
-      {abierta && (
-        <VistaRapidaResultado
-          resultado={resultado}
-          idPanel={idPanel}
-          desdeMejores={desdeMejores}
-          onCerrar={cerrarVista}
-        />
-      )}
+      {abierta &&
+        (ranuraVista
+          ? createPortal(
+              <VistaRapidaResultado
+                resultado={resultado}
+                idPanel={idPanel}
+                desdeMejores={desdeMejores}
+                onCerrar={cerrarVista}
+              />,
+              ranuraVista,
+            )
+          : (
+            <VistaRapidaResultado
+              resultado={resultado}
+              idPanel={idPanel}
+              desdeMejores={desdeMejores}
+              onCerrar={cerrarVista}
+            />
+          ))}
     </div>
   )
 }

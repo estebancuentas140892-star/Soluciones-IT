@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (buscador global, tarea 339, T6): campo arriba en tableta y paleta con vista rápida al lado en escritorio
+
+**Área modificada:** `src/features/busqueda/BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx` (`FilaResultado`), `PanelVistaRapida.tsx`, `ranuraVistaRapida.ts` (nuevo); `src/components/CampoBusqueda.tsx` (variante `paleta`); `scripts/capturas-moviles.mjs` (paradas `buscador-*` y el índice persistente); prueba nueva `buscadorPorAncho.test.tsx`.
+**Tipo:** Cambiado; Agregado (`useRanuraVistaRapida`, variante `paleta`).
+**Motivo:** paso T6 del handoff (pizarras Búsqueda 768 y 1280).
+**Descripción:** un solo `CampoBusqueda`, montado según el ancho: abajo en el teléfono, arriba desde 768, en la cabecera de la paleta desde 1280. La paleta (880, 960 desde 1680) se centra sobre el contenido encima de una sección y sobre la ventana encima de una tarea, con velo que la cierra y la línea de atajos al pie. La vista rápida se pinta por portal en una columna de 380 al lado de la lista, con la fila marcada; por debajo de 1280 sigue debajo de su fila. Chips de alcance, grupos con conteo, IP en mono, puente de la Bóveda y qué hace tocar un resultado, sin cambios.
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** buscar en escritorio sin perder de vista la pantalla y consultar un equipo sin mover la lista.
+
 ### Cambiado (ejecución de guía, tarea 339, T5): columna de trabajo, pie por banda e índice persistente en escritorio
 
 **Área modificada:** `src/app/Chasis.tsx` (nivel tarea `amplio`), `src/app/ranuraIndice.ts` (nuevo), `src/components/BarraTarea.tsx`, `src/features/soluciones/AsistentePage.tsx`, `AsistenteVista.tsx`, `HojaPasos.tsx` (`IndicePasos` nuevo), `ModoFoco.tsx`; prueba nueva `guiaPorAncho.test.tsx`.

@@ -58,8 +58,10 @@ const tocar = (texto) =>
 // de Claude Design (2026-10-01); antes decia "Siguiente".
 const siguiente = `{ const s=[...document.querySelectorAll('button')].find(b=>b.textContent.replace(/\\s+/g,' ').trim()==='Completar y seguir'); s?.click(); await new Promise(r=>setTimeout(r,500)); }`
 // Una fila de la hoja del indice ("Ruta de la guia"), por el nombre del paso.
+// Desde la tarea 339 (T5) el indice es una columna fija desde 1280: la fila
+// se busca en la hoja o en esa columna.
 const tocarFilaIndice = (texto) =>
-  `{ const el=[...document.querySelectorAll('[role="dialog"] button')].find(b=>b.textContent.includes(${JSON.stringify(texto)})); el?.click(); await new Promise(r=>setTimeout(r,500)); }`
+  `{ const el=[...document.querySelectorAll('[role="dialog"] button, nav[aria-label="Pasos de la guía"] button')].find(b=>b.textContent.includes(${JSON.stringify(texto)})); el?.click(); await new Promise(r=>setTimeout(r,500)); }`
 
 // Tarea 255: las paradas de la guia de tres tareas reponen su avance
 // sembrado (paso 1 hecho) y el modo de ejecucion ANTES de abrirse, porque
@@ -239,6 +241,19 @@ const TODAS_LAS_PARADAS = [
     ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
     antes: AVANCE_SEMBRADO + modo('foco'),
     guion: tocar('Buscar sin salir de aquí') + escribirEnCapa('impresora'),
+  },
+  // Tarea 339 (T6): el buscador global por banda. Desde Más (disparador con
+  // forma de campo desde 768, paleta desde 1280) y, encima de una tarea, en
+  // modo consulta con la vista rapida de un equipo abierta.
+  { nombre: 'buscador-global', ruta: '/mas', guion: tocar('Buscar en Soluciones IT') + escribirEnCapa('impresora') },
+  {
+    nombre: 'buscador-consulta-vista',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco'),
+    guion:
+      tocar('Buscar sin salir de aquí') +
+      escribirEnCapa('impresora') +
+      `{ const b=[...document.querySelectorAll('[role="dialog"] button[aria-expanded]')][0]; b?.click(); await new Promise(r=>setTimeout(r,600)); }`,
   },
   { nombre: 'guia-vinculada', ruta: '/soluciones/cat-software/art-alta-usuario' },
   { nombre: 'vinculo-roto', ruta: '/soluciones/cat-software/art-vinculo-roto' },

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { CaretLeft, MagnifyingGlass, Plus } from '../../components/iconos'
 import { useAltoDelTeclado } from '../../components/useAltoDelTeclado'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
+import { ANCHO_ESCRITORIO, useEsAncho } from '../../components/useEsAncho'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import type { ModoBuscador } from './modoConsulta'
@@ -11,6 +12,7 @@ import { alcanceEfectivo, conteoPorAlcance, filtrarPorAlcance, type Alcance } fr
 import { ChipsDeAlcance } from './ChipsDeAlcance'
 import { useIdsDeRed } from './useIdsDeRed'
 import { PuenteBoveda } from './PuenteBoveda'
+import { ProveedorRanuraVistaRapida } from './ranuraVistaRapida'
 import { AYUDA_BUSCADOR, MARCADOR_BUSCADOR } from './resultados'
 import { ResultadosBusqueda } from './ResultadosBusqueda'
 import { buscar, useIndiceBusqueda } from './useIndiceBusqueda'
@@ -79,6 +81,11 @@ export function BuscadorGlobal({
   const alcance = alcanceEfectivo(alcanceElegido, conteo)
   const visibles = useMemo(() => filtrarPorAlcance(resultados, alcance, idsDeRed), [resultados, alcance, idsDeRed])
   const teclado = useAltoDelTeclado()
+  // Desde 768 el campo va arriba; desde 1280 la capa es una paleta con la
+  // vista rápida al lado (tarea 339, T6). Son puntos de montaje distintos.
+  const ancho = useEsAncho()
+  const escritorio = useEsAncho(ANCHO_ESCRITORIO)
+  const [ranuraVista, setRanuraVista] = useState<HTMLElement | null>(null)
 
   // `onCerrar` llega como flecha nueva en cada render de quien abre la
   // capa. Leerlo de una ref deja el efecto de abajo atado SOLO a abrir y
@@ -126,128 +133,231 @@ export function BuscadorGlobal({
 
   if (!abierto) return null
 
-  // Portal a <body> por el mismo motivo que Modal: la barra superior
-  // desde la que se invoca lleva `backdrop-blur`, que crea bloque
-  // contenedor y romperia `fixed inset-0`.
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={modo === 'consulta' ? 'Consultar sin salir de la tarea' : 'Buscar en Soluciones IT'}
-      className="nocturne fixed inset-0 z-[60] flex flex-col bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text"
-      // Con el teclado abierto (iOS no encoge la página), todo sube por
-      // encima de él: el campo, abajo, queda pegado al teclado.
-      style={teclado > 0 ? { paddingBottom: teclado } : undefined}
-    >
-      {/* LA CABECERA DE LA BÚSQUEDA (rediseño móvil "1b Pulgar", tarea 330):
-          el regreso a la izquierda y qué es. El campo baja al pulgar. */}
-      <div className="flex min-h-[50px] flex-none items-center gap-1 px-1 py-0.5">
-        <button
-          type="button"
-          onClick={onCerrar}
-          aria-label="Cerrar el buscador"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
-        >
-          <CaretLeft size={20} aria-hidden />
-        </button>
-        <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold">
-          {modo === 'consulta' ? 'Consultar sin salir de la tarea' : 'Buscar en Soluciones IT'}
-        </h2>
-      </div>
+  const titulo = modo === 'consulta' ? 'Consultar sin salir de la tarea' : 'Buscar en Soluciones IT'
+
+  // EL MISMO CAMPO, EN UN SOLO SITIO (tarea 339, T6): abajo, al pulgar, en el
+  // teléfono; arriba desde 768 (la tableta tiene el teclado abajo y el campo
+  // arriba no queda tapado); y desde 1280, la cabecera de la paleta.
+  const campoUI = (
+    <CampoBusqueda
+      valor={query}
+      onCambiar={setQuery}
+      alcance="Soluciones IT"
+      textoAlternativo={MARCADOR_BUSCADOR}
+      refCampo={campo}
+      variante={escritorio ? 'paleta' : ancho ? 'normal' : 'dock'}
+    />
+  )
+
+  const contenido = (
+    <>
+      {escritorio ? (
+        // LA CABECERA DE LA PALETA (desde 1280): el campo sin caja, qué busca
+        // y Esc, que cierra (también un clic fuera, en el velo).
+        <div className="flex h-16 flex-none items-center gap-3 border-b border-noct-divider pl-5 pr-[18px]">
+          {campoUI}
+          <span className="shrink-0 text-[12.5px] text-noct-neutral-500">{titulo}</span>
+          <button
+            type="button"
+            onClick={onCerrar}
+            aria-label="Cerrar el buscador"
+            title="Cerrar el buscador (Esc)"
+            className="flex h-9 shrink-0 items-center rounded-lg px-1.5 hover:bg-noct-text/[.05]"
+          >
+            <kbd aria-hidden className={KBD}>
+              Esc
+            </kbd>
+          </button>
+        </div>
+      ) : (
+        // LA CABECERA DE LA BÚSQUEDA (rediseño móvil "1b Pulgar", tarea 330):
+        // el regreso a la izquierda y qué es. En el teléfono el campo baja al
+        // pulgar; desde 768 ocupa el sitio del título (T6).
+        <div className="flex min-h-[50px] flex-none items-center gap-1 px-1 py-0.5 md:h-16 md:gap-2.5 md:border-b md:border-noct-divider md:py-0 md:pl-3 md:pr-6">
+          <button
+            type="button"
+            onClick={onCerrar}
+            aria-label="Cerrar el buscador"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
+          >
+            <CaretLeft size={20} aria-hidden />
+          </button>
+          {ancho ? (
+            <div className="min-w-0 flex-1">{campoUI}</div>
+          ) : (
+            <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold">{titulo}</h2>
+          )}
+        </div>
+      )}
 
       {/* EN MODO CONSULTA, POR QUÉ ES SEGURO TOCAR (sección 9): el técnico
           tiene que saber que nada de aquí lo saca de ella, o no se
           atreverá a tocar un resultado. Una línea, sin caja. */}
       {modo === 'consulta' && (
-        <p className="flex-none px-4 pb-2 text-[12.5px] leading-snug text-noct-neutral-400">
+        <p className="flex-none px-4 pb-2 text-[12.5px] leading-snug text-noct-neutral-400 md:px-6 md:pt-3 xl:px-5">
           Modo consulta: lo que abras aquí no te saca de lo que estás haciendo.
         </p>
       )}
 
       {/* LOS CHIPS DE ALCANCE (tarea 330): solo filtran la vista. */}
       {buscando && resultados.length > 0 && (
-        <div className="flex-none px-3.5 pb-2.5">
+        <div className="flex-none px-3.5 pb-2.5 md:border-b md:border-noct-divider md:px-6 md:py-3 xl:px-5">
           <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />
         </div>
       )}
 
-      <div
-        // Desplazar la lista con el dedo cierra el teclado: se está
-        // mirando lo encontrado, no escribiendo.
-        onTouchMove={() => campo.current?.blur()}
-        className="min-h-0 flex-1 overflow-y-auto border-t border-noct-divider px-4 pb-6 pt-4"
-      >
-        {!buscando ? (
-          <div className="flex flex-col gap-1 px-0.5">
-            <p className="text-[14.5px] font-medium leading-snug">¿Qué necesitas resolver?</p>
-            <p className="text-[13px] leading-relaxed text-noct-neutral-400">{AYUDA_BUSCADOR}</p>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-noct-neutral-500">
-              Tolera errores de escritura y entiende sinónimos: "backup" encuentra "copia de seguridad".
-            </p>
-          </div>
-        ) : resultados.length > 0 ? (
-          <ResultadosBusqueda
-            resultados={visibles}
-            consulta={consulta}
-            consultaCruda={consultaCruda}
-            onNavegar={onNavegar ?? onCerrar}
-            onDesbloqueada={() => setHuboDesbloqueo(true)}
-            huboDesbloqueo={huboDesbloqueo}
-            modo={modo}
-            enCapa
-          />
-        ) : (
-          <div className="flex flex-col gap-4">
-            {/* Estado vacío honesto (sección 14 del encargo): con la
-                bóveda bloqueada, "no hay nada" no es toda la verdad.
-                Sigue sin confirmar que exista ninguna credencial. Sin
-                resultados públicos, el puente conserva su forma
-                destacada (sección 14 del encargo del 2026-09-16). */}
-            <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} modo={modo} />
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
-              <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
-              <div>
-                <p className="text-[14.5px] font-medium">Sin coincidencias</p>
-                <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                  Nada coincide con "{consultaCruda}". Prueba otra palabra o revisa la ortografía.
+      <div className="flex min-h-0 flex-1">
+        <div
+          // Desplazar la lista con el dedo cierra el teclado: se está
+          // mirando lo encontrado, no escribiendo.
+          onTouchMove={ancho ? undefined : () => campo.current?.blur()}
+          className="min-h-0 min-w-0 flex-1 overflow-y-auto border-t border-noct-divider px-4 pb-6 pt-4 md:border-t-0 md:px-6 xl:px-[22px]"
+        >
+          <ProveedorRanuraVistaRapida value={escritorio ? ranuraVista : null}>
+            {!buscando ? (
+              <div className="flex flex-col gap-1 px-0.5">
+                <p className="text-[14.5px] font-medium leading-snug">¿Qué necesitas resolver?</p>
+                <p className="text-[13px] leading-relaxed text-noct-neutral-400">{AYUDA_BUSCADOR}</p>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-noct-neutral-500">
+                  Tolera errores de escritura y entiende sinónimos: "backup" encuentra "copia de seguridad".
                 </p>
               </div>
-              <div className="mt-0.5 flex flex-wrap justify-center gap-2">
-                {/* Crear es una salida: no en modo consulta, que vive
-                    encima de una tarea. */}
-                {modo === 'normal' && (
-                  <Link
-                    to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
-                    onClick={onNavegar ?? onCerrar}
-                    className={BTN_SECUNDARIO}
-                  >
-                    <Plus size={15} aria-hidden />
-                    Crear equipo
-                  </Link>
-                )}
-                <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
-                  Limpiar búsqueda
-                </button>
+            ) : resultados.length > 0 ? (
+              <ResultadosBusqueda
+                resultados={visibles}
+                consulta={consulta}
+                consultaCruda={consultaCruda}
+                onNavegar={onNavegar ?? onCerrar}
+                onDesbloqueada={() => setHuboDesbloqueo(true)}
+                huboDesbloqueo={huboDesbloqueo}
+                modo={modo}
+                enCapa
+              />
+            ) : (
+              <div className="flex flex-col gap-4">
+                {/* Estado vacío honesto (sección 14 del encargo): con la
+                    bóveda bloqueada, "no hay nada" no es toda la verdad.
+                    Sigue sin confirmar que exista ninguna credencial. Sin
+                    resultados públicos, el puente conserva su forma
+                    destacada (sección 14 del encargo del 2026-09-16). */}
+                <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} modo={modo} />
+                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
+                  <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
+                  <div>
+                    <p className="text-[14.5px] font-medium">Sin coincidencias</p>
+                    <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
+                      Nada coincide con "{consultaCruda}". Prueba otra palabra o revisa la ortografía.
+                    </p>
+                  </div>
+                  <div className="mt-0.5 flex flex-wrap justify-center gap-2">
+                    {/* Crear es una salida: no en modo consulta, que vive
+                        encima de una tarea. */}
+                    {modo === 'normal' && (
+                      <Link
+                        to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
+                        onClick={onNavegar ?? onCerrar}
+                        className={BTN_SECUNDARIO}
+                      >
+                        <Plus size={15} aria-hidden />
+                        Crear equipo
+                      </Link>
+                    )}
+                    <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
+                      Limpiar búsqueda
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            )}
+          </ProveedorRanuraVistaRapida>
+        </div>
+        {/* LA VISTA RÁPIDA, AL LADO (desde 1280, T6): la fila abierta pinta
+            aquí su vista; sin ninguna abierta, la columna no existe. */}
+        {escritorio && (
+          <aside
+            ref={setRanuraVista}
+            aria-label="Vista rápida"
+            className="w-[380px] shrink-0 overflow-y-auto border-l border-noct-divider bg-noct-bg/40 px-[22px] py-5 empty:hidden"
+          />
         )}
       </div>
 
-      {/* EL CAMPO, ABAJO, AL PULGAR (tarea 330): con el teclado abierto,
-          pegado a él. El marcador invita a contar lo que pasa (tarea 288) y
-          la etiqueta accesible sigue diciendo el alcance (regla M-R8). */}
-      <div className="flex-none border-t border-noct-divider bg-noct-bg px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5">
-        <CampoBusqueda
-          valor={query}
-          onCambiar={setQuery}
-          alcance="Soluciones IT"
-          textoAlternativo={MARCADOR_BUSCADOR}
-          refCampo={campo}
-          variante="dock"
-        />
-      </div>
+      {/* EL CAMPO, ABAJO, AL PULGAR (tarea 330), solo en el teléfono: con el
+          teclado abierto, pegado a él. El marcador invita a contar lo que
+          pasa (tarea 288) y la etiqueta accesible sigue diciendo el alcance
+          (regla M-R8). */}
+      {!ancho && (
+        <div className="flex-none border-t border-noct-divider bg-noct-bg px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5">
+          {campoUI}
+        </div>
+      )}
+
+      {/* Los atajos que ya existen, dichos donde hay teclado (desde 1280). */}
+      {escritorio && (
+        <div className="flex h-[42px] flex-none items-center gap-[18px] border-t border-noct-divider px-5 text-[12.5px] text-noct-neutral-400">
+          <span className="flex items-center gap-1.5">
+            <kbd aria-hidden className={KBD}>
+              Esc
+            </kbd>
+            cerrar
+          </span>
+          <span className="flex items-center gap-1.5">
+            <kbd aria-hidden className={KBD}>
+              /
+            </kbd>
+            buscar desde cualquier pantalla
+          </span>
+        </div>
+      )}
+    </>
+  )
+
+  // Portal a <body> por el mismo motivo que Modal: la barra superior
+  // desde la que se invoca lleva `backdrop-blur`, que crea bloque
+  // contenedor y romperia `fixed inset-0`.
+  if (escritorio) {
+    // LA PALETA (desde 1280, T6): 880 px (960 desde 1680) a 14 px de arriba
+    // y de abajo, sobre un velo que la cierra al tocarlo. Encima de una
+    // sección se centra sobre el contenido (a la derecha de la barra
+    // lateral); encima de una tarea, que no la tiene, sobre la ventana.
+    return createPortal(
+      <div
+        className="nocturne fixed inset-0 z-[60] bg-black/[.58] font-inter text-[15px] leading-[1.55] text-noct-text [:root[data-tema=claro]_&]:bg-noct-text/30"
+        onClick={onCerrar}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={titulo}
+          onClick={(evento) => evento.stopPropagation()}
+          className={`absolute bottom-3.5 top-3.5 flex w-[880px] max-w-[calc(100vw-28px)] -translate-x-1/2 flex-col overflow-hidden rounded-[18px] bg-noct-surface shadow-[var(--shadow-noct-panel)] ring-1 ring-noct-divider 3xl:w-[960px] ${
+            modo === 'consulta' ? 'left-1/2' : 'left-[calc(50%+120px)] 3xl:left-[calc(50%+116px)]'
+          }`}
+        >
+          {contenido}
+        </div>
+      </div>,
+      document.body,
+    )
+  }
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={titulo}
+      className="nocturne fixed inset-0 z-[60] flex flex-col bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text"
+      // Con el teclado abierto (iOS no encoge la página), todo sube por
+      // encima de él: el campo, abajo, queda pegado al teclado. Desde 768 el
+      // campo está arriba y no hace falta.
+      style={!ancho && teclado > 0 ? { paddingBottom: teclado } : undefined}
+    >
+      {contenido}
     </div>,
     document.body,
   )
 }
+
+// La tecla, dibujada (la misma que el disparador de la barra superior).
+const KBD =
+  'inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-md border border-b-2 border-noct-divider bg-noct-bg px-1.5 font-mono text-[11.5px] font-medium leading-none text-noct-neutral-400'
