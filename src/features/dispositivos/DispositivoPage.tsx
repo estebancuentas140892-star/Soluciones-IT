@@ -22,6 +22,7 @@ import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { BotonCopiar, FilaDato } from '../../components/FilaDato'
 import { HojaInferior } from '../../components/HojaInferior'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
+import { useEsAncho } from '../../components/useEsAncho'
 import { useGrafo } from '../../components/useGrafo'
 import { useUrlAdjunto } from '../../components/useUrlAdjunto'
 import {
@@ -190,6 +191,9 @@ export function DispositivoPage() {
     if (deLaAncla) setHoja(deLaAncla)
   }, [location.hash])
   const cerrarHoja = () => setHoja(null)
+  // "Resolver un problema" va en la barra fija del teléfono y, desde 768 px,
+  // en la cabecera del documento (tarea 339): una sola vez por ventana.
+  const ancho = useEsAncho()
   // EL NOMBRE SUBE A LA CABECERA AL DESPLAZARSE (tarea 329): mientras el
   // carnet está a la vista, la cabecera dice solo a dónde se vuelve; cuando
   // el nombre grande sale por arriba, aparece en ella (M-R1 se cumple: el
@@ -558,6 +562,16 @@ export function DispositivoPage() {
       contexto={[esRed ? 'Red' : 'Equipos', ubicacionNombre].filter(Boolean).join(' · ')}
       tituloVisible={!nombreALaVista}
       pestanasSeOcultanAlBajar
+      // Desde 768 px, la acción de la barra fija sube a la cabecera, detrás
+      // del menú (tarea 339). El chasis solo la pinta desde 768.
+      accionPrincipal={
+        <BarraAccionEquipo
+          variante="cabecera"
+          resolver={resolverBarra}
+          onCredenciales={conCredenciales && totalCredenciales > 0 ? () => setHoja('credenciales') : null}
+          abierta={hoja === 'credenciales' || hoja === 'resolver' ? hoja : null}
+        />
+      }
       acciones={
         // Favorito y Compartir viven en el menú desde la tarea 329: la
         // cabecera de un documento lleva el regreso, de qué es y "···".
@@ -817,13 +831,14 @@ export function DispositivoPage() {
             Más del equipo
           </h2>
           <ul className="flex flex-col">
-            <FilaIndice Icono={Info} titulo="Más datos" valor={`${totalMasDatos}`} onAbrir={() => setHoja('datos')} />
+            <FilaIndice Icono={Info} titulo="Más datos" valor={`${totalMasDatos}`} abierta={hoja === 'datos'} onAbrir={() => setHoja('datos')} />
             {hayImpacto && (
               <FilaIndice
                 Icono={WarningOctagon}
                 titulo="Si falla, caen"
                 valor={`${equiposEnRiesgo} ${equiposEnRiesgo === 1 ? 'equipo' : 'equipos'}`}
                 tono="precaucion"
+                abierta={hoja === 'impacto'}
                 onAbrir={() => setHoja('impacto')}
               />
             )}
@@ -831,6 +846,7 @@ export function DispositivoPage() {
               Icono={PlugsConnected}
               titulo="Conexiones"
               valor={totalConexiones === 0 ? 'Ninguna' : `${totalConexiones}`}
+              abierta={hoja === 'conexiones'}
               onAbrir={() => setHoja('conexiones')}
             />
             {conCredenciales && (
@@ -838,6 +854,7 @@ export function DispositivoPage() {
                 Icono={Key}
                 titulo="Credenciales"
                 valor={totalCredenciales === 0 ? 'Ninguna' : `${totalCredenciales}`}
+                abierta={hoja === 'credenciales'}
                 onAbrir={() => setHoja('credenciales')}
               />
             )}
@@ -846,6 +863,7 @@ export function DispositivoPage() {
                 Icono={LockSimple}
                 titulo="Datos protegidos"
                 valor={totalCamposProtegidos === 0 ? 'Ninguno' : `${totalCamposProtegidos}`}
+                abierta={hoja === 'seguridad'}
                 onAbrir={() => setHoja('seguridad')}
               />
             )}
@@ -853,6 +871,7 @@ export function DispositivoPage() {
               Icono={Paperclip}
               titulo="Adjuntos"
               valor={totalAdjuntos === 0 ? 'Ninguno' : `${totalAdjuntos}`}
+              abierta={hoja === 'adjuntos'}
               onAbrir={() => setHoja('adjuntos')}
             />
             {/* Mantenimiento se trabaja: abre su pantalla (tarea 331). */}
@@ -869,6 +888,7 @@ export function DispositivoPage() {
                 titulo="Facturación"
                 valor={facturacion.texto}
                 tono={facturacion.revisar ? 'precaucion' : 'neutro'}
+                abierta={hoja === 'facturacion'}
                 onAbrir={() => setHoja('facturacion')}
               />
             )}
@@ -876,6 +896,7 @@ export function DispositivoPage() {
               Icono={ClockCounterClockwise}
               titulo="Intervenciones"
               valor={intervencionesValor}
+              abierta={hoja === 'intervenciones'}
               onAbrir={() => setHoja('intervenciones')}
             />
           </ul>
@@ -891,10 +912,12 @@ export function DispositivoPage() {
 
         {/* La barra fija (M-R3): "Resolver un problema", relleno, y la llave
             de sus credenciales. */}
-        <BarraAccionEquipo
-          resolver={resolverBarra}
-          onCredenciales={conCredenciales && totalCredenciales > 0 ? () => setHoja('credenciales') : null}
-        />
+        {!ancho && (
+          <BarraAccionEquipo
+            resolver={resolverBarra}
+            onCredenciales={conCredenciales && totalCredenciales > 0 ? () => setHoja('credenciales') : null}
+          />
+        )}
       </main>
 
       {/* LAS HOJAS (tarea 329): lo que antes iba plegado, ahora encima de la

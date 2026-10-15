@@ -10,6 +10,14 @@ import { Modal } from './Modal'
 // ya se ancla abajo, y le añade la cabecera de siempre: de qué es (12 px),
 // el título y una X de 44 px. Una sola hoja a la vez: quien la usa guarda
 // cuál está abierta.
+//
+// DESDE 768 PX, PANEL LATERAL (tarea 339, handoff de tableta y escritorio):
+// la misma hoja, con la misma API, se abre al costado derecho (420 px, 440
+// desde 1280 y 480 desde 1680) y deja la pantalla a la vista detrás del
+// velo. Se cierra igual: la X, Esc o un clic fuera. La cabecera queda fija
+// arriba con su línea y el cuerpo se desplaza solo. "Hoja para consultar,
+// pantalla para trabajar" no cambia: lo que se trabaja sigue siendo
+// pantalla.
 export function HojaInferior({
   abierta,
   onCerrar,
@@ -29,9 +37,9 @@ export function HojaInferior({
 }) {
   const idTitulo = useId()
   return (
-    <Modal abierto={abierta} onCerrar={onCerrar} tituloId={idTitulo}>
-      <div className="mb-2 flex items-start gap-2">
-        <div className="min-w-0 flex-1 pt-1.5">
+    <Modal abierto={abierta} onCerrar={onCerrar} tituloId={idTitulo} variante="hoja">
+      <div className="mb-2 flex items-start gap-2 md:mb-0 md:min-h-[68px] md:shrink-0 md:items-center md:gap-3 md:border-b md:border-noct-divider md:py-3 md:pl-[22px] md:pr-4">
+        <div className="min-w-0 flex-1 pt-1.5 md:pt-0">
           {contexto && <p className="text-[12px] leading-snug text-noct-neutral-500 [overflow-wrap:anywhere]">{contexto}</p>}
           <h2 id={idTitulo} className="text-[17px] font-semibold leading-snug [overflow-wrap:anywhere]">
             {titulo}
@@ -41,12 +49,14 @@ export function HojaInferior({
           type="button"
           onClick={onCerrar}
           aria-label={etiquetaCerrar}
-          className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text"
+          className="-mr-2 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text md:m-0 md:rounded-[10px] md:border md:border-noct-divider xl:h-9 xl:w-9"
         >
           <X size={19} aria-hidden />
         </button>
       </div>
-      {children}
+      {/* El cuerpo: en el teléfono no añade nada (la hoja entera se
+          desplaza); en el panel es lo único que se desplaza. */}
+      <div className="md:min-h-0 md:flex-1 md:overflow-y-auto md:px-[22px] md:py-[18px]">{children}</div>
     </Modal>
   )
 }

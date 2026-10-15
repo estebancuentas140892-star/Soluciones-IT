@@ -66,6 +66,25 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | (hallazgo de la 327) | El color de categoría 6 coincide con el acento | 334 | Decidido: verde lima; integrada en `main` y desplegada, pendiente de confirmación visual del usuario |
 | (handoff) | Recomendaciones de producto RP-1, RP-2 y RP-4 | 335 | Las tres integradas en `main` y desplegadas, pendiente de confirmación visual del usuario |
 
+**ENCARGO DEL 2026-10-14: EL SISTEMA "1b PULGAR" EN TABLETA Y ESCRITORIO (handoff de Claude Design).** El usuario pidió extender a tableta y escritorio el sistema móvil aprobado, sin volver al diseño de escritorio anterior y sin una tercera identidad: móvil, tableta y escritorio como una sola aplicación (acento cian, IBM Plex Mono, tema claro y oscuro). Lienzo de referencia: `https://claude.ai/artifact/Y6Edu4sn7KiYweTBMyr4Rt` (29 pizarras, con su handoff en la pizarra 13). Solo composición y presentación por ancho: no cambian datos, esquema, sincronización, reglas de negocio, textos ni marcadores; las recomendaciones de producto RP-A a RP-G del handoff no se implementan. Orden del handoff: T1 chasis, T2 panel lateral, después Resolver, ficha, guía, buscador global, Agenda, Mantenimiento y Facturación, Más, zonas de 1680 y auditoría del claro. **Choque abierto con la tarea 338** (rama `fix/pulgar-solo-movil`, AD-087 y regla 31, sin integrar): aquella limita Pulgar al teléfono y devuelve el escritorio de antes; este encargo, posterior, pide lo contrario. Por indicación de la sesión que encarga el trabajo, manda este handoff; la 338 no se toca y decidir qué pasa con ella le toca al usuario. **Por eso este trabajo va en su propia rama (`feat/pulgar-tableta-escritorio-t1-t2`, desde `c6ebefb`) y NO se integra a `main` hasta que el usuario resuelva la 338** (excepción a la regla 11 solo para este encargo).
+
+| Paso | Tarea del encargo | Tarea del tablero | Estado |
+|---|---|---|---|
+| T1 + T2 | Chasis (buscador en la barra, disparador global, acción principal en la cabecera, tamaños por banda) y hoja inferior como panel lateral | 339 | **En proceso**: rama `feat/pulgar-tableta-escritorio-t1-t2`, sin integrar |
+| (hallazgo de la 339) | El foco no entra al panel ni a los diálogos al abrirlos | 340 | Pendiente ("Por hacer") |
+
+### 339. Tableta y escritorio, T1 y T2: el chasis por banda y el panel lateral
+
+- **Título:** el buscador de cada raíz sube a la barra desde 768 px, el disparador del buscador global con "/", la acción principal de un documento en su cabecera, los tamaños de los botones por banda y la hoja inferior como panel lateral derecho.
+- **Descripción:** secciones 1, 2 (puntos 1 a 5) y 3 del handoff. Un hook de ancho (`matchMedia`) decide un único punto de montaje del buscador de cada raíz: el dock por debajo de 768 px, la barra superior desde 768; nunca dos `CampoBusqueda` vivos. En las secciones con lupa, desde 768 px un disparador con aspecto de campo ("Buscar en Soluciones IT", con la tecla "/" desde 1280) abre el mismo `BuscadorGlobal`. Nueva prop `accionPrincipal` del nivel documento: desde 768 px el chasis la pinta en la fila superior y la barra fija del teléfono deja de montarse (ficha de equipo, autorización, mantenimiento del equipo). `BTN_PRIMARIO_RELLENO` a 48 en tableta y 40 en escritorio; `BTN_ICONO_SECUNDARIO` a 40 en escritorio; título de sección a 22 px desde 1280; filas de agenda, índice y Más por banda; dos sombras nuevas con su valor claro. `HojaInferior` desde 768 px es un panel lateral derecho de 420, 440 y 480 px con la misma API, que se cierra con Esc, la X o un clic fuera. El teléfono no cambia.
+- **Motivo:** encargo del usuario del 2026-10-14 (handoff de tableta y escritorio, pasos T1 y T2).
+- **Impacto:** tableta y escritorio ganan la búsqueda siempre a la vista, la acción dominante arriba y la consulta sin tapar la pantalla.
+- **Prioridad:** Alta. **Estado:** En proceso (rama `feat/pulgar-tableta-escritorio-t1-t2`, sin integrar; espera que el usuario resuelva la 338). No cambia Supabase, `schema.sql`, Dexie, la sincronización ni datos.
+- **Verificado (2026-10-14):** suite completa (214 archivos, 3353 pruebas), `tsc -b`, lint y build en verde. A 390 px, 49 capturas de 56 idénticas píxel a píxel a `c6ebefb` en oscuro; las distintas eran la hoja inferior, que había perdido su sombra y su centrado desde 640 px por una clase pegada a una interpolación en `Modal` (corregido, con una guarda nueva en `sistemaVisual.test.ts`), y el cursor que parpadea en `guia-lupa` (ruido, también entre dos corridas de la base). Revisadas a mano en el navegador a 1280 y 768: Resolver (campo en la barra con el escáner dentro y el foco automático), Más (disparador con "/"), la ficha (cabecera con "···" y "Resolver un problema" de 40, sin barra fija) y el panel de "Más datos" (440 px, alto completo, sombra y velo, fila marcada).
+- **Falta:** repetir la comparación de 390 en oscuro y en claro después del arreglo del `Modal`, y revisar a mano todas las capturas de 768 x 1024, 1280 x 832 y 1680 x 1050 en los dos temas (`node scripts/capturas-moviles.mjs <url> --tamanos=... --tema=claro`); después, la decisión del usuario sobre la 338 y la integración.
+- **Área afectada:** `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `DockBusqueda.tsx`, `CampoBusqueda.tsx`, `CabeceraColapsable.tsx`, `HojaInferior.tsx`, `Modal.tsx`, `nocturne.tsx`, `useEsAncho.ts` (nuevo), `src/index.css`, `src/pruebas/setup.ts` y las pantallas `inicio/ResolverPage.tsx`, `dispositivos/DispositivosPage.tsx`, `boveda/BovedaPage.tsx`, `dispositivos/DispositivoPage.tsx`, `PiezasFicha.tsx`, `facturacion/AutorizacionPage.tsx`, `mantenimientos/MantenimientosPage.tsx` y `MantenimientosDelEquipo.tsx` (en `src/features/`).
+- **Dependencias:** 327 a 335 (el sistema móvil que se extiende). En conflicto con la 338.
+
 ### 327. Rediseño móvil, paso 1: tokens cian, IBM Plex Mono local y botón primario relleno
 
 - **Título:** el acento pasa al cian del icono, los datos técnicos a IBM Plex Mono y existe una acción rellena por pantalla, sin cambiar todavía ninguna pantalla.
@@ -613,6 +632,16 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 340. El foco no entra al panel lateral ni a los diálogos al abrirlos (hallazgo de la 339)
+
+- **Título:** al abrir un `Modal` (y por tanto una `HojaInferior`, que desde la 339 es un panel lateral desde 768 px) el foco se queda en el botón que lo abrió, Tab sale del diálogo y al cerrarlo nada devuelve el foco.
+- **Descripción:** `src/components/Modal.tsx` (líneas ~33 a 85) declara `role="dialog"` y `aria-modal="true"`, cierra con Esc y con un clic fuera y bloquea el desplazamiento del fondo, pero no mueve el foco al abrir, no lo atrapa ni lo devuelve al cerrar. El handoff de tableta y escritorio daba por hecho "foco atrapado como hoy"; la 339 lo dejó igual que estaba (no era su alcance) y lo documenta en AD-088. Con teclado, en escritorio, Tab recorre la pantalla de detrás del velo.
+- **Motivo:** accesibilidad con teclado y lector de pantalla, más visible ahora que el panel deja la pantalla a la vista.
+- **Impacto:** quien trabaja con teclado entra al panel directamente y vuelve a la fila que lo abrió al cerrarlo.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/components/Modal.tsx` (lo heredan `HojaInferior`, `DialogoEliminar`, `PanelSync` y `HojaFiltro`).
+- **Dependencias:** ninguna; conviene después de resolver el choque entre la 338 y la 339.
 
 ### 319. Casos de datos y conflictos de la conciliación que no se resuelven por código (usuario y ChatGPT)
 

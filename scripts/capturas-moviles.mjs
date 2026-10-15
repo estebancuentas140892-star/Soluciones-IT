@@ -5,7 +5,7 @@
 // (`-arriba`) y el final del scroll, que es donde se hace la auditoria.
 //
 // Uso:
-//   node scripts/capturas-moviles.mjs [url-base] [--tamanos=390x844,1366x768] [--paradas=resolver,mas]
+//   node scripts/capturas-moviles.mjs [url-base] [--tamanos=390x844,1366x768] [--paradas=resolver,mas] [--tema=claro]
 //
 // Por defecto, los cuatro tamaños del encargo del 2026-09-22 (seccion 26):
 // telefono 390x844, tableta 768x1024, portatil 1366x768 y escritorio
@@ -29,13 +29,20 @@ const PERFIL = join(process.env.TEMP ?? tmpdir(), `cdp-capturas-${Date.now()}`)
 // En Windows, el Chrome instalado; en otro sistema (una sesion en la nube
 // con Chromium), CHROME=<ruta del ejecutable>.
 const CHROME = process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe'
-const PUERTO = 9333
+// PUERTO_CDP=<n> deja correr dos recorridos a la vez (tarea 339: la rama y
+// la linea base de comparacion, cada uno con su Chrome).
+const PUERTO = Number(process.env.PUERTO_CDP ?? 9333)
 
 const TAMANOS = (opcion('tamanos') ?? '390x844,768x1024,1366x768,1920x1080').split(',').map((t) => {
   const [ancho, alto] = t.split('x').map(Number)
   return { ancho, alto }
 })
 const FILTRO_PARADAS = opcion('paradas')?.split(',') ?? null
+// Tarea 339: `--tema=claro` (u `oscuro`) guarda la preferencia del tema
+// antes de recorrer, como la elige un tecnico en Ajustes, y los PNG llevan
+// el tema en el nombre. Sin la opcion, el que tenga el perfil temporal (el
+// oscuro por defecto) y los nombres de siempre.
+const TEMA = opcion('tema') ?? null
 
 // Recorridos del encargo del 2026-09-17 ("resolver rápido con guías"):
 // abrir una guía entra a su paso pendiente (ya no hay `/ejecutar` ni
@@ -75,6 +82,10 @@ const FAVORITO_SEMBRADO = `{ const { db } = await import('/src/lib/db.ts'); awai
 const SIN_FAVORITO = `{ const { db } = await import('/src/lib/db.ts'); await db.favoritos.delete('articulo:art-recurso-compartido'); }`
 const ACTIVIDAD_SEMBRADA = `{ const { db } = await import('/src/lib/db.ts'); await db.historial.put({ id: 'hist-captura-257', entidadTipo: 'articulo', entidadId: 'art-recurso-compartido', usuario: null, usuarioNombre: 'Tecnico de prueba', fechaHora: new Date().toISOString(), campo: 'titulo', valorAnterior: 'Titulo anterior', valorNuevo: 'Titulo nuevo', motivo: '' }); }`
 const SIN_ACTIVIDAD = `{ const { db } = await import('/src/lib/db.ts'); await db.historial.delete('hist-captura-257'); }`
+// Tarea 339: una autorizacion de facturacion inventada sobre la impresora de
+// la semilla (que no trae ninguna), para ver su cabecera con "Editar".
+const AUTORIZACION_SEMBRADA = `{ const { db } = await import('/src/lib/db.ts'); await db.autorizaciones_facturacion.put({ id: 'aut-captura-339', dispositivoIds: ['dis-impresora-ejemplo'], prefijo: 'PRB', formulario: '', rangoDesde: 3000, rangoHasta: 8000, fechaFormalizacion: null, vigenciaReportada: '', vencimientoDocumentado: null, vencimientoConfirmado: null, consecutivoActual: null, consecutivoLeidoEn: null, consecutivoFuente: '', estado: 'documentada', fuente: 'Documento de prueba', verificadoEn: null, verificacionFuente: '', observaciones: '', evidenciaAdjuntoId: null, updatedAt: new Date().toISOString(), updatedBy: null, eliminadoEn: null }); }`
+const SIN_AUTORIZACION = `{ const { db } = await import('/src/lib/db.ts'); await db.autorizaciones_facturacion.delete('aut-captura-339'); }`
 // Tarea 266: repone las personas y los computadores inventados de la
 // semilla (una parada de retiro o de asignación los cambia).
 const PERSONAS_SEMBRADAS = `{ const { db } = await import('/src/lib/db.ts'); await db.personas.clear(); await db.dispositivos.bulkDelete(['dis-pc-ejemplo-62','dis-pc-ejemplo-15','dis-pc-ejemplo-41','dis-pc-ejemplo-07','dis-pc-ejemplo-44','dis-pc-ejemplo-45']); const { sembrarBancoDePruebas } = await import('/src/pruebas/semillaLocal.ts'); await sembrarBancoDePruebas({ conProgreso: false }); }`
@@ -159,6 +170,17 @@ const TODAS_LAS_PARADAS = [
   // "Más datos del equipo" vive dentro de "Más del equipo" desde la propuesta
   // final de Claude Design (2026-10-01): primero se abre el pliegue.
   { nombre: 'equipo-mas-datos', ruta: '/dispositivos/dis-impresora-ejemplo', guion: tocar('Más del equipo') + tocar('Más datos del equipo') },
+  // Tarea 339: la hoja de la ficha, que desde 768 px es un panel lateral
+  // (la fila "Más datos" del indice la abre), y las pantallas cuya accion
+  // principal sube a la cabecera desde 768 px.
+  { nombre: 'equipo-panel-datos', ruta: '/dispositivos/dis-impresora-ejemplo', guion: tocar('Más datos') },
+  { nombre: 'equipo-mantenimiento', ruta: '/dispositivos/dis-impresora-ejemplo/mantenimientos' },
+  {
+    nombre: 'equipo-mantenimiento-programar',
+    ruta: '/dispositivos/dis-impresora-ejemplo/mantenimientos',
+    guion: tocar('Programar mantenimiento'),
+  },
+  { nombre: 'autorizacion', ruta: '/facturacion/aut-captura-339', antes: AUTORIZACION_SEMBRADA, despues: SIN_AUTORIZACION },
   { nombre: 'escaner', ruta: '/escaner' },
   {
     nombre: 'escaner-asistencia',
@@ -573,6 +595,11 @@ async function main() {
   // Primera carga: deja que el banco de pruebas siembre IndexedDB.
   await s.enviar('Page.navigate', { url: `${BASE}/soluciones` })
   await esperar(4000)
+  // El tema elegido, guardado como lo guarda Ajustes (tarea 339): cada
+  // parada vuelve a cargar la pagina y public/tema.js lo aplica antes de pintar.
+  if (TEMA) {
+    await s.enviar('Runtime.evaluate', { expression: `localStorage.setItem('sit-tema', ${JSON.stringify(TEMA)})` })
+  }
 
   const desbordes = []
   const hallazgos = []
@@ -586,7 +613,7 @@ async function main() {
       mobile: movil,
     })
     await s.enviar('Emulation.setTouchEmulationEnabled', { enabled: movil, maxTouchPoints: movil ? 5 : 0 })
-    const etiqueta = `${ancho}x${alto}`
+    const etiqueta = `${ancho}x${alto}${TEMA ? `-${TEMA}` : ''}`
     for (const parada of PARADAS) {
       const anotar = (momento, error) => {
         if (error) fallosGuion.push(`${etiqueta} ${parada.nombre} (${momento}): ${error}`)

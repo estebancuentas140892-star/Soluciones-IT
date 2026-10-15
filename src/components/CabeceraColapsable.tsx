@@ -37,7 +37,12 @@ export function CabeceraColapsable({ titulo, forzarContraida = false }: { titulo
     <h1
       // 25 px y 650 en reposo desde el rediseño móvil "1b Pulgar" (tarea 330):
       // la cabecera de raíz es una sola fila, título, sincronización y cuenta.
-      className={`min-w-0 truncate leading-[1.15] transition-[font-size] duration-150 motion-reduce:transition-none ${
+      //
+      // DESDE 768 PX NO SE PLIEGA (tarea 339): la barra mide siempre 64 o 72
+      // y lleva el buscador al lado del título, así que encoger el título
+      // movería el campo mientras se escribe en él. 25 px en tableta y 22
+      // desde 1280, porque ahí comparte la fila con el campo.
+      className={`min-w-0 truncate leading-[1.15] transition-[font-size] duration-150 motion-reduce:transition-none md:text-[25px] md:font-[650] md:tracking-[-.02em] xl:text-[22px] ${
         contraida ? 'text-[14px] font-medium' : 'text-[25px] font-[650] tracking-[-.02em]'
       }`}
     >

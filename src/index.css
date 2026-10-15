@@ -195,6 +195,20 @@
   --color-noct-cat-10: oklch(0.75 0.11 335);
 }
 
+/* SOMBRAS DEL SISTEMA (tarea 339, handoff de tableta y escritorio). Las
+   dos unicas: la elevacion, que en el claro separa una superficie blanca
+   del fondo (en el oscuro la separa el color, asi que no hay sombra), y la
+   del panel lateral, que flota sobre la pantalla. Van FUERA de @theme a
+   proposito: Tailwind copia el valor de una sombra de @theme dentro de su
+   utilidad (`shadow-noct-panel` llevaria el valor oscuro tambien en el
+   claro), asi que se usan con `shadow-[var(--shadow-noct-panel)]` y el
+   tema claro las redefine abajo como a los colores. `0 0 #0000` es "sin
+   sombra" y, a diferencia de `none`, se puede componer con los anillos. */
+:root {
+  --shadow-noct-elevacion: 0 0 #0000;
+  --shadow-noct-panel: 0 24px 64px rgb(0 0 0 / 0.5);
+}
+
 /* TEMA CLARO "A PLENO SOL, TAQUILLA" (tarea 333, paso 7 del rediseño movil
    "1b Pulgar"; regla 12 desde el 2026-10-13: oscuro por defecto, claro
    opcional en Ajustes). Se activa con `data-tema="claro"` en <html>
@@ -265,6 +279,10 @@
   --color-noct-cat-8: oklch(0.52 0.11 270);
   --color-noct-cat-9: oklch(0.52 0.11 300);
   --color-noct-cat-10: oklch(0.52 0.11 335);
+
+  /* Las sombras (tarea 339): en claro la profundidad es sombra. */
+  --shadow-noct-elevacion: 0 1px 2px rgb(25 27 40 / 0.06), 0 0 0 1px rgb(25 27 40 / 0.07);
+  --shadow-noct-panel: 0 24px 64px rgb(25 27 40 / 0.18);
 
   /* Los controles nativos (fecha, desplazamiento) en claro. */
   color-scheme: light;

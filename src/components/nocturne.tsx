@@ -68,8 +68,21 @@ export const BTN_PRIMARIO = `${BTN_BASE} border-noct-accent px-2.5 py-[7px] text
 // Alto mínimo de 54 (la acción va al pulgar) y texto en `on-accent`, el
 // casi negro que se lee sobre el cian. No hereda de BTN_BASE: su tamaño
 // de letra, radio y alto son otros, y no lleva borde visible.
+//
+// POR BANDA (tarea 339, handoff de tableta y escritorio): el mismo botón,
+// más bajo donde ya no va al pulgar. Teléfono 54 · 16 px · radio 15;
+// tableta 48 · 15.5 · 14; escritorio 40 · 14 · 11, el alto de los botones
+// de una cabecera con ratón.
 export const BTN_PRIMARIO_RELLENO =
-  'inline-flex min-h-[54px] cursor-pointer items-center justify-center gap-2 rounded-[15px] border border-transparent bg-noct-accent px-4 text-[16px] font-semibold leading-tight text-noct-on-accent hover:bg-noct-accent-300 active:bg-noct-accent-500 disabled:cursor-not-allowed disabled:opacity-45'
+  'inline-flex min-h-[54px] cursor-pointer items-center justify-center gap-2 rounded-[15px] border border-transparent bg-noct-accent px-4 text-[16px] font-semibold leading-tight text-noct-on-accent hover:bg-noct-accent-300 active:bg-noct-accent-500 disabled:cursor-not-allowed disabled:opacity-45 md:min-h-12 md:rounded-[14px] md:text-[15.5px] xl:min-h-10 xl:rounded-[11px] xl:px-[15px] xl:text-[14px]'
+// La acción principal DELINEADA de una cabecera de documento desde 768 px
+// (tarea 339): la que no hace avanzar nada pero manda en la pantalla
+// ("Programar mantenimiento", "Editar" una autorización, "Credenciales" de
+// la ficha). Mismo alto que la rellena de su banda en escritorio (40) y 44
+// en tableta. En el teléfono esas acciones viven en la barra fija de su
+// pantalla, a 52 px, así que esta constante solo se usa desde 768.
+export const BTN_DELINEADO_CABECERA =
+  'inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border-[1.5px] border-noct-text/25 px-4 text-[15px] font-semibold leading-tight text-noct-text hover:bg-noct-text/[.05] active:bg-noct-text/10 xl:h-10 xl:rounded-[11px] xl:px-[15px] xl:text-[14px]'
 export const BTN_SECUNDARIO = `${BTN_BASE} border-noct-divider px-2.5 py-[7px] text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`
 // Variante destructiva del primario (.btn-danger): para la accion que
 // SI ejecuta la eliminacion (a diferencia de BTN_GHOST_PELIGRO, pensado
@@ -105,7 +118,10 @@ export const BTN_GHOST_TENUE = `${BTN_BASE} border-transparent px-2.5 py-[7px] t
 // (favorito, compartir, "···"), justo el borde menos alcanzable con una
 // mano. Donde ya se le sumaba `min-h-11 min-w-11` (junto a un campo de
 // 44) no cambia nada.
-export const BTN_ICONO_SECUNDARIO = `${BTN_BASE} h-11 w-11 shrink-0 border-noct-divider p-0 text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15`
+//
+// Desde 1280 px, 40 x 40 (tarea 339): con ratón no hace falta el dedo, y
+// así cuadra con los botones de 40 de la misma cabecera.
+export const BTN_ICONO_SECUNDARIO = `${BTN_BASE} h-11 w-11 shrink-0 border-noct-divider p-0 text-noct-text hover:bg-noct-text/[.07] active:bg-noct-text/15 xl:h-10 xl:w-10`
 // La misma variante para la accion destructiva (eliminar): sin borde y
 // en rojo. Existe como constante propia porque añadir `text-noct-error`
 // sobre BTN_ICONO_SECUNDARIO NO funciona: las dos clases de color tienen

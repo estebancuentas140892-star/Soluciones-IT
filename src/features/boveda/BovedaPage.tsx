@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { db, type TipoSecreto } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import { DockBusqueda } from '../../components/DockBusqueda'
 import {
   ArrowElbowDownRight,
   ArrowSquareOut,
@@ -448,7 +447,13 @@ export function BovedaPage() {
     // buscador de la misma pantalla y con otro alcance. La duda que
     // midió la auditoría era exactamente esa: "¿esto busca en todo o
     // solo aquí?". Buscar en todo sigue a un toque, desde Inicio.
-    <Chasis titulo="Bóveda" conLupa={false} barra={
+    //
+    // EL BUSCADOR DE LA BÓVEDA (tarea 330, y 339 desde 768 px): el de
+    // siempre, con la Bóveda desbloqueada. El chasis lo monta en el dock de
+    // abajo en el teléfono y en la barra superior desde 768 px.
+    <Chasis titulo="Bóveda" conLupa={false} buscador={
+      <CampoBusqueda valor={texto} onCambiar={setTexto} alcance="la Bóveda" variante="dock" />
+    } barra={
       <>
         <header className="flex items-center justify-between gap-2 px-4 pb-0.5 pt-1">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
@@ -696,12 +701,6 @@ export function BovedaPage() {
           </div>
         </div>
       </main>
-
-      {/* EL BUSCADOR DE LA BÓVEDA, AL PULGAR (tarea 330): el de siempre, con
-          la Bóveda desbloqueada, en el dock de abajo. */}
-      <DockBusqueda>
-        <CampoBusqueda valor={texto} onCambiar={setTexto} alcance="la Bóveda" variante="dock" />
-      </DockBusqueda>
 
       {/* Hoja "Nuevo acceso": arriba los dos gestos de todos los días
           (un acceso con usuario y contraseña, una clave suelta); los

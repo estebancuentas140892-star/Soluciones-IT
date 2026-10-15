@@ -6,7 +6,6 @@ import { conOrigen } from '../../lib/origenNavegacion'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import { DockBusqueda } from '../../components/DockBusqueda'
 import {
   ArrowRight,
   BookOpen,
@@ -220,10 +219,26 @@ export function ResolverPage() {
     // la cabecera es de una fila (título, sincronización y cuenta) y el
     // buscador baja al dock: la pregunta "¿Qué necesitas resolver?" y la
     // línea de ayuda se retiran.
+    //
+    // EL BUSCADOR, AL PULGAR EN EL TELÉFONO (tarea 330) Y EN LA BARRA DESDE
+    // 768 PX (tarea 339): el mismo de siempre, montado por el chasis en un
+    // solo sitio. En el dock va sobre las pestañas y, con el teclado
+    // abierto, sobre el teclado. El marcador sigue invitando a describir lo
+    // que pasa (tarea 288).
     <Chasis
       titulo="Resolver"
       conLupa={false}
       tituloContraido={escribiendo}
+      buscador={
+        <CampoBusqueda
+          valor={query}
+          onCambiar={setQuery}
+          alcance="Soluciones IT"
+          textoAlternativo={MARCADOR_BUSCADOR}
+          refCampo={refCampo}
+          variante="dock"
+        />
+      }
     >
       <main className="flex-1 px-4 pb-6 pt-4">
         {buscando ? (
@@ -322,20 +337,6 @@ export function ResolverPage() {
           </div>
         )}
       </main>
-
-      {/* EL BUSCADOR, AL PULGAR (tarea 330): el mismo de siempre, abajo,
-          sobre las pestañas y, con el teclado abierto, sobre el teclado.
-          El marcador sigue invitando a describir lo que pasa (tarea 288). */}
-      <DockBusqueda>
-        <CampoBusqueda
-          valor={query}
-          onCambiar={setQuery}
-          alcance="Soluciones IT"
-          textoAlternativo={MARCADOR_BUSCADOR}
-          refCampo={refCampo}
-          variante="dock"
-        />
-      </DockBusqueda>
     </Chasis>
   )
 }

@@ -1,5 +1,16 @@
-import type { Ref } from 'react'
+import { createContext, useContext, type ReactNode, type Ref } from 'react'
 import { MagnifyingGlass, XCircleFill } from './iconos'
+
+// EL CAMPO EN LA BARRA SUPERIOR (tarea 339, handoff de tableta y escritorio).
+// Desde 768 px el buscador de una raíz (Resolver, Equipos, Bóveda) deja el
+// dock y sube a la barra, junto al título: es el MISMO elemento, montado en
+// otro sitio (`buscador` del chasis), y el sitio es lo que decide su forma.
+// La barra lo envuelve en este contexto, con lo que va dentro del campo al
+// final (el escáner, tras una línea); fuera de la barra vale `null` y el
+// campo es el de siempre.
+const CampoEnBarraContexto = createContext<{ accesorio?: ReactNode } | null>(null)
+
+export const ProveedorCampoEnBarra = CampoEnBarraContexto.Provider
 
 // UN BUSCADOR POR PANTALLA, SIEMPRE EL MISMO (tarea 207, hallazgos
 // M-004, M-005 y M-009, regla M-R8).
@@ -45,11 +56,30 @@ export function CampoBusqueda({
   variante?: 'normal' | 'destacada' | 'dock'
   className?: string
 }) {
+  const enBarra = useContext(CampoEnBarraContexto)
   const buscando = valor.trim().length > 0
   // `dock` (tarea 330): el de abajo, al pulgar. Mismo alto que `destacada`
   // (52 px), más redondo, con borde y sombra: flota sobre la lista.
-  const dock = variante === 'dock'
-  const destacada = variante === 'destacada' || dock
+  const dock = variante === 'dock' && !enBarra
+  const destacada = (variante === 'destacada' || variante === 'dock') && !enBarra
+
+  // En la barra (tarea 339): 44 px en tableta y 48 desde 1280, con el
+  // borde neutro fuerte del dock y la elevación del tema claro. Lo de
+  // dentro (icono, texto, borrar) a la medida de un campo con ratón.
+  const forma = enBarra
+    ? 'h-11 gap-2.5 rounded-xl pl-3.5 pr-1.5 shadow-[var(--shadow-noct-elevacion)] xl:h-12 xl:rounded-[13px] xl:pl-4'
+    : dock
+      ? 'h-[52px] gap-2.5 rounded-2xl pl-4 pr-3.5 shadow-[0_6px_20px_rgba(0,0,0,.16)]'
+      : destacada
+        ? 'h-[52px] gap-3 rounded-[10px] pl-4 pr-3.5'
+        : 'h-[46px] gap-2.5 rounded-lg px-3.5'
+  const borde = buscando
+    ? 'border-noct-accent'
+    : dock || enBarra
+      ? 'border-noct-text/25'
+      : destacada
+        ? 'border-noct-neutral-600'
+        : 'border-noct-divider'
 
   return (
     <label
@@ -60,17 +90,11 @@ export function CampoBusqueda({
       // borde más `ring-1`: 2 px de acento, tan visibles como el anillo
       // global que sustituyen, y distintos del borde de 1 px que queda
       // cuando hay texto escrito pero el foco está en otra parte.
-      className={`flex items-center border bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent ${
-        dock
-          ? 'h-[52px] gap-2.5 rounded-2xl pl-4 pr-3.5 shadow-[0_6px_20px_rgba(0,0,0,.16)]'
-          : destacada
-            ? 'h-[52px] gap-3 rounded-[10px] pl-4 pr-3.5'
-            : 'h-[46px] gap-2.5 rounded-lg px-3.5'
-      } ${buscando ? 'border-noct-accent' : dock ? 'border-noct-text/25' : destacada ? 'border-noct-neutral-600' : 'border-noct-divider'} ${className}`}
+      className={`flex items-center border bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent ${forma} ${borde} ${className}`}
     >
       <MagnifyingGlass
         size={destacada ? 20 : 18}
-        className={`shrink-0 ${buscando || dock ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
+        className={`shrink-0 ${buscando || dock || enBarra ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
         aria-hidden
       />
       <input
@@ -84,7 +108,7 @@ export function CampoBusqueda({
         // La "x" nativa de WebKit se oculta siempre: duplicaba el botón
         // de borrar y medía la mitad.
         className={`min-w-0 flex-1 bg-transparent text-noct-text outline-none placeholder:text-noct-neutral-400 [&::-webkit-search-cancel-button]:hidden ${
-          destacada ? 'text-[16px]' : 'text-[15px]'
+          enBarra ? 'text-[15px] xl:text-[15.5px]' : destacada ? 'text-[16px]' : 'text-[15px]'
         }`}
       />
       {buscando && (
@@ -92,10 +116,18 @@ export function CampoBusqueda({
           type="button"
           onClick={() => onCambiar('')}
           aria-label="Borrar la búsqueda"
-          className="-mr-3 flex h-11 w-11 shrink-0 items-center justify-center text-noct-neutral-300 hover:text-noct-text"
+          className={`flex shrink-0 items-center justify-center text-noct-neutral-300 hover:text-noct-text ${
+            enBarra ? 'h-9 w-9 rounded-[9px] hover:bg-noct-text/[.05]' : '-mr-3 h-11 w-11'
+          }`}
         >
           <XCircleFill size={destacada ? 19 : 18} aria-hidden />
         </button>
+      )}
+      {enBarra?.accesorio && (
+        <>
+          <span className="h-[22px] w-px shrink-0 bg-noct-divider" aria-hidden />
+          {enBarra.accesorio}
+        </>
       )}
     </label>
   )

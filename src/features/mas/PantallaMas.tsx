@@ -215,7 +215,7 @@ function FilaFavoritos({ favoritos }: { favoritos: ElementoFavorito[] }) {
         onClick={() => setAbierta((valor) => !valor)}
         aria-expanded={abierta}
         aria-controls={idCuerpo}
-        className="flex min-h-[60px] w-full items-center gap-3.5 py-2 text-left text-noct-text hover:bg-noct-text/[.04]"
+        className="flex min-h-[60px] w-full items-center gap-3.5 py-2 text-left text-noct-text hover:bg-noct-text/[.04] md:min-h-14 xl:min-h-[46px]"
       >
         <Star size={20} className="w-5 shrink-0 text-noct-neutral-400" aria-hidden />
         <span className="min-w-0 flex-1">

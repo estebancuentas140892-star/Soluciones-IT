@@ -16,6 +16,11 @@ import { useAltoDelTeclado } from './useAltoDelTeclado'
 // encima. Donde el navegador ya encoge la página (Android), el teclado no
 // tapa nada y el dock sigue sobre las pestañas. Desplazar la lista con el
 // dedo cierra el teclado: se está mirando lo encontrado, no escribiendo.
+//
+// SOLO EN EL TELÉFONO (tarea 339). Desde 768 px el mismo campo va en la
+// barra superior. Lo monta el chasis (`buscador`) en un único sitio según
+// el ancho (`useEsAncho`); el `md:hidden` es solo una red por si alguien lo
+// monta a mano.
 export function DockBusqueda({ children, conEscaner = true }: { children: ReactNode; conEscaner?: boolean }) {
   const contenedor = useRef<HTMLDivElement>(null)
   const teclado = useAltoDelTeclado()
@@ -39,7 +44,7 @@ export function DockBusqueda({ children, conEscaner = true }: { children: ReactN
       // Con el teclado abierto el `bottom` sale de la medida, no del alto
       // de las pestañas (que quedan debajo del teclado).
       style={teclado > 0 ? { bottom: teclado } : undefined}
-      className={`sticky ${PEGADA_SOBRE_PESTANAS} z-10 mt-auto flex items-center gap-2 bg-noct-bg/[.94] px-3 pb-2.5 pt-2 backdrop-blur-[12px]`}
+      className={`sticky ${PEGADA_SOBRE_PESTANAS} z-10 mt-auto flex items-center gap-2 bg-noct-bg/[.94] px-3 pb-2.5 pt-2 backdrop-blur-[12px] md:hidden`}
     >
       <div className="min-w-0 flex-1">{children}</div>
       {conEscaner && (
