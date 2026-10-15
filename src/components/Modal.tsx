@@ -128,6 +128,10 @@ export function Modal({ abierto, onCerrar, tituloId, variante = 'dialogo', child
         aria-modal="true"
         aria-labelledby={tituloId}
         tabIndex={-1}
+        // Recibe el foco solo para que el diálogo se anuncie y Tab empiece
+        // dentro: no es un control, así que sin anillo (la regla de
+        // `[data-foco-lectura]` en index.css). Lo de dentro sí lo dibuja.
+        data-foco-lectura
         onClick={(evento) => evento.stopPropagation()}
         className={`max-h-[calc(100dvh-2rem)] w-full outline-none max-w-sm overflow-y-auto rounded-2xl border border-noct-divider bg-noct-surface p-5 text-noct-text shadow-2xl ${variante === 'hoja' ? PANEL : ''}`}
       >
