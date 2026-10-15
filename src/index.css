@@ -209,6 +209,33 @@
   --shadow-noct-panel: 0 24px 64px rgb(0 0 0 / 0.5);
 }
 
+/* EL MARGEN DE BANDA (tarea 339, T1; "Especificación de breakpoints" del
+   handoff de tableta y escritorio): 16 px en el teléfono, 24 en la tableta,
+   32 desde 1024 y 40 desde 1280, con 24 y 28 de aire arriba. Es del chasis,
+   no de cada pantalla, igual que el alto de las pestañas (R22): cada
+   pantalla escribe `px-4` para el teléfono y esta regla la sustituye desde
+   768 en el `main` que cuelga de la columna del chasis
+   (`data-margen-banda`). Va fuera de toda capa a propósito: así manda sobre
+   las utilidades (`px-4`, `lg:px-10`) sin tocar cuarenta pantallas. La barra
+   superior y la cabecera de documento usan el mismo margen. */
+@media (min-width: 48rem) {
+  [data-margen-banda] > main {
+    padding-inline: 1.5rem;
+    padding-top: 1.5rem;
+  }
+}
+@media (min-width: 64rem) {
+  [data-margen-banda] > main {
+    padding-inline: 2rem;
+  }
+}
+@media (min-width: 80rem) {
+  [data-margen-banda] > main {
+    padding-inline: 2.5rem;
+    padding-top: 1.75rem;
+  }
+}
+
 /* TEMA CLARO "A PLENO SOL, TAQUILLA" (tarea 333, paso 7 del rediseño movil
    "1b Pulgar"; regla 12 desde el 2026-10-13: oscuro por defecto, claro
    opcional en Ajustes). Se activa con `data-tema="claro"` en <html>

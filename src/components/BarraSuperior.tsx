@@ -87,7 +87,12 @@ export function BarraSuperior({
   return (
     <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
       <div
-        className={`flex items-center justify-between gap-2 pr-2 pt-2.5 md:h-16 md:justify-start md:gap-3.5 md:pr-4 md:pt-0 xl:h-[72px] xl:gap-4 ${volver ? 'pl-1' : 'pl-4'}`}
+        // El margen de la banda (T1): 24, 32 desde 1024 y 40 desde 1280, el
+        // mismo del contenido; con regreso, 10 px antes para que su icono
+        // caiga en la línea del margen.
+        className={`flex items-center justify-between gap-2 pr-2 pt-2.5 md:h-16 md:justify-start md:gap-3.5 md:pr-6 md:pt-0 lg:pr-8 xl:h-[72px] xl:gap-4 xl:pr-10 ${
+          volver ? 'pl-1 md:pl-3.5 lg:pl-[22px] xl:pl-[30px]' : 'pl-4 md:pl-6 lg:pl-8 xl:pl-10'
+        }`}
       >
         <div className="flex min-w-0 items-center gap-0.5 md:shrink-0">
           {volver && (

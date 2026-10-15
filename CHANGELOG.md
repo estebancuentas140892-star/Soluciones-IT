@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (chasis, tarea 339, ajuste de T1 con el lienzo): el margen de cada banda y la barra lateral
+
+**Área modificada:** `src/index.css` (regla `[data-margen-banda] > main`), `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** el lienzo "Soluciones IT · Tableta y escritorio" (pizarras 2 y 12) fija el margen por banda (16, 24, 32 desde 1024 y 40) y la forma de la barra lateral; T1 los había dejado en 16 px y con el número de urgentes siempre sobre el icono.
+**Descripción:** el margen lo pone el chasis desde 768 px sobre el `main` de cada pantalla, fuera de las capas de Tailwind para mandar sobre su `px-4`, sin tocar cuarenta pantallas; la barra de sección y la cabecera de documento se alinean con él. La barra lateral: destinos de 44 en el rail y 40 desde 1280, activo con el tinte al 13 % y el texto en acento, y el número de urgentes a la derecha del rótulo desde 1280.
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** el contenido respira como en el lienzo y título, búsqueda y contenido comparten la misma línea.
+
 ### Corregido (diálogos, tarea 340, complemento de T2): el foco entra al panel y a los diálogos, y vuelve al cerrar
 
 **Área modificada:** `src/components/Modal.tsx`; `src/features/boveda/CredencialEnHoja.tsx`; prueba en `src/app/chasisPorAncho.test.tsx`.

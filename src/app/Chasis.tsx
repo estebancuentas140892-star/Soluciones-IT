@@ -510,7 +510,9 @@ export function Chasis(props: Props) {
             al lado van el origen a 11 px y el nombre a 14 px. */}
         {/* Desde 768 px la fila mide 60 (tarea 339): cabe la acción
             principal de 48 de la tableta sin tocar los bordes. */}
-        <div className="flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5 md:min-h-[60px] md:pr-4 md:pt-0">
+        {/* Su margen es el de la banda (T1): el regreso, 10 px antes del
+            margen del contenido, para que su icono caiga en la misma línea. */}
+        <div className="flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5 md:min-h-[60px] md:gap-2.5 md:pl-3.5 md:pr-6 md:pt-0 lg:pl-[22px] lg:pr-8 xl:pl-[30px] xl:pr-10">
           {props.titulo ? (
             <div className="flex min-w-0 flex-1 items-center gap-0.5">
               <BotonVolver to={volverA} soloIcono estado={estadoDeRegreso(origen)}>
@@ -597,9 +599,9 @@ export function Chasis(props: Props) {
           lo mismo en la misma pantalla. Ahora Más es una sola puerta en
           todos los tamaños. */}
       <aside className="sticky top-0 hidden h-svh w-16 shrink-0 flex-col gap-[18px] overflow-y-auto border-r border-noct-divider bg-noct-surface px-2 py-5 md:flex xl:w-60 xl:px-3 3xl:w-[232px]">
-        <div className="flex items-center justify-center gap-2 xl:justify-start xl:px-2">
+        <div className="flex h-7 items-center justify-center gap-[9px] xl:justify-start xl:px-2">
           <Marca className="h-[22px] w-[22px] shrink-0 text-noct-accent" />
-          <span className="hidden text-[15px] font-semibold xl:inline">Soluciones IT</span>
+          <span className="hidden text-[15px] font-[650] tracking-[-.01em] xl:inline">Soluciones IT</span>
         </div>
         <nav className="flex flex-col gap-0.5" aria-label="Navegación principal">
           {DESTINOS.map(({ to, label, icono: Icono, iconoActivo: IconoActivo }) => {
@@ -612,17 +614,34 @@ export function Chasis(props: Props) {
                 onClick={() => alTocarPestana(to)}
                 aria-current={activo ? 'page' : undefined}
                 title={label}
-                className={`flex min-h-11 items-center justify-center gap-2.5 rounded-md text-sm outline-none focus-visible:outline-2 focus-visible:outline-noct-accent xl:justify-start xl:px-2.5 xl:py-[9px] ${
+                // Barra lateral del lienzo (T1): 44 en el rail, que es táctil, y
+                // 40 con su rótulo desde 1280; el destino activo, con el tinte
+                // de acento al 13 % y el texto en acento-300.
+                className={`flex min-h-11 items-center justify-center gap-[11px] rounded-[9px] text-sm outline-none focus-visible:outline-2 focus-visible:outline-noct-accent xl:min-h-10 xl:justify-start xl:px-2.5 ${
                   activo
-                    ? 'bg-noct-accent/[.12] font-semibold text-noct-accent'
-                    : 'font-medium text-noct-neutral-400 hover:bg-noct-text/[.05]'
+                    ? 'bg-noct-accent/[.13] font-semibold text-noct-accent-300'
+                    : 'font-medium text-noct-neutral-400 hover:bg-noct-text/[.045] hover:text-noct-text'
                 }`}
               >
                 <span className="relative">
                   {activo ? <IconoActivo size={18} /> : <Icono size={18} />}
-                  {numeroPendientes > 0 && <AvisoPestana variante="numero" valor={numeroPendientes} />}
+                  {/* En el rail, el número sobre el icono; desde 1280, a la
+                      derecha del rótulo. El mismo dato y el mismo color. */}
+                  {numeroPendientes > 0 && (
+                    <span className="xl:hidden">
+                      <AvisoPestana variante="numero" valor={numeroPendientes} />
+                    </span>
+                  )}
                 </span>
                 <span className="hidden xl:inline">{label}</span>
+                {numeroPendientes > 0 && (
+                  <span
+                    aria-hidden
+                    className="ml-auto hidden h-5 min-w-5 items-center justify-center rounded-full bg-noct-precaucion px-1.5 font-mono text-[11.5px] font-semibold leading-none text-noct-bg xl:flex"
+                  >
+                    {numeroPendientes > 9 ? '9+' : numeroPendientes}
+                  </span>
+                )}
                 {numeroPendientes > 0 && (
                   <span className="sr-only">
                     {' '}
@@ -665,6 +684,9 @@ export function Chasis(props: Props) {
       <div className="flex min-h-svh min-w-0 flex-1 flex-col">
         <div
           data-transicion={direccion}
+          // El margen de cada banda (16, 24, 32 y 40) lo pone `src/index.css`
+          // sobre el `main` de la pantalla (T1).
+          data-margen-banda
           className={`mx-auto flex w-full flex-1 flex-col ${ANCHO_CONTENIDO} ${ALTO_PESTANAS}`}
         >
           {cabecera}
