@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (Más, tarea 339, T9): directorio y favoritos al lado desde 1280
+
+**Área modificada:** `src/features/mas/PantallaMas.tsx` (`ColumnaFavoritos` y `ListaFavoritos`, internos), `FilasMas.tsx` (`unaLinea`, `className`); prueba nueva `masPorAncho.test.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** paso T9 del handoff (pizarra Más 1280).
+**Descripción:** desde 1280, cada grupo es una fila del directorio (`180px minmax(0,1fr)`) con puertas de una línea, y Mis favoritos va abierto en una columna de 320 (decidido con `useEsAncho`: el pliegue pasa a ser columna). La lista de favoritos es una sola, usada por la fila plegable y por la columna. **Desviación del lienzo:** el lienzo recorta lo que contiene cada puerta en una línea; aquí baja a la segunda cuando no cabe (tarea 268, la fila no esconde lo que hay dentro).
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** Más se lee como un índice y los favoritos quedan a un clic sin abrir nada.
+
 ### Cambiado (mantenimiento y facturación, tarea 339, T8): lista tabular y columnas en paralelo
 
 **Área modificada:** `src/features/mantenimientos/MantenimientosDelEquipo.tsx` (`TablaRealizados` nueva, interna), `src/features/facturacion/AutorizacionPage.tsx`; pruebas en `mantenimientoFlujo.test.tsx`.

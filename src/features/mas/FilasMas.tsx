@@ -19,9 +19,9 @@ import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 // y la fila de índice, a 60 px con el título a 15,5 px y el conteo a
 // 13,5 px en IBM Plex Mono.
 
-export function TituloGrupo({ children }: { children: ReactNode }) {
+export function TituloGrupo({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <h2 className="pb-0.5 text-[13.5px] font-semibold leading-[1.3] text-noct-neutral-400">
+    <h2 className={`pb-0.5 text-[13.5px] font-semibold leading-[1.3] text-noct-neutral-400 ${className}`}>
       {children}
     </h2>
   )
@@ -46,6 +46,7 @@ export function FilaMas({
   nota,
   estado,
   variante = 'indice',
+  unaLinea = false,
 }: {
   to: string
   Icono: (props: IconoProps) => React.JSX.Element
@@ -66,20 +67,37 @@ export function FilaMas({
   estado?: EstadoConOrigen
   /** `indice`: icono de línea y sin caja (Más, inventario). `caja`: el icono en su recuadro. */
   variante?: 'indice' | 'caja'
+  /**
+   * DESDE 1280, EN UNA LÍNEA (tarea 339, T9; el directorio de Más): el
+   * título y, a su lado, de qué es. Si no cabe, lo que contiene baja entero
+   * a la línea de abajo en vez de recortarse (tarea 268: la fila no esconde
+   * lo que hay dentro). En el teléfono y la tableta, dos líneas como siempre.
+   */
+  unaLinea?: boolean
 }) {
   if (variante === 'indice') {
     return (
       <Link
         to={to}
         state={estado}
-        className="flex min-h-[60px] items-center gap-3.5 py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-14 xl:min-h-[46px]"
+        className={`flex min-h-[60px] items-center gap-3.5 py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-14 xl:min-h-[46px] ${
+          unaLinea ? 'xl:-mx-2 xl:rounded-lg xl:px-2 xl:py-1' : ''
+        }`}
       >
         <Icono size={20} className="w-5 shrink-0 text-noct-neutral-400" aria-hidden />
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15.5px] font-[550] leading-[1.3]">{titulo}</span>
+        <span className={`min-w-0 flex-1 ${unaLinea ? 'xl:flex xl:flex-wrap xl:items-baseline xl:gap-x-3' : ''}`}>
+          <span
+            className={`block text-[15.5px] font-[550] leading-[1.3] ${unaLinea ? 'xl:shrink-0 xl:whitespace-nowrap xl:text-[14.5px] xl:font-semibold' : ''}`}
+          >
+            {titulo}
+          </span>
           {/* Sin recortar (tarea 268): en un teléfono estrecho, la línea
               pasa a una segunda antes que esconder lo que hay dentro. */}
-          <span className="block text-[13px] leading-[1.35] text-noct-neutral-400">{subtitulo}</span>
+          <span
+            className={`block text-[13px] leading-[1.35] text-noct-neutral-400 ${unaLinea ? 'xl:min-w-0 xl:text-[13.5px]' : ''}`}
+          >
+            {subtitulo}
+          </span>
           {nota && <span className="mt-0.5 block text-[12px] text-noct-neutral-500">{nota}</span>}
         </span>
         <ConteoFila valor={conteo} />

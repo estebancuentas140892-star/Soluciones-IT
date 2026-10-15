@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useId, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
+import { ANCHO_ESCRITORIO, useEsAncho } from '../../components/useEsAncho'
 import { destinoDePestana, RAICES_CON_MEMORIA } from '../../app/memoriaPestana'
 import {
   BookBookmark,
@@ -82,119 +83,194 @@ export function PantallaMas() {
   // 257, ver `RAICES_CON_MEMORIA`).
   const { pathname } = useLocation()
   const destinoRed = destinoDePestana('/red', pathname, RAICES_CON_MEMORIA)
+  // DESDE 1280, UN DIRECTORIO Y SUS FAVORITOS AL LADO (tarea 339, T9; pizarra
+  // Más 1280): cada grupo es una fila del directorio (su nombre en 180 px y
+  // sus puertas, de una línea) y Mis favoritos, abierto, en su columna. Que
+  // los favoritos dejen de ser un pliegue y sean una columna cambia la
+  // estructura, así que se decide aquí.
+  const escritorio = useEsAncho(ANCHO_ESCRITORIO)
+  const favoritosAlLado = escritorio && favoritos.length > 0
+  // Los cambios de forma del directorio, por CSS: el grupo en dos columnas y
+  // su nombre y sus filas con la línea de arriba.
+  const grupo = 'xl:grid xl:grid-cols-[180px_minmax(0,1fr)] xl:gap-x-6'
+  const tituloGrupo = 'xl:border-t xl:border-noct-divider xl:pb-0 xl:pt-[13px]'
+  const filas = 'flex flex-col divide-y divide-noct-divider xl:divide-y-0 xl:border-t xl:border-noct-divider xl:py-1'
+
+  const directorio = (
+    // Una columna en el teléfono y en la tableta; desde 1024 px, dos. A
+    // 768 las dos columnas dejaban unos 340 px por grupo y recortaban los
+    // subtítulos (medido en las capturas de la tarea 257). `items-start`
+    // evita que abrir Mis favoritos estire el grupo de al lado. Desde 1280,
+    // el directorio: un grupo debajo de otro (T9).
+    //
+    // `grid-cols-1` NO sobra aunque sea una sola columna: sin columnas
+    // declaradas, la columna implícita es `auto` y no puede encogerse por
+    // debajo del texto `truncate` más largo (no parte línea), así que en el
+    // teléfono crecía más que la pantalla y el conteo y el galón quedaban
+    // fuera, recortados sin barra de desplazamiento. Tailwind la define con
+    // `minmax(0, 1fr)`, que sí se encoge.
+    <div className="grid min-w-0 grid-cols-1 items-start gap-[22px] lg:grid-cols-2 lg:gap-x-8 xl:grid-cols-1 xl:gap-0">
+      <section className={grupo}>
+        <TituloGrupo className={tituloGrupo}>Consultar</TituloGrupo>
+        <div className={filas}>
+          {/* Centro de consulta (antes "Referencia"): responde "¿qué
+              es esto?" con el equipo delante, en mitad de una guía o
+              de una llamada. */}
+          <Fila
+            to="/referencia"
+            Icono={BookBookmark}
+            titulo="Centro de consulta"
+            subtitulo="Herramientas, glosario, atajos y comandos"
+            conteo={referencias ?? null}
+            unaLinea
+          />
+          {favoritos.length > 0 && !favoritosAlLado && <FilaFavoritos favoritos={favoritos} />}
+        </div>
+      </section>
+
+      <section className={grupo}>
+        <TituloGrupo className={tituloGrupo}>Personas y lugares</TituloGrupo>
+        <div className={filas}>
+          <Fila
+            to="/personas"
+            Icono={UsersThree}
+            titulo="Personas"
+            subtitulo="Quién tiene cada equipo, ingresos y retiros"
+            conteo={personasActivas ?? null}
+            unaLinea
+          />
+          <Fila
+            to="/ubicaciones"
+            Icono={MapPin}
+            titulo="Ubicaciones"
+            subtitulo="Qué hay en cada sede, área y rack"
+            conteo={ubicaciones ?? null}
+            unaLinea
+          />
+        </div>
+      </section>
+
+      <section className={grupo}>
+        <TituloGrupo className={tituloGrupo}>Infraestructura</TituloGrupo>
+        <div className={filas}>
+          {/* Red recorre la infraestructura, busca un equipo, dice qué
+              cae si falla y abre el mapa completo (Topología), que ya
+              no necesita fila propia (tarea 268). */}
+          <Fila
+            to={destinoRed}
+            Icono={PlugsConnected}
+            titulo="Red"
+            subtitulo="Conexiones, impacto y el mapa completo"
+            unaLinea
+          />
+        </div>
+      </section>
+
+      <section className={grupo}>
+        <TituloGrupo className={tituloGrupo}>Inventario</TituloGrupo>
+        <div className={filas}>
+          <Fila
+            to="/inventario"
+            Icono={Package}
+            titulo="Herramientas de inventario"
+            subtitulo="Importar, etiquetas QR y datos por ordenar"
+            unaLinea
+          />
+          {/* Tarea 321: todas las autorizaciones, también las que no
+              tienen POS (no cuelgan de ninguna ficha). */}
+          <Fila
+            to="/facturacion"
+            Icono={Storefront}
+            titulo="Autorizaciones de facturación"
+            subtitulo="Prefijos y rangos DIAN de los POS"
+            conteo={autorizaciones ?? null}
+            unaLinea
+          />
+        </div>
+      </section>
+
+      <section className={grupo}>
+        <TituloGrupo className={tituloGrupo}>Cuenta y aplicación</TituloGrupo>
+        <div className={filas}>
+          {/* AJUSTES, una sola puerta (tarea 268): Mi cuenta, Bloqueo
+              y seguridad y Buscar actualización eran tres filas, y Mi
+              cuenta ya enlazaba la seguridad y ofrecía instalar y
+              trabajar sin conexión. Desde la propuesta final, una fila
+              de índice como las demás: de quién es la cuenta lo dice el
+              avatar de la barra superior y la cabecera de Ajustes. */}
+          <Fila
+            to="/cuenta"
+            Icono={UserCircle}
+            titulo="Ajustes"
+            subtitulo="Cuenta, bloqueo, sin conexión y actualización"
+            unaLinea
+          />
+        </div>
+      </section>
+    </div>
+  )
 
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila, sin controles
     // propios bajo la fila superior.
     <Chasis titulo="Más">
       <main className="flex-1 px-4 pb-16 pt-4">
-        {/* Una columna en el teléfono y en la tableta; desde 1024 px,
-            dos. A 768 las dos columnas dejaban unos 340 px por grupo y
-            recortaban los subtítulos (medido en las capturas de la
-            tarea 257). `items-start` evita que abrir Mis favoritos
-            estire el grupo de al lado.
-
-            `grid-cols-1` NO sobra aunque sea una sola columna: sin
-            columnas declaradas, la columna implícita es `auto` y no
-            puede encogerse por debajo del texto `truncate` más largo
-            (no parte línea), así que en el teléfono crecía más que la
-            pantalla y el conteo y el galón quedaban fuera, recortados
-            sin barra de desplazamiento. Tailwind la define con
-            `minmax(0, 1fr)`, que sí se encoge. */}
-        <div className="grid grid-cols-1 items-start gap-[22px] lg:grid-cols-2 lg:gap-x-8">
-          <section>
-            <TituloGrupo>Consultar</TituloGrupo>
-            <div className="flex flex-col divide-y divide-noct-divider">
-              {/* Centro de consulta (antes "Referencia"): responde "¿qué
-                  es esto?" con el equipo delante, en mitad de una guía o
-                  de una llamada. */}
-              <Fila
-                to="/referencia"
-                Icono={BookBookmark}
-                titulo="Centro de consulta"
-                subtitulo="Herramientas, glosario, atajos y comandos"
-                conteo={referencias ?? null}
-              />
-              {favoritos.length > 0 && <FilaFavoritos favoritos={favoritos} />}
-            </div>
-          </section>
-
-          <section>
-            <TituloGrupo>Personas y lugares</TituloGrupo>
-            <div className="flex flex-col divide-y divide-noct-divider">
-              <Fila
-                to="/personas"
-                Icono={UsersThree}
-                titulo="Personas"
-                subtitulo="Quién tiene cada equipo, ingresos y retiros"
-                conteo={personasActivas ?? null}
-              />
-              <Fila
-                to="/ubicaciones"
-                Icono={MapPin}
-                titulo="Ubicaciones"
-                subtitulo="Qué hay en cada sede, área y rack"
-                conteo={ubicaciones ?? null}
-              />
-            </div>
-          </section>
-
-          <section>
-            <TituloGrupo>Infraestructura</TituloGrupo>
-            <div className="flex flex-col divide-y divide-noct-divider">
-              {/* Red recorre la infraestructura, busca un equipo, dice qué
-                  cae si falla y abre el mapa completo (Topología), que ya
-                  no necesita fila propia (tarea 268). */}
-              <Fila
-                to={destinoRed}
-                Icono={PlugsConnected}
-                titulo="Red"
-                subtitulo="Conexiones, impacto y el mapa completo"
-              />
-            </div>
-          </section>
-
-          <section>
-            <TituloGrupo>Inventario</TituloGrupo>
-            <div className="flex flex-col divide-y divide-noct-divider">
-              <Fila
-                to="/inventario"
-                Icono={Package}
-                titulo="Herramientas de inventario"
-                subtitulo="Importar, etiquetas QR y datos por ordenar"
-              />
-              {/* Tarea 321: todas las autorizaciones, también las que no
-                  tienen POS (no cuelgan de ninguna ficha). */}
-              <Fila
-                to="/facturacion"
-                Icono={Storefront}
-                titulo="Autorizaciones de facturación"
-                subtitulo="Prefijos y rangos DIAN de los POS"
-                conteo={autorizaciones ?? null}
-              />
-            </div>
-          </section>
-
-          <section>
-            <TituloGrupo>Cuenta y aplicación</TituloGrupo>
-            <div className="flex flex-col divide-y divide-noct-divider">
-              {/* AJUSTES, una sola puerta (tarea 268): Mi cuenta, Bloqueo
-                  y seguridad y Buscar actualización eran tres filas, y Mi
-                  cuenta ya enlazaba la seguridad y ofrecía instalar y
-                  trabajar sin conexión. Desde la propuesta final, una fila
-                  de índice como las demás: de quién es la cuenta lo dice el
-                  avatar de la barra superior y la cabecera de Ajustes. */}
-              <Fila
-                to="/cuenta"
-                Icono={UserCircle}
-                titulo="Ajustes"
-                subtitulo="Cuenta, bloqueo, sin conexión y actualización"
-              />
-            </div>
-          </section>
-        </div>
+        {favoritosAlLado ? (
+          <div className="grid grid-cols-[minmax(0,1fr)_320px] items-start gap-x-12">
+            {directorio}
+            <ColumnaFavoritos favoritos={favoritos} />
+          </div>
+        ) : (
+          directorio
+        )}
       </main>
     </Chasis>
+  )
+}
+
+// MIS FAVORITOS, ABIERTOS EN SU COLUMNA (desde 1280, tarea 339, T9): la misma
+// lista que despliega su fila en el teléfono, con su cabecera (la estrella, el
+// nombre y cuántos), sin botón.
+function ColumnaFavoritos({ favoritos }: { favoritos: ElementoFavorito[] }) {
+  const idTitulo = useId()
+  return (
+    <aside aria-labelledby={idTitulo} className="flex min-w-0 flex-col gap-1.5">
+      <div className="flex items-center justify-between gap-2 border-b border-noct-divider pb-1 pt-2.5">
+        <h2 id={idTitulo} className="flex items-center gap-2 text-[14.5px] font-semibold">
+          <Star size={17} className="shrink-0 text-noct-neutral-400" aria-hidden />
+          Mis favoritos
+        </h2>
+        <ConteoFila valor={favoritos.length} />
+      </div>
+      <ListaFavoritos favoritos={favoritos} />
+    </aside>
+  )
+}
+
+// La lista de favoritos, la misma en la fila plegable y en la columna.
+function ListaFavoritos({ favoritos, id }: { favoritos: ElementoFavorito[]; id?: string }) {
+  return (
+    <div id={id} className="flex flex-col">
+      {favoritos.map((favorito) => {
+        const { Icono } = VISUAL_POR_TIPO[favorito.tipo]
+        return (
+          <Link
+            key={favorito.clave}
+            to={favorito.ruta}
+            className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 text-[14px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
+          >
+            <Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+            {/* Hasta dos líneas, como los títulos de Recientes y de los
+                resultados: recortado, "Conectar un recurso compartido…"
+                no decía cuál era. */}
+            <span className="line-clamp-2 min-w-0 flex-1 break-words py-1.5">{favorito.titulo}</span>
+            {favorito.subtitulo && (
+              <span className="max-w-[45%] shrink-0 truncate text-[12px] text-noct-neutral-400">{favorito.subtitulo}</span>
+            )}
+          </Link>
+        )
+      })}
+    </div>
   )
 }
 
@@ -236,28 +312,8 @@ function FilaFavoritos({ favoritos }: { favoritos: ElementoFavorito[] }) {
       {abierta && (
         // Sangría alineada con el título de la fila (20 de icono + 14 de
         // separación), para que se lea como su contenido.
-        <div id={idCuerpo} className="flex flex-col pb-1.5 pl-[34px]">
-          {favoritos.map((favorito) => {
-            const { Icono } = VISUAL_POR_TIPO[favorito.tipo]
-            return (
-              <Link
-                key={favorito.clave}
-                to={favorito.ruta}
-                className="flex min-h-11 items-center gap-2.5 border-t border-noct-divider/60 text-[14px] text-noct-text first:border-t-0 hover:text-noct-accent-300"
-              >
-                <Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
-                {/* Hasta dos líneas, como los títulos de Recientes y de los
-                    resultados: recortado, "Conectar un recurso compartido…"
-                    no decía cuál era. */}
-                <span className="line-clamp-2 min-w-0 flex-1 break-words py-1.5">{favorito.titulo}</span>
-                {favorito.subtitulo && (
-                  <span className="max-w-[45%] shrink-0 truncate text-[12px] text-noct-neutral-400">
-                    {favorito.subtitulo}
-                  </span>
-                )}
-              </Link>
-            )
-          })}
+        <div className="pb-1.5 pl-[34px]">
+          <ListaFavoritos favoritos={favoritos} id={idCuerpo} />
         </div>
       )}
     </div>
