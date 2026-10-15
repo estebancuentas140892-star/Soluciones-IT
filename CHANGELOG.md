@@ -6,9 +6,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-15
+
+### Integrado (tarea 339 y 340): el sistema "1b Pulgar" en tableta y escritorio llega a `main`
+
+**Área modificada:** la rama `feat/responsive-pulgar` (pasos T1 a T11 y la tarea 340, detallados abajo, en las entradas del 2026-10-14) entra en `main` por avance rápido desde `c6ebefb`.
+**Tipo:** Cambiado.
+**Motivo:** el usuario revisó las capturas (320 a 1680, oscuro y claro) y aprobó integrar, desplegar y verificar (reglas 14 y 21).
+**Estructura de datos:** sin cambios (ni Supabase, ni `schema.sql`, ni Dexie, ni la sincronización): no hay SQL que aplicar.
+**Impacto esperado:** en tableta y escritorio la app tiene la misma identidad que en el teléfono, compuesta para cada ancho. Los dispositivos con la app instalada la reciben al aceptar "Actualización disponible" (en escritorio, recargando).
+
 ## 2026-10-14
 
-### Cambiado (chasis, tarea 339): el sistema "1b Pulgar" en tableta y escritorio, T1 y T2 (rama `feat/responsive-pulgar`, sin integrar)
+### Cambiado (chasis, tarea 339): el sistema "1b Pulgar" en tableta y escritorio, T1 y T2
 
 **Área modificada:** `src/app/Chasis.tsx` (props `buscador` y `accionPrincipal`), `src/components/BarraSuperior.tsx`, `CampoBusqueda.tsx`, `DockBusqueda.tsx`, `CabeceraColapsable.tsx`, `HojaInferior.tsx`, `Modal.tsx` (`variante="hoja"`), `nocturne.tsx` (`BTN_PRIMARIO_RELLENO` y `BTN_ICONO_SECUNDARIO` por banda, `BTN_DELINEADO_CABECERA` nuevo), `useEsAncho.ts` (nuevo), `src/index.css` (dos sombras), `src/pruebas/setup.ts`; pantallas `ResolverPage`, `DispositivosPage`, `BovedaPage`, `DispositivoPage`, `PiezasFicha`, `AutorizacionPage`, `MantenimientosPage`, `MantenimientosDelEquipo`, `SeccionesAgenda`, `FilasMas` y `PantallaMas`; `scripts/capturas-moviles.mjs` (`--tema` y cuatro paradas).
 **Tipo:** Cambiado; Agregado (pruebas `src/app/chasisPorAncho.test.tsx`); Documentación (DECISIONES AD-088, COMPONENTES_UI, DOCUMENTACION_FUNCIONAL, ARQUITECTURA, TAREAS 339 y 340).
