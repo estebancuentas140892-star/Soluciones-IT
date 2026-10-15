@@ -5,7 +5,7 @@ import { Campo, CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 import { HojaInferior } from '../../components/HojaInferior'
 import { Check, ClockCountdown, ClockCounterClockwise, Note, Plus, SealCheck, User, Wrench } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
-import { useEsAncho } from '../../components/useEsAncho'
+import { ANCHO_TABLETA_HORIZONTAL, useEsAncho } from '../../components/useEsAncho'
 import { db, type Mantenimiento, type TipoMantenimiento } from '../../lib/db'
 import { esPorValidar, fechaConAnio, nombreMantenimiento } from '../../lib/mantenimientos'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
@@ -62,6 +62,9 @@ export function MantenimientosDelEquipo({
   // "Programar mantenimiento" va abajo, en su barra, solo en el teléfono;
   // desde 768 px la pantalla lo pone en la cabecera (tarea 339).
   const ancho = useEsAncho()
+  // Desde 1024 (contenedor de 896): dos columnas y lo hecho en una lista
+  // tabular (T8). Cambia la estructura, no solo la forma.
+  const tabular = useEsAncho(ANCHO_TABLETA_HORIZONTAL)
   const mantenimientos = useLiveQuery(
     () =>
       db.mantenimientos
@@ -81,6 +84,53 @@ export function MantenimientosDelEquipo({
   const antecedentes = mantenimientos.filter(esPorValidar).sort(porFechaProgramada)
   const vacio = abiertos.length === 0 && realizados.length === 0 && antecedentes.length === 0
 
+  const programado = abiertos.length > 0 && (
+    <section aria-labelledby="mant-programado" className="flex flex-col gap-2.5">
+      <h2 id="mant-programado" className="flex items-center gap-2 text-[15px] font-semibold">
+        <ClockCountdown size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+        Programado
+      </h2>
+      {abiertos.map((m) => (
+        <TarjetaProgramado key={m.id} mantenimiento={m} onCerrar={() => setCerrando(m)} />
+      ))}
+    </section>
+  )
+
+  const realizado = realizados.length > 0 && (
+    <section aria-labelledby="mant-realizado" className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="mant-realizado" className="flex items-center gap-2 text-[15px] font-semibold">
+          <SealCheck size={17} className="shrink-0 text-noct-exito" aria-hidden />
+          Realizado y confirmado
+        </h2>
+        {tabular && <span className="shrink-0 font-mono text-[13px] text-noct-neutral-500">{realizados.length}</span>}
+      </div>
+      {tabular ? (
+        <TablaRealizados realizados={realizados} />
+      ) : (
+        realizados.map((m) => <TarjetaRealizado key={m.id} mantenimiento={m} />)
+      )}
+    </section>
+  )
+
+  const porValidar = antecedentes.length > 0 && (
+    <section aria-labelledby="mant-antecedentes" className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-0.5">
+        <h2 id="mant-antecedentes" className="flex items-center gap-2 text-[15px] font-semibold">
+          <Note size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
+          Documentado, por validar
+        </h2>
+        <p className="text-[13px] leading-[1.45] text-noct-neutral-400">
+          Marcas de una fuente histórica. No dicen técnico, resultado ni evidencia: no son mantenimientos hechos ni
+          pendientes.
+        </p>
+      </div>
+      {antecedentes.map((m) => (
+        <TarjetaAntecedente key={m.id} mantenimiento={m} />
+      ))}
+    </section>
+  )
+
   return (
     <div className="flex flex-1 flex-col">
       {vacio ? (
@@ -94,49 +144,22 @@ export function MantenimientosDelEquipo({
             cuando toque.
           </p>
         </div>
+      ) : tabular && porValidar ? (
+        // DESDE 1024 (tarea 339, T8; pizarra Mantenimiento 1280): lo programado
+        // y lo hecho a la izquierda; lo documentado por validar en su columna
+        // de 340, aparte, porque no es trabajo hecho ni pendiente.
+        <div className="grid grid-cols-[minmax(0,1fr)_340px] items-start gap-x-12 pb-4">
+          <div className="flex min-w-0 flex-col gap-[30px]">
+            {programado}
+            {realizado}
+          </div>
+          {porValidar}
+        </div>
       ) : (
         <div className="flex flex-col gap-[26px] pb-4">
-          {abiertos.length > 0 && (
-            <section aria-labelledby="mant-programado" className="flex flex-col gap-2.5">
-              <h2 id="mant-programado" className="flex items-center gap-2 text-[15px] font-semibold">
-                <ClockCountdown size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
-                Programado
-              </h2>
-              {abiertos.map((m) => (
-                <TarjetaProgramado key={m.id} mantenimiento={m} onCerrar={() => setCerrando(m)} />
-              ))}
-            </section>
-          )}
-
-          {realizados.length > 0 && (
-            <section aria-labelledby="mant-realizado" className="flex flex-col gap-2.5">
-              <h2 id="mant-realizado" className="flex items-center gap-2 text-[15px] font-semibold">
-                <SealCheck size={17} className="shrink-0 text-noct-exito" aria-hidden />
-                Realizado y confirmado
-              </h2>
-              {realizados.map((m) => (
-                <TarjetaRealizado key={m.id} mantenimiento={m} />
-              ))}
-            </section>
-          )}
-
-          {antecedentes.length > 0 && (
-            <section aria-labelledby="mant-antecedentes" className="flex flex-col gap-2.5">
-              <div className="flex flex-col gap-0.5">
-                <h2 id="mant-antecedentes" className="flex items-center gap-2 text-[15px] font-semibold">
-                  <Note size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
-                  Documentado, por validar
-                </h2>
-                <p className="text-[13px] leading-[1.45] text-noct-neutral-400">
-                  Marcas de una fuente histórica. No dicen técnico, resultado ni evidencia: no son mantenimientos
-                  hechos ni pendientes.
-                </p>
-              </div>
-              {antecedentes.map((m) => (
-                <TarjetaAntecedente key={m.id} mantenimiento={m} />
-              ))}
-            </section>
-          )}
+          {programado}
+          {realizado}
+          {porValidar}
         </div>
       )}
 
@@ -198,7 +221,7 @@ function TarjetaProgramado({ mantenimiento, onCerrar }: { mantenimiento: Manteni
         onClick={onCerrar}
         aria-haspopup="dialog"
         aria-label={`Cerrar mantenimiento: ${nombreMantenimiento(mantenimiento.tipo)}`}
-        className="flex min-h-[52px] w-full items-center justify-center gap-2 border-t border-noct-divider bg-noct-accent/[.14] text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.2]"
+        className="flex min-h-[52px] w-full items-center justify-center gap-2 border-t border-noct-divider bg-noct-accent/[.14] text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.2] xl:min-h-[42px] xl:text-[14px]"
       >
         <Check size={17} aria-hidden />
         Cerrar mantenimiento
@@ -240,6 +263,61 @@ function TarjetaRealizado({ mantenimiento }: { mantenimiento: Mantenimiento }) {
         )}
       </span>
     </Link>
+  )
+}
+
+/**
+ * LO HECHO, EN UNA LISTA TABULAR (desde 1024, tarea 339, T8): el mismo grupo
+ * sólido con su barra verde, una fila por mantenimiento con su fecha en IBM
+ * Plex Mono, qué se hizo y quién. Se compara de un vistazo; cada fila abre
+ * el mantenimiento, como la tarjeta del teléfono.
+ */
+function TablaRealizados({ realizados }: { realizados: Mantenimiento[] }) {
+  const columnas = 'grid grid-cols-[100px_minmax(0,1fr)_150px] gap-4 px-4'
+  return (
+    <div
+      role="table"
+      aria-label="Mantenimientos realizados y confirmados"
+      className="overflow-hidden rounded-[14px] border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface shadow-[var(--shadow-noct-elevacion)]"
+    >
+      <div
+        role="row"
+        className={`${columnas} min-h-9 items-center border-b border-noct-divider text-[12px] font-semibold text-noct-neutral-500`}
+      >
+        <span role="columnheader">Fecha</span>
+        <span role="columnheader">Mantenimiento</span>
+        <span role="columnheader">Técnico</span>
+      </div>
+      {realizados.map((m) => (
+        <Link
+          key={m.id}
+          role="row"
+          to={`/dispositivos/${m.dispositivoId}/mantenimientos/${m.id}`}
+          className={`${columnas} items-start border-b border-noct-divider py-[11px] text-[14px] text-noct-text last:border-b-0 hover:bg-noct-text/[.045]`}
+        >
+          <span role="cell" className="pt-0.5 font-mono text-[13px] text-noct-neutral-300">
+            {m.fechaRealizada ? fechaConAnio(m.fechaRealizada) : ''}
+          </span>
+          <span role="cell" className="min-w-0">
+            <span className="block font-semibold">{nombreMantenimiento(m.tipo)}</span>
+            {m.resultado && (
+              <span className="block text-[13.5px] leading-[1.45] text-noct-neutral-300 [overflow-wrap:anywhere]">
+                {m.resultado}
+              </span>
+            )}
+          </span>
+          <span role="cell" className="flex min-w-0 items-center gap-1.5 text-[13.5px] text-noct-neutral-400">
+            <span className="min-w-0 [overflow-wrap:anywhere]">{m.tecnico}</span>
+            {m.historialId && (
+              <>
+                <ClockCounterClockwise size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                <span className="sr-only">en el historial</span>
+              </>
+            )}
+          </span>
+        </Link>
+      ))}
+    </div>
   )
 }
 

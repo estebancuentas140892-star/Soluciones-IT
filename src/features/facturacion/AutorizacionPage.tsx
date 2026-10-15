@@ -130,7 +130,7 @@ export function AutorizacionPage() {
           fuente, lo confirmado en superficie sólida con barra verde, y el
           dato actual como la lectura de un instrumento. Una reemplazada se
           lee atenuada. */}
-      <main className="flex flex-1 flex-col gap-[22px] px-4 pb-4 pt-4 lg:px-10">
+      <main className="@container flex flex-1 flex-col gap-[22px] px-4 pb-4 pt-4 lg:px-10">
         <section className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2.5">
             <h1 className="m-0 font-mono text-[30px] font-semibold leading-[1.1] tracking-[-.02em] [overflow-wrap:anywhere]">
@@ -142,116 +142,122 @@ export function AutorizacionPage() {
         </section>
 
         <div className={`flex flex-col gap-[22px] ${reemplazada ? 'opacity-[.62]' : ''}`}>
-          <section aria-labelledby="aut-documentado" className="flex flex-col gap-2.5">
-            <EncabezadoCapa
-              id="aut-documentado"
-              numero={1}
-              titulo="Lo documentado"
-              icono={
-                <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg border-[1.5px] border-dashed border-noct-neutral-400 text-noct-neutral-300">
-                  <Note size={15} aria-hidden />
-                </span>
-              }
-            />
-            <div className="rounded-[14px] border-[1.5px] border-dashed border-noct-text/25 px-3.5 pb-1.5 pt-1">
-              <p className="flex items-center gap-1.5 pb-1 pt-2 text-[13px] font-semibold text-noct-neutral-400 [overflow-wrap:anywhere]">
-                <Paperclip size={13} className="shrink-0" aria-hidden />
-                Según {autorizacion.fuente}
-              </p>
-              <DatoDocumentado etiqueta="Rango">{textoRango(autorizacion) || 'Sin rango documentado'}</DatoDocumentado>
-              {autorizacion.formulario && <DatoDocumentado etiqueta="Formulario o documento">{autorizacion.formulario}</DatoDocumentado>}
-              {autorizacion.fechaFormalizacion && (
-                <DatoDocumentado etiqueta="Formalización">{fechaConAnio(autorizacion.fechaFormalizacion)}</DatoDocumentado>
-              )}
-              {autorizacion.vigenciaReportada && (
-                <DatoDocumentado etiqueta="Vigencia reportada">{autorizacion.vigenciaReportada}</DatoDocumentado>
-              )}
-              {autorizacion.vencimientoDocumentado && (
-                <DatoDocumentado etiqueta="Vence según la fuente (sin confirmar)">
-                  {fechaConAnio(autorizacion.vencimientoDocumentado)}
-                </DatoDocumentado>
-              )}
-              {evidenciaVigente && (
-                <DatoDocumentado etiqueta="Documento">
-                  {evidenciaVigente.nombre}
-                  {posDeEvidencia && (
-                    <>
-                      {' '}
-                      <Link
-                        to={`/dispositivos/${posDeEvidencia.id}#foto`}
-                        state={aqui}
-                        className="text-noct-accent-300 hover:text-noct-accent-400"
-                      >
-                        (en los adjuntos de {posDeEvidencia.nombre})
-                      </Link>
-                    </>
-                  )}
-                </DatoDocumentado>
-              )}
-            </div>
-          </section>
-
-          <section aria-labelledby="aut-confirmado" className="flex flex-col gap-2.5">
-            <EncabezadoCapa
-              id="aut-confirmado"
-              numero={2}
-              titulo="Lo confirmado"
-              icono={
-                <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-noct-exito/[.13] text-noct-exito">
-                  <SealCheck size={16} aria-hidden />
-                </span>
-              }
-            />
-            {autorizacion.verificadoEn ? (
-              <div className="rounded-[14px] border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-1">
-                <div className="flex justify-between gap-3 border-b border-noct-divider py-2.5 last:border-b-0">
-                  <span className="text-[13px] text-noct-neutral-400">Verificada</span>
-                  <span className="text-right text-[14.5px] font-medium">
-                    {fechaConAnio(autorizacion.verificadoEn)}
-                    {autorizacion.verificacionFuente && (
-                      <span className="block text-[12.5px] font-normal text-noct-neutral-400 [overflow-wrap:anywhere]">
-                        con {autorizacion.verificacionFuente}
-                      </span>
-                    )}
+          {/* LAS TRES CAPAS EN PARALELO desde 880 px de contenido (tarea 339,
+              T8; pizarra Facturación 1280): se comparan de un vistazo, cada
+              una con su forma. Por debajo, apiladas, como siempre (la
+              envoltura no existe: `contents`). */}
+          <div className="contents @[880px]:grid @[880px]:grid-cols-3 @[880px]:items-start @[880px]:gap-6">
+            <section aria-labelledby="aut-documentado" className="flex flex-col gap-2.5">
+              <EncabezadoCapa
+                id="aut-documentado"
+                numero={1}
+                titulo="Lo documentado"
+                icono={
+                  <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg border-[1.5px] border-dashed border-noct-neutral-400 text-noct-neutral-300">
+                    <Note size={15} aria-hidden />
                   </span>
-                </div>
-                {autorizacion.vencimientoConfirmado && (
-                  <div className="flex justify-between gap-3 py-2.5">
-                    <span className="text-[13px] text-noct-neutral-400">Vence</span>
-                    <span className="text-[14.5px] font-semibold text-noct-exito">{fechaConAnio(autorizacion.vencimientoConfirmado)}</span>
-                  </div>
+                }
+              />
+              <div className="rounded-[14px] border-[1.5px] border-dashed border-noct-text/25 px-3.5 pb-1.5 pt-1">
+                <p className="flex items-center gap-1.5 pb-1 pt-2 text-[13px] font-semibold text-noct-neutral-400 [overflow-wrap:anywhere]">
+                  <Paperclip size={13} className="shrink-0" aria-hidden />
+                  Según {autorizacion.fuente}
+                </p>
+                <DatoDocumentado etiqueta="Rango">{textoRango(autorizacion) || 'Sin rango documentado'}</DatoDocumentado>
+                {autorizacion.formulario && <DatoDocumentado etiqueta="Formulario o documento">{autorizacion.formulario}</DatoDocumentado>}
+                {autorizacion.fechaFormalizacion && (
+                  <DatoDocumentado etiqueta="Formalización">{fechaConAnio(autorizacion.fechaFormalizacion)}</DatoDocumentado>
+                )}
+                {autorizacion.vigenciaReportada && (
+                  <DatoDocumentado etiqueta="Vigencia reportada">{autorizacion.vigenciaReportada}</DatoDocumentado>
+                )}
+                {autorizacion.vencimientoDocumentado && (
+                  <DatoDocumentado etiqueta="Vence según la fuente (sin confirmar)">
+                    {fechaConAnio(autorizacion.vencimientoDocumentado)}
+                  </DatoDocumentado>
+                )}
+                {evidenciaVigente && (
+                  <DatoDocumentado etiqueta="Documento">
+                    {evidenciaVigente.nombre}
+                    {posDeEvidencia && (
+                      <>
+                        {' '}
+                        <Link
+                          to={`/dispositivos/${posDeEvidencia.id}#foto`}
+                          state={aqui}
+                          className="text-noct-accent-300 hover:text-noct-accent-400"
+                        >
+                          (en los adjuntos de {posDeEvidencia.nombre})
+                        </Link>
+                      </>
+                    )}
+                  </DatoDocumentado>
                 )}
               </div>
-            ) : (
-              <div className="flex flex-col gap-2.5 rounded-[14px] border border-noct-divider bg-noct-surface p-3.5">
-                <p className="text-[14.5px] text-noct-neutral-300">Sin verificar con una fuente actual.</p>
-                {/* Abre el formulario de siempre, donde se registra la
-                    verificación con su día y su fuente. */}
-                <Link to={`/facturacion/${autorizacionId}/editar`} className={ACCION_DELINEADA}>
-                  <SealCheck size={16} aria-hidden />
-                  Registrar verificación
-                </Link>
-              </div>
-            )}
-          </section>
+            </section>
 
-          <section aria-labelledby="aut-actual" className="flex flex-col gap-2.5">
-            <EncabezadoCapa
-              id="aut-actual"
-              numero={3}
-              titulo="Dato actual"
-              icono={
-                <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-noct-accent/[.14] text-noct-accent-300">
-                  <Pulse size={16} aria-hidden />
-                </span>
-              }
-            />
-            <Consecutivo
-              autorizacion={autorizacion}
-              editar={`/facturacion/${autorizacionId}/editar`}
-              onRegistrarLectura={() => setLeyendo(true)}
-            />
-          </section>
+            <section aria-labelledby="aut-confirmado" className="flex flex-col gap-2.5">
+              <EncabezadoCapa
+                id="aut-confirmado"
+                numero={2}
+                titulo="Lo confirmado"
+                icono={
+                  <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-noct-exito/[.13] text-noct-exito">
+                    <SealCheck size={16} aria-hidden />
+                  </span>
+                }
+              />
+              {autorizacion.verificadoEn ? (
+                <div className="rounded-[14px] border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-1">
+                  <div className="flex justify-between gap-3 border-b border-noct-divider py-2.5 last:border-b-0">
+                    <span className="text-[13px] text-noct-neutral-400">Verificada</span>
+                    <span className="text-right text-[14.5px] font-medium">
+                      {fechaConAnio(autorizacion.verificadoEn)}
+                      {autorizacion.verificacionFuente && (
+                        <span className="block text-[12.5px] font-normal text-noct-neutral-400 [overflow-wrap:anywhere]">
+                          con {autorizacion.verificacionFuente}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                  {autorizacion.vencimientoConfirmado && (
+                    <div className="flex justify-between gap-3 py-2.5">
+                      <span className="text-[13px] text-noct-neutral-400">Vence</span>
+                      <span className="text-[14.5px] font-semibold text-noct-exito">{fechaConAnio(autorizacion.vencimientoConfirmado)}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5 rounded-[14px] border border-noct-divider bg-noct-surface p-3.5">
+                  <p className="text-[14.5px] text-noct-neutral-300">Sin verificar con una fuente actual.</p>
+                  {/* Abre el formulario de siempre, donde se registra la
+                      verificación con su día y su fuente. */}
+                  <Link to={`/facturacion/${autorizacionId}/editar`} className={ACCION_DELINEADA}>
+                    <SealCheck size={16} aria-hidden />
+                    Registrar verificación
+                  </Link>
+                </div>
+              )}
+            </section>
+
+            <section aria-labelledby="aut-actual" className="flex flex-col gap-2.5">
+              <EncabezadoCapa
+                id="aut-actual"
+                numero={3}
+                titulo="Dato actual"
+                icono={
+                  <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-noct-accent/[.14] text-noct-accent-300">
+                    <Pulse size={16} aria-hidden />
+                  </span>
+                }
+              />
+              <Consecutivo
+                autorizacion={autorizacion}
+                editar={`/facturacion/${autorizacionId}/editar`}
+                onRegistrarLectura={() => setLeyendo(true)}
+              />
+            </section>
+          </div>
 
           <section aria-labelledby="aut-pos" className="flex flex-col">
             <h2 id="aut-pos" className="pb-0.5 text-[13.5px] font-semibold text-noct-neutral-400">

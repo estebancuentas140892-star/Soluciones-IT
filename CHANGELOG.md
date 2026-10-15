@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (mantenimiento y facturación, tarea 339, T8): lista tabular y columnas en paralelo
+
+**Área modificada:** `src/features/mantenimientos/MantenimientosDelEquipo.tsx` (`TablaRealizados` nueva, interna), `src/features/facturacion/AutorizacionPage.tsx`; pruebas en `mantenimientoFlujo.test.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** paso T8 del handoff (pizarras Mantenimiento y Facturación 768 y 1280).
+**Descripción:** mantenimiento: desde 1024 (`useEsAncho`, cambia la estructura), lo programado y lo hecho | lo documentado por validar en 340 px, con lo hecho en una tabla (`role="table"`, filas que abren cada mantenimiento). Facturación: desde 880 px de contenido (`@container`), las tres capas en una rejilla de tres; la envoltura es `contents` por debajo. Las tres formas del dato, sus textos y lo que abre cada cosa, sin cambios.
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** comparar de un vistazo lo hecho con lo que dice una fuente y las tres capas de una autorización.
+
 ### Cambiado (Agenda, tarea 339, T7): con fecha | sin fecha abierto y actividad, desde 1024
 
 **Área modificada:** `src/features/inicio/SeccionesAgenda.tsx` (`disposicion`, `complemento`), `AgendaPage.tsx`; `src/components/useEsAncho.ts` (dos cortes con nombre); pruebas en `resolverYAgenda.test.tsx`.

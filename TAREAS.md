@@ -76,6 +76,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | T5 | Ejecución de guía: columna 576/640, pie por banda e índice persistente desde 1280 | 339 | Hecho en `feat/responsive-pulgar`, sin integrar |
 | T6 | Buscador global: campo arriba en tableta; paleta 880/960 con vista rápida al lado en escritorio | 339 | Hecho en `feat/responsive-pulgar`, sin integrar |
 | T7 | Agenda: con fecha a la izquierda y "Sin fecha" abierto con la actividad, desde 1024 | 339 | Hecho en `feat/responsive-pulgar`, sin integrar |
+| T8 | Mantenimiento (tabla y por validar aparte, desde 1024) y Facturación (tres capas en paralelo) | 339 | Hecho en `feat/responsive-pulgar`, sin integrar |
 | (hallazgo de la 339) | El foco no entra al panel ni a los diálogos al abrirlos | 340 | Hecho en `feat/responsive-pulgar` (con T2), sin integrar |
 
 ### 339. Tableta y escritorio, T1 y T2: el chasis por banda y el panel lateral

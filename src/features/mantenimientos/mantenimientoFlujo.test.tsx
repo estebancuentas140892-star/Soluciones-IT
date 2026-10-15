@@ -455,3 +455,65 @@ describe('desde la Agenda hasta cerrarlo', () => {
     expect(cancelacion?.valorNuevo).toContain('cancelado')
   })
 })
+
+// POR ANCHO (tarea 339, T8): desde 1024 lo hecho se lee en una lista tabular
+// (fecha, qué se hizo y quién) y lo documentado por validar va aparte, en su
+// columna. Las tres formas del dato y lo que abre cada fila no cambian.
+describe('el mantenimiento de un equipo por ancho', () => {
+  type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+  const ventana = window as unknown as VentanaDePrueba
+
+  afterEach(() => {
+    ventana.happyDOM.setViewport({ width: 375, height: 812 })
+  })
+
+  async function sembrarLosTres(): Promise<void> {
+    await sembrarBase()
+    await sembrarMantenimiento({ id: 'm-prog', fechaProgramada: fechaRelativa(3) })
+    await sembrarMantenimiento({
+      id: 'm-hecho',
+      estado: 'realizado',
+      fechaProgramada: fechaRelativa(-20),
+      fechaRealizada: fechaRelativa(-20),
+      tecnico: 'Técnico de prueba',
+      resultado: 'Se limpió el equipo de prueba',
+    })
+    await sembrarMantenimiento({
+      id: 'm-ante',
+      fechaProgramada: '2025-03-12',
+      estado: 'realizado',
+      validacion: 'documentado_por_validar',
+      fuente: 'Cronograma de prueba',
+    })
+  }
+
+  it('a 1280 px lo hecho va en una tabla y lo documentado en su columna', async () => {
+    ventana.happyDOM.setViewport({ width: 1280, height: 832 })
+    await sembrarLosTres()
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos')
+
+    const tabla = await esperar(
+      () => document.body.querySelector<HTMLElement>('[role="table"][aria-label="Mantenimientos realizados y confirmados"]'),
+      'la tabla de lo hecho',
+    )
+    const filas = tabla.querySelectorAll('a[role="row"]')
+    expect(filas).toHaveLength(1)
+    expect(filas[0].textContent).toContain('Se limpió el equipo de prueba')
+    expect(filas[0].textContent).toContain('Técnico de prueba')
+    expect(filas[0].getAttribute('href')).toBe('/dispositivos/pc/mantenimientos/m-hecho')
+    // Lo documentado no está en la columna de lo programado y lo hecho.
+    const programado = document.body.querySelector('#mant-programado')?.closest('section')
+    const columnaIzquierda = programado?.parentElement
+    expect(columnaIzquierda?.contains(tabla)).toBe(true)
+    expect(columnaIzquierda?.textContent).not.toContain('Según Cronograma de prueba')
+    expect(textoPantalla()).toContain('Según Cronograma de prueba')
+  })
+
+  it('a 768 px, una columna con las tarjetas de siempre', async () => {
+    ventana.happyDOM.setViewport({ width: 768, height: 1024 })
+    await sembrarLosTres()
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos')
+    await esperar(() => textoPantalla().includes('Se limpió el equipo de prueba'), 'lo hecho')
+    expect(document.body.querySelector('[role="table"]')).toBeNull()
+  })
+})
