@@ -106,7 +106,10 @@ export function BarraTarea({
   if (compacta) {
     return (
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-surface/[.95] backdrop-blur-[12px]">
-        <div className={`flex items-center gap-1 pl-1 pr-1 ${contexto ? 'min-h-[50px] py-0.5' : 'h-11'}`}>
+        {/* 56 de alto en la tableta y 60 en el escritorio (tarea 339, T5). */}
+        <div
+          className={`flex items-center gap-1 pl-1 pr-1 md:min-h-14 md:gap-2 md:pl-2.5 md:pr-4 xl:min-h-[60px] xl:pr-6 ${contexto ? 'min-h-[50px] py-0.5' : 'h-11'}`}
+        >
           {alSalir ? (
             <button
               type="button"
@@ -134,7 +137,7 @@ export function BarraTarea({
             // lee en el índice de pasos, que abre el contador.
             <div className="min-w-0 flex-1">
               <p className="truncate text-[12px] leading-[1.3] text-noct-neutral-500">{contexto}</p>
-              <h1 className="truncate text-[14px] font-semibold leading-[1.3]">{titulo}</h1>
+              <h1 className="truncate text-[14px] font-semibold leading-[1.3] md:text-[15px]">{titulo}</h1>
             </div>
           ) : (
             <h1 className="min-w-0 flex-1 truncate text-[14.5px] font-medium leading-tight">{titulo}</h1>
@@ -144,10 +147,18 @@ export function BarraTarea({
               type="button"
               onClick={onBuscar}
               aria-label="Buscar sin salir de aquí"
-              title="Buscar sin salir de aquí"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text"
+              aria-keyshortcuts="/"
+              title="Buscar sin salir de aquí (/)"
+              className="flex h-11 min-w-11 shrink-0 items-center justify-center gap-2 rounded-lg px-2.5 text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text xl:h-9 xl:rounded-[10px]"
             >
               <MagnifyingGlass size={18} aria-hidden />
+              {/* La tecla que ya existe, a la vista donde hay teclado (desde 1280). */}
+              <kbd
+                aria-hidden
+                className="hidden h-[22px] min-w-[22px] items-center justify-center rounded-md border border-b-2 border-noct-divider bg-noct-bg px-1.5 font-mono text-[11.5px] font-medium leading-none text-noct-neutral-400 xl:inline-flex"
+              >
+                /
+              </kbd>
             </button>
           )}
           {trailing}

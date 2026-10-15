@@ -313,10 +313,15 @@ function adjuntosDe(bloques: BloquePaso[]): PasoAdjunto[] {
 // avanzar. Hasta entonces iba delineado con un tinte del 16 % y de un
 // vistazo pesaba casi como "Anterior" (hallazgo 3 de la auditoría móvil).
 // "Anterior" sigue delineado: solo mueve la vista.
+//
+// EL PIE DE TAREA POR BANDA (tarea 339, T5; handoff de tableta y
+// escritorio). Ya no va al pulgar: en la tableta la acción mide 48 y en el
+// escritorio 44, sin estirarse (al menos 260 y 240 px, a la derecha de la
+// columna), y "Anterior" deja el cuadrado de 62 por su palabra, sin borde.
 const BOTON_PRINCIPAL =
-  'flex h-[62px] min-w-0 flex-1 items-center justify-center gap-2.5 rounded-[18px] bg-noct-accent px-3.5 text-[17px] font-semibold text-noct-on-accent hover:bg-noct-accent-300 active:bg-noct-accent-500 disabled:bg-noct-text/[.06] disabled:text-noct-neutral-400'
+  'flex h-[62px] min-w-0 flex-1 items-center justify-center gap-2.5 rounded-[18px] bg-noct-accent px-3.5 text-[17px] font-semibold text-noct-on-accent hover:bg-noct-accent-300 active:bg-noct-accent-500 disabled:bg-noct-text/[.06] disabled:text-noct-neutral-400 md:ml-auto md:h-12 md:min-w-[260px] md:flex-none md:gap-2 md:rounded-[14px] md:px-[18px] md:text-[15.5px] xl:h-11 xl:min-w-[240px] xl:rounded-xl xl:text-[15px]'
 export const BOTON_ANTERIOR =
-  'flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-[18px] border-[1.5px] border-noct-text/25 text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-35'
+  'flex h-[62px] w-[62px] shrink-0 items-center justify-center gap-1.5 rounded-[18px] border-[1.5px] border-noct-text/25 text-noct-neutral-300 hover:bg-noct-text/[.08] disabled:opacity-35 md:h-12 md:w-auto md:rounded-[14px] md:border-transparent md:px-3.5 md:text-[15.5px] md:font-semibold md:text-noct-text xl:h-11 xl:rounded-xl xl:text-[15px]'
 
 // LA INSTRUCCIÓN, el texto que domina la pantalla (regla 27 a): 26 px desde
 // 375 de ancho y 23 en el teléfono más estrecho (320), donde 26 partía
@@ -353,9 +358,12 @@ export function BotonPrincipal({
       title={abreviada ? etiquetaCompleta : undefined}
       className={BOTON_PRINCIPAL}
     >
-      {icono === 'marca' && <Check size={20} className="shrink-0" aria-hidden />}
-      {icono === 'flecha' && <ArrowRight size={20} className="shrink-0" aria-hidden />}
+      {icono === 'marca' && <Check size={20} className="shrink-0 md:h-[17px] md:w-[17px]" aria-hidden />}
+      {icono === 'flecha' && <ArrowRight size={20} className="shrink-0 md:hidden" aria-hidden />}
       <span className="line-clamp-2 min-w-0 text-center leading-[1.25] [overflow-wrap:anywhere]">{etiqueta}</span>
+      {/* Desde 768 la flecha va detrás del rótulo, como en el lienzo; el
+          teléfono la conserva delante. */}
+      {icono === 'flecha' && <ArrowRight size={17} className="hidden shrink-0 md:block" aria-hidden />}
     </button>
   )
 }
@@ -1108,7 +1116,7 @@ export function ModoFoco({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex flex-1 flex-col pb-6 pt-2.5">
+      <div className="flex flex-1 flex-col pb-6 pt-2.5 md:pt-8 xl:pt-10">
         {requisitos.length > 0 && esPrimeraDelPaso && !enAdvertencia && (
           <div className="mb-4">
             <AntesDeEmpezar requisitos={requisitos} />
@@ -1339,7 +1347,7 @@ export function ModoFoco({
               los controles no se estiran: un botón de 700 px no se toca
               mejor que uno de 600. En la consulta no hay "Anterior": el
               único gesto es volver al paso de trabajo. */}
-          <div className="mx-auto flex w-full max-w-xl gap-2.5">
+          <div className="mx-auto flex w-full max-w-xl items-center gap-2.5 xl:max-w-[640px]">
             {!consulta && (
               <button
                 type="button"
@@ -1349,7 +1357,11 @@ export function ModoFoco({
                 title="Anterior"
                 className={BOTON_ANTERIOR}
               >
-                <CaretLeft size={22} aria-hidden />
+                <CaretLeft size={22} className="md:h-4 md:w-4" aria-hidden />
+                {/* Desde 768 la palabra: ya no es un toque de pulgar. */}
+                <span aria-hidden className="hidden md:inline">
+                  Anterior
+                </span>
               </button>
             )}
             {principal}

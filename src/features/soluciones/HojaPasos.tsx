@@ -117,6 +117,12 @@ interface Props {
 
 const ID_TITULO = 'hoja-pasos-titulo'
 
+// Las acciones del índice (el paso entero, los detalles, conectar, empezar de
+// nuevo) en la columna persistente: filas ligeras de 40, no botones con borde
+// que compitan con los pasos (tarea 339, T5).
+const ACCION_PERSISTENTE =
+  'flex h-10 w-full min-w-0 items-center gap-2 rounded-[10px] px-2.5 text-left text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.045] hover:text-noct-text'
+
 // Marca de estado (dos canales, forma y color, regla R16): el hecho
 // lleva check, el de trabajo y los pendientes su número, y el saltado el
 // número con borde discontinuo, que se distingue sin depender del color.
@@ -149,8 +155,11 @@ function InsigniaPaso({ estado, numero }: { estado: EstadoPaso; numero: number }
 // saber ANTES de ir. El número de tareas ya no se repite en cada fila: el
 // nombre del paso es lo que se busca aquí (regla 22, no mostrar un dato
 // solo porque está disponible).
-function NotaFila({ resumen }: { resumen: ResumenPaso }) {
-  const nota = resumen.estado === 'actual' ? 'Aquí vas' : resumen.estado === 'saltado' ? 'Saltado' : ''
+function NotaFila({ resumen, persistente = false }: { resumen: ResumenPaso; persistente?: boolean }) {
+  // En el índice persistente (desde 1280) el paso de trabajo ya se ve con su
+  // fondo y `aria-current`: "Aquí vas" le quitaría ancho al nombre.
+  const nota =
+    resumen.estado === 'actual' ? (persistente ? '' : 'Aquí vas') : resumen.estado === 'saltado' ? 'Saltado' : ''
   if (!nota && !resumen.tieneCuidado) return null
   return (
     <span className="flex shrink-0 items-center gap-1.5">
@@ -168,8 +177,28 @@ function NotaFila({ resumen }: { resumen: ResumenPaso }) {
   )
 }
 
-export function HojaPasos({
-  abierto,
+// LAS DOS FORMAS DEL ÍNDICE (tarea 339, T5; handoff de tableta y escritorio).
+// El mismo contenido, con el mismo `onIrAPaso`: en el teléfono y la tableta,
+// dentro de su hoja (`HojaPasos`), que desde 768 px es el panel lateral
+// derecho; desde 1280, `persistente`, en la columna de 280 que el chasis
+// publica a la izquierda de la ejecución. La forma persistente no tiene X
+// (no se cierra) ni repite el nombre de la guía (la cabecera ya lo dice
+// entero a ese ancho), y sus filas son las densas del escritorio.
+type PropsIndice = Omit<Props, 'abierto'> & { persistente?: boolean }
+
+export function HojaPasos({ abierto, onCerrar, ...resto }: Props) {
+  return (
+    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO} variante="hoja">
+      {/* En el panel (desde 768) la hoja no trae relleno propio: se lo da
+          esta capa, que además es lo único que se desplaza. */}
+      <div className="md:min-h-0 md:flex-1 md:overflow-y-auto md:px-[22px] md:py-[18px]">
+        <IndicePasos onCerrar={onCerrar} {...resto} />
+      </div>
+    </Modal>
+  )
+}
+
+export function IndicePasos({
   onCerrar,
   resumenes,
   subtitulo,
@@ -185,11 +214,25 @@ export function HojaPasos({
   onEmpezarDeNuevo,
   rutaConectar,
   estadoConectar,
-}: Props) {
+  persistente = false,
+}: PropsIndice) {
   const enFoco = modoEjecucion === 'foco'
 
   return (
-    <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
+    <>
+      {persistente ? (
+        <div className="flex flex-wrap items-center gap-2 px-2.5 pb-1">
+          <h2 id={ID_TITULO} className="text-[13.5px] font-semibold text-noct-neutral-400">
+            Pasos
+          </h2>
+          {borrador && (
+            <span className="inline-flex h-6 items-center rounded-full bg-noct-neutral-800 px-2 text-[12px] text-noct-neutral-300">
+              Borrador
+            </span>
+          )}
+          <span className="sr-only">{subtitulo}</span>
+        </div>
+      ) : (
       <div className="mb-1.5 flex items-start gap-2">
         <span className="min-w-0 flex-1 pt-2.5">
           <span className="flex flex-wrap items-center gap-2">
@@ -216,13 +259,14 @@ export function HojaPasos({
           type="button"
           onClick={onCerrar}
           aria-label="Cerrar el índice de pasos"
-          className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.08] hover:text-noct-text"
+          className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.08] hover:text-noct-text md:mr-0 md:rounded-[10px] md:border md:border-noct-divider"
         >
           <X size={19} aria-hidden />
         </button>
       </div>
+      )}
 
-      <ol className="flex flex-col">
+      <ol className={`flex flex-col ${persistente ? 'gap-0.5' : ''}`}>
         {resumenes.map((resumen) => (
           <li key={resumen.id}>
             <button
@@ -232,23 +276,37 @@ export function HojaPasos({
                 onIrAPaso(resumen.indice)
                 onCerrar()
               }}
-              className={`-mx-2 flex min-h-12 w-[calc(100%+16px)] items-center gap-3 rounded-lg px-2 text-left ${
-                resumen.estado === 'actual'
-                  ? 'bg-noct-accent/10'
-                  : 'hover:bg-noct-text/[.06] active:bg-noct-text/[.1]'
-              }`}
+              className={
+                persistente
+                  ? `flex min-h-11 w-full items-center gap-[11px] rounded-[10px] px-2.5 py-1.5 text-left ${
+                      resumen.estado === 'actual'
+                        ? 'bg-noct-accent/[.12]'
+                        : 'hover:bg-noct-text/[.045] active:bg-noct-text/[.08]'
+                    }`
+                  : `-mx-2 flex min-h-12 w-[calc(100%+16px)] items-center gap-3 rounded-lg px-2 text-left ${
+                      resumen.estado === 'actual'
+                        ? 'bg-noct-accent/10'
+                        : 'hover:bg-noct-text/[.06] active:bg-noct-text/[.1]'
+                    }`
+              }
             >
               <InsigniaPaso estado={resumen.estado} numero={resumen.indice + 1} />
               {/* HASTA DOS LÍNEAS: el nombre del paso es lo que se busca
                   aquí, y en una sola se cortaba en 360 px. */}
+              {/* Persistente, el nombre entero: la columna es estrecha y
+                  nada aprieta el alto (regla 23). */}
               <span
-                className={`line-clamp-2 min-w-0 flex-1 py-1.5 text-[14px] leading-[1.35] text-pretty ${
-                  resumen.estado === 'actual' ? 'font-medium text-noct-text' : 'text-noct-neutral-300'
+                className={`min-w-0 flex-1 py-1.5 text-[14px] leading-[1.35] text-pretty ${
+                  persistente ? '[overflow-wrap:anywhere]' : 'line-clamp-2'
+                } ${
+                  resumen.estado === 'actual'
+                    ? `${persistente ? 'font-semibold' : 'font-medium'} text-noct-text`
+                    : 'text-noct-neutral-300'
                 }`}
               >
                 {resumen.titulo}
               </span>
-              <NotaFila resumen={resumen} />
+              <NotaFila resumen={resumen} persistente={persistente} />
             </button>
           </li>
         ))}
@@ -297,7 +355,7 @@ export function HojaPasos({
           onCambiarModo(enFoco ? 'pasoEntero' : 'foco')
           onCerrar()
         }}
-        className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+        className={`mt-2 ${persistente ? ACCION_PERSISTENTE : "flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"}`}
       >
         {enFoco ? <Eye size={17} aria-hidden /> : <Crosshair size={17} aria-hidden />}
         {enFoco ? 'Ver el paso entero' : 'Volver a una acción a la vez'}
@@ -309,13 +367,13 @@ export function HojaPasos({
       {(rutaDetalles || onEmpezarDeNuevo || rutaConectar) && (
         // Uno debajo del otro: lado a lado, en 360 px los dos rótulos se
         // recortaban ("Detalles de la g…", "Empezar de nu…").
-        <div className="mt-2 flex flex-col gap-2">
+        <div className={`mt-2 flex flex-col ${persistente ? 'gap-0.5' : 'gap-2'}`}>
           {rutaDetalles && (
             <Link
               to={rutaDetalles}
               state={estadoDetalles}
               onClick={onCerrar}
-              className="flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+              className={persistente ? ACCION_PERSISTENTE : "flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"}
             >
               <Info size={17} className="shrink-0" aria-hidden />
               <span className="truncate">Detalles de la guía</span>
@@ -326,7 +384,7 @@ export function HojaPasos({
               to={rutaConectar}
               state={estadoConectar}
               onClick={onCerrar}
-              className="flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+              className={persistente ? ACCION_PERSISTENTE : "flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"}
             >
               <PlugsConnected size={17} className="shrink-0" aria-hidden />
               <span className="truncate">Conectar un equipo</span>
@@ -339,7 +397,7 @@ export function HojaPasos({
                 onEmpezarDeNuevo()
                 onCerrar()
               }}
-              className="flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"
+              className={persistente ? ACCION_PERSISTENTE : "flex h-11 w-full min-w-0 shrink-0 items-center justify-center gap-2 rounded-lg border border-noct-divider text-[13.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06]"}
             >
               <ArrowsClockwise size={17} className="shrink-0" aria-hidden />
               <span className="truncate">Empezar de nuevo</span>
@@ -347,6 +405,6 @@ export function HojaPasos({
           )}
         </div>
       )}
-    </Modal>
+    </>
   )
 }

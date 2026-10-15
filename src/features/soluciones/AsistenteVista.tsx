@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
@@ -35,6 +36,7 @@ import {
 import { registrarIntervencion } from '../../lib/repositorio'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { BandaBajoTarea, BandaTarea } from '../../app/bandaTarea'
+import { useRanuraIndice } from '../../app/ranuraIndice'
 import { Adjuntos } from '../../components/Adjuntos'
 import {
   ArrowRight,
@@ -82,7 +84,7 @@ import { motivoGuiasPendientes } from './guiasObligatorias'
 import { estadoVinculo, kickerVinculo } from './estadoVinculo'
 import { TarjetaGuiaVinculada } from './TarjetaGuiaVinculada'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
-import { HojaPasos } from './HojaPasos'
+import { HojaPasos, IndicePasos } from './HojaPasos'
 import { AntesDeEmpezar, BOTON_ANTERIOR, BotonPrincipal, ModoFoco, TEXTO_INSTRUCCION } from './ModoFoco'
 import { RutaProcedimiento } from './RutaProcedimiento'
 import { presenciaDeAviso } from './tonos'
@@ -206,6 +208,10 @@ export function AsistenteVista({
   const [listo, setListo] = useState(false)
   // Índice de los pasos (tablero 6c): se abre tocando el contador.
   const [indiceAbierto, setIndiceAbierto] = useState(false)
+  // LA COLUMNA DEL ÍNDICE PERSISTENTE (tarea 339, T5): solo la guía que se
+  // abrió, y solo si el chasis la publica (una tarea `amplio` desde 1280).
+  const ranuraIndice = useRanuraIndice()
+  const indicePersistente = nivel === 0 ? ranuraIndice : null
   // CÓMO SE EJECUTA (tarea 217, hallazgos G-16 a G-19). Una tarea a la
   // vez es la ejecución por defecto, y la elección del técnico se
   // GUARDA: era lo único del flujo que no sobrevivía a salir de la
@@ -966,8 +972,11 @@ export function AsistenteVista({
   // (2026-10-01): en el teléfono ocupaba un tercio de la pantalla con el
   // paso anterior, el actual y el siguiente, y competía con la acción. Ahí
   // la orientan el contador "3/8" (que abre el índice) y los segmentos.
+  //
+  // Con el índice persistente a la vista (desde 1280, T5) la ruta dice lo
+  // mismo que él: no se monta. Por debajo, sigue como siempre.
   const rutaUI =
-    nivel === 0 ? (
+    nivel === 0 && !indicePersistente ? (
       <RutaProcedimiento
         resumenes={resumenes}
         total={totalPasos}
@@ -987,8 +996,43 @@ export function AsistenteVista({
   // ABRE TAMBIÉN desde aquí en Foco, algo que antes no existía: el
   // índice era inalcanzable sin salir primero a la vista completa. Se
   // arma una sola vez porque las dos vistas lo comparten por igual.
+  //
+  // DESDE 1280 EL ÍNDICE NO SE ABRE: ESTÁ (tarea 339, T5). El mismo
+  // contenido, con el mismo `onIrAPaso`, va por portal a la columna que
+  // publica el chasis; el contador lleva el foco al paso de trabajo.
+  const propsIndice =
+    nivel === 0
+      ? {
+          resumenes: resumenesIndice,
+          subtitulo: subtituloIndice,
+          tituloGuia: articulo?.titulo,
+          borrador: esBorrador,
+          onIrAPaso: (indice: number) => verPaso(indice),
+          modoEjecucion,
+          onCambiarModo: (modo: ModoEjecucion) => void cambiarModoEjecucion(modo),
+          verificacionFinal,
+          pasoDeLaPregunta,
+          rutaDetalles: articulo ? `/soluciones/${articulo.categoriaId}/${articulo.id}/detalles` : undefined,
+          estadoDetalles: articulo ? conOrigen(rutaOrigen, articulo.titulo) : undefined,
+          onEmpezarDeNuevo: sinAvance ? undefined : () => void reiniciarYVolver(),
+          rutaConectar: equipoConectado ? undefined : '/conectar',
+          estadoConectar: conOrigen(rutaOrigen, articulo?.titulo ?? 'la guía'),
+        }
+      : null
   const indiceUI =
-    nivel === 0 ? (
+    propsIndice && indicePersistente ? (
+      <>
+        <BandaTarea>
+          <ContadorPaso
+            indice={indiceActual}
+            total={totalPasos}
+            persistente
+            onAbrirIndice={() => indicePersistente.querySelector<HTMLElement>('[aria-current="step"]')?.focus()}
+          />
+        </BandaTarea>
+        {createPortal(<IndicePasos {...propsIndice} onCerrar={() => {}} persistente />, indicePersistente)}
+      </>
+    ) : nivel === 0 ? (
       <>
         <BandaTarea>
           <ContadorPaso indice={indiceActual} total={totalPasos} onAbrirIndice={() => setIndiceAbierto(true)} />
@@ -1029,7 +1073,9 @@ export function AsistenteVista({
         <ModoFoco
           key={paso.id}
           paso={paso}
-          ruta={rutaUI}
+          // Con el índice persistente (desde 1280) no hay ruta ni hace falta
+          // el "Paso N de M" que la sustituye: el índice ya dice dónde se va.
+          ruta={indicePersistente ? <></> : rutaUI}
           tituloPaso={tituloPaso}
           numeroPaso={indiceActual + 1}
           totalPasos={totalPasos}
@@ -1607,16 +1653,19 @@ function ContadorPaso({
   indice,
   total,
   onAbrirIndice,
+  persistente = false,
 }: {
   indice: number
   total: number | null
   onAbrirIndice: () => void
+  /** El índice ya está a la vista (desde 1280): no abre ninguna hoja. */
+  persistente?: boolean
 }) {
   return (
     <button
       type="button"
       onClick={onAbrirIndice}
-      aria-haspopup="dialog"
+      aria-haspopup={persistente ? undefined : 'dialog'}
       aria-label={nombreDelContador(indice, total)}
       // UN BOTÓN QUE SE VE COMO BOTÓN (tarea 328): "2/4" en IBM Plex Mono
       // a 14.5 px sobre fondo tenue, en el color del texto. Antes era texto

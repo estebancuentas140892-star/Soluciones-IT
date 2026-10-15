@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (ejecución de guía, tarea 339, T5): columna de trabajo, pie por banda e índice persistente en escritorio
+
+**Área modificada:** `src/app/Chasis.tsx` (nivel tarea `amplio`), `src/app/ranuraIndice.ts` (nuevo), `src/components/BarraTarea.tsx`, `src/features/soluciones/AsistentePage.tsx`, `AsistenteVista.tsx`, `HojaPasos.tsx` (`IndicePasos` nuevo), `ModoFoco.tsx`; prueba nueva `guiaPorAncho.test.tsx`.
+**Tipo:** Cambiado; Agregado (`IndicePasos`, `useRanuraIndice`).
+**Motivo:** paso T5 del handoff (pizarras Guía 768 y 1280; punto 2.7: con `amplio`, índice de 280 y pie alineado a la columna).
+**Descripción:** desde 768, cabecera de todo el ancho (56, 60 desde 1280), columna de 576 (640 desde 1280) y pie con "‹ Anterior" y la acción rellena de 48 (44) a la derecha. El índice se abre en el panel lateral en la tableta y, desde 1280, está en una columna de 280 que el chasis publica solo a ese ancho (punto de montaje decidido con `useEsAncho`); `AsistenteVista` pinta ahí el mismo `IndicePasos` por portal, con el mismo `onIrAPaso`. La ruta horizontal no se monta donde está el índice persistente. Sin cambios en el avance, las decisiones, la advertencia previa, "Marca N comprobaciones" ni "Terminar".
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** en escritorio se ve toda la guía y el paso actual a la vez, sin abrir nada.
+
 ### Cambiado (ficha de equipo, tarea 339, T4): dos columnas en tableta y documento con índice en escritorio
 
 **Área modificada:** `src/features/dispositivos/DispositivoPage.tsx`, `PiezasFicha.tsx` (`ResolverConEsteEquipo` gana `visibles` y `visiblesEscritorio`); prueba `fichaEquipoMovil.test.tsx`.

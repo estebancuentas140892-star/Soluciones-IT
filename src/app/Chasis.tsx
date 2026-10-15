@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useState, type ReactNode } from 'react'
 import { decidirContraida, type EstadoContraible } from '../components/contraerAlBajar'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/autenticacion/authContext'
@@ -12,10 +12,11 @@ import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
 import { DockBusqueda } from '../components/DockBusqueda'
 import { Marca } from '../components/Marca'
-import { useEsAncho } from '../components/useEsAncho'
+import { ANCHO_ESCRITORIO, useEsAncho } from '../components/useEsAncho'
 import { huecoAvisoActualizacionChasis } from '../components/ranuraAvisoActualizacion'
 import { CapaAtajos } from './CapaAtajos'
 import { ProveedorBandaBajoTarea, ProveedorBandaTarea } from './bandaTarea'
+import { ProveedorRanuraIndice } from './ranuraIndice'
 import { direccionPara } from './direccionTransicion'
 import { useOrigen } from './useOrigen'
 import { destinoDePestana, useMemoriaPestana } from './memoriaPestana'
@@ -280,6 +281,12 @@ interface PropsTarea extends PropsComunes {
    * guía enseña arriba la RUTA del procedimiento en horizontal, y eso
    * necesita sitio. En el teléfono no cambia nada (448 px). Los controles
    * de dentro no se estiran: la vista los centra en 576 px.
+   *
+   * DESDE LA TAREA 339 (T5, handoff de tableta y escritorio): la cabecera
+   * ocupa todo el ancho desde 768 y la pantalla centra su columna (576 en
+   * tableta, 640 en escritorio). Desde 1280 el chasis publica además, a la
+   * izquierda, la columna de 280 del índice persistente
+   * (`useRanuraIndice`), pegada bajo la cabecera.
    */
   amplio?: boolean
 }
@@ -329,6 +336,12 @@ export function Chasis(props: Props) {
   // La segunda ranura de la cabecera compacta, bajo su línea (tarea 328):
   // ahí van los segmentos de la guía. En estado por el mismo motivo.
   const [ranuraBajoTarea, setRanuraBajoTarea] = useState<HTMLDivElement | null>(null)
+  // La columna del índice persistente de una tarea `amplio` desde 1280 (tarea
+  // 339, T5), en estado por el mismo motivo que las ranuras de arriba. Se
+  // pega bajo la cabecera, cuyo alto cambia con el título y los segmentos:
+  // se mide, no se adivina.
+  const [ranuraIndice, setRanuraIndice] = useState<HTMLElement | null>(null)
+  const [altoCabeceraTarea, setAltoCabeceraTarea] = useState(0)
   // Buscador en capa sobre una tarea (tarea 241). Vive aqui y no dentro
   // de la pantalla porque la cabecera que lo invoca tambien es del
   // chasis; la capa se monta en un portal a <body>, asi que abrirla no
@@ -347,6 +360,21 @@ export function Chasis(props: Props) {
   // puede existir dos veces, el buscador de una raíz y la acción principal
   // de un documento (tarea 339).
   const ancho = useEsAncho()
+  // Escritorio (desde 1280): la columna del índice de una tarea `amplio`
+  // existe o no existe (es otro punto de montaje, T5).
+  const escritorio = useEsAncho(ANCHO_ESCRITORIO)
+  const conIndice = props.modo === 'tarea' && Boolean(props.amplio) && escritorio
+  useLayoutEffect(() => {
+    // La cabecera es el bloque pegajoso que contiene la ranura de abajo.
+    const cabecera = conIndice ? ranuraBajoTarea?.parentElement : null
+    if (!cabecera) return
+    const medir = () => setAltoCabeceraTarea(cabecera.offsetHeight)
+    medir()
+    if (typeof ResizeObserver !== 'function') return
+    const observador = new ResizeObserver(medir)
+    observador.observe(cabecera)
+    return () => observador.disconnect()
+  }, [conIndice, ranuraBajoTarea])
 
   // PESTAÑAS QUE SE ESCONDEN AL BAJAR (tarea 329): solo donde la pantalla lo
   // pide (la ficha de equipo). La misma decisión que la barra de reanudar
@@ -386,7 +414,7 @@ export function Chasis(props: Props) {
     return (
       <div className="nocturne min-h-svh bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text">
         <div
-          className={`mx-auto flex min-h-svh w-full flex-col ${props.amplio ? 'max-w-md md:max-w-3xl' : 'max-w-md'}`}
+          className={`mx-auto flex min-h-svh w-full flex-col ${props.amplio ? 'max-w-md md:max-w-none' : 'max-w-md'}`}
           data-transicion={direccion}
         >
           <BarraTarea
@@ -431,7 +459,25 @@ export function Chasis(props: Props) {
           </BarraTarea>
           <ProveedorBandaTarea value={ranuraTarea}>
             <ProveedorBandaBajoTarea value={props.compacta ? ranuraBajoTarea : undefined}>
-              {props.children}
+              <ProveedorRanuraIndice value={conIndice ? ranuraIndice : null}>
+                {conIndice ? (
+                  // Desde 1280: el índice persistente (280) y la columna de
+                  // trabajo. La tarea sigue sin navegación principal. Mientras
+                  // la pantalla no pinte su índice (la preparación de la guía,
+                  // antes de empezar), la columna no existe (`empty:hidden`).
+                  <div className="flex flex-1">
+                    <nav
+                      ref={setRanuraIndice}
+                      aria-label="Pasos de la guía"
+                      style={{ top: altoCabeceraTarea, maxHeight: `calc(100svh - ${altoCabeceraTarea}px)` }}
+                      className="sticky w-[280px] shrink-0 self-start overflow-y-auto px-4 py-[22px] empty:hidden"
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col border-l border-noct-divider">{props.children}</div>
+                  </div>
+                ) : (
+                  props.children
+                )}
+              </ProveedorRanuraIndice>
             </ProveedorBandaBajoTarea>
           </ProveedorBandaTarea>
         </div>

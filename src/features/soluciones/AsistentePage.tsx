@@ -116,7 +116,10 @@ export function AsistentePage() {
           reserva su alto y el área segura del teléfono. Tampoco superior:
           lo pone cada vista, para que el primer paso empiece pegado a la
           cabecera. */}
-      <main className="flex flex-1 flex-col px-4">
+      {/* LA COLUMNA DE TRABAJO (tarea 339, T5): 576 px en la tableta y 640
+          en el escritorio, centrada bajo una cabecera de todo el ancho (y,
+          desde 1280, al lado del índice). El teléfono no cambia. */}
+      <main className="flex flex-1 flex-col px-4 md:mx-auto md:w-full md:max-w-[608px] xl:max-w-[672px]">
         {/* EJECUTAR UN BORRADOR SE DICE, NO SE IMPIDE (encargo del
             2026-09-20, tarea 2). Desde el buscador se puede abrir una guía
             sin publicar, que es lo que se pidió: sirve aunque le falten

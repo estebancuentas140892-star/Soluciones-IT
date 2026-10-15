@@ -73,6 +73,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | T1 + T2 | Chasis (buscador en la barra, disparador global, acción principal en la cabecera, tamaños por banda) y hoja inferior como panel lateral | 339 | Hecho en `feat/responsive-pulgar`, sin integrar |
 | T3 | Resolver: tres zonas por contenedor (A, B y C) y filas densas en escritorio | 339 | Hecho en `feat/responsive-pulgar`, sin integrar |
 | T4 | Ficha de equipo: dos columnas en tableta y documento + índice de 344 en escritorio | 339 | Hecho en `feat/responsive-pulgar`, sin integrar |
+| T5 | Ejecución de guía: columna 576/640, pie por banda e índice persistente desde 1280 | 339 | Hecho en `feat/responsive-pulgar`, sin integrar |
 | (hallazgo de la 339) | El foco no entra al panel ni a los diálogos al abrirlos | 340 | Hecho en `feat/responsive-pulgar` (con T2), sin integrar |
 
 ### 339. Tableta y escritorio, T1 y T2: el chasis por banda y el panel lateral
