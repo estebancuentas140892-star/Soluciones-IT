@@ -8,6 +8,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-15
 
+### Documentación (tareas 327 a 335): cierre del rediseño móvil "1b Pulgar" tras la aprobación visual del usuario
+
+**Área modificada:** [TAREAS.md](TAREAS.md) (encargo del 2026-10-13 cerrado, 327 a 335 retiradas del tablero) y [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (327 a 335).
+**Tipo:** Modificado (documentación).
+**Motivo:** el usuario aclaró que su aprobación visual en Production ("se ve bien") cubre todo el rediseño "1b Pulgar" ya desplegado: el móvil (327 a 335) y el de tableta y escritorio (339 y 340, ya archivadas).
+**Qué cambia:**
+- Las 327 a 335 quedan cerradas y archivadas, cada una con sus commits en `main`, la integración continua y Vercel en verde y la aprobación visual del usuario. Como contexto técnico, en la 339 se comprobó que el teléfono, a 320, 375, 390 y 767 px, conservó lo aprobado (las únicas capturas distintas eran el anillo de foco de la 340, corregido).
+- La 338 sigue como dirección superada y no se integra.
+**Estructura de datos:** sin cambios. Solo documentación: ni código, ni Supabase, ni `schema.sql`, ni Dexie, ni la sincronización, ni datos.
+**Impacto esperado:** ninguno en la app; el tablero refleja el estado real.
+
 ### Documentación (tareas 338, 339 y 340): cierre del rediseño responsive tras la aprobación visual del usuario
 
 **Área modificada:** [TAREAS.md](TAREAS.md) (encargo del 2026-10-14 cerrado, 339 y 340 retiradas del tablero, 322 preparada para retomarse), [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (339, 340 y 338), [DECISIONES.md](DECISIONES.md) (estado de AD-088), [ARQUITECTURA.md](ARQUITECTURA.md) y [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) (estado de la sección de tableta y escritorio).

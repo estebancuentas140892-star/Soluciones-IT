@@ -61,6 +61,116 @@
 
 **Área afectada:** ninguna en `main`. AD-087 y la regla 31 de esa rama no existen en `main` y no se aplican.
 
+## Encargo del 2026-10-13: rediseño móvil "1b Pulgar"
+
+### 335. Recomendaciones de producto del rediseño móvil (RP-1, RP-2 y RP-4)
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"): el usuario aclaró que su aprobación cubre todo el rediseño "1b Pulgar" ya desplegado, el móvil (327 a 335) y el de tableta y escritorio (339 y 340). El usuario delegó la elección ("la que consideres que es la mejor opción") y se hicieron las tres (AD-084).
+
+**Qué cambió:** **RP-4:** cuando el escáner lee un código que no es de ningún equipo, el aviso ofrece "Buscar este código" (`src/features/escaner/EscanerPage.tsx`). **RP-2:** "Registrar lectura" del consecutivo desde la autorización abre una hoja, con o sin lectura anterior; sin rango, el formulario (`src/features/facturacion/RegistrarLectura.tsx`, nuevo, y `AutorizacionPage.tsx`). **RP-1:** al terminar una guía abierta desde un equipo se ofrece registrar la intervención con la guía precargada (`src/features/soluciones/IntervencionAlTerminar.tsx`, nuevo, en la pantalla "Guía terminada" de `AsistenteVista.tsx`).
+
+**Integración:** en `main` el 2026-10-13, en tres partes con su commit y su despliegue: `681cfd1` (RP-4), `d6e1b5c` (RP-2) y `86a44fd` (RP-1). CI en verde (runs 38496705132, 38497104050 y 38497575986) y estado de Vercel `success` en los tres.
+
+**Verificación:** pruebas en `src/features/dispositivos/equiposYQr.test.tsx`, `facturacionFlujo.test.tsx` y `src/features/soluciones/intervencionAlTerminar.test.tsx`. En la 339 se comprobó que el teléfono, a 320, 375, 390 y 767 px, conservó lo aprobado (152 de 176 capturas idénticas píxel a píxel a `main`; las 24 restantes, solo el anillo de foco de la 340, corregido). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `EscanerPage.tsx` y el dock de la 330; `AutorizacionPage.tsx` y `RegistrarLectura.tsx`; `IntervencionAlTerminar.tsx` y `AsistenteVista.tsx`; sus pruebas.
+
+### 334. El color de categoría 6 coincide con el acento cian
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), dentro de su aprobación de todo el rediseño "1b Pulgar" ya desplegado. Hallazgo de la 327; decisión del usuario del 2026-10-13: mover solo la 6 a verde lima (AD-083).
+
+**Qué cambió:** `--color-noct-cat-6` en `src/index.css` pasa de `oklch(0.75 0.11 200)` (el matiz del acento) a `oklch(0.75 0.11 118)`, con su comentario. Las demás categorías no cambian.
+
+**Integración:** `c959887`, en `main` el 2026-10-13. CI en verde (run 38495626167) y estado de Vercel `success`.
+
+**Verificación:** paridad del teléfono comprobada en la 339 (320, 375, 390 y 767 px: 152 de 176 capturas idénticas a `main`; las 24 restantes, solo el anillo de foco de la 340, corregido). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `src/index.css` (`--color-noct-cat-6`).
+
+### 333. Rediseño móvil, paso 7: tema claro
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), dentro de su aprobación de todo el rediseño "1b Pulgar" ya desplegado. Decisión del usuario del 2026-10-13: "Claro opcional, oscuro por defecto", con automático; la regla 12 se reescribió (AD-085).
+
+**Qué cambió:** tokens claros en `src/index.css` (`:root[data-tema='claro']`, tras el bloque `@theme`); `src/lib/tema.ts` y `public/tema.js` lo aplican antes de pintar (`<script>` en `index.html`, `iniciarTema` en `src/main.tsx`); la preferencia (oscuro, claro o automático) se elige en Ajustes > Aplicación (`src/features/autenticacion/ElegirTema.tsx` en `CuentaPage.tsx`); ajustes de contraste en `ChipsDeAlcance.tsx` y `FilaDispositivo.tsx`. La 339 (T11) completó después el claro en pantalla grande.
+
+**Integración:** `82dd99b`, en `main` el 2026-10-13. CI en verde (run 38499031741) y estado de Vercel `success`.
+
+**Verificación:** pruebas `src/lib/tema.test.ts`, `src/components/sistemaVisual.test.ts` y `src/features/inventario/herramientasInventario.test.tsx`. Paridad del teléfono comprobada en la 339 (320, 375, 390 y 767 px: 152 de 176 capturas idénticas a `main`; las 24 restantes, solo el anillo de foco de la 340, corregido). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `src/index.css`, `src/lib/tema.ts`, `public/tema.js`, `index.html`, `src/main.tsx`, `ElegirTema.tsx` y `CuentaPage.tsx` (Ajustes).
+
+### 332. Rediseño móvil, paso 6: Agenda y Más
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), dentro de su aprobación de todo el rediseño "1b Pulgar" ya desplegado. Encargo del 2026-10-13, paso 6 (AD-082).
+
+**Qué cambió:** la Agenda lleva arriba `ContadoresAgenda` (en `SeccionesAgenda.tsx`, compartido con `ResolverPage.tsx`) en lugar de `ResumenDelDia` (retirado); "Todo al día por hoy" en verde suave; cabeceras de grupo a 15 px con conteo en mono; una fila plegada "Sin fecha" al final con En curso y Por revisar del equipo (abierta si no hay nada con fecha); "Ver los otros N" a 14 px. `agruparAgenda` no cambia. Más (`FilasMas.tsx`, `PantallaMas.tsx`): rótulos a 13,5 px en minúsculas y filas de 60 px; Herramientas de inventario cambia con ellas.
+
+**Integración:** `cb69d55`, en `main` el 2026-10-13. CI en verde (run 38495076143) y estado de Vercel `success`.
+
+**Verificación:** pruebas `masInfraestructura.test.tsx` y las de la Agenda. Paridad del teléfono comprobada en la 339 (320, 375, 390 y 767 px: 152 de 176 capturas idénticas a `main`; las 24 restantes, solo el anillo de foco de la 340, corregido). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `src/features/inicio/AgendaPage.tsx`, `SeccionesAgenda.tsx`, `src/features/mas/PantallaMas.tsx`, `FilasMas.tsx` y sus pruebas.
+
+### 331. Rediseño móvil, paso 5: mantenimiento y autorización con tres formas de dato
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), dentro de su aprobación de todo el rediseño "1b Pulgar" ya desplegado. Encargo del 2026-10-13, paso 5 (AD-081).
+
+**Qué cambió:** **Mantenimiento:** pantalla propia `/dispositivos/:id/mantenimientos` (`MantenimientosPage.tsx`, nuevo; `MantenimientosDelEquipo.tsx`, reescrito) con las tres formas (programado, realizado y confirmado, documentado por validar), estado vacío, y "Programar mantenimiento" y "Cerrar mantenimiento" en hojas (`RegistrarDesenlace`, exportado de `MantenimientoPage.tsx`); ruta en `src/App.tsx` y `padreDe` en `src/lib/navegacion.ts`; la fila de la ficha abre la pantalla. Cancelar se conserva como tercera respuesta. **Autorización** (`AutorizacionPage.tsx`): tres capas (lo documentado punteado, lo confirmado con barra verde y el dato actual como instrumento), Editar abajo y Eliminar en el menú; reemplazada al 62 %. Sin "No coincide" por campo: la autorización guarda una sola fuente (AD-081, decisión 4). Ningún cambio en `src/lib/autorizaciones.ts` ni en el modelo.
+
+**Integración:** en `main` el 2026-10-13, en dos partes con su commit y su despliegue: `6ced6bb` (mantenimiento) y `852092f` (autorización). CI en verde (runs 38492678901 y 38493869274) y estado de Vercel `success` en los dos.
+
+**Verificación:** pruebas `facturacionFlujo.test.tsx` y las de mantenimiento. Paridad del teléfono comprobada en la 339 (320, 375, 390 y 767 px: 152 de 176 capturas idénticas a `main`; las 24 restantes, solo el anillo de foco de la 340, corregido). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `src/features/mantenimientos/` (`MantenimientosPage.tsx`, `MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`), `src/features/facturacion/AutorizacionPage.tsx`, `src/App.tsx`, `src/lib/navegacion.ts`, `DispositivoPage.tsx` y sus pruebas.
+
+### 330. Rediseño móvil, paso 4: dock de búsqueda, búsqueda y cabeceras de raíz
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), dentro de su aprobación de todo el rediseño "1b Pulgar" ya desplegado. Encargo del 2026-10-13, paso 4 (AD-080).
+
+**Qué cambió:** **Parte 1:** `DockBusqueda` (nuevo, `src/components/DockBusqueda.tsx`) con el buscador de cada pantalla abajo en Resolver, Equipos y Bóveda, el escáner al lado y el teclado seguido con `visualViewport`; `CampoBusqueda` variante `dock`; título de raíz a 25 px (`CabeceraColapsable`); en Resolver se retiran la pregunta y la línea de ayuda. **Parte 2:** "Necesita atención" con tres contadores que abren la Agenda, `FilaAgenda` con barra lateral de 4 px e icono neutro, "Seguir donde ibas" (`BloqueSeguir`) y "Guías" con chips con conteo. **Parte 3:** chips de alcance con conteo que solo filtran la vista (`alcanceBusqueda.ts`, `ChipsDeAlcance.tsx`, `useIdsDeRed.ts`) en Resolver y en `BuscadorGlobal.tsx`, con el regreso arriba y el campo abajo pegado al teclado (`useAltoDelTeclado.ts`). Sin chip "Facturación" (las autorizaciones no se indexan). No cambia qué se indexa ni el ranking (BUSCADOR.md). Desde la 339, el buscador sube a la barra desde 768 px.
+
+**Integración:** en `main` el 2026-10-13, en tres partes con su commit y su despliegue: `ec8af2b`, `5acc8ca` y `9dc13a0`. CI en verde (runs 38490453522, 38491164373 y 38491798182) y estado de Vercel `success` en los tres.
+
+**Verificación:** prueba nueva `alcanceBusqueda.test.tsx` y las actualizadas (`nombresSinRecorte.test.tsx` incluida). Paridad del teléfono comprobada en la 339 (320, 375, 390 y 767 px: 152 de 176 capturas idénticas a `main`; las 24 restantes, solo el anillo de foco de la 340, corregido). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`, `CampoBusqueda.tsx`, `DockBusqueda.tsx`, `src/features/inicio/ResolverPage.tsx`, `SeccionesAgenda.tsx` (`FilaAgenda`), `src/features/busqueda/BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx`, las raíces de Equipos y Bóveda y sus pruebas.
+
+### 329. Rediseño móvil, paso 3: ficha de equipo
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), dentro de su aprobación de todo el rediseño "1b Pulgar" ya desplegado. Encargo del 2026-10-13, paso 3 (AD-079).
+
+**Qué cambió:** `src/features/dispositivos/DispositivoPage.tsx` reescrita en su presentación: carnet de 52 px con el nombre a 28 px y el estado debajo; avisos del equipo (autorización en conflicto o por validar, responsable por validar, conflicto de IP), sin datos nuevos; datos para trabajar sin tarjeta con la IP en mono a 20 px; "Resolver con este equipo" con tres filas y "Ver N"; índice "Más del equipo" de un nivel con `HojaInferior` por fila; menú "···" con Favorito y Compartir y lo destructivo aparte; barra fija `BarraAccionEquipo`; pestañas que se esconden al bajar. Piezas nuevas en `PiezasFicha.tsx`, `src/components/HojaInferior.tsx`, `Chasis.tsx` (`tituloVisible`, `pestanasSeOcultanAlBajar`) y `nocturne.tsx` (`BAJA_CON_LAS_PESTANAS`). **Diferencia con el diseño, a propósito:** el estado va bajo el nombre (a la derecha partía nombres a mitad de palabra). Mantenimiento abre su pantalla desde la 331.
+
+**Integración:** `dc8e6c0`, en `main` el 2026-10-13. CI en verde (run 38489424996) y estado de Vercel `success`.
+
+**Verificación:** prueba nueva `fichaEquipoMovil.test.tsx`; actualizadas `equiposYQr`, `contextoEquipoPantallas`, `facturacionFlujo` y `mantenimientoFlujo`; medida a 375 px. Paridad del teléfono comprobada en la 339 (320, 375, 390 y 767 px: 152 de 176 capturas idénticas a `main`; las 24 restantes, solo el anillo de foco de la 340, corregido). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `DispositivoPage.tsx`, `PiezasFicha.tsx`, `FilaDato.tsx`, `PastillaEstado.tsx`, `SeccionPlegable.tsx` (deja de usarse ahí), `HojaInferior.tsx`, `src/app/Chasis.tsx`, `nocturne.tsx` y sus pruebas.
+
+### 328. Rediseño móvil, paso 2: ejecución de guía
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), dentro de su aprobación de todo el rediseño "1b Pulgar" ya desplegado. Encargo del 2026-10-13, paso 2, el de mayor impacto (AD-078).
+
+**Qué cambió:** **Parte 1:** cabecera de dos líneas ("Guía · equipo"), contador "2/4" en mono como botón que abre el índice, segmentos de 4 px dentro de la cabecera con uno más para la comprobación final (`SegmentosDePasos`, por la ranura `BandaBajoTarea`), control grande relleno y "Anterior" de 62 px, instrucción a 23/26 px, números de "Cómo hacerlo" en caja mono, dato técnico con copiar, advertencia previa ajustada y comprobación final con forma de acción (casillas de 64 px, "Marca N comprobaciones" / "Terminar"). **Parte 2:** la credencial de la acción es una fila con borde que abre `CredencialEnPaso` en una hoja (`src/features/boveda/CredencialEnHoja.tsx`, nuevo); la Bóveda no cambia (regla 29) y cerrar la hoja saca lo descifrado del documento. **No se hizo, a propósito:** "Información" y "Nota del equipo" en la ejecución (retiradas en la tarea 307, regla 27).
+
+**Integración:** `af12a22` y `fe14e62`, integradas en `main` el 2026-10-13 junto con la 327, con el registro en `9b28acc`. CI en verde (runs 38487475392 y 38487513757) y estado de Vercel `success`.
+
+**Verificación:** suite completa (208 archivos, 3287 pruebas), `tsc -b`, lint y build en verde; prueba nueva `credencialEnHoja.test.tsx`; medida en el navegador a 375 y 320 px (sin desbordes, ningún texto por debajo de 12 px). Paridad del teléfono comprobada en la 339 (320, 375, 390 y 767 px: 152 de 176 capturas idénticas a `main`; las 24 restantes, solo el anillo de foco de la 340, corregido). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `src/features/soluciones/ModoFoco.tsx`, `AsistenteVista.tsx`, `AsistentePage.tsx`, `EstadoEjecucion.tsx`, `SenalesDePaso.tsx`, `PantallaAdvertencia.tsx`, `cierrePaso.ts`, `src/components/BarraTarea.tsx`, `src/app/bandaTarea.tsx`, `src/app/Chasis.tsx`, `src/features/boveda/CredencialEnHoja.tsx` y sus pruebas.
+
+### 327. Rediseño móvil, paso 1: tokens cian, IBM Plex Mono local y botón primario relleno
+
+**Estado:** Completada (2026-10-15). **Confirmada visualmente por el usuario en Production el 2026-10-15** ("se ve bien"), dentro de su aprobación de todo el rediseño "1b Pulgar" ya desplegado. Encargo del 2026-10-13 (handoff de Claude Design "Preguntas sobre identidad visual", dirección "1b Pulgar"), paso 1 (AD-077, regla 30).
+
+**Qué cambió:** el acento pasa del lavanda `#9184d9` al cian `oklch(0.82 0.11 200)`, con su rampa regenerada en oklch y `--color-noct-on-accent` nuevo; el tipo "configuración" pasa de matiz 195 a 175; se retira `--color-noct-accion` y sus cinco usos pasan al acento; nueva `--font-mono` con IBM Plex Mono local (tres woff2 en `src/assets/`, con su licencia), que toman `VALOR_TECNICO` y `VALOR_TECNICO_COMPACTO`; nueva `BTN_PRIMARIO_RELLENO` en `src/components/nocturne.tsx`. Ninguna pantalla cambió de estructura.
+
+**Integración:** `673fc8c`, integrada en `main` el 2026-10-13 junto con la 328 (`fe14e62`), con el registro en `9b28acc`. CI en verde (runs 38487475392 y 38487513757) y estado de Vercel `success`.
+
+**Verificación:** suite completa (207 archivos, 3285 pruebas; `src/components/sistemaVisual.test.ts`, nuevo, vigila los tokens, la fuente local y `BTN_PRIMARIO_RELLENO`), lint y build en verde; `verificar-precache` correcto, con los tres woff2 en el precache. En el navegador a 375 px, el acento computado es el cian y la IP se pinta en IBM Plex Mono. Paridad del teléfono comprobada en la 339 (320, 375, 390 y 767 px: 152 de 176 capturas idénticas a `main`; las 24 restantes, solo el anillo de foco de la 340, corregido). **Revisión visual del usuario: aprobada en Production el 2026-10-15.**
+
+**Área afectada:** `src/index.css`, `src/assets/`, `src/components/nocturne.tsx`, los cinco archivos que usaban `noct-accion`, `src/components/sistemaVisual.test.ts` (nuevo); documentación en REGLAS.md (regla 30), DECISIONES.md (AD-077), ARQUITECTURA.md, ARQUITECTURA_FUNCIONAL.md, DOCUMENTACION_FUNCIONAL.md (9.1), COMPONENTES_UI.md (1.1) y CHANGELOG.md.
+
 ## Encargo del 2026-10-10: siguiente fase después de la conciliación de datos
 
 ### 326. Guardar sin red con el token vencido no espera 25 segundos ni pierde el autor
