@@ -26,6 +26,7 @@ Constantes de clase (para interpolar en `className`, no son componentes):
 |---|---|
 | `BTN_PRIMARIO` | delineado en acento |
 | `BTN_PRIMARIO_RELLENO` | relleno de acento, texto `noct-on-accent`, 16 px seminegrita, radio 15, alto mínimo 54 (tarea 327); por banda (tarea 339): 48 · 15.5 px · radio 14 desde 768 y 40 · 14 px · radio 11 desde 1280 |
+| `BTN_PRIMARIO_DOMINANTE` | (tarea 341, AD-089) "Guardar" y "Desbloquear" donde son la única acción que ejecuta: en el teléfono, el relleno de 54 · 16 · radio 15; desde 768, exactamente `BTN_PRIMARIO` delineado. Una prueba de `sistemaVisual.test.ts` lo exige |
 | `BTN_DELINEADO_CABECERA` | la acción principal delineada de una cabecera de documento, solo desde 768 (tarea 339): 44 de alto, borde `noct-text/25` de 1.5, 15 px seminegrita, radio 12; 40 · 14 px · radio 11 desde 1280. La usan "Editar" (autorización) y "Programar mantenimiento" |
 | `BTN_SECUNDARIO` | delineado en el divisor |
 | `BTN_PRIMARIO_PELIGRO` | delineado en rojo (ejecuta eliminación) |
@@ -43,7 +44,9 @@ Constantes de clase (para interpolar en `className`, no son componentes):
 - **Por qué la caja visible y no un área invisible alrededor de un cuadrado de 34:** con los 6 px entre iconos vecinos, las áreas se solaparían y un toque entre dos caería en cualquiera de ellos.
 - **Controles sin borde que no deben mover lo de al lado** (la X de un modal): la caja de 44 lleva el margen negativo que le devuelve la huella del dibujo, `-m-[13px] h-11 w-11` con una X de 18.
 
-Componentes: `TituloSeccion({ children, className? })` y `TagNeutral({ children, className? })` (rótulos de sección y etiqueta neutra; importados en 27 archivos).
+**Los mínimos del teléfono (tarea 341, AD-089).** Por debajo de 768, la base de los botones (`BTN_BASE`: `BTN_PRIMARIO`, `BTN_SECUNDARIO`, `BTN_GHOST*`, `BTN_ICONO_*`, `BTN_PRIMARIO_PELIGRO`) lleva el verbo a 14 px (`max-md:text-[14px]`) y la marca `btn-tactil`, que en `index.css` da 44 px de alto mínimo desde la capa de componentes: el alto que escriba una pantalla (`min-h-12`, `min-h-[46px]`) sigue mandando. Un botón que quiera más de 14 en el teléfono lo escribe con `max-md:` (`LoginPage`, `ConectarPage`). Para un control que no puede crecer sin romper su dibujo (la X de una miniatura o de un chip, el número de un paso) existe `toque-amplio`: un `::after` de 44 x 44 centrado e invisible; el control tiene que estar posicionado (`relative` o `absolute`). Desde 768 nada de esto existe.
+
+Componentes: `TituloSeccion({ children, className? })` y `TagNeutral({ children, className? })` (rótulos de sección y etiqueta neutra; importados en 27 archivos). Los dos pasan de 11 a 12 px en el teléfono (tarea 341).
 
 Ejemplo (`DialogoEliminar.tsx`):
 ```tsx
@@ -56,6 +59,8 @@ Ejemplo (`DialogoEliminar.tsx`):
 Fuente única de cómo se ve un campo y su etiqueta (antes `CLASE_CAMPO` estaba redefinida en 13 archivos con deriva visual). Importado en 22 archivos.
 
 Constantes: `CLASE_CAMPO`, `CLASE_CAMPO_SIN_ANCHO` (sin `w-full`), `CLASE_CAMPO_SOBRE_SUPERFICIE` (fondo de tarjeta), `CLASE_CAMPO_MONO` y `CLASE_CAMPO_MONO_SIN_ANCHO` (monoespaciado, para claves/PIN/puertos), `CLASE_ETIQUETA`.
+
+**16 px en el teléfono (tarea 341, AD-089).** Las constantes de campo llevan `max-md:text-base`: con menos de 16 px, iOS amplía la pantalla al enfocar el campo y el técnico pierde el sitio. Un campo escrito a mano (fuera de estas constantes) lleva su `max-md:text-[16px]`; uno que quiera más en el teléfono lo dice con `max-md:` (el código de `ConectarPage`, 26 px). Desde 768, los 14 de siempre.
 
 Componentes:
 
@@ -277,7 +282,20 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** "hoja para consultar, pantalla para trabajar" (rediseño móvil "1b Pulgar"): lo que se mira sin dejar la pantalla se abre encima y al cerrarla todo sigue donde estaba.
 - **Props:** `{ abierta, onCerrar, titulo, contexto?, etiquetaCerrar = Cerrar, children }`. Sobre `Modal` (anclada abajo en el teléfono, Escape y tocar fuera la cierran), con la línea de contexto a 12 px, el título a 17 px y una X de 44 px. Cerrada no monta su contenido.
 - **Panel lateral desde 768 px (tarea 339, AD-088):** con la misma API, `Modal variante="hoja"` la pone al costado derecho, de alto completo: 420 px, 440 desde 1280 y 480 desde 1680, sobre un velo negro al 58 % sin desenfoque (tinta al 30 % en el claro) y con la sombra `--shadow-noct-panel`. La cabecera queda fija (68 px, su línea abajo, la X con borde: 44 en tableta, 36 desde 1280) y solo se desplaza el cuerpo (22 px de margen). Se cierra igual: Esc, la X o un clic fuera.
+- **En el teléfono, la hoja del handoff (tarea 341, AD-089):** la da `Modal` (pegada abajo, radio 22, asa, el velo, sube y baja animada y se cierra deslizándola). `HojaInferior` pone en el teléfono el título a 18/650 y la X redonda con tinte (`bg-noct-tinte`, `active:bg-noct-presionado`); desde 768, la cabecera del panel de siempre.
 - **Dónde:** `CredencialEnHoja` (la credencial de una acción) y las hojas de `DispositivoPage` (Más datos, Si falla caen, Conexiones, Credenciales, Datos protegidos, Adjuntos, Mantenimiento, Facturación, Intervenciones y Resolver con este equipo).
+
+### 2.10e0c `AvisoFlotante` y `avisosFlotantes` (`src/components/`, 2026-10-15, tarea 341, AD-089)
+
+- **Propósito:** la confirmación breve de algo que ya pasó y no pide nada más (handoff móvil: "Aviso (toast): sobre el pie fijo, invertido, 200 ms, 2.4 s. Nunca muestra un secreto").
+- **API:** `avisar(texto, icono = 'hecho')` desde cualquier sitio (`icono`: `hecho`, `copiado`, `candado`, `historial`); `retirarAviso()` para las pruebas; `DURACION_AVISO_MS` (2400); `useAvisoFlotante()`. Es un almacén de módulo con `useSyncExternalStore`, no un contexto: un aviso nuevo sustituye al anterior y vuelve a contar desde cero; el mismo texto dos veces se vuelve a anunciar.
+- **`AvisoFlotante`:** se monta una vez, en `App.tsx`, fuera de las rutas, para seguir a la vista aunque la acción navegue. Invertido (fondo `noct-text`, texto `noct-bg`), radio 14, 14/600 con su icono, sombra del handoff; sobre el pie fijo: encima del hueco que publican las barras de acción y la franja del chasis para el aviso de versión nueva (`ranuraAvisoActualizacion.ts`) o, si ese hueco está vacío, de su sitio (la barra que lo contiene, o el `bottom` de la franja pegajosa); sin hueco, a 16 px del borde. `role="status"`, `aria-live="polite"`, `aria-atomic`, sin foco ni toques (`pointer-events-none`). Entra en 200 ms desde 8 px más abajo, solo en el teléfono y sin "reducir movimiento". Desde 768 es `sr-only`: se anuncia, no se ve.
+- **Quién avisa hoy:** `BotonCopiar` con `aviso` (la IP de la ficha: "IP copiada: …"), la X de la guía ("Avance guardado: paso N de M" o "falta la comprobación final", `avisoAlSalirDeLaGuia`), los desbloqueos de la Bóveda ("Bóveda desbloqueada": `BovedaGuard`, `PuenteBoveda`, `CredencialEnPaso`, `CrearAccesoRapido`, `SeguridadDelEquipo`) y el cierre de un mantenimiento realizado ("Guardado. Queda en el historial del equipo").
+- **Nunca:** un error, algo que exija una acción (eso se dice donde ocurre y se queda) ni un secreto. No se convierten mensajes existentes en bloque.
+
+### 2.10e0d `gestoHoja.ts` (`src/components/`, 2026-10-15, tarea 341)
+
+- `empiezaArrastre(dx, dy, scrollTop)`: solo hacia abajo, más vertical que horizontal, pasados 8 px y con el contenido arriba del todo. `cierraAlSoltar(desplazamiento, duracionMs, altoHoja)`: la cuarta parte de la hoja (120 px como mucho) o un tirón de 40 px o más a más de 0,5 px/ms. Lo usa `Modal`; aparte para probarlo sin pantalla.
 
 ### 2.10e0b `dispositivos/PiezasFicha` (2026-10-13, tarea 329, AD-079)
 
@@ -371,7 +389,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Props:** `{ etiqueta, valor?, tecnico?: boolean = false, children?, copiable?: string }`. `tecnico` marca IP, serial, placa, MAC, puerto o clave; `children` sustituye el valor de texto por un enlace vivo o una pastilla; `copiable` dibuja el botón de copiar con su confirmación breve.
 - **Variantes:** un dato **técnico** nunca comparte renglón con su etiqueta (va debajo, a ancho completo, en `VALOR_TECNICO`: 14 px monoespaciado tabular en `noct-text`) y su botón de copiar mide 44x44 con fondo propio. Un dato **corriente** comparte renglón solo si el contenedor da para ello: el umbral es una **container query de 380 px** sobre el contenedor de la ficha, no el ancho de la ventana, porque la misma fila vive en una columna de 328 px en el teléfono y en una de 720 en escritorio. La etiqueta nunca pasa de 96 px (`w-24`).
 - **Exporta dos constantes** para quien pinta un dato técnico fuera de una fila: `VALOR_TECNICO` (14 px, `noct-text`) y `VALOR_TECNICO_COMPACTO` (13 px, `neutral-300`, el piso exacto de M-R5, para listas donde el dato acompaña a un nombre).
-- **Exporta `BotonCopiar`** (2026-09-14): `{ etiqueta, texto, destacado?: boolean = false, conTexto?: boolean = false }`. Siempre 44 px de alto con su confirmación breve. `conTexto` escribe "Copiar"/"Copiado" junto al icono, para una tarjeta de lista donde un icono suelto no dice qué hace. Lo usan las tarjetas de atajos y comandos del Centro de consulta (`ReferenciaPage`), que copian la combinación o el comando sin abrir la ficha.
+- **Exporta `BotonCopiar`** (2026-09-14): `{ etiqueta, texto, destacado?: boolean = false, conTexto?: boolean = false, aviso?: string }`. Siempre 44 px de alto con su confirmación breve. `aviso` (tarea 341) da además el aviso flotante al copiar ("IP copiada: 10.0.0.5"); solo para lo que se puede leer en voz alta, nunca un secreto. En el teléfono, el botón sin fondo mide 44 de ancho y "Copiar" va a 14 px. `conTexto` escribe "Copiar"/"Copiado" junto al icono, para una tarjeta de lista donde un icono suelto no dice qué hace. Lo usan las tarjetas de atajos y comandos del Centro de consulta (`ReferenciaPage`), que copian la combinación o el comando sin abrir la ficha.
 - **Dónde:** `DispositivoPage` (capas "Ahora" y "Contexto"); las constantes, en `FilaDispositivo` y `TopologiaEquipoPage`. Es el camino para retirar las copias a mano de la fila etiqueta-valor que quedan en `CredencialPage`, `UbicacionPage` y `PersonaPage`.
 
 ### 2.10m1 `useReanudar` (`src/features/soluciones/useReanudar.ts`)
@@ -416,6 +434,7 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Propósito:** ventana modal centrada con fondo oscurecido; en móvil aparece pegada abajo (hoja), en pantallas grandes centrada (responsive por CSS, no por prop). Se cierra con Escape o tocando fuera.
 - **Props:** `{ abierto, onCerrar, tituloId?, variante?, children }`.
 - **Variantes:** `variante="hoja"` (tarea 339, AD-088), la de `HojaInferior`: en el teléfono no cambia nada; desde 768 px la tarjeta es un panel lateral derecho de alto completo (420, 440 desde 1280 y 480 desde 1680), sin relleno propio, sin esquinas ni borde salvo el izquierdo, con la sombra `--shadow-noct-panel`, sobre un velo negro al 58 % sin desenfoque (en el claro, la tinta al 30 %). Por defecto (`dialogo`), la de siempre. **El foco vive dentro mientras está abierto (tarea 340):** al abrir entra al diálogo (`tabIndex=-1`; si un campo con `autoFocus` ya lo tomó, se respeta), Tab y Mayús+Tab dan la vuelta dentro, y al cerrar vuelve a lo que lo abrió si sigue en la página (en un teléfono, nunca a un campo de texto: abriría el teclado). Con dos diálogos abiertos solo atrapa el de encima. Siempre se monta con `createPortal(..., document.body)` (agregado el 2026-07-21 tras un bug real: `position: fixed` no se resuelve contra el viewport si un ancestro con `backdrop-blur` crea un containing block).
+- **La hoja del teléfono (tarea 341, AD-089).** Por debajo de 768 los dos (`dialogo` y `hoja`) son la hoja del handoff: pegada al borde de abajo y de lado a lado, radio 22 arriba, sin borde, 18 px de margen y el área segura abajo, hasta el 88 % del alto, la sombra `0 -12px 40px`, sobre `noct-velo` sin desenfoque, con el asa (38 x 5, `noct-divider-fuerte`, oculta al lector). Sube en 260 ms y el velo aparece en 200 (CSS, solo sin "reducir movimiento"); al cerrarse sigue montada 200 ms mientras baja (Web Animations API, desde donde la dejó el dedo), inerte y oculta al lector; sin maquetación (las pruebas) o con "reducir movimiento", el cierre es inmediato. **Deslizar para cerrar:** hacia abajo desde cualquier parte que no sea un campo, con el contenido arriba del todo (`gestoHoja.ts`); escuchas nativas porque `touchmove` tiene que poder cancelarse. Un arrastre corto vuelve a su sitio; un arrastre que cierra no activa lo que hubiera bajo el dedo. La X, el velo y Esc siguen cerrando igual y el foco sigue atrapado. Desde 768, el diálogo centrado y el panel lateral de siempre, sin gesto. `coincide(consulta)` (exportada de `useEsAncho.ts`) decide el ancho en el momento del gesto.
 - **Dónde:** solo internamente, por `PanelSync` y `DialogoEliminar`. Ninguna pantalla de features lo importa directo hoy (ver `HojaInferior`, candidato CAND-5).
 
 ### 2.13 `PanelSync`

@@ -8,6 +8,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-15
 
+### Cambiado (tarea 341, en la rama `fix/remate-fidelidad-movil`, sin integrar): remate de fidelidad móvil "1b Pulgar"
+
+**Área modificada:** el teléfono (<768 px). La hoja (`src/components/Modal.tsx`, `HojaInferior.tsx`, `gestoHoja.ts` nuevo), el aviso flotante (`src/components/avisosFlotantes.ts` y `AvisoFlotante.tsx`, nuevos, montado en `src/App.tsx`), los botones y campos (`src/components/nocturne.tsx`, `campos.tsx`), los tokens y el movimiento (`src/index.css`), la pantalla final de la guía (`src/features/soluciones/AsistenteVista.tsx`, `guiaCompletada.ts` nuevo) y el aviso al salir (`sinTerminar.ts`, `AsistentePage.tsx`, `Chasis.tsx`, `BarraTarea.tsx`), más clases `max-md:` en unos 90 archivos de pantallas. Documentación: [TAREAS.md](TAREAS.md), [DECISIONES.md](DECISIONES.md) (AD-089), [COMPONENTES_UI.md](COMPONENTES_UI.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) y [ARQUITECTURA.md](ARQUITECTURA.md).
+**Tipo:** Cambiado.
+**Motivo:** hallazgo posterior a la auditoría del 2026-10-15 del handoff móvil original contra `main`: detalles de fidelidad e interacción del teléfono que nunca se implementaron. **El rediseño aprobado sigue vigente; esta tarea solo completa fidelidad e interacción en el teléfono; las 327 a 340 siguen cerradas y archivadas, y las reglas superadas del handoff original no vuelven.**
+**Qué cambia (solo por debajo de 768 px):**
+- **Hoja inferior:** pegada abajo, de lado a lado, radio 22 arriba, asa, el velo del handoff, sube y baja animada y se cierra deslizándola hacia abajo; la X, el velo y Esc siguen cerrándola. Desde 768, el panel lateral de siempre.
+- **Respuesta al tocar:** las filas de Resolver, Agenda, Más, la búsqueda, la ficha y el responsable se tiñen (`noct-presionado`) bajo el dedo; el hover y el foco de escritorio no cambian.
+- **Aviso flotante:** "IP copiada: …", "Avance guardado: paso N de M", "Bóveda desbloqueada" y "Guardado. Queda en el historial del equipo", 2,4 s, sobre el pie fijo, anunciado al lector sin robar el foco y sin animación con "reducir movimiento". Nunca errores ni secretos.
+- **Mínimos:** texto de 12 px o más, verbos de 14, campos de 16 (iOS ya no amplía al enfocar) y objetivos de 44 (chips, enlaces "Ver todas", la X de los adjuntos y de los equipos de una credencial, el número de un paso).
+- **Acción dominante:** "Guardar" y "Desbloquear" van rellenos donde son la única acción que ejecuta (formularios de equipo, credencial, diagnóstico, persona, ubicación, ficha de consulta, autorización, conexión, intervención y dato protegido; los desbloqueos de la Bóveda y de la app).
+- **Pantalla final de la guía:** marca de 84 px que crece una vez, "Guía completada", qué se hizo y dónde con los pasos y las comprobaciones, la hora del cierre en mono y las acciones en el pie: "Salir de la guía" (la única rellena), "Registrar intervención" (RP-1) y "Empezar de nuevo". "Ir a Resolver" queda fuera de alcance.
+- **Tokens:** `--color-noct-divider-fuerte`, `-tinte`, `-presionado` y `-velo`, con su valor claro; los claros aprobados no cambian.
+**Estructura de datos:** sin cambios. Ni Supabase, ni `schema.sql`, ni Dexie, ni la sincronización, ni rutas, ni datos.
+**Impacto esperado:** en el teléfono, hojas que se sienten nativas, respuesta inmediata al tocar, confirmación de lo hecho y controles legibles y tocables. Desde 768, nada.
+**Verificación y estado:** suite completa (3408 pruebas), `tsc -b`, lint, build y `verificar-precache` en verde; prueba sin conexión real con los mismos 7 fallos documentados de la 336 y ninguno nuevo; capturas a 320, 375, 390 y 767 (sin objetivos por debajo de 44 px) y a 768, 1024, 1280 y 1680 en oscuro y claro, comparadas con `cf77a58`: 481 de 528 idénticas píxel a píxel y el resto dentro del ruido del renderizado. **Sin integrar ni desplegar: pendiente de la revisión visual del usuario.**
+
 ### Documentación (reglas, regla 31): el `.git` compartido entre dos computadores y los worktrees
 
 **Área modificada:** [REGLAS.md](REGLAS.md) (regla 31 nueva, en "Control de versiones") y [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (aclaración en la 338: su "regla 31" era de su rama y es otra).
