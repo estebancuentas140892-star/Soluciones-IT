@@ -59,7 +59,7 @@
 
 **Rama:** `fix/pulgar-solo-movil` (`1b324d0`, local y en `origin`), sin integrar y congelada. Con su worktree (`C:\Users\ecardona\dev\sit-pulgar-solo-movil`) se conserva, sin borrar, hasta la limpieza controlada, que necesita la autorización expresa del usuario. No guarda trabajo que haga falta recuperar.
 
-**Área afectada:** ninguna en `main`. AD-087 y la regla 31 de esa rama no existen en `main` y no se aplican.
+**Área afectada:** ninguna en `main`. AD-087 y la regla 31 de esa rama (limitar el rediseño al teléfono) no existen en `main` y no se aplican; la regla 31 de [REGLAS.md](REGLAS.md) en `main` es otra, la del `.git` compartido entre dos computadores (2026-10-15).
 
 ## Encargo del 2026-10-13: rediseño móvil "1b Pulgar"
 

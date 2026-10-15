@@ -34,6 +34,15 @@ Registro de las reglas acordadas durante el proyecto. Toda nueva regla se agrega
 
 21. **La integración continua tiene que quedar en verde** (regla acordada el 2026-09-29, tarea 276: ningún cambio se da por sano solo porque compiló en la máquina de quien lo hizo). Cada push a `main` dispara `.github/workflows/ci.yml` (`npm ci`, `npm test`, `npm run lint` y `npm run build`, con Node 24 como Vercel). Igual que la regla 14 pide verlo en producción, un cambio no se da por entregado hasta que ese workflow termina en verde para su commit: se comprueba con la API de GitHub (`/repos/<owner>/<repo>/actions/runs?head_sha=<sha>`). Si falla, se corrige antes de seguir con otra tarea.
 
+31. **El `.git` se comparte entre dos computadores: nunca hay limpieza global de worktrees** (regla acordada con el usuario el 2026-10-15, al cerrar el rediseño "1b Pulgar"). El directorio `.git` del repositorio se sincroniza por OneDrive entre dos computadores, así que los dos ven los mismos registros de worktree y las mismas ramas locales:
+    - **Nunca se ejecuta `git worktree prune`.**
+    - Que Git marque un worktree como `prunable` NO significa que pueda borrarse: una ruta que no existe en el computador actual (por ejemplo `C:\Users\USUARIO\...` o `C:\Users\ecardona\...`) puede pertenecer al otro equipo.
+    - No se borran registros de worktree, ramas asociadas ni carpetas solo porque la ruta no exista en el computador actual.
+    - Antes de eliminar un worktree se demuestra que: (1) pertenece al equipo actual; (2) su ruta existe en este computador; (3) está limpio; (4) no pertenece a otra sesión; (5) su trabajo está integrado o el usuario lo descartó de forma expresa.
+    - Un worktree con cambios sin commit nunca se elimina sin la autorización expresa del usuario.
+    - Cuando el usuario autoriza eliminar un worktree concreto, se usa `git worktree remove <ruta-específica>`, de uno en uno.
+    - Nunca se hace una limpieza global de worktrees.
+
 ## Esquema de base de datos
 
 17. Toda columna que la app sincronice debe existir en `supabase/schema.sql` (regla nacida el 2026-07-22, tarea 143, tras un error real en producción). `aFilaRemota` envía todas las columnas declaradas en `configTablas`, y PostgREST rechaza la fila ENTERA si una no existe en el servidor: el cambio se queda reintentándose para siempre en la cola y esa ficha además deja de recibir las novedades del equipo. Al agregar una columna:

@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-15
 
+### Documentación (reglas, regla 31): el `.git` compartido entre dos computadores y los worktrees
+
+**Área modificada:** [REGLAS.md](REGLAS.md) (regla 31 nueva, en "Control de versiones") y [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (aclaración en la 338: su "regla 31" era de su rama y es otra).
+**Tipo:** Agregado (documentación).
+**Motivo:** el `.git` del repositorio se sincroniza por OneDrive entre dos computadores. Desde cada uno, los worktrees del otro aparecen como `prunable` porque su ruta no existe allí, y una limpieza global los borraría. El usuario aprobó registrarlo como regla permanente al cerrar la limpieza del rediseño "1b Pulgar".
+**Qué cambia:** nunca `git worktree prune`; `prunable` no autoriza a borrar; nada se borra solo porque su ruta no exista en este computador; antes de eliminar un worktree se demuestran cinco condiciones (equipo actual, ruta local, limpio, sin otra sesión, trabajo integrado o descartado por el usuario); con cambios sin commit, solo con autorización expresa; de uno en uno con `git worktree remove <ruta>`, nunca una limpieza global.
+**Estructura de datos:** sin cambios. Solo documentación.
+**Impacto esperado:** ninguno en la app; protege el trabajo del otro equipo.
+
 ### Documentación (tareas 327 a 335): cierre del rediseño móvil "1b Pulgar" tras la aprobación visual del usuario
 
 **Área modificada:** [TAREAS.md](TAREAS.md) (encargo del 2026-10-13 cerrado, 327 a 335 retiradas del tablero) y [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (327 a 335).
