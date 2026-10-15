@@ -133,29 +133,44 @@ export interface ItemResolver {
 // primero) y "Ver N", que abre la hoja con todo, el diagnóstico de su
 // categoría al final. Sustituye a los bloques "Problemas frecuentes" y
 // "Procedimientos" de la ficha, que ahora viven en esa hoja.
+//
+// CINCO DESDE 1280 (tarea 339, T4; "cuánto se ve antes de Ver N" cambia
+// con el ancho): quien lo usa pasa hasta `visiblesEscritorio` filas; por
+// debajo de 1280 las que pasan de `visibles` se esconden con CSS y "Ver N"
+// aparece según lo que de verdad se ve en cada banda.
 export function ResolverConEsteEquipo({
   items,
   total,
   onVerTodos,
+  visibles = 3,
+  visiblesEscritorio = visibles,
 }: {
   items: ItemResolver[]
   total: number
   onVerTodos: () => void
+  visibles?: number
+  visiblesEscritorio?: number
 }) {
   if (items.length === 0) return null
+  const vistosTelefono = Math.min(items.length, visibles)
+  const vistosEscritorio = Math.min(items.length, visiblesEscritorio)
+  const verEnTelefono = total > vistosTelefono
+  const verEnEscritorio = total > vistosEscritorio
   return (
     <section aria-labelledby="resolver-con-este-equipo" className="flex flex-col">
       <div className="flex items-baseline justify-between gap-2 pb-0.5">
         <h2 id="resolver-con-este-equipo" className="text-[17px] font-semibold tracking-[-.01em]">
           Resolver con este equipo
         </h2>
-        {total > items.length && (
+        {(verEnTelefono || verEnEscritorio) && (
           <button
             type="button"
             onClick={onVerTodos}
             aria-haspopup="dialog"
             aria-label={`Ver las ${total} formas de resolver con este equipo`}
-            className="flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300"
+            className={`min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 xl:min-h-0 ${
+              verEnTelefono ? 'flex' : 'hidden'
+            } ${verEnEscritorio ? 'xl:flex' : 'xl:hidden'}`}
           >
             Ver {total}
             <CaretUp size={13} aria-hidden />
@@ -163,19 +178,20 @@ export function ResolverConEsteEquipo({
         )}
       </div>
       <ul className="flex flex-col">
-        {items.map((item) => (
-          <li key={item.id}>
+        {items.slice(0, vistosEscritorio).map((item, i) => (
+          <li key={item.id} className={i >= vistosTelefono ? 'hidden xl:block' : undefined}>
             <Link
               to={item.ruta}
-              className="flex min-h-16 items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04]"
+              // 64 en el teléfono, 60 en la tableta y 54 desde 1280 (densa).
+              className="flex min-h-16 items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-[60px] xl:min-h-[54px] xl:py-1.5"
             >
-              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] bg-noct-text/[.06] text-noct-neutral-300">
+              <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[11px] bg-noct-text/[.06] text-noct-neutral-300 xl:h-[34px] xl:w-[34px] xl:rounded-[10px]">
                 <item.Icono size={19} aria-hidden />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[12.5px] leading-snug text-noct-neutral-500">{item.tipo}</span>
                 {/* El título es la identidad de la guía: no se recorta (regla 23). */}
-                <span className="block text-[15.5px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+                <span className="block text-[15.5px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere] xl:text-[14.5px]">
                   {item.titulo}
                 </span>
                 {item.extra && (

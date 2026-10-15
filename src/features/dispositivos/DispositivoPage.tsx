@@ -666,8 +666,16 @@ export function DispositivoPage() {
 
           No se quita ni un dato: lo que iba en pliegues dentro de pliegues
           está ahora en hojas, una a la vez. Un solo eje vertical (R26,
-          tarea 191): `lg:px-10`. */}
-      <main className="@container flex flex-1 flex-col gap-6 px-4 pb-4 pt-2 lg:px-10">
+          tarea 191): `lg:px-10`.
+
+          POR ANCHO (tarea 339, T4; pizarras Ficha 768 y 1280): desde 768 los
+          datos para trabajar y el índice van en dos columnas; desde 1280 el
+          documento y, al lado, el índice de 344 px, pegado arriba al
+          desplazarse. Es la misma lista de piezas: en el teléfono la
+          envoltura del documento no existe (`contents`) y el orden de lectura
+          no cambia. */}
+      <main className="@container flex flex-1 flex-col gap-6 px-4 pb-4 pt-2 lg:px-10 md:gap-[26px] xl:grid xl:grid-cols-[minmax(0,1fr)_344px] xl:items-start xl:gap-x-12 xl:gap-y-7">
+        <div className="contents xl:col-start-1 xl:row-start-1 xl:flex xl:min-w-0 xl:flex-col xl:gap-7">
         {/* Migracion pendiente (hallazgos L2/L3): este equipo reemplaza a
             otro que todavia tiene conexiones, credenciales o campos
             protegidos sin mover. */}
@@ -743,7 +751,7 @@ export function DispositivoPage() {
             con copiar, dónde está, quién responde de él y a qué está
             conectado. Sin ninguno, no hay bloque. */}
         {(dispositivo.ip || ubicacionNombre || personaVivaACargo || anotadoPorValidar || subida) && (
-        <section aria-label="Datos para trabajar" className="flex flex-col">
+        <section aria-label="Datos para trabajar" className="flex flex-col md:grid md:grid-cols-2 md:gap-x-8">
           {dispositivo.ip && (
             <div className="flex min-h-[68px] items-center gap-3 border-b border-noct-divider">
               <div className="min-w-0 flex-1">
@@ -786,7 +794,7 @@ export function DispositivoPage() {
               alguien lo anotó. Sus filas traen su propio margen (las de la
               tarjeta de antes): se compensa aquí. */}
           {aplicaResponsable && (
-            <div className="-mx-3.5 border-b border-noct-divider empty:hidden">
+            <div className="-mx-3.5 border-b border-noct-divider empty:hidden md:mx-0 md:[&>*]:-mx-3.5">
               <ResponsableDelEquipo dispositivo={dispositivo} origen={origenEsteEquipo} ocultarSiNoHay />
             </div>
           )}
@@ -818,19 +826,26 @@ export function DispositivoPage() {
         )}
 
         <ResolverConEsteEquipo
-          items={formasDeResolver.slice(0, 3)}
+          items={formasDeResolver.slice(0, 5)}
           total={formasDeResolver.length}
           onVerTodos={() => setHoja('resolver')}
+          visibles={3}
+          visiblesEscritorio={5}
         />
+        </div>
 
         {/* MÁS DEL EQUIPO: un índice de un solo nivel (antes, un pliegue con
             pliegues dentro). Cada fila dice lo que guarda y abre su hoja;
-            una sola a la vez. */}
-        <section aria-labelledby="mas-del-equipo" className="flex flex-col">
-          <h2 id="mas-del-equipo" className="pb-1 text-[17px] font-semibold tracking-[-.01em]">
+            una sola a la vez. En dos columnas en la tableta y, desde 1280,
+            en su columna de 344, pegado bajo la cabecera (T4). */}
+        <section
+          aria-labelledby="mas-del-equipo"
+          className="flex flex-col xl:sticky xl:top-[84px] xl:col-start-2 xl:row-span-2 xl:row-start-1"
+        >
+          <h2 id="mas-del-equipo" className="pb-1 text-[17px] font-semibold tracking-[-.01em] xl:pb-1.5">
             Más del equipo
           </h2>
-          <ul className="flex flex-col">
+          <ul className="flex flex-col md:grid md:grid-cols-2 md:gap-x-7 xl:flex">
             <FilaIndice Icono={Info} titulo="Más datos" valor={`${totalMasDatos}`} abierta={hoja === 'datos'} onAbrir={() => setHoja('datos')} />
             {hayImpacto && (
               <FilaIndice
@@ -902,13 +917,16 @@ export function DispositivoPage() {
           </ul>
         </section>
 
-        {/* La puerta única de documentar (M-016, M-031, regla M-R10). */}
-        <PuertaDocumentar
-          dispositivo={dispositivo}
-          categoriaNombre={categoria?.nombre ?? ''}
-          puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
-          completitud={completitud}
-        />
+        {/* La puerta única de documentar (M-016, M-031, regla M-R10). Desde
+            1280, en la columna del documento, bajo lo demás. */}
+        <div className="empty:hidden xl:col-start-1 xl:row-start-2 xl:min-w-0">
+          <PuertaDocumentar
+            dispositivo={dispositivo}
+            categoriaNombre={categoria?.nombre ?? ''}
+            puedeVerBoveda={Boolean(perfil?.puedeVerBoveda)}
+            completitud={completitud}
+          />
+        </div>
 
         {/* La barra fija (M-R3): "Resolver un problema", relleno, y la llave
             de sus credenciales. */}

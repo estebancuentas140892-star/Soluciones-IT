@@ -140,8 +140,13 @@ describe('resolver con este equipo', () => {
       () => document.body.querySelector<HTMLElement>('section[aria-labelledby="resolver-con-este-equipo"]'),
       'Resolver con este equipo',
     )
-    await esperar(() => seccion.querySelectorAll('a').length === 3, 'tres formas')
-    const enlaces = Array.from(seccion.querySelectorAll('a'))
+    // A la vista en el teléfono: desde la tarea 339 (T4) la ficha pasa hasta
+    // cinco y las que sobran de tres se esconden con CSS por debajo de 1280.
+    const aLaVista = () => Array.from(seccion.querySelectorAll('a')).filter((a) => !a.closest('li.hidden'))
+    await esperar(() => aLaVista().length === 3, 'tres formas')
+    expect(seccion.querySelectorAll('a').length).toBe(4)
+    expect(seccion.querySelector('li.hidden')?.className).toContain('xl:block')
+    const enlaces = aLaVista()
     expect(enlaces.slice(0, 2).every((a) => (a.textContent ?? '').includes('Problema frecuente'))).toBe(true)
     // Cada una abre la guía con este equipo (tarea 290).
     expect(enlaces.every((a) => a.getAttribute('href')?.endsWith('?equipo=pc'))).toBe(true)

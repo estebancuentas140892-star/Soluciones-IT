@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (ficha de equipo, tarea 339, T4): dos columnas en tableta y documento con índice en escritorio
+
+**Área modificada:** `src/features/dispositivos/DispositivoPage.tsx`, `PiezasFicha.tsx` (`ResolverConEsteEquipo` gana `visibles` y `visiblesEscritorio`); prueba `fichaEquipoMovil.test.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** paso T4 del handoff (pizarras Ficha 768 y 1280).
+**Descripción:** desde 768, datos para trabajar e índice en dos columnas; desde 1280, rejilla `minmax(0,1fr) 344px` con el índice pegado bajo la cabecera, cinco formas de resolver a la vista y filas densas. La envoltura del documento es `contents` en el teléfono, así que el orden de lectura y el DOM del teléfono no cambian. Las formas que sobran en cada banda se esconden con CSS (un ancho intermedio no remonta nada).
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** en escritorio la ficha entera y su índice caben en la primera pantalla.
+
 ### Cambiado (Resolver, tarea 339, T3): tres zonas por ancho de contenedor y filas densas en escritorio
 
 **Área modificada:** `src/features/inicio/ResolverPage.tsx`; `src/features/inicio/SeccionesAgenda.tsx` (`ContadoresAgenda`, `FilaAgenda`, compartidos con la Agenda).
