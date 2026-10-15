@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-15
 
+### Integrado y cerrado (tarea 336): la prueba sin conexión real, en `main`
+
+**Área modificada:** `7308173` (`scripts/prueba-sin-conexion.mjs`, detallado en la entrada de abajo) entra en `main` por avance rápido desde `bf5160e`; la 336 sale del tablero y pasa a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**Tipo:** Corregido.
+**Motivo:** con la 341 integrada y verificada, el usuario pidió retomar la 336 portando solo su corrección vigente, adaptarla a "Guía completada", validarla con 0 fallos e integrarla.
+**Estructura de datos:** sin cambios. La app no cambia: solo la prueba.
+**Verificación y estado:** prueba sin conexión 84 de 84 con 0 fallos; CI en verde para `7308173`; Vercel "success"; `/version.json` de producción en `7308173`. **Completada y archivada.** La 337 sigue pendiente; la 322 no se tocó.
+
 ### Corregido (tarea 336): la prueba sin conexión real vuelve a pasar entera, adaptada a la 341
 
 **Área modificada:** `scripts/prueba-sin-conexion.mjs` (solo la prueba; la app no cambia) y [TAREAS.md](TAREAS.md).

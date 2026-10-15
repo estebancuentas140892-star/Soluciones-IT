@@ -198,6 +198,24 @@
 
 ## Encargo del 2026-10-10: siguiente fase después de la conciliación de datos
 
+### 336. La prueba sin conexión real fallaba en `main` en los pasos 4b, 4b2 y 4c (hallazgo de la 322)
+
+**Estado:** Completada (2026-10-15). Solo cambia la prueba (la app no cambia): portada a `main`, adaptada a la 341, integrada por avance rápido, desplegada y verificada.
+
+**Causa:** ninguna regresión sin red: la prueba quedó desactualizada por la tarea 328 (AD-078). (4b) El número de cada microacción va en su caja con un contador de CSS en el `::before` de cada `li` y la prueba exigía `list-style-type: decimal`. (4b2) La comprobación final pregunta "¿Quedó resuelto?" con "Marca N comprobaciones" y "Terminar" y la prueba buscaba "Antes de terminar, comprueba" y "Finalizar". (4c) La credencial se consulta en una hoja que abre su fila y la prueba la buscaba en el cuerpo de la acción. Dos comprobaciones pasaban en vacío. En `main` daba 73 de 80 con 7 fallos.
+
+**Qué cambió:** `scripts/prueba-sin-conexion.mjs`, con la corrección de `a5a35bd` (rama `fix/prueba-sin-conexion`, del 2026-10-13) portada sola, sin sus versiones viejas de TAREAS.md y CHANGELOG.md (el script de `main` era idéntico al de su base, `82dd99b`): 4b acepta los números del navegador o un contador de CSS dibujado de verdad y exige la ubicación bajo su microacción; 4b2 usa "¿Quedó resuelto?", comprueba "Marca 1 comprobación" inactivo y termina con "Terminar"; 4c abre la hoja y comprueba dentro la credencial correcta, la contraseña maestra, que nada cifrado llega a la página y que un equipo sin credencial no recibe la de otro. **Adaptación por la 341** (la prueba corre a 390 px y el teléfono dice ahora "Guía completada"): "marcar la última comprobación no termina la guía" exige que siga "¿Quedó resuelto?" con "Terminar" activo y sin el cierre, en vez de la ausencia de "Guía terminada", que en el teléfono ya no existe y la hacía pasar en vacío; "solo Terminar la termina" espera "Guía completada" con su marca (`[data-marca-completada]`) en un ancho de teléfono, en vez del texto viejo, con el que habría fallado.
+
+**Integración:** rama `fix/prueba-sin-conexion-main` desde `main` (`bf5160e`, con la 341 ya integrada), commit `7308173`; entró en `main` por avance rápido (`bf5160e..7308173`), sin commit de fusión. Este cierre documental va en un commit propio encima. La rama original `fix/prueba-sin-conexion` (`a5a35bd`, worktree del otro equipo) no se integró ni se borró (regla 31).
+
+**Verificación:** sobre `main` + 341 + 336, **84 de 84, "PRUEBA SIN CONEXION: OK", 0 fallos** (4b, 4b2 y 4c enteros); suite completa (223 archivos, 3408 pruebas), `tsc -b`, lint, build y `verificar-precache` en verde. Después de integrar: CI en verde para `7308173` (ejecución `38788666131`: pruebas, lint y build); Vercel "success" (despliegue de Production `7101430603`); `/version.json` de producción `7308173` (compilado el 2026-10-15 a las 18:49 UTC), con el contenido de la app intacto en los trozos de `sw.js`.
+
+**Al integrar la 322:** su rama (`feat/documentos-equipos`) trae esta misma tarea en su TAREAS.md y un paso 4f nuevo en la prueba: queda una sola entrada (esta) y el 4f se suma sin tocar 4b, 4b2 ni 4c, que ya miran "Guía completada" en el teléfono.
+
+**Área afectada:** `scripts/prueba-sin-conexion.mjs` (cabecera ~12-18; 4b ~561-643; 4b2 ~645-737, con la adaptación a "Guía completada" ~712-737; 4c ~739-798).
+
+**Hallazgo registrado:** la 337 (la fila de la credencial del equipo no dice qué credencial es), que sigue pendiente en el tablero.
+
 ### 326. Guardar sin red con el token vencido no espera 25 segundos ni pierde el autor
 
 **Estado:** Completada (2026-10-10). **Cerrada por confirmación real del usuario**, que validó en producción la versión publicada de la fase B, en la que entró ("se ve bien"). Hallazgo de la prueba sin conexión real de la fase B (tarea 320).
