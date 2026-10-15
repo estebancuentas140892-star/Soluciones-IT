@@ -10,7 +10,6 @@ import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { FilaDeslizable } from '../../components/FilaDeslizable'
 import { Monitor, Plus } from '../../components/iconos'
-import { DockBusqueda } from '../../components/DockBusqueda'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { buscarEquipos, conteosDeChips } from './busquedaEquipos'
@@ -176,7 +175,21 @@ export function DispositivosPage() {
     // escrito, así que la lupa de la barra superior sería el segundo
     // buscador de la misma pantalla y con otro alcance. Buscar en todo
     // sigue a un toque, desde Resolver.
-    <Chasis titulo="Equipos" conLupa={false} barra={
+    //
+    // BUSCAR Y ESCANEAR (tarea 330, y 339 desde 768 px): el buscador de
+    // equipos de siempre (su marcador dice lo que busca de verdad,
+    // `camposDeBusqueda`). El chasis lo monta en el dock de abajo, con el
+    // escáner al lado, en el teléfono, y en la barra superior, con el
+    // escáner dentro, desde 768 px.
+    <Chasis titulo="Equipos" conLupa={false} buscador={
+      <CampoBusqueda
+        valor={texto}
+        onCambiar={setTexto}
+        alcance="Equipos"
+        textoAlternativo="Nombre, persona, IP, lugar o serial"
+        variante="dock"
+      />
+    } barra={
       <>
         <header className="flex items-center justify-between gap-2 px-4 pt-0.5">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
@@ -291,19 +304,6 @@ export function DispositivosPage() {
           </div>
         )}
       </main>
-
-      {/* BUSCAR Y ESCANEAR, AL PULGAR (tarea 330): el buscador de equipos
-          de siempre (su marcador dice lo que busca de verdad, `camposDeBusqueda`),
-          en el dock de abajo con el escáner al lado. */}
-      <DockBusqueda>
-        <CampoBusqueda
-          valor={texto}
-          onCambiar={setTexto}
-          alcance="Equipos"
-          textoAlternativo="Nombre, persona, IP, lugar o serial"
-          variante="dock"
-        />
-      </DockBusqueda>
     </Chasis>
   )
 }

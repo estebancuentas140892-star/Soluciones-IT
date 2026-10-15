@@ -6,7 +6,8 @@ import { useOrigen } from '../../app/useOrigen'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { HojaInferior } from '../../components/HojaInferior'
 import { CaretRight, DotsThreeOutline, Note, Paperclip, PencilSimple, Pulse, SealCheck, Storefront, TrashSimple } from '../../components/iconos'
-import { BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO } from '../../components/nocturne'
+import { BTN_DELINEADO_CABECERA, BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO } from '../../components/nocturne'
+import { useEsAncho } from '../../components/useEsAncho'
 import { formatearNumero, textoRango } from '../../lib/autorizaciones'
 import { db, type AutorizacionFacturacion } from '../../lib/db'
 import { fechaConAnio } from '../../lib/mantenimientos'
@@ -36,6 +37,9 @@ export function AutorizacionPage() {
   const [menuAbierto, setMenuAbierto] = useState(false)
   // La hoja de la lectura del consecutivo (RP-2, tarea 335).
   const [leyendo, setLeyendo] = useState(false)
+  // "Editar" va en la barra fija del teléfono y, desde 768 px, en la
+  // cabecera (tarea 339): una sola vez por ventana.
+  const ancho = useEsAncho()
   const autorizacion = useLiveQuery(
     async () => (await db.autorizaciones_facturacion.get(autorizacionId)) ?? null,
     [autorizacionId],
@@ -82,6 +86,15 @@ export function AutorizacionPage() {
       volverEtiqueta="Autorizaciones"
       titulo={autorizacion.prefijo}
       contexto="Autorización de facturación"
+      // EDITAR, DELINEADO EN LA CABECERA DESDE 768 PX (tarea 339): no hace
+      // avanzar nada, así que no es relleno. Detrás del menú, como en la
+      // ficha de un equipo.
+      accionPrincipal={
+        <Link to={`/facturacion/${autorizacionId}/editar`} className={BTN_DELINEADO_CABECERA}>
+          <PencilSimple size={16} aria-hidden />
+          Editar
+        </Link>
+      }
       acciones={
         // ELIMINAR, EN EL MENÚ (regla 30): lo destructivo no va junto a Editar.
         <button
@@ -278,16 +291,19 @@ export function AutorizacionPage() {
         </div>
 
         {/* EDITAR, ABAJO Y DELINEADO: no hace avanzar nada. Sube a esta
-            ficha (regla 13): sin origen, su X vuelve aquí. */}
-        <div className="sticky bottom-[calc(65px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:bottom-0 lg:-mx-10">
-          <Link
-            to={`/facturacion/${autorizacionId}/editar`}
-            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[15px] border-[1.5px] border-noct-text/25 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.05]"
-          >
-            <PencilSimple size={17} aria-hidden />
-            Editar
-          </Link>
-        </div>
+            ficha (regla 13): sin origen, su X vuelve aquí. Solo en el
+            teléfono; desde 768 px va en la cabecera (tarea 339). */}
+        {!ancho && (
+          <div className="sticky bottom-[calc(65px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden lg:-mx-10">
+            <Link
+              to={`/facturacion/${autorizacionId}/editar`}
+              className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[15px] border-[1.5px] border-noct-text/25 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.05]"
+            >
+              <PencilSimple size={17} aria-hidden />
+              Editar
+            </Link>
+          </div>
+        )}
       </main>
 
       {/* Se monta solo abierta: cada lectura empieza en blanco. */}

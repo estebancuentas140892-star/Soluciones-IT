@@ -5,6 +5,7 @@ import { Campo, CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 import { HojaInferior } from '../../components/HojaInferior'
 import { Check, ClockCountdown, ClockCounterClockwise, Note, Plus, SealCheck, User, Wrench } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
+import { useEsAncho } from '../../components/useEsAncho'
 import { db, type Mantenimiento, type TipoMantenimiento } from '../../lib/db'
 import { esPorValidar, fechaConAnio, nombreMantenimiento } from '../../lib/mantenimientos'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
@@ -30,7 +31,8 @@ import { SelectorTipoMantenimiento } from './SelectorTipoMantenimiento'
 //                      ni hecho, es lo que dice una fuente histórica.
 //
 // Sin ninguno, un estado vacío que dice qué aparecerá. Programar va abajo,
-// delineado (no hace avanzar nada: la acción rellena es la del cierre).
+// delineado (no hace avanzar nada: la acción rellena es la del cierre); desde
+// 768 px, en la cabecera de la pantalla (tarea 339).
 
 function porFechaProgramada(a: Mantenimiento, b: Mantenimiento): number {
   return (a.fechaProgramada ?? '').localeCompare(b.fechaProgramada ?? '')
@@ -43,11 +45,23 @@ function porFechaRealizadaDesc(a: Mantenimiento, b: Mantenimiento): number {
 export function MantenimientosDelEquipo({
   dispositivoId,
   nombreEquipo,
+  programando,
+  onProgramar,
 }: {
   dispositivoId: string
   /** El nombre del equipo, para el contexto de las hojas. */
   nombreEquipo: string
+  /**
+   * La hoja "Programar mantenimiento" abierta. La guarda la pantalla
+   * (tarea 339): desde 768 px su botón va en la cabecera del chasis, fuera
+   * de este componente, y abre esta misma hoja.
+   */
+  programando: boolean
+  onProgramar: (abierta: boolean) => void
 }) {
+  // "Programar mantenimiento" va abajo, en su barra, solo en el teléfono;
+  // desde 768 px la pantalla lo pone en la cabecera (tarea 339).
+  const ancho = useEsAncho()
   const mantenimientos = useLiveQuery(
     () =>
       db.mantenimientos
@@ -57,7 +71,6 @@ export function MantenimientosDelEquipo({
         .toArray(),
     [dispositivoId],
   )
-  const [programando, setProgramando] = useState(false)
   const [cerrando, setCerrando] = useState<Mantenimiento | null>(null)
 
   if (!mantenimientos) return null
@@ -127,21 +140,24 @@ export function MantenimientosDelEquipo({
         </div>
       )}
 
-      {/* PROGRAMAR, ABAJO Y DELINEADO: no hace avanzar nada. */}
-      <div className="sticky bottom-[calc(65px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:bottom-0">
-        <button
-          type="button"
-          onClick={() => setProgramando(true)}
-          aria-haspopup="dialog"
-          className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[15px] border-[1.5px] border-noct-text/25 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.05]"
-        >
-          <Plus size={17} aria-hidden />
-          Programar mantenimiento
-        </button>
-      </div>
+      {/* PROGRAMAR, ABAJO Y DELINEADO: no hace avanzar nada. Solo en el
+          teléfono; desde 768 px va en la cabecera (tarea 339). */}
+      {!ancho && (
+        <div className="sticky bottom-[calc(65px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden">
+          <button
+            type="button"
+            onClick={() => onProgramar(true)}
+            aria-haspopup="dialog"
+            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[15px] border-[1.5px] border-noct-text/25 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.05]"
+          >
+            <Plus size={17} aria-hidden />
+            Programar mantenimiento
+          </button>
+        </div>
+      )}
 
-      <HojaInferior abierta={programando} onCerrar={() => setProgramando(false)} titulo="Programar mantenimiento" contexto={nombreEquipo}>
-        <FormularioProgramar dispositivoId={dispositivoId} alTerminar={() => setProgramando(false)} />
+      <HojaInferior abierta={programando} onCerrar={() => onProgramar(false)} titulo="Programar mantenimiento" contexto={nombreEquipo}>
+        <FormularioProgramar dispositivoId={dispositivoId} alTerminar={() => onProgramar(false)} />
       </HojaInferior>
 
       <HojaInferior

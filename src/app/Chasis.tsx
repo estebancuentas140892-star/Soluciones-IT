@@ -10,7 +10,9 @@ import { AvisoPestana } from '../components/AvisoPestana'
 import { BarraSuperior } from '../components/BarraSuperior'
 import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
+import { DockBusqueda } from '../components/DockBusqueda'
 import { Marca } from '../components/Marca'
+import { useEsAncho } from '../components/useEsAncho'
 import { huecoAvisoActualizacionChasis } from '../components/ranuraAvisoActualizacion'
 import { CapaAtajos } from './CapaAtajos'
 import { ProveedorBandaBajoTarea, ProveedorBandaTarea } from './bandaTarea'
@@ -156,6 +158,15 @@ interface PropsSeccion extends PropsComunes {
    */
   conLupa?: boolean
   /**
+   * El buscador propio de la pantalla (Resolver, Equipos, Bóveda: su
+   * `CampoBusqueda`). UN SOLO PUNTO DE MONTAJE (tarea 339): el chasis lo
+   * pone en el dock, al pulgar, por debajo de 768 px, y en la barra
+   * superior, junto al título, desde 768. Nunca en los dos a la vez: dos
+   * campos vivos serían dos `ref`, dos focos y dos lecturas del teclado
+   * para un solo buscador. Quien lo pasa suele apagar `conLupa` (M-R8).
+   */
+  buscador?: ReactNode
+  /**
    * El nombre de la sección a 14 px aunque no se haya desplazado nada.
    * Resolver lo pide mientras se escribe (propuesta final de Claude
    * Design, 2026-10-01): con la pregunta plegada, el campo sube una sola
@@ -199,6 +210,15 @@ interface PropsDocumento extends PropsComunes {
   pestanasSeOcultanAlBajar?: boolean
   /** Acciones propias de la pantalla, a la derecha de la fila de regreso. */
   acciones?: ReactNode
+  /**
+   * LA ACCIÓN DOMINANTE DEL DOCUMENTO EN SU CABECERA, DESDE 768 PX (tarea
+   * 339): "Resolver un problema" en la ficha de un equipo, "Editar" en una
+   * autorización, "Programar mantenimiento". El chasis la pinta a la
+   * derecha de la fila superior, detrás de `acciones`, solo desde 768 px;
+   * en el teléfono la pantalla la sigue pintando en su barra fija de abajo
+   * y esa barra no se monta desde 768 (`useEsAncho`). Una vez por ventana.
+   */
+  accionPrincipal?: ReactNode
   /** Banda bajo la fila de regreso: título, buscador, pestañas internas. */
   barra?: ReactNode
 }
@@ -323,12 +343,17 @@ export function Chasis(props: Props) {
   const direccion = direccionPara(location)
   useMemoriaScroll(location.pathname)
   useMemoriaPestana(location.pathname, location.search)
+  // Tableta o escritorio (desde 768 px): decide dónde se monta lo que no
+  // puede existir dos veces, el buscador de una raíz y la acción principal
+  // de un documento (tarea 339).
+  const ancho = useEsAncho()
 
   // PESTAÑAS QUE SE ESCONDEN AL BAJAR (tarea 329): solo donde la pantalla lo
   // pide (la ficha de equipo). La misma decisión que la barra de reanudar
   // (`decidirContraida`): al bajar se van, al subir o cerca del principio
-  // vuelven, y el micromovimiento no cuenta.
-  const pestanasSeOcultan = props.modo === 'documento' && Boolean(props.pestanasSeOcultanAlBajar)
+  // vuelven, y el micromovimiento no cuenta. Desde 768 px no hay pestañas
+  // que esconder (tarea 339).
+  const pestanasSeOcultan = props.modo === 'documento' && Boolean(props.pestanasSeOcultanAlBajar) && !ancho
   const [desplazamiento, setDesplazamiento] = useState<EstadoContraible>({ contraida: false, ultimo: 0 })
   useEffect(() => {
     if (!pestanasSeOcultan) return
@@ -483,7 +508,9 @@ export function Chasis(props: Props) {
             reduce a su cuadrado de 44 px (la etiqueta la asume el
             contexto de arriba, que además nombra el destino real, R13) y
             al lado van el origen a 11 px y el nombre a 14 px. */}
-        <div className="flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5">
+        {/* Desde 768 px la fila mide 60 (tarea 339): cabe la acción
+            principal de 48 de la tableta sin tocar los bordes. */}
+        <div className="flex min-h-[44px] items-center justify-between gap-2 pl-2 pr-3 pt-2.5 md:min-h-[60px] md:pr-4 md:pt-0">
           {props.titulo ? (
             <div className="flex min-w-0 flex-1 items-center gap-0.5">
               <BotonVolver to={volverA} soloIcono estado={estadoDeRegreso(origen)}>
@@ -518,7 +545,12 @@ export function Chasis(props: Props) {
               {volverEtiqueta}
             </BotonVolver>
           )}
-          {props.acciones && <div className="flex shrink-0 items-center gap-1.5">{props.acciones}</div>}
+          {(props.acciones || (ancho && props.accionPrincipal)) && (
+            <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+              {props.acciones}
+              {ancho && props.accionPrincipal}
+            </div>
+          )}
         </div>
         {props.barra}
       </div>
@@ -532,10 +564,14 @@ export function Chasis(props: Props) {
         // propia entrada en la barra. Mismo orden que el nivel documento:
         // el último salto real si lo hay (M-R2) y si no el padre declarado.
         volver={volverDeSeccion}
+        buscador={ancho ? props.buscador : undefined}
       >
         {props.barra}
       </BarraSuperior>
     )
+  // El buscador de la pantalla, al pulgar: solo por debajo de 768 px. Va
+  // detrás del contenido, donde lo ponían las pantallas hasta la tarea 339.
+  const dock = props.modo !== 'documento' && props.buscador && !ancho ? <DockBusqueda>{props.buscador}</DockBusqueda> : null
 
   // Qué destino se ilumina: el que abre lo que se está viendo, aunque la
   // ruta no cuelgue de su enlace (una guía ilumina Resolver). Lo decide
@@ -633,6 +669,7 @@ export function Chasis(props: Props) {
         >
           {cabecera}
           {props.children}
+          {dock}
           {/* FRANJA DEL AVISO DE VERSIÓN NUEVA (tarea 274). La pastilla
               flotaba sobre el contenido y al final de Resolver tapaba los
               accesos rápidos. Aquí va en el flujo, detrás de lo último de

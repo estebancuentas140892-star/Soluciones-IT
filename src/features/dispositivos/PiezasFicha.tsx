@@ -71,6 +71,7 @@ export function FilaIndice({
   valor,
   tono = 'neutro',
   abre = 'hoja',
+  abierta = false,
   onAbrir,
 }: {
   Icono: Icono
@@ -78,6 +79,13 @@ export function FilaIndice({
   valor: string
   tono?: 'neutro' | 'precaucion'
   abre?: 'hoja' | 'pantalla'
+  /**
+   * Su hoja está abierta (tarea 339). Desde 768 px la hoja es un panel al
+   * costado y la ficha sigue a la vista: la fila que lo abrió se marca con
+   * el tinte de acento mientras dure. En el teléfono la hoja tapa la fila y
+   * no se pinta nada.
+   */
+  abierta?: boolean
   onAbrir: () => void
 }) {
   const Galon = abre === 'hoja' ? CaretUp : CaretRight
@@ -87,10 +95,17 @@ export function FilaIndice({
         type="button"
         onClick={onAbrir}
         aria-haspopup={abre === 'hoja' ? 'dialog' : undefined}
-        className="flex min-h-[52px] w-full items-center gap-3 border-b border-noct-divider text-left text-noct-text hover:bg-noct-text/[.04]"
+        aria-expanded={abre === 'hoja' ? abierta : undefined}
+        className={`flex min-h-[52px] w-full items-center gap-3 border-b border-noct-divider text-left text-noct-text hover:bg-noct-text/[.04] xl:min-h-11 ${
+          abierta ? 'md:-mx-1.5 md:w-[calc(100%+12px)] md:rounded-[9px] md:border-transparent md:bg-noct-accent/[.12] md:px-1.5' : ''
+        }`}
       >
         <Icono size={18} className="shrink-0 text-noct-neutral-400" aria-hidden />
-        <span className="min-w-0 flex-1 text-[15px] leading-snug">{titulo}</span>
+        <span
+          className={`min-w-0 flex-1 text-[15px] leading-snug ${abierta ? 'md:font-semibold md:text-noct-accent-300' : ''}`}
+        >
+          {titulo}
+        </span>
         <span
           className={`max-w-[45%] shrink-0 truncate text-[13.5px] font-[550] ${
             tono === 'precaucion' ? 'text-noct-precaucion' : 'text-noct-neutral-400'
@@ -180,15 +195,84 @@ export function ResolverConEsteEquipo({
 // rellena (regla 30), y al lado, con permiso de Bóveda, la llave que abre
 // las credenciales del equipo en su hoja. Pegada sobre las pestañas y,
 // cuando estas se esconden al bajar, al borde (tarea 329).
+//
+// EN LA CABECERA DESDE 768 PX (tarea 339): `variante="cabecera"` es lo
+// mismo para la `accionPrincipal` del chasis. En tableta, el relleno de 48
+// y la llave sola, cuadrada, detrás; en escritorio, "Credenciales"
+// delineado con su palabra y después el relleno de 40, a la derecha del
+// todo. La barra fija solo se monta en el teléfono (la ficha lo decide con
+// `useEsAncho`, y por si acaso lleva `md:hidden`).
 export function BarraAccionEquipo({
   resolver,
   onCredenciales,
+  variante = 'barra',
+  abierta = null,
 }: {
   /** A dónde lleva "Resolver un problema": el diagnóstico de la categoría o la hoja con todo. */
   resolver: { to: string; estado?: EstadoConOrigen } | { onAbrir: () => void } | null
   onCredenciales: (() => void) | null
+  variante?: 'barra' | 'cabecera'
+  /** Qué hoja de las dos está abierta, para marcar su botón mientras dure (solo en la cabecera). */
+  abierta?: 'resolver' | 'credenciales' | null
 }) {
   if (!resolver && !onCredenciales) return null
+  if (variante === 'cabecera') {
+    const resolverAbierta = abierta === 'resolver'
+    const credencialesAbiertas = abierta === 'credenciales'
+    const contenidoCabecera: ReactNode = (
+      <>
+        <TreeStructure size={17} aria-hidden />
+        Resolver un problema
+      </>
+    )
+    return (
+      <>
+        {onCredenciales && (
+          <button
+            type="button"
+            onClick={onCredenciales}
+            aria-haspopup="dialog"
+            aria-expanded={credencialesAbiertas}
+            aria-label="Credenciales del equipo"
+            title="Credenciales del equipo"
+            // Solo existe desde 768 px: la base es la tableta (48 x 48, sola)
+            // y `xl:` el escritorio (40 de alto, con su palabra). Mientras su
+            // hoja está abierta, el tinte de acento dice de dónde salió.
+            className={`order-last inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[14px] border-[1.5px] text-[15px] font-semibold leading-tight xl:order-none xl:h-10 xl:w-auto xl:rounded-[11px] xl:px-[15px] xl:text-[14px] ${
+              credencialesAbiertas
+                ? 'border-noct-accent/60 bg-noct-accent/[.12] text-noct-accent-300'
+                : 'border-noct-text/25 text-noct-text hover:bg-noct-text/[.05]'
+            }`}
+          >
+            <Key size={18} className="shrink-0" aria-hidden />
+            <span className="hidden xl:inline">Credenciales</span>
+          </button>
+        )}
+        {resolver &&
+          ('to' in resolver ? (
+            <Link
+              to={resolver.to}
+              state={resolver.estado}
+              aria-label="Resolver un problema con este equipo"
+              className={BTN_PRIMARIO_RELLENO}
+            >
+              {contenidoCabecera}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={resolver.onAbrir}
+              aria-haspopup="dialog"
+              aria-expanded={resolverAbierta}
+              aria-label="Resolver un problema con este equipo"
+              className={BTN_PRIMARIO_RELLENO}
+            >
+              {contenidoCabecera}
+            </button>
+          ))}
+      </>
+    )
+  }
   const contenido: ReactNode = (
     <>
       <TreeStructure size={19} aria-hidden />
@@ -198,7 +282,7 @@ export function BarraAccionEquipo({
   const clase = `${BTN_PRIMARIO_RELLENO} min-w-0 flex-1`
   return (
     <div
-      className={`sticky ${PEGADA_SOBRE_PESTANAS} ${BAJA_CON_LAS_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] lg:px-10`}
+      className={`sticky ${PEGADA_SOBRE_PESTANAS} ${BAJA_CON_LAS_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden lg:px-10`}
     >
       {/* El aviso de versión nueva va aquí, encima de los botones (tarea
           274): esta barra se pega a la misma altura que la franja del

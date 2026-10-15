@@ -73,6 +73,69 @@ describe('BTN_PRIMARIO_RELLENO (regla 30)', () => {
   })
 })
 
+describe('las sombras del sistema (tarea 339)', () => {
+  // Las dos sombras del handoff de tableta y escritorio. Van fuera de @theme
+  // porque Tailwind copia el valor de una sombra de @theme dentro de su
+  // utilidad: `shadow-noct-panel` llevaría el valor oscuro también en el
+  // claro sin que nada fallara. Se usan con `shadow-[var(--shadow-noct-*)]`.
+  function sombrasDe(bloque: string): string[] {
+    return [...bloque.matchAll(/(--shadow-noct-[a-z0-9-]+)\s*:/g)].map((m) => m[1]).sort()
+  }
+  function bloqueDe(inicio: string): string {
+    const desde = css.indexOf(inicio)
+    expect(desde).toBeGreaterThan(0)
+    return css.slice(desde, css.indexOf('\n}', desde))
+  }
+
+  it('el oscuro y el claro definen las mismas dos, y @theme ninguna', () => {
+    const oscuro = sombrasDe(bloqueDe(':root {'))
+    expect(oscuro).toEqual(['--shadow-noct-elevacion', '--shadow-noct-panel'])
+    expect(sombrasDe(bloqueDe(":root[data-tema='claro'] {"))).toEqual(oscuro)
+    expect(sombrasDe(bloqueDe('@theme {'))).toEqual([])
+  })
+
+  it('ningún archivo las pide como utilidad de tema', () => {
+    // Solo el código: index.css lo nombra en su comentario para explicarlo.
+    const conUtilidad = archivosFuente('src')
+      .filter((ruta) => !ruta.endsWith('.css'))
+      .filter((ruta) => /(?<![-\w])shadow-noct-/.test(readFileSync(ruta, 'utf8')))
+    expect(conUtilidad).toEqual([])
+  })
+})
+
+describe('las clases que Tailwind tiene que ver (tarea 339)', () => {
+  // Tailwind busca las clases en el texto del código, no en el DOM. Una
+  // clase pegada a una interpolación (`shadow-2xl${...}`) se lee como un
+  // solo trozo y no genera CSS, aunque en el navegador el atributo `class`
+  // salga bien. Le pasó al `Modal` de la tarea 339: la hoja del teléfono
+  // perdió su sombra y su centrado desde 640 px sin que nada fallara.
+  it('ninguna clase de un className va pegada a una interpolación', () => {
+    const pegadas = archivosFuente('src')
+      .filter((ruta) => ruta.endsWith('.tsx'))
+      .filter((ruta) => /className=\{`[^`]*[a-z0-9\])%]\$\{/.test(readFileSync(ruta, 'utf8')))
+    expect(pegadas).toEqual([])
+  })
+})
+
+describe('BTN_PRIMARIO_RELLENO por banda (tarea 339)', () => {
+  it('48 · 15.5 · 14 en tableta y 40 · 14 · 11 en escritorio, sin tocar el teléfono', () => {
+    const clases = BTN_PRIMARIO_RELLENO.split(/\s+/)
+    for (const clase of [
+      'md:min-h-12',
+      'md:rounded-[14px]',
+      'md:text-[15.5px]',
+      'xl:min-h-10',
+      'xl:rounded-[11px]',
+      'xl:text-[14px]',
+      'xl:px-[15px]',
+    ]) {
+      expect(clases).toContain(clase)
+    }
+    expect(clases).toContain('text-[16px]')
+    expect(clases).toContain('px-4')
+  })
+})
+
 describe('el tema claro (tarea 333)', () => {
   // Cada token de color del tema oscuro (@theme) tiene su valor claro: uno
   // olvidado se vería oscuro sobre fondo claro sin que nada fallara.

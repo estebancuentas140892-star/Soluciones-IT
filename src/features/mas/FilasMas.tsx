@@ -72,7 +72,7 @@ export function FilaMas({
       <Link
         to={to}
         state={estado}
-        className="flex min-h-[60px] items-center gap-3.5 py-2 text-noct-text hover:bg-noct-text/[.04]"
+        className="flex min-h-[60px] items-center gap-3.5 py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-14 xl:min-h-[46px]"
       >
         <Icono size={20} className="w-5 shrink-0 text-noct-neutral-400" aria-hidden />
         <span className="min-w-0 flex-1">

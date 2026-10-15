@@ -367,7 +367,7 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
     <Link
       to={item.ruta}
       aria-label={`${accion} ${item.titulo} · ${ETIQUETA_ESTADO[estado]}`}
-      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04]"
+      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-14 xl:min-h-[52px]"
     >
       <span aria-hidden data-barra-estado className={`my-1 w-1 shrink-0 self-stretch rounded-sm ${BARRA_PENDIENTE[item.tono]}`} />
       <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300">
