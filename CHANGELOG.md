@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (Resolver, tarea 339, T3): tres zonas por ancho de contenedor y filas densas en escritorio
+
+**Área modificada:** `src/features/inicio/ResolverPage.tsx`; `src/features/inicio/SeccionesAgenda.tsx` (`ContadoresAgenda`, `FilaAgenda`, compartidos con la Agenda).
+**Tipo:** Cambiado.
+**Motivo:** paso T3 del handoff (pizarras Resolver 768 y 1280): A (Necesita atención), B (Seguir donde ibas y Recientes) y C (Guías) con identidad fija; las columnas las decide el contenedor (`@container` y `@[880px]:`), no la ventana.
+**Descripción:** una columna por debajo de 880 px de contenido; desde 880, A | B y C debajo tras una línea. Las cabeceras de A y B miden lo mismo lado a lado. Desde 1280, contadores de 54 px en una línea, filas de agenda de 52, de Recientes de 48 y chips de 34; en tableta, contadores de 60, agenda de 56 y Recientes de 52. El teléfono no cambia. Sin bloques nuevos ni textos nuevos.
+**Estructura de datos:** sin cambios (`agruparAgenda`, `asuntosDeAtencion` y los recientes, intactos).
+**Impacto esperado:** en escritorio, lo urgente y el trabajo propio a la vista a la vez, sin desplazar.
+
 ### Cambiado (chasis, tarea 339, ajuste de T1 con el lienzo): el margen de cada banda y la barra lateral
 
 **Área modificada:** `src/index.css` (regla `[data-margen-banda] > main`), `src/app/Chasis.tsx`, `src/components/BarraSuperior.tsx`.

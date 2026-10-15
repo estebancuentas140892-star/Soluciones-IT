@@ -208,6 +208,7 @@ export function ResolverPage() {
   const consultasListas = useLiveQuery(() => db.progresoPasos.count(), []) !== undefined
   // La guía a medias más reciente (con avance o con una pregunta en curso).
   const seguir = recientes.find((r) => r.avance !== null || r.enCurso !== null) ?? null
+  const otrasRecientes = recientes.filter((r) => r !== seguir)
   const hayBloquesReales =
     pendientes.length > 0 || avances.size > 0 || recientes.some((r) => r.enCurso !== null)
 
@@ -240,7 +241,7 @@ export function ResolverPage() {
         />
       }
     >
-      <main className="flex-1 px-4 pb-6 pt-4">
+      <main className="@container flex-1 px-4 pb-6 pt-4">
         {buscando ? (
           <div className="flex flex-col gap-4">
             {resultados.length > 0 && <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />}
@@ -318,21 +319,37 @@ export function ResolverPage() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-[22px]">
+          // TRES ZONAS CON IDENTIDAD FIJA (tarea 339, T3; handoff de tableta y
+          // escritorio): A, lo que urge (Necesita atención); B, mi trabajo
+          // (Seguir donde ibas y Recientes); C, el catálogo (Guías). El orden
+          // de lectura no cambia nunca; el ancho del contenedor decide cuántas
+          // caben lado a lado. Por debajo de 880 px, una columna (teléfono y
+          // tableta vertical); desde 880, A | B y C debajo, de lado a lado
+          // tras una línea (tableta horizontal y escritorio). Sin bloques
+          // nuevos.
+          <div className="flex flex-col gap-[22px] md:gap-[30px] @[880px]:grid @[880px]:grid-cols-2 @[880px]:items-start @[880px]:gap-x-10">
             {!agendaCargando && <BloqueAtencion agenda={agenda} />}
-            {/* SEGUIR DONDE IBAS (tarea 330): la guía a medias más reciente,
-                en una tarjeta con su avance. Las demás recientes siguen
-                debajo, en su lista. */}
-            {seguir && <BloqueSeguir guia={seguir} />}
-            <BloqueRecientes recientes={recientes.filter((r) => r !== seguir)} />
-            <BloqueAccesos accesos={accesos} />
+            {(seguir || otrasRecientes.length > 0) && (
+              <div className="flex flex-col gap-[22px] md:gap-[26px]">
+                {/* SEGUIR DONDE IBAS (tarea 330): la guía a medias más
+                    reciente, en una tarjeta con su avance. Las demás
+                    recientes siguen debajo, en su lista. */}
+                {seguir && <BloqueSeguir guia={seguir} />}
+                <BloqueRecientes recientes={otrasRecientes} />
+              </div>
+            )}
+            <div className="@[880px]:col-span-2 @[880px]:border-t @[880px]:border-noct-divider @[880px]:pt-5">
+              <BloqueAccesos accesos={accesos} />
+            </div>
 
             {/* Bienvenida del primer día: los tres pasos que dejan al
                 técnico listo para trabajar sin señal. Va al final para no
                 empujar nada, se retira sola en cuanto hay trabajo real y,
                 cumplida, no vuelve. */}
             {consultasListas && (
-              <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
+              <div className="empty:hidden @[880px]:col-span-2">
+                <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
+              </div>
             )}
           </div>
         )}
@@ -364,7 +381,9 @@ function BloqueAtencion({ agenda }: { agenda: Agenda }) {
           // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe) y
           // el origen taparía la fecha de hoy de su cabecera (tarea 265).
           aria-label={total > visibles.length ? `Ver la agenda completa (${total})` : 'Ver la agenda completa'}
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline"
+          // 44 de alto mientras sea táctil; con puntero (desde 1280) no
+          // descuadra la cabecera de la zona de al lado.
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline xl:min-h-0"
         >
           Agenda
           <CaretRight size={13} aria-hidden />
@@ -393,7 +412,12 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
     (avance ? pasoDeTotal(Math.min(avance.hechos + 1, avance.total), avance.total, avance.totalAbierto ?? false) : '')
   return (
     <section aria-labelledby="resolver-seguir" className="flex flex-col gap-2.5">
-      <h2 id="resolver-seguir" className="text-[17px] font-semibold tracking-[-.01em]">
+      {/* Lado a lado con "Necesita atención" (desde 880 px), su cabecera mide
+          lo mismo que la de al lado, que lleva el enlace a la Agenda. */}
+      <h2
+        id="resolver-seguir"
+        className="text-[17px] font-semibold tracking-[-.01em] @[880px]:flex @[880px]:min-h-11 @[880px]:items-center xl:min-h-0"
+      >
         Seguir donde ibas
       </h2>
       <Link
@@ -521,7 +545,9 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
       to={guia.ruta}
       state={ORIGEN_RESOLVER}
       aria-label={`${accion} ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
-      className="-mx-2 flex min-h-14 items-center gap-3 rounded-lg px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05]"
+      // 56 en el teléfono, 52 en la tableta y 48 desde 1280 (filas densas
+      // del escritorio, T3).
+      className="-mx-2 flex min-h-14 items-center gap-3 rounded-lg px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05] md:min-h-[52px] xl:min-h-12 xl:py-1.5"
     >
       <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent-300">
         <Icono size={17} aria-hidden />
@@ -533,7 +559,7 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
             seguía perdiendo el final, que suele ser lo que la distingue. */}
         <span
           data-nombre-principal
-          className="min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] text-pretty"
+          className="min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] text-pretty xl:text-[14.5px]"
         >
           {guia.titulo}
         </span>
@@ -578,7 +604,7 @@ function BloqueAccesos({ accesos }: { accesos: AccesoRapido[] }) {
           to="/soluciones"
           state={ORIGEN_RESOLVER}
           aria-label="Todas las guías"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline xl:min-h-0"
         >
           Todas
           <CaretRight size={13} aria-hidden />
@@ -592,7 +618,8 @@ function BloqueAccesos({ accesos }: { accesos: AccesoRapido[] }) {
               to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
               state={ORIGEN_RESOLVER}
               aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-noct-text/25 px-3.5 text-[14.5px] font-[550] text-noct-text hover:bg-noct-text/[.05]"
+              // Desde 1280, el chip denso del escritorio (34 px, con puntero).
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-noct-text/25 px-3.5 text-[14.5px] font-[550] text-noct-text hover:bg-noct-text/[.05] xl:min-h-[34px] xl:rounded-[10px] xl:px-3 xl:text-[13.5px]"
             >
               {acceso.nombre}
               <span className="font-mono text-[12.5px] text-noct-neutral-500">{acceso.guias}</span>

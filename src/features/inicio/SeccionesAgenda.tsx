@@ -64,7 +64,9 @@ export function ContadoresAgenda({ agenda, enlace }: { agenda: Agenda; enlace?: 
     <div className="grid grid-cols-3 gap-2">
       {contadores.map((c) => {
         const etiqueta = c.n === 1 ? c.uno : c.varios
-        const clase = `flex min-h-16 flex-col justify-center gap-px rounded-[14px] px-3 py-2 ${
+        // 64 en el teléfono y 60 en la tableta; desde 1280, el contador denso
+        // del escritorio: 54 de alto, el número y su rótulo en una línea (T3).
+        const clase = `flex min-h-16 flex-col justify-center gap-px rounded-[14px] px-3 py-2 md:min-h-[60px] xl:min-h-[54px] xl:flex-row xl:flex-wrap xl:items-baseline xl:content-center xl:gap-x-2 xl:px-3.5 xl:py-0 ${
           c.n > 0 ? FONDO_CONTADOR[c.tono] : 'bg-noct-text/[.06]'
         }`
         // El espacio entre el número y su rótulo no se ve (la caja es una
@@ -72,7 +74,7 @@ export function ContadoresAgenda({ agenda, enlace }: { agenda: Agenda; enlace?: 
         const contenido = (
           <>
             <span
-              className={`font-mono text-[24px] font-semibold leading-[1.1] ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
+              className={`font-mono text-[24px] font-semibold leading-[1.1] xl:text-[22px] ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
             >
               {c.n}
             </span>{' '}
@@ -367,10 +369,10 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
     <Link
       to={item.ruta}
       aria-label={`${accion} ${item.titulo} · ${ETIQUETA_ESTADO[estado]}`}
-      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-14 xl:min-h-[52px]"
+      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] md:min-h-14 xl:min-h-[52px] xl:gap-[11px] xl:py-1.5"
     >
       <span aria-hidden data-barra-estado className={`my-1 w-1 shrink-0 self-stretch rounded-sm ${BARRA_PENDIENTE[item.tono]}`} />
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300 xl:h-8 xl:w-8 xl:rounded-[9px]">
         <Icono size={18} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
@@ -378,7 +380,7 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
             hay que revisar. La razón de debajo sí se recorta. */}
         <span
           data-nombre-principal
-          className="block min-w-0 text-[15.5px] font-semibold leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+          className="block min-w-0 text-[15.5px] font-semibold leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty] xl:text-[14.5px]"
         >
           {item.titulo}
         </span>
