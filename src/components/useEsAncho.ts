@@ -18,6 +18,11 @@ import { useCallback, useSyncExternalStore } from 'react'
 // diseña primero para él.
 export const ANCHO_TABLETA = '(min-width: 48rem)'
 export const ANCHO_ESCRITORIO = '(min-width: 80rem)'
+// Dos cortes más, para lo que una pantalla reparte en columnas cuando el
+// reparto cambia su estructura y no solo su forma (la Agenda, tarea 339):
+// la tableta en horizontal (1024, contenedor de 896) y el escritorio amplio.
+export const ANCHO_TABLETA_HORIZONTAL = '(min-width: 64rem)'
+export const ANCHO_AMPLIO = '(min-width: 105rem)'
 
 function coincide(consulta: string): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false

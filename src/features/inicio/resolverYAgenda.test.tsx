@@ -610,3 +610,49 @@ describe('Resolver en móvil y en escritorio', () => {
     expect(texto).toContain('Panel del router')
   })
 })
+
+// LA AGENDA POR ANCHO (tarea 339, T7): desde 1024, lo que tiene fecha a la
+// izquierda y "Sin fecha" abierto en su columna, sin botón, con la actividad
+// del equipo al final. Los grupos y lo que cae en cada uno no cambian.
+describe('La agenda completa por ancho', () => {
+  type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+  const ventana = window as unknown as VentanaDePrueba
+
+  afterEach(() => {
+    ventana.happyDOM.setViewport({ width: 375, height: 812 })
+  })
+
+  it('a 1280 px "Sin fecha" va abierto en su columna, sin botón', async () => {
+    ventana.happyDOM.setViewport({ width: 1280, height: 832 })
+    await sembrarAcceso('c1', 'Panel del router', -3)
+    await sembrarBorradorPropio('b1', 'Cambiar el tóner')
+    await sembrarSugerenciaDelEquipo('e1', 'La impresora no imprime')
+    await montar(RUTAS, '/agenda')
+
+    const texto = await esperarTexto('Cambiar el tóner')
+    expect(texto).toContain('La impresora no imprime')
+    expect(control(/^Sin fecha/)).toBeNull()
+    // La barra lateral del chasis también es un aside: la columna es la que
+    // lleva la cabecera "Sin fecha".
+    const columna = Array.from(document.body.querySelectorAll<HTMLElement>('main aside')).find(
+      (a) => a.querySelector('h2')?.textContent === 'Sin fecha',
+    )
+    expect(columna).toBeDefined()
+    expect(columna?.textContent).toContain('Por revisar del equipo')
+    // Lo que tiene fecha sigue a la izquierda, fuera de esa columna.
+    expect(columna?.textContent).not.toContain('Panel del router')
+    expect(texto).toContain('Panel del router')
+  })
+
+  it('a 768 px sigue en una columna, con "Sin fecha" plegado', async () => {
+    ventana.happyDOM.setViewport({ width: 768, height: 1024 })
+    await sembrarAcceso('c1', 'Panel del router', -3)
+    await sembrarBorradorPropio('b1', 'Cambiar el tóner')
+    await montar(RUTAS, '/agenda')
+
+    await esperarTexto('Panel del router')
+    const sinFecha = await esperar(() => control(/^Sin fecha/), 'la fila plegada')
+    expect(sinFecha.getAttribute('aria-expanded')).toBe('false')
+    expect(textoPantalla()).not.toContain('Cambiar el tóner')
+  })
+})

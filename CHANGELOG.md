@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (Agenda, tarea 339, T7): con fecha | sin fecha abierto y actividad, desde 1024
+
+**Área modificada:** `src/features/inicio/SeccionesAgenda.tsx` (`disposicion`, `complemento`), `AgendaPage.tsx`; `src/components/useEsAncho.ts` (dos cortes con nombre); pruebas en `resolverYAgenda.test.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** paso T7 del handoff (pizarras Agenda 768 y 1280).
+**Descripción:** desde 1024, dos columnas: lo que tiene fecha | "Sin fecha" abierto en 360 px con la actividad del equipo al final; contadores de 600 px como mucho. Por debajo, igual que siempre. Los grupos se arman una vez y se colocan según la disposición; el reparto por fecha no cambia.
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** en escritorio lo que vence y lo que no vence se leen a la vez, sin abrir nada.
+
 ### Cambiado (buscador global, tarea 339, T6): campo arriba en tableta y paleta con vista rápida al lado en escritorio
 
 **Área modificada:** `src/features/busqueda/BuscadorGlobal.tsx`, `ResultadosBusqueda.tsx` (`FilaResultado`), `PanelVistaRapida.tsx`, `ranuraVistaRapida.ts` (nuevo); `src/components/CampoBusqueda.tsx` (variante `paleta`); `scripts/capturas-moviles.mjs` (paradas `buscador-*` y el índice persistente); prueba nueva `buscadorPorAncho.test.tsx`.

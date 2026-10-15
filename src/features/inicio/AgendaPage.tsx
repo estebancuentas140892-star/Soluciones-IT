@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Chasis } from '../../app/Chasis'
+import { ANCHO_TABLETA_HORIZONTAL, useEsAncho } from '../../components/useEsAncho'
 import { ActividadDelEquipo } from '../historial/ActividadDelEquipo'
 import { agruparAgenda, fechaDeHoy } from './agenda'
 import { ContadoresAgenda, SeccionesAgenda } from './SeccionesAgenda'
@@ -29,6 +30,11 @@ export function AgendaPage() {
   const { items: pendientes, cargando } = usePendientes()
   const agenda = useMemo(() => agruparAgenda(pendientes), [pendientes])
   const hoyTexto = useMemo(() => fechaDeHoy(), [])
+  // POR ANCHO (tarea 339, T7): desde 1024 lo que tiene fecha a la izquierda
+  // y "Sin fecha", abierto, con la actividad del equipo en su columna. Cambia
+  // la estructura (un pliegue o una columna), así que se decide aquí.
+  const enColumnas = useEsAncho(ANCHO_TABLETA_HORIZONTAL)
+  const disposicion = enColumnas ? 'dos' : 'columna'
 
   return (
     // Nivel documento: se consulta y se vuelve. Sube a Resolver (padreDe).
@@ -38,13 +44,22 @@ export function AgendaPage() {
           {/* El día ya está en la cabecera del chasis (`contexto`). Arriba,
               los tres contadores (tarea 332), sin enlace: ya se está en la
               Agenda. Mientras carga no se cuenta nada. */}
-          {!cargando && <ContadoresAgenda agenda={agenda} />}
-          <SeccionesAgenda agenda={agenda} cargando={cargando} />
+          {!cargando && (
+            <div className={enColumnas ? 'max-w-[600px]' : undefined}>
+              <ContadoresAgenda agenda={agenda} />
+            </div>
+          )}
+          <SeccionesAgenda
+            agenda={agenda}
+            cargando={cargando}
+            disposicion={disposicion}
+            complemento={enColumnas ? <ActividadDelEquipo /> : undefined}
+          />
           {/* Lo que pasa en el equipo, al final y plegado (tarea 257):
               no es un pendiente, así que va después de todos ellos. Solo
               aquí y no en el resumen de Resolver, que responde otra
               pregunta. Si no hay actividad, no se monta. */}
-          <ActividadDelEquipo />
+          {!enColumnas && <ActividadDelEquipo />}
         </div>
       </main>
     </Chasis>

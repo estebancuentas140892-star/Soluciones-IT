@@ -119,6 +119,8 @@ export function SeccionesAgenda({
   agenda,
   cargando = false,
   conEnlaceCompleta = false,
+  disposicion = 'columna',
+  complemento,
 }: {
   agenda: Agenda
   /**
@@ -129,6 +131,19 @@ export function SeccionesAgenda({
   cargando?: boolean
   /** Inicio: enlace a `/agenda`. La propia `/agenda` no se enlaza a sí misma. */
   conEnlaceCompleta?: boolean
+  /**
+   * CÓMO SE REPARTEN LOS GRUPOS POR ANCHO (tarea 339, T7; handoff de tableta
+   * y escritorio). `columna`, la de siempre: uno debajo del otro y "Sin
+   * fecha" plegado al final. `dos` (desde 1024): lo que tiene fecha a la
+   * izquierda y, en su columna de 360, "Sin fecha" ABIERTO (sin botón: tiene
+   * sitio propio) y el `complemento`. `tres` (desde 1680, T10): vencidos y
+   * para hoy | próximos, todos, sin "Ver los otros N" | sin fecha y el
+   * `complemento`. Los grupos, su orden y qué cae en cada uno no cambian:
+   * solo dónde se pintan.
+   */
+  disposicion?: 'columna' | 'dos' | 'tres'
+  /** Lo que va al final de la columna de "Sin fecha" (la actividad del equipo). */
+  complemento?: ReactNode
 }) {
   const reanudar = useReanudar()
   const hayQueReanudar = tarjetaReanudarVisible(reanudar)
@@ -151,147 +166,216 @@ export function SeccionesAgenda({
   const totalSinFecha = enCurso + vista.porRevisar.length
   const conFecha = vista.vencidos.length + vista.hoy.length + vista.proximos.length
   const sinFechaAbierto = sinFechaElegido ?? conFecha === 0
+  const enColumnas = disposicion !== 'columna'
+
+  // ESTADO TRANQUILO: sin vencidos ni asuntos de hoy se dice con
+  // todas sus letras, en vez de dejar el hueco en blanco. Con algo
+  // vencido o de hoy NO aparece: sería mentir.
+  const todoAlDia = urgentes === 0 && (
+    <div className="flex items-center gap-3 rounded-[14px] bg-noct-exito/[.13] p-3.5">
+      <Check size={20} className="shrink-0 text-noct-exito" aria-hidden />
+      <p className="min-w-0 flex-1">
+        <span className="block text-[15.5px] font-semibold leading-[1.3]">Todo al día por hoy</span>
+        <span className="block text-[13px] leading-[1.35] text-noct-neutral-300">Nada vencido ni para hoy.</span>
+      </p>
+    </div>
+  )
+
+  const vencidos = vista.vencidos.length > 0 && (
+    <section>
+      <CabeceraAgenda titulo="Vencidos" total={vista.vencidos.length} estado="vencido" />
+      <div className="flex flex-col">
+        {vista.vencidos.map((item) => (
+          <FilaAgenda key={item.clave} item={item} estado="vencido" />
+        ))}
+      </div>
+    </section>
+  )
+
+  const hoy = vista.hoy.length > 0 && (
+    <section>
+      <CabeceraAgenda titulo="Para hoy" total={vista.hoy.length} estado="hoy" />
+      <div className="flex flex-col">
+        {vista.hoy.map((item) => (
+          <FilaAgenda key={item.clave} item={item} estado="hoy" />
+        ))}
+      </div>
+    </section>
+  )
+
+  const proximos = vista.proximos.length > 0 && (
+    <BloqueLista
+      titulo="Próximos"
+      total={vista.proximos.length}
+      estado="proximo"
+      etiquetaVerMas="próximos"
+      // Con su propia columna (1680) se ven todos: "Ver los otros N" no
+      // ahorra nada donde hay sitio.
+      visiblesIniciales={disposicion === 'tres' ? vista.proximos.length : PROXIMOS_VISIBLES}
+    >
+      {(visibles) =>
+        vista.proximos
+          .slice(0, visibles)
+          .map((item) => <FilaAgenda key={item.clave} item={item} estado="proximo" />)
+      }
+    </BloqueLista>
+  )
+
+  // Dentro de "Sin fecha", los dos grupos de siempre: "En curso" (la guía
+  // a medias y los borradores, trabajo propio empezado) y "Por revisar del
+  // equipo" (sugerencias de diagnóstico sin convertir en guía, que siguen
+  // el permiso con el que ya se listan en Guías con preguntas, y desde la
+  // tarea 270 los equipos liberados que esperan dueño y las personas
+  // retiradas que aún tienen equipos). `agruparAgenda` no cambia: solo
+  // dónde se pintan.
+  const gruposSinFecha = (
+    <div id={idSinFecha} className={`flex flex-col gap-[18px] ${enColumnas ? '' : 'pt-3.5'}`}>
+      {enCurso > 0 && (
+        <section>
+          <CabeceraAgenda titulo="En curso" total={enCurso} estado="enCurso" />
+          <div className="flex flex-col gap-2">
+            {hayQueReanudar && reanudar.actual && (
+              <BarraReanudar
+                variante="tarjeta"
+                articulo={reanudar.actual.articulo}
+                hechos={reanudar.actual.hechos}
+                total={reanudar.actual.total}
+                totalAbierto={reanudar.actual.totalAbierto}
+                minutosRestantes={reanudar.actual.minutosRestantes}
+                onDescartar={reanudar.descartar}
+              />
+            )}
+            {vista.enCurso.length > 0 && (
+              <div className="flex flex-col">
+                {vista.enCurso.map((item) => (
+                  <FilaAgenda key={item.clave} item={item} estado="enCurso" />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+      {/* Ya desplegado a propósito: se ven todos, sin un segundo
+          "Ver los otros N" dentro del pliegue. */}
+      {vista.porRevisar.length > 0 && (
+        <section>
+          <CabeceraAgenda titulo="Por revisar del equipo" total={vista.porRevisar.length} estado="porRevisar" />
+          <div className="flex flex-col">
+            {vista.porRevisar.map((item) => (
+              <FilaAgenda key={item.clave} item={item} estado="porRevisar" />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  )
+
+  const enlace = conEnlaceCompleta && (
+    <Link
+      to="/agenda"
+      className="inline-flex min-h-11 items-center gap-1.5 self-start px-1.5 text-[13px] font-medium text-noct-accent-300 hover:underline"
+    >
+      Ver agenda completa
+      <CaretRight size={13} aria-hidden />
+    </Link>
+  )
+
+  if (!enColumnas) {
+    return (
+      <>
+        {todoAlDia}
+        {vencidos}
+        {hoy}
+        {proximos}
+
+        {/* SIN FECHA (rediseño móvil "1b Pulgar", tarea 332): lo que no
+            vence va al final y plegado, en una fila que dice qué guarda y
+            cuántos. */}
+        {totalSinFecha > 0 && (
+          <section>
+            <button
+              type="button"
+              onClick={() => setSinFechaElegido(!sinFechaAbierto)}
+              aria-expanded={sinFechaAbierto}
+              aria-controls={idSinFecha}
+              className="flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04]"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-semibold leading-[1.3]">Sin fecha</span>
+                <span className="block text-[13px] leading-[1.35] text-noct-neutral-400">
+                  Por revisar y en curso. No vencen.
+                </span>
+              </span>
+              <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500">{totalSinFecha}</span>
+              <CaretDown
+                size={15}
+                className={`shrink-0 text-noct-neutral-400 transition-transform duration-150 motion-reduce:transition-none ${
+                  sinFechaAbierto ? 'rotate-180' : ''
+                }`}
+                aria-hidden
+              />
+            </button>
+            {sinFechaAbierto && gruposSinFecha}
+          </section>
+        )}
+
+        {enlace}
+      </>
+    )
+  }
+
+  // EN COLUMNAS (tarea 339, T7 y T10): "Sin fecha" tiene su columna y va
+  // abierto, con la misma cabecera que la fila plegada (qué guarda y
+  // cuántos), sin botón. Al final de esa columna, el complemento.
+  const columnaSinFecha = (
+    <aside className="flex min-w-0 flex-col gap-5">
+      {totalSinFecha > 0 && (
+        <section aria-labelledby={`${idSinFecha}-titulo`} className="flex flex-col gap-3.5">
+          <div className="flex flex-col gap-0.5 border-b border-noct-divider pb-3">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id={`${idSinFecha}-titulo`} className="text-[15px] font-semibold leading-[1.3]">
+                Sin fecha
+              </h2>
+              <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500">{totalSinFecha}</span>
+            </div>
+            <p className="text-[13px] leading-[1.35] text-noct-neutral-400">Por revisar y en curso. No vencen.</p>
+          </div>
+          {gruposSinFecha}
+        </section>
+      )}
+      {complemento}
+    </aside>
+  )
+
+  if (disposicion === 'tres') {
+    // Tres columnas de lectura (1680): lo que urge, lo que viene y lo que no
+    // vence. Si no hay próximos, su columna no queda vacía en medio: los
+    // otros dos grupos se reparten el ancho.
+    return (
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_340px] items-start gap-x-11">
+        <div className="flex min-w-0 flex-col gap-[22px]">
+          {todoAlDia}
+          {vencidos}
+          {hoy}
+          {enlace}
+        </div>
+        <div className="flex min-w-0 flex-col gap-[22px]">{proximos}</div>
+        {columnaSinFecha}
+      </div>
+    )
+  }
 
   return (
-    <>
-      {/* ESTADO TRANQUILO: sin vencidos ni asuntos de hoy se dice con
-          todas sus letras, en vez de dejar el hueco en blanco. Con algo
-          vencido o de hoy NO aparece: sería mentir. */}
-      {urgentes === 0 && (
-        <div className="flex items-center gap-3 rounded-[14px] bg-noct-exito/[.13] p-3.5">
-          <Check size={20} className="shrink-0 text-noct-exito" aria-hidden />
-          <p className="min-w-0 flex-1">
-            <span className="block text-[15.5px] font-semibold leading-[1.3]">Todo al día por hoy</span>
-            <span className="block text-[13px] leading-[1.35] text-noct-neutral-300">Nada vencido ni para hoy.</span>
-          </p>
-        </div>
-      )}
-
-      {vista.vencidos.length > 0 && (
-        <section>
-          <CabeceraAgenda titulo="Vencidos" total={vista.vencidos.length} estado="vencido" />
-          <div className="flex flex-col">
-            {vista.vencidos.map((item) => (
-              <FilaAgenda key={item.clave} item={item} estado="vencido" />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {vista.hoy.length > 0 && (
-        <section>
-          <CabeceraAgenda titulo="Para hoy" total={vista.hoy.length} estado="hoy" />
-          <div className="flex flex-col">
-            {vista.hoy.map((item) => (
-              <FilaAgenda key={item.clave} item={item} estado="hoy" />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {vista.proximos.length > 0 && (
-        <BloqueLista
-          titulo="Próximos"
-          total={vista.proximos.length}
-          estado="proximo"
-          etiquetaVerMas="próximos"
-          visiblesIniciales={PROXIMOS_VISIBLES}
-        >
-          {(visibles) =>
-            vista.proximos
-              .slice(0, visibles)
-              .map((item) => <FilaAgenda key={item.clave} item={item} estado="proximo" />)
-          }
-        </BloqueLista>
-      )}
-
-      {/* SIN FECHA (rediseño móvil "1b Pulgar", tarea 332): lo que no vence
-          va al final y plegado, en una fila que dice qué guarda y cuántos.
-          Dentro, los dos grupos de siempre: "En curso" (la guía a medias y
-          los borradores, trabajo propio empezado) y "Por revisar del
-          equipo" (sugerencias de diagnóstico sin convertir en guía, que
-          siguen el permiso con el que ya se listan en Guías con preguntas,
-          y desde la tarea 270 los equipos liberados que esperan dueño y
-          las personas retiradas que aún tienen equipos). `agruparAgenda`
-          no cambia: solo dónde se pintan. */}
-      {totalSinFecha > 0 && (
-        <section>
-          <button
-            type="button"
-            onClick={() => setSinFechaElegido(!sinFechaAbierto)}
-            aria-expanded={sinFechaAbierto}
-            aria-controls={idSinFecha}
-            className="flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04]"
-          >
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15px] font-semibold leading-[1.3]">Sin fecha</span>
-              <span className="block text-[13px] leading-[1.35] text-noct-neutral-400">
-                Por revisar y en curso. No vencen.
-              </span>
-            </span>
-            <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500">{totalSinFecha}</span>
-            <CaretDown
-              size={15}
-              className={`shrink-0 text-noct-neutral-400 transition-transform duration-150 motion-reduce:transition-none ${
-                sinFechaAbierto ? 'rotate-180' : ''
-              }`}
-              aria-hidden
-            />
-          </button>
-          {sinFechaAbierto && (
-            <div id={idSinFecha} className="flex flex-col gap-[18px] pt-3.5">
-              {enCurso > 0 && (
-                <section>
-                  <CabeceraAgenda titulo="En curso" total={enCurso} estado="enCurso" />
-                  <div className="flex flex-col gap-2">
-                    {hayQueReanudar && reanudar.actual && (
-                      <BarraReanudar
-                        variante="tarjeta"
-                        articulo={reanudar.actual.articulo}
-                        hechos={reanudar.actual.hechos}
-                        total={reanudar.actual.total}
-                        totalAbierto={reanudar.actual.totalAbierto}
-                        minutosRestantes={reanudar.actual.minutosRestantes}
-                        onDescartar={reanudar.descartar}
-                      />
-                    )}
-                    {vista.enCurso.length > 0 && (
-                      <div className="flex flex-col">
-                        {vista.enCurso.map((item) => (
-                          <FilaAgenda key={item.clave} item={item} estado="enCurso" />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </section>
-              )}
-              {/* Ya desplegado a propósito: se ven todos, sin un segundo
-                  "Ver los otros N" dentro del pliegue. */}
-              {vista.porRevisar.length > 0 && (
-                <section>
-                  <CabeceraAgenda titulo="Por revisar del equipo" total={vista.porRevisar.length} estado="porRevisar" />
-                  <div className="flex flex-col">
-                    {vista.porRevisar.map((item) => (
-                      <FilaAgenda key={item.clave} item={item} estado="porRevisar" />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-          )}
-        </section>
-      )}
-
-      {conEnlaceCompleta && (
-        <Link
-          to="/agenda"
-          className="inline-flex min-h-11 items-center gap-1.5 self-start px-1.5 text-[13px] font-medium text-noct-accent-300 hover:underline"
-        >
-          Ver agenda completa
-          <CaretRight size={13} aria-hidden />
-        </Link>
-      )}
-    </>
+    <div className="grid grid-cols-[minmax(0,1fr)_360px] items-start gap-x-12">
+      <div className="flex min-w-0 flex-col gap-[22px]">
+        {todoAlDia}
+        {vencidos}
+        {hoy}
+        {proximos}
+        {enlace}
+      </div>
+      {columnaSinFecha}
+    </div>
   )
 }
 
