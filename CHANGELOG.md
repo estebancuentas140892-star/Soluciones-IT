@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (tema claro, tarea 339, T11): profundidad por sombra, papel documentado y tintes al 11 %
+
+**Área modificada:** `src/index.css` (`--tinte-estado`, `[data-documentado]` y `[data-instrumento]` en el claro), `ResolverPage.tsx`, `SeccionesAgenda.tsx`, `PiezasFicha.tsx`, `AutorizacionPage.tsx`, `MantenimientosDelEquipo.tsx`, `BarraReanudar.tsx`; `scripts/capturas-moviles.mjs` (`--contraste`); guarda nueva en `sistemaVisual.test.ts`; DECISIONES AD-088 (decisiones 8 a 15).
+**Tipo:** Cambiado; Agregado (auditoría de contraste en el script de capturas).
+**Motivo:** paso T11 del handoff (sección 5, "el claro, diseñado").
+**Descripción:** las superficies confirmadas y actuales se elevan con la sombra del sistema (sin efecto en el oscuro); lo documentado lleva su punteado en neutro-600 en el claro; los tintes de estado pasan a una variable (13 % y 11 %). El número de los contadores conserva 24 px en escritorio (a 22 quedaba en 4.49:1 en el claro). Auditoría de contraste a 1280 en los dos temas contra `c6ebefb`: sin regresiones; lo que queda por debajo ya estaba en `main`.
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** el claro en pantalla grande se lee por capas, no como un negativo del oscuro.
+
 ### Cambiado (zonas de 1680, tarea 339, T10): ficha entre su lista y su índice, Resolver y Agenda en tres
 
 **Área modificada:** `src/app/Chasis.tsx` (prop `zonas`), `src/index.css` (`[data-zona-documento]`), `src/features/dispositivos/DispositivoPage.tsx`, `ZonaListaEquipos.tsx` (nuevo), `src/features/inicio/ResolverPage.tsx`, `AgendaPage.tsx`; prueba nueva `src/app/zonasAmplio.test.tsx`.

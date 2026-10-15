@@ -207,6 +207,12 @@
 :root {
   --shadow-noct-elevacion: 0 0 #0000;
   --shadow-noct-panel: 0 24px 64px rgb(0 0 0 / 0.5);
+  /* EL TINTE DE UN ESTADO (tarea 339, T11; "el claro, diseñado"): el
+     fondo de un aviso, de un contador o de "Todo al día" es su color al
+     13 % en el oscuro y al 11 % en el claro, donde ensuciaba. Las
+     pantallas lo piden como `bg-noct-error/(--tinte-estado)` sin saber de
+     temas (regla 12). */
+  --tinte-estado: 13%;
 }
 
 /* EL MARGEN DE BANDA (tarea 339, T1; "Especificación de breakpoints" del
@@ -316,6 +322,7 @@
   /* Las sombras (tarea 339): en claro la profundidad es sombra. */
   --shadow-noct-elevacion: 0 1px 2px rgb(25 27 40 / 0.06), 0 0 0 1px rgb(25 27 40 / 0.07);
   --shadow-noct-panel: 0 24px 64px rgb(25 27 40 / 0.18);
+  --tinte-estado: 11%;
 
   /* Los controles nativos (fecha, desplazamiento) en claro. */
   color-scheme: light;
@@ -345,6 +352,21 @@ body,
    dos marcos, uno rectangular dentro del otro, como si fueran dos campos. */
 .nocturne [data-campo-busqueda]:focus-visible {
   outline: none;
+}
+/* LAS TRES FORMAS DEL DATO EN EL CLARO (tarea 339, T11; "el claro,
+   diseñado" del handoff de tableta y escritorio). En el claro la
+   profundidad es sombra: lo confirmado y lo actual son objetos blancos
+   elevados, y lo documentado queda en el fondo, como papel, con su
+   punteado en neutro-600 (en el oscuro, el borde fuerte de siempre). Las
+   pantallas solo marcan el papel de la pieza (`data-documentado`,
+   `data-instrumento`); el tema decide aquí. */
+:root[data-tema='claro'] [data-documentado] {
+  border-color: var(--color-noct-neutral-600);
+}
+:root[data-tema='claro'] [data-instrumento] {
+  background-color: var(--color-noct-surface);
+  border-color: var(--color-noct-divider);
+  box-shadow: var(--shadow-noct-elevacion);
 }
 .nocturne ::selection {
   background: color-mix(in srgb, var(--color-noct-accent) 30%, transparent);

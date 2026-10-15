@@ -101,6 +101,19 @@ describe('las sombras del sistema (tarea 339)', () => {
       .filter((ruta) => /(?<![-\w])shadow-noct-/.test(readFileSync(ruta, 'utf8')))
     expect(conUtilidad).toEqual([])
   })
+
+  // EL TINTE DE UN ESTADO (T11): 13 % en el oscuro y 11 % en el claro, en
+  // una sola variable. Una pantalla que escribiera el 13 % a mano dejaría ese
+  // aviso igual de cargado en los dos temas. (Las cajas de icono tintadas al
+  // 12, 14 o 16 % son otra pieza y no cambian.)
+  it('el tinte de estado vive en una variable, con su valor en cada tema', () => {
+    expect(bloqueDe(':root {')).toMatch(/--tinte-estado:\s*13%/)
+    expect(bloqueDe(":root[data-tema='claro'] {")).toMatch(/--tinte-estado:\s*11%/)
+    const aMano = archivosFuente('src')
+      .filter((ruta) => !ruta.endsWith('.css') && !ruta.includes('.test.'))
+      .filter((ruta) => /bg-noct-(error|precaucion|exito)\/\[\.13\]/.test(readFileSync(ruta, 'utf8')))
+    expect(aMano).toEqual([])
+  })
 })
 
 describe('las clases que Tailwind tiene que ver (tarea 339)', () => {

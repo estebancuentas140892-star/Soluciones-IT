@@ -43,6 +43,12 @@ const FILTRO_PARADAS = opcion('paradas')?.split(',') ?? null
 // el tema en el nombre. Sin la opcion, el que tenga el perfil temporal (el
 // oscuro por defecto) y los nombres de siempre.
 const TEMA = opcion('tema') ?? null
+// Tarea 339 (T11): `--contraste` mide, en cada parada tal como se abre,
+// cada texto contra el fondo que tiene de verdad (los colores se resuelven
+// con un canvas, asi que valen oklch y color-mix) y lista lo que no llega a
+// 4.5:1 (3:1 si es texto grande). Sirve para comparar el oscuro con el
+// claro, como la auditoria de la tarea 333.
+const CONTRASTE = argumentos.includes('--contraste')
 
 // Recorridos del encargo del 2026-09-17 ("resolver rápido con guías"):
 // abrir una guía entra a su paso pendiente (ya no hay `/ejecutar` ni
@@ -534,6 +540,80 @@ const AUDITORIA = `JSON.stringify((() => {
   }
 })())`
 
+// CONTRASTE (tarea 339, T11). Recorre los nodos de texto visibles de la
+// ventana y compara su color, con la opacidad de sus contenedores, con el
+// primer fondo opaco que tienen debajo (mezclando los fondos translucidos).
+const AUDITORIA_CONTRASTE = `JSON.stringify((() => {
+  const lienzo = document.createElement('canvas')
+  lienzo.width = lienzo.height = 1
+  const ctx = lienzo.getContext('2d', { willReadFrequently: true })
+  const rgba = (color) => {
+    ctx.clearRect(0, 0, 1, 1)
+    ctx.fillStyle = '#000'
+    ctx.fillStyle = color
+    ctx.fillRect(0, 0, 1, 1)
+    const d = ctx.getImageData(0, 0, 1, 1).data
+    return [d[0], d[1], d[2], d[3] / 255]
+  }
+  const mezcla = (arriba, abajo) => {
+    const a = arriba[3]
+    return [0, 1, 2].map((i) => arriba[i] * a + abajo[i] * (1 - a)).concat(1)
+  }
+  const fondoDe = (el) => {
+    const capas = []
+    for (let n = el; n; n = n.parentElement) {
+      const c = rgba(getComputedStyle(n).backgroundColor)
+      if (c[3] > 0) capas.push(c)
+      if (c[3] >= 1) break
+    }
+    let fondo = rgba(getComputedStyle(document.body).backgroundColor)
+    if (fondo[3] < 1) fondo = [255, 255, 255, 1]
+    for (let i = capas.length - 1; i >= 0; i--) fondo = mezcla(capas[i], fondo)
+    return fondo
+  }
+  const luz = (c) => {
+    const [r, g, b] = c.slice(0, 3).map((v) => {
+      const x = v / 255
+      return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const opacidad = (el) => {
+    let o = 1
+    for (let n = el; n; n = n.parentElement) o *= parseFloat(getComputedStyle(n).opacity)
+    return o
+  }
+  const bajos = []
+  const vistos = new Set()
+  const recorrido = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+  while (recorrido.nextNode()) {
+    const texto = recorrido.currentNode
+    if (!texto.textContent.trim()) continue
+    const el = texto.parentElement
+    if (!el || vistos.has(el)) continue
+    vistos.add(el)
+    if (el.closest('.sr-only, [aria-hidden="true"], svg, [disabled]')) continue
+    const e = getComputedStyle(el)
+    if (e.visibility === 'hidden' || e.display === 'none') continue
+    const r = el.getBoundingClientRect()
+    if (r.width === 0 || r.height === 0 || r.bottom < 0 || r.top > innerHeight) continue
+    // Lo transparente a proposito (el nombre que aparece al desplazar) no se
+    // lee: no cuenta.
+    const op = opacidad(el)
+    if (op === 0) continue
+    const fondo = fondoDe(el)
+    const c = rgba(e.color)
+    const frente = mezcla([c[0], c[1], c[2], c[3] * op], fondo)
+    const [l1, l2] = [luz(frente), luz(fondo)].sort((a, b) => b - a)
+    const razon = (l1 + 0.05) / (l2 + 0.05)
+    const px = parseFloat(e.fontSize)
+    const grande = px >= 24 || (px >= 18.66 && parseInt(e.fontWeight, 10) >= 700)
+    const minimo = grande ? 3 : 4.5
+    if (razon < minimo) bajos.push(razon.toFixed(2) + ' ' + px + 'px "' + texto.textContent.trim().slice(0, 40) + '"')
+  }
+  return bajos
+})())`
+
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms))
 
 async function json(ruta, metodo = 'GET') {
@@ -618,6 +698,7 @@ async function main() {
 
   const desbordes = []
   const hallazgos = []
+  const contrastes = []
   const fallosGuion = []
   for (const { ancho, alto } of TAMANOS) {
     const movil = ancho < 768
@@ -645,6 +726,10 @@ async function main() {
       // Como se abre: es lo que el tecnico ve primero.
       const arriba = await s.enviar('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false })
       writeFileSync(join(SALIDA, `${etiqueta}-${parada.nombre}-arriba.png`), Buffer.from(arriba.data, 'base64'))
+      if (CONTRASTE) {
+        const medida = await s.enviar('Runtime.evaluate', { expression: AUDITORIA_CONTRASTE, returnByValue: true })
+        for (const bajo of JSON.parse(medida.result.value)) contrastes.push(`${etiqueta} ${parada.nombre}: ${bajo}`)
+      }
       // La auditoria se hace AL FINAL DEL SCROLL: un control que
       // se cruza con la barra fija a mitad de recorrido es scroll
       // normal, no un defecto. Lo que hay que cazar es lo que
@@ -672,6 +757,10 @@ async function main() {
       ? '\nSin desbordamiento horizontal en ningun ancho.'
       : `\nDESBORDES:\n${desbordes.join('\n')}`,
   )
+  if (CONTRASTE) {
+    console.log(contrastes.length === 0 ? 'Contraste: todo el texto llega a 4.5:1 (3:1 el grande).' : `CONTRASTE POR DEBAJO (${contrastes.length}):`)
+    for (const c of contrastes) console.log('  ' + c)
+  }
   if (hallazgos.length === 0) {
     console.log('Sin texto recortado, controles tapados ni areas tactiles por debajo de 44 px.')
   } else {

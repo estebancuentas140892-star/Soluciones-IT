@@ -202,7 +202,7 @@ function TarjetaProgramado({ mantenimiento, onCerrar }: { mantenimiento: Manteni
   const razon = textoProgramado(fecha, restantes)
   const ruta = `/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`
   return (
-    <div className="overflow-hidden rounded-2xl border border-noct-divider bg-noct-surface">
+    <div className="overflow-hidden rounded-2xl border border-noct-divider bg-noct-surface shadow-[var(--shadow-noct-elevacion)]">
       <Link to={ruta} className="flex flex-col gap-1.5 p-3.5 text-noct-text hover:bg-noct-text/[.03]">
         <span className="flex items-baseline justify-between gap-2.5">
           <span className="text-[16.5px] font-semibold">{nombreMantenimiento(mantenimiento.tipo)}</span>
@@ -235,7 +235,7 @@ function TarjetaRealizado({ mantenimiento }: { mantenimiento: Mantenimiento }) {
   return (
     <Link
       to={`/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`}
-      className="flex flex-col gap-1.5 rounded-2xl border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-3 text-noct-text hover:bg-noct-text/[.03]"
+      className="flex flex-col gap-1.5 rounded-2xl border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-3 text-noct-text shadow-[var(--shadow-noct-elevacion)] hover:bg-noct-text/[.03]"
     >
       <span className="flex items-baseline justify-between gap-2.5">
         <span className="text-[15.5px] font-semibold">{nombreMantenimiento(mantenimiento.tipo)}</span>
@@ -326,6 +326,7 @@ function TarjetaAntecedente({ mantenimiento }: { mantenimiento: Mantenimiento })
   const cuando = mantenimiento.fechaProgramada ? fechaConAnio(mantenimiento.fechaProgramada) : 'Sin fecha'
   return (
     <Link
+      data-documentado
       to={`/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`}
       className="flex flex-col gap-1.5 rounded-2xl border-[1.5px] border-dashed border-noct-text/25 px-3.5 py-3 text-noct-text hover:bg-noct-text/[.03]"
     >

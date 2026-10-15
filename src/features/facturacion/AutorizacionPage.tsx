@@ -158,7 +158,7 @@ export function AutorizacionPage() {
                   </span>
                 }
               />
-              <div className="rounded-[14px] border-[1.5px] border-dashed border-noct-text/25 px-3.5 pb-1.5 pt-1">
+              <div data-documentado className="rounded-[14px] border-[1.5px] border-dashed border-noct-text/25 px-3.5 pb-1.5 pt-1">
                 <p className="flex items-center gap-1.5 pb-1 pt-2 text-[13px] font-semibold text-noct-neutral-400 [overflow-wrap:anywhere]">
                   <Paperclip size={13} className="shrink-0" aria-hidden />
                   Según {autorizacion.fuente}
@@ -202,13 +202,13 @@ export function AutorizacionPage() {
                 numero={2}
                 titulo="Lo confirmado"
                 icono={
-                  <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-noct-exito/[.13] text-noct-exito">
+                  <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-noct-exito/(--tinte-estado) text-noct-exito">
                     <SealCheck size={16} aria-hidden />
                   </span>
                 }
               />
               {autorizacion.verificadoEn ? (
-                <div className="rounded-[14px] border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-1">
+                <div className="rounded-[14px] border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-1 shadow-[var(--shadow-noct-elevacion)]">
                   <div className="flex justify-between gap-3 border-b border-noct-divider py-2.5 last:border-b-0">
                     <span className="text-[13px] text-noct-neutral-400">Verificada</span>
                     <span className="text-right text-[14.5px] font-medium">
@@ -228,7 +228,7 @@ export function AutorizacionPage() {
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col gap-2.5 rounded-[14px] border border-noct-divider bg-noct-surface p-3.5">
+                <div className="flex flex-col gap-2.5 rounded-[14px] border border-noct-divider bg-noct-surface p-3.5 shadow-[var(--shadow-noct-elevacion)]">
                   <p className="text-[14.5px] text-noct-neutral-300">Sin verificar con una fuente actual.</p>
                   {/* Abre el formulario de siempre, donde se registra la
                       verificación con su día y su fuente. */}
@@ -388,7 +388,7 @@ function Consecutivo({
   )
   if (!tieneConsecutivoLeido(autorizacion)) {
     return (
-      <div className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5">
+      <div data-instrumento className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5">
         <span aria-hidden className="flex h-[26px] items-center">
           <span className="block h-[3px] w-7 rounded-full bg-noct-neutral-500" />
         </span>
@@ -403,7 +403,7 @@ function Consecutivo({
   const gastado =
     desde !== null && hasta !== null && hasta > desde ? Math.min(100, Math.max(0, ((actual - desde) / (hasta - desde)) * 100)) : null
   return (
-    <div className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5">
+    <div data-instrumento className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5">
       <p className="text-[12.5px] text-noct-neutral-400">Último emitido</p>
       <p className="font-mono text-[34px] font-semibold leading-none tracking-[-.02em] text-noct-accent-300">
         {formatearNumero(actual)}

@@ -26,8 +26,8 @@ export interface AvisoEquipo {
 }
 
 const TONO_AVISO = {
-  error: { fondo: 'bg-noct-error/[.13]', icono: 'text-noct-error' },
-  precaucion: { fondo: 'bg-noct-precaucion/[.13]', icono: 'text-noct-precaucion' },
+  error: { fondo: 'bg-noct-error/(--tinte-estado)', icono: 'text-noct-error' },
+  precaucion: { fondo: 'bg-noct-precaucion/(--tinte-estado)', icono: 'text-noct-precaucion' },
 } as const
 
 // AVISOS DEL EQUIPO, justo bajo el carnet: lo que sus datos ya dicen que

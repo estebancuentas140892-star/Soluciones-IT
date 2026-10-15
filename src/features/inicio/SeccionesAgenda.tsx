@@ -66,6 +66,9 @@ export function ContadoresAgenda({ agenda, enlace }: { agenda: Agenda; enlace?: 
         const etiqueta = c.n === 1 ? c.uno : c.varios
         // 64 en el teléfono y 60 en la tableta; desde 1280, el contador denso
         // del escritorio: 54 de alto, el número y su rótulo en una línea (T3).
+        // El número conserva sus 24 px (el lienzo lo baja a 22): a 22 el rojo
+        // sobre su tinte del tema claro quedaba en 4.49:1, y a 24 es texto
+        // grande (T11, auditoría de contraste).
         const clase = `flex min-h-16 flex-col justify-center gap-px rounded-[14px] px-3 py-2 md:min-h-[60px] xl:min-h-[54px] xl:flex-row xl:flex-wrap xl:items-baseline xl:content-center xl:gap-x-2 xl:px-3.5 xl:py-0 ${
           c.n > 0 ? FONDO_CONTADOR[c.tono] : 'bg-noct-text/[.06]'
         }`
@@ -74,7 +77,7 @@ export function ContadoresAgenda({ agenda, enlace }: { agenda: Agenda; enlace?: 
         const contenido = (
           <>
             <span
-              className={`font-mono text-[24px] font-semibold leading-[1.1] xl:text-[22px] ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
+              className={`font-mono text-[24px] font-semibold leading-[1.1] ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
             >
               {c.n}
             </span>{' '}
@@ -96,8 +99,8 @@ export function ContadoresAgenda({ agenda, enlace }: { agenda: Agenda; enlace?: 
 }
 
 const FONDO_CONTADOR = {
-  error: 'bg-noct-error/[.13]',
-  precaucion: 'bg-noct-precaucion/[.13]',
+  error: 'bg-noct-error/(--tinte-estado)',
+  precaucion: 'bg-noct-precaucion/(--tinte-estado)',
   neutro: 'bg-noct-text/[.06]',
 } as const
 const COLOR_CONTADOR = {
@@ -172,7 +175,7 @@ export function SeccionesAgenda({
   // todas sus letras, en vez de dejar el hueco en blanco. Con algo
   // vencido o de hoy NO aparece: sería mentir.
   const todoAlDia = urgentes === 0 && (
-    <div className="flex items-center gap-3 rounded-[14px] bg-noct-exito/[.13] p-3.5">
+    <div className="flex items-center gap-3 rounded-[14px] bg-noct-exito/(--tinte-estado) p-3.5">
       <Check size={20} className="shrink-0 text-noct-exito" aria-hidden />
       <p className="min-w-0 flex-1">
         <span className="block text-[15.5px] font-semibold leading-[1.3]">Todo al día por hoy</span>

@@ -166,7 +166,7 @@ export function BarraReanudar({
         // accesible decía "Sigues en el paso 2 de 5 …", que describe
         // el estado, no lo que pasa al tocarla.
         aria-label={`Continuar ${articulo.titulo} · ${paso}`}
-        className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3 text-noct-text hover:bg-noct-accent/[.13]"
+        className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3 text-noct-text shadow-[var(--shadow-noct-elevacion)] hover:bg-noct-accent/[.13]"
       >
         <span className="flex items-center gap-[11px]">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.16] text-noct-accent-300">

@@ -425,7 +425,7 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
         to={guia.ruta}
         state={ORIGEN_RESOLVER}
         aria-label={`Continuar ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
-        className="flex flex-col gap-2.5 rounded-2xl border border-noct-text/25 bg-noct-surface p-3.5 text-noct-text hover:bg-noct-text/[.04]"
+        className="flex flex-col gap-2.5 rounded-2xl border border-noct-text/25 bg-noct-surface p-3.5 text-noct-text shadow-[var(--shadow-noct-elevacion)] hover:bg-noct-text/[.04]"
       >
         <span className="flex items-center gap-2 text-[12.5px] text-noct-neutral-400">
           <Icono size={14} className="shrink-0" aria-hidden />
