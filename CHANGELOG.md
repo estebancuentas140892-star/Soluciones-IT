@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Cambiado (zonas de 1680, tarea 339, T10): ficha entre su lista y su índice, Resolver y Agenda en tres
+
+**Área modificada:** `src/app/Chasis.tsx` (prop `zonas`), `src/index.css` (`[data-zona-documento]`), `src/features/dispositivos/DispositivoPage.tsx`, `ZonaListaEquipos.tsx` (nuevo), `src/features/inicio/ResolverPage.tsx`, `AgendaPage.tsx`; prueba nueva `src/app/zonasAmplio.test.tsx`.
+**Tipo:** Cambiado; Agregado (`zonas`, `ZonaListaEquipos`).
+**Motivo:** paso T10 del handoff (punto 2.6 y pizarras Ficha, Resolver y Agenda 1680; presupuesto de la tarea 199).
+**Descripción:** la ficha a 1680: lista de Equipos · ficha · índice, decidido con `useEsAncho(ANCHO_AMPLIO)` (el índice pasa de la ficha a su zona: una sola vez por ventana). Resolver: las tres zonas lado a lado desde 1100 px de contenido (`@container`), con Guías como índice vertical. Agenda: disposición `tres`. **Desviación del lienzo:** la lista de Equipos no se agrupa por ubicación como en la pizarra: sigue el orden de la pantalla Equipos (agruparla sería otra forma de ordenar, no solo de presentar). La barra superior sigue ocupando la columna de 1294, no todo el ancho.
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** en un monitor ancho se salta de un equipo a otro sin volver a Equipos y se lee todo lo que urge a la vez.
+
 ### Cambiado (Más, tarea 339, T9): directorio y favoritos al lado desde 1280
 
 **Área modificada:** `src/features/mas/PantallaMas.tsx` (`ColumnaFavoritos` y `ListaFavoritos`, internos), `FilasMas.tsx` (`unaLinea`, `className`); prueba nueva `masPorAncho.test.tsx`.

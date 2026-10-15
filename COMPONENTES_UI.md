@@ -309,6 +309,10 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **Reglas que aplica:** las acciones propias de la pantalla ("Crear", "Escanear", el menú "···") **no** van en la fila del título: van en `children`. Es la única forma de que la fila superior caiga siempre en el mismo sitio, que es el problema que la barra resuelve. Ver [DECISIONES.md](DECISIONES.md) AD-023.
 - **Dónde:** ya no la montan las pantallas: desde la tarea 185 la monta `Chasis` cuando el nivel es `seccion` (Resolver, Equipos, Bóveda y su pantalla de bloqueo, Más, el catálogo de guías y Red).
 
+### `app/Chasis`, prop `zonas` y `dispositivos/ZonaListaEquipos` (2026-10-14, tarea 339, T10)
+- **`zonas?: { lista?, contexto? }`** (nivel documento): desde 1680 (`useEsAncho(ANCHO_AMPLIO)`), rejilla `322px 720px 252px` dentro de los 1294 de la columna: la lista y el contexto en `aside` pegados arriba (`h-svh`, desplazamiento propio, con `aria-label` "Lista" y "Contexto"), la cabecera y el documento en medio, con margen de 32 (`[data-zona-documento] > main` en `index.css`) y el nombre siempre visible. Por debajo de 1680 las zonas no se montan. Hoy la usa la ficha de equipo.
+- **`ZonaListaEquipos({ actualId })`:** la lista de Equipos de la zona: `buscarEquipos` (lo mismo que busca Equipos; los de red, solo buscando), `CampoBusqueda` con el alcance "Equipos" (el único de la ventana) y filas compactas de 54 px: punto del estado (`tonoEstado`, con su palabra para el lector), nombre entero, IP en mono y categoría; la del equipo abierto con `aria-current="page"` y el tinte con el filo de acento.
+
 ### `mas/FilasMas`: `unaLinea` y `className` (2026-10-14, tarea 339, T9)
 - **`FilaMas` gana `unaLinea?`** (solo la usa Más): desde 1280 el título (14.5 seminegrita, sin partir) y lo que contiene (13.5) van en la misma línea, con `flex-wrap`: si no caben, lo que contiene baja entero a la segunda línea, nunca se recorta (tarea 268). La fila mide 46 y no lleva divisores entre filas (el grupo lleva su línea arriba). **`TituloGrupo` gana `className?`**, para que el directorio le dé su línea y su aire. Herramientas de inventario y Guías no las usan: no cambian.
 
