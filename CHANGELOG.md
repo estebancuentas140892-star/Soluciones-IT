@@ -15,6 +15,7 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Motivo:** el usuario revisó las capturas (320 a 1680, oscuro y claro) y aprobó integrar, desplegar y verificar (reglas 14 y 21).
 **Estructura de datos:** sin cambios (ni Supabase, ni `schema.sql`, ni Dexie, ni la sincronización): no hay SQL que aplicar.
 **Impacto esperado:** en tableta y escritorio la app tiene la misma identidad que en el teléfono, compuesta para cada ancho. Los dispositivos con la app instalada la reciben al aceptar "Actualización disponible" (en escritorio, recargando).
+**Verificación y estado:** Integrada y desplegada, verificada técnicamente, pendiente de confirmación visual del usuario. `version.json` de producción, el estado de Vercel y la integración continua en verde para `8aa3e0c` y `ab5a45d`; el contenido nuevo, en los trozos que precachea `sw.js`. Las tareas 339 y 340 siguen en el tablero hasta esa confirmación.
 
 ## 2026-10-14
 
