@@ -8,6 +8,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-15
 
+### Corregido (tarea 336): la prueba sin conexión real vuelve a pasar entera, adaptada a la 341
+
+**Área modificada:** `scripts/prueba-sin-conexion.mjs` (solo la prueba; la app no cambia) y [TAREAS.md](TAREAS.md).
+**Tipo:** Corregido.
+**Motivo:** desde la tarea 328 la prueba daba 73 de 80 en `main` con 7 fallos de una prueba desactualizada, no de una regresión sin red (4b, 4b2 y 4c). La corrección de `a5a35bd` (rama `fix/prueba-sin-conexion`) se porta sola, sin sus versiones viejas de TAREAS.md y CHANGELOG.md, a la rama `fix/prueba-sin-conexion-main` desde `bf5160e`.
+**Qué cambia:**
+- 4b acepta los números del navegador o un contador de CSS dibujado de verdad y exige la ubicación bajo su microacción; 4b2 usa "¿Quedó resuelto?", "Marca 1 comprobación" (inactivo) y "Terminar"; 4c abre la hoja de la credencial y comprueba dentro la credencial correcta, la contraseña maestra, que nada cifrado llega a la página y que un equipo sin credencial no recibe la de otro.
+- **Adaptación a la 341:** la prueba corre a 390 px y en el teléfono la pantalla final dice "Guía completada". "Marcar la última comprobación no termina la guía" exige que siga "¿Quedó resuelto?" con "Terminar" activo y sin el cierre (ya no pasa en vacío por la ausencia de "Guía terminada"); "solo Terminar la termina" espera "Guía completada" con su marca en un ancho de teléfono (ya no busca el texto viejo).
+**Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización, ni datos).
+**Impacto esperado:** la única prueba que ejecuta una guía con el service worker y sin red vuelve a distinguir una regresión real.
+**Verificación:** sobre `main` + 341 + 336, **84 de 84, "PRUEBA SIN CONEXION: OK", 0 fallos**; suite completa (3408 pruebas), `tsc -b`, lint, build y `verificar-precache` en verde.
+
 ### Integrado y cerrado (tarea 341): el remate de fidelidad móvil "1b Pulgar" llega a `main`
 
 **Área modificada:** la rama `fix/remate-fidelidad-movil` (`bc5a94b` y `40a6d90`, detallados en la entrada de abajo) entra en `main` por avance rápido desde `cf77a58`, sin commit de fusión ni squash; la 341 sale del tablero y pasa a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); AD-089 pasa a Vigente.

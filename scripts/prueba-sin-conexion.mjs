@@ -12,6 +12,8 @@
 //   4. las pantallas principales abren sin red, y una guia se ejecuta sin
 //      red: lo reutilizado en el sitio, su "Como hacerlo" (tarea 303) y la
 //      imagen de "Debes ver" desde la copia sin conexion (tarea 307);
+//      la comprobacion final (tarea 308) y la credencial del equipo, que
+//      se resuelve en la hoja que abre su fila (tareas 290 y 328);
 //      y un mantenimiento atrasado sale en la Agenda y se cierra sin red,
 //      dejando la intervencion y el cambio en la cola (tarea 320); y una
 //      autorizacion de facturacion confirmada avisa de su vencimiento en
@@ -579,8 +581,18 @@ async function main() {
       'la primera acción reutilizada, en el sitio',
     )
     // Tarea 310: "Cómo hacerlo" es una lista numerada a la vista, sin nada
-    // que desplegar; la ubicación va bajo su microacción.
+    // que desplegar; la ubicación va bajo su microacción. Desde el rediseño
+    // móvil (tarea 328, AD-078) el número de la acción a la vez va en su
+    // caja: la lista no lleva los números del navegador (`list-none`) y cada
+    // `li` lo dibuja en su `::before` con un contador de CSS. Cualquiera de
+    // las dos formas es numerar de verdad; una lista sin ninguna, no.
     const LISTA_COMO_HACERLO = `[...document.querySelectorAll('ol[aria-labelledby]')].find((ol) => document.getElementById(ol.getAttribute('aria-labelledby'))?.textContent === 'Cómo hacerlo')`
+    const NUMERADA_DE_VERDAD = `(ol) =>
+      getComputedStyle(ol).listStyleType === 'decimal' ||
+      [...ol.children].every((li) => {
+        const numero = getComputedStyle(li, '::before')
+        return /^counter\\(/.test(numero.content) && numero.display !== 'none' && parseFloat(numero.width) > 0
+      })`
     comprobar(
       Boolean(
         await s.evaluar(
@@ -592,7 +604,7 @@ async function main() {
     comprobar(
       Boolean(
         await s.evaluar(
-          `const ol = ${LISTA_COMO_HACERLO}; return getComputedStyle(ol).listStyleType === 'decimal' && [...ol.children].some((li) => li.innerText.includes('Barra lateral de prueba'))`,
+          `const ol = ${LISTA_COMO_HACERLO}; return (${NUMERADA_DE_VERDAD})(ol) && ol.children[1]?.innerText.includes('Barra lateral de prueba') && !ol.children[0]?.innerText.includes('Barra lateral de prueba')`,
         ),
       ),
       'numerada de verdad y con la ubicación a la vista bajo su microacción',
@@ -625,8 +637,12 @@ async function main() {
     )
 
     // Tarea 308: la comprobación final es un estado de la ejecución, no su
-    // fin. Todo sale de la base local: volver, seguir y finalizar sin red.
-    paso('4b2. La comprobación final sin red: "Anterior" vuelve a la última acción y solo "Finalizar" termina (tarea 308)')
+    // fin. Todo sale de la base local: volver, seguir y terminar sin red.
+    // Desde la tarea 328 (AD-078) pregunta "¿Quedó resuelto?" (antes "Antes
+    // de terminar, comprueba") y su control dice "Marca N comprobaciones" y
+    // "Terminar" (antes "Faltan N comprobaciones" y "Finalizar").
+    const COMPROBACION_FINAL = '¿Quedó resuelto?'
+    paso('4b2. La comprobación final sin red: "Anterior" vuelve a la última acción y solo "Terminar" termina (tarea 308)')
     await s.tocar('Completar y seguir')
     comprobar(
       Boolean(await s.hasta(`document.body.innerText.includes('Selecciona Guardar')`, 'el paso 2')),
@@ -659,8 +675,17 @@ async function main() {
     )
     await s.tocar('Completar y seguir')
     comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes('Antes de terminar, comprueba')`, 'la comprobación final')),
+      Boolean(await s.hasta(`document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)})`, 'la comprobación final')),
       'la última acción lleva a la comprobación final',
+    )
+    // Sin marcar, el control dice lo que falta y no termina (regla 28).
+    comprobar(
+      Boolean(
+        await s.evaluar(
+          `const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Marca 1 comprobación'); return b != null && b.disabled && ![...document.querySelectorAll('button')].some((e) => e.textContent.trim() === 'Terminar')`,
+        ),
+      ),
+      'sin marcar, el control dice "Marca 1 comprobación", inactivo, y no ofrece "Terminar"',
     )
     const TOCAR_ANTERIOR = `
       const b = [...document.querySelectorAll('button')].find((e) => (e.getAttribute('aria-label') || '').startsWith('Anterior'))
@@ -673,7 +698,7 @@ async function main() {
     comprobar(
       Boolean(
         await s.hasta(
-          `document.body.innerText.includes('Selecciona Guardar') && !document.body.innerText.includes('Antes de terminar, comprueba')`,
+          `document.body.innerText.includes('Selecciona Guardar') && !document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)})`,
           'la última acción',
         ),
       ),
@@ -681,38 +706,75 @@ async function main() {
     )
     await s.tocar('Seguir')
     comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes('Antes de terminar, comprueba')`, 'otra vez la comprobación')),
+      Boolean(await s.hasta(`document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)})`, 'otra vez la comprobación')),
       '"Seguir" vuelve a la comprobación',
     )
+    // Desde la tarea 341, en el teléfono (esta prueba corre a 390 px) la
+    // pantalla final dice "Guía completada", con su marca; desde 768 sigue
+    // siendo "Guía terminada". Las dos comprobaciones miran el estado real
+    // y no la ausencia de un texto: marcar deja la comprobación final a la
+    // vista con "Terminar" activo y sin el cierre; solo "Terminar" lleva a
+    // "Guía completada".
+    const GUIA_COMPLETADA = `innerWidth < 768 && document.body.innerText.includes('Guía completada') && document.querySelector('[data-marca-completada]') != null`
     await s.evaluar(`document.querySelector('[role="checkbox"]').click(); await new Promise((r) => setTimeout(r, 600)); return true`)
     comprobar(
-      !(await s.evaluar(`return document.body.innerText.includes('Guía terminada')`)),
-      'marcar la última comprobación no termina la guía',
+      Boolean(
+        await s.evaluar(
+          `return document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)}) && [...document.querySelectorAll('button')].some((e) => e.textContent.trim() === 'Terminar' && !e.disabled) && !(${GUIA_COMPLETADA})`,
+        ),
+      ),
+      'marcar la última comprobación no termina la guía: sigue "¿Quedó resuelto?" con "Terminar" activo',
     )
-    await s.tocar('Finalizar')
+    await s.tocar('Terminar')
     comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes('Guía terminada')`, 'la guía terminada')),
-      'solo "Finalizar" la termina, sin red',
+      Boolean(await s.hasta(GUIA_COMPLETADA, '"Guía completada"')),
+      'solo "Terminar" la termina, sin red: "Guía completada" en el teléfono',
     )
 
     // Tarea 290: la relación equipo y credencial se lee del teléfono, sin
-    // red; los datos siguen detrás de la contraseña maestra.
-    paso('4c. La credencial del equipo actual, sin red: se resuelve y sigue protegida (tarea 290)')
+    // red; los datos siguen detrás de la contraseña maestra. Desde la tarea
+    // 328 (AD-078) la acción a la vez no lleva el bloque protegido en su
+    // cuerpo: una fila ("Ver la credencial: …") abre una hoja con el bloque
+    // de siempre, y es ahí donde se resuelve la credencial del equipo.
+    paso('4c. La credencial del equipo actual, sin red: se resuelve en su hoja y sigue protegida (tareas 290 y 328)')
     comprobar(Boolean(await s.evaluar(SEMBRAR_EQUIPO_PRUEBA)), 'equipos, credencial y guía inventados escritos en la base local, con la red cortada')
+    const FILA_CREDENCIAL = `document.querySelector('button[aria-label^="Ver la credencial"]')`
+    const HOJA_CREDENCIAL = `document.querySelector('[role="dialog"]')`
+    // Abre la hoja desde la fila y, dentro, la consulta del dato protegido.
+    const ABRIR_HOJA = `
+      const fila = ${FILA_CREDENCIAL}
+      if (!fila) return false
+      fila.click()
+      await new Promise((r) => setTimeout(r, 600))
+      return ${HOJA_CREDENCIAL} != null
+    `
+    const MOSTRAR_EN_HOJA = `
+      const b = ${HOJA_CREDENCIAL}?.querySelector('button[aria-label^="Dato protegido"]')
+      if (!b) return false
+      b.click()
+      await new Promise((r) => setTimeout(r, 600))
+      return true
+    `
     await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-equipo-sin-red?equipo=eq-sin-red-a' })
     comprobar(
       Boolean(
+        await s.hasta(`${FILA_CREDENCIAL} != null && document.body.innerText.includes('Impresora de prueba sin red A')`, 'la fila de la credencial', 45000),
+      ),
+      'la acción del equipo A ofrece su credencial en una fila, sin red',
+    )
+    comprobar(Boolean(await s.evaluar(ABRIR_HOJA)), 'la fila abre su hoja')
+    comprobar(
+      Boolean(
         await s.hasta(
-          `document.body.innerText.includes('Acceso de prueba sin red') && document.body.innerText.includes('Impresora de prueba sin red A')`,
-          'la credencial del equipo',
-          45000,
+          `(() => { const h = ${HOJA_CREDENCIAL}; return h != null && h.innerText.includes('Acceso de prueba sin red') && h.innerText.includes('Impresora de prueba sin red A') })()`,
+          'la credencial del equipo en la hoja',
         ),
       ),
-      'la acción resuelve la credencial de ese equipo sin red',
+      'la hoja resuelve la credencial de ese equipo sin red',
     )
-    await s.tocar('Acceso de prueba sin red')
+    comprobar(Boolean(await s.evaluar(MOSTRAR_EN_HOJA)), 'su "Mostrar", dentro de la hoja')
     comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes('La bóveda está bloqueada')`, 'el desbloqueo')),
+      Boolean(await s.hasta(`${HOJA_CREDENCIAL}?.innerText.includes('La bóveda está bloqueada')`, 'el desbloqueo')),
       'para ver sus datos sigue pidiendo la contraseña maestra',
     )
     comprobar(
@@ -720,10 +782,16 @@ async function main() {
       'nada de la Bóveda en la página',
     )
     await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-equipo-sin-red?equipo=eq-sin-red-b' })
-    await s.hasta(`document.body.innerText.includes('Impresora de prueba sin red B')`, 'el otro equipo', 45000)
-    await s.tocar('Credencial del equipo')
+    await s.hasta(`${FILA_CREDENCIAL} != null && document.body.innerText.includes('Impresora de prueba sin red B')`, 'el otro equipo', 45000)
+    await s.evaluar(ABRIR_HOJA)
+    await s.evaluar(MOSTRAR_EN_HOJA)
     comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes('No hay una credencial configurada para este equipo.')`, 'sin credencial')),
+      Boolean(
+        await s.hasta(
+          `(() => { const h = ${HOJA_CREDENCIAL}; return h != null && h.innerText.includes('No hay una credencial configurada para este equipo.') && !h.innerText.includes('Acceso de prueba sin red') })()`,
+          'sin credencial',
+        ),
+      ),
       'un equipo sin credencial no recibe la de otro',
     )
 
