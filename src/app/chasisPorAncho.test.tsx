@@ -321,6 +321,28 @@ describe('la hoja inferior como panel lateral', () => {
     expect(panel.parentElement?.className).toContain('md:justify-end')
   })
 
+  it('el foco entra al panel, Tab da la vuelta dentro y al cerrar vuelve a lo que lo abrió (tarea 340)', async () => {
+    verA(ESCRITORIO)
+    await montar([{ ruta: '/', elemento: <ConHoja /> }], '/')
+    const abridor = await esperarControl('Abrir conexiones')
+    abridor.focus()
+    const panel = await abrir()
+    expect(panel.contains(document.activeElement)).toBe(true)
+
+    // El único enfocable es la X: Tab y Mayús+Tab se quedan en ella.
+    const cerrar = await esperarControl('Cerrar')
+    for (const shiftKey of [false, true, false]) {
+      await act(async () => {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey, bubbles: true, cancelable: true }))
+      })
+      expect(document.activeElement).toBe(cerrar)
+    }
+
+    await tocar(cerrar)
+    expect(dialogo()).toBeNull()
+    expect(document.activeElement).toBe(abridor)
+  })
+
   it('en la ficha, la fila que abrió el panel queda marcada mientras está abierto', async () => {
     verA(ESCRITORIO)
     await sembrarEquipo({ id: 'pc-1', nombre: 'PC de prueba', estado: 'Operativo' })

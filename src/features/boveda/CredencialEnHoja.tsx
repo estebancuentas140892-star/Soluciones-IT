@@ -33,9 +33,14 @@ export function CredencialEnHoja({ vinculo }: { vinculo: VinculoProtegido }) {
       <button
         type="button"
         aria-haspopup="dialog"
+        aria-expanded={abierta}
         aria-label={`Ver la credencial: ${titulo}`}
         onClick={() => setAbierta(true)}
-        className="flex min-h-[58px] w-full min-w-0 items-center gap-3 rounded-[14px] border-[1.5px] border-noct-text/25 py-1.5 pl-3.5 pr-2 text-left hover:bg-noct-text/[.04] active:bg-noct-text/[.07]"
+        // Desde 768 px la hoja es un panel al costado y la guía sigue a la
+        // vista (tarea 339): la fila que lo abrió queda con el tinte de acento.
+        className={`flex min-h-[58px] w-full min-w-0 items-center gap-3 rounded-[14px] border-[1.5px] border-noct-text/25 py-1.5 pl-3.5 pr-2 text-left hover:bg-noct-text/[.04] active:bg-noct-text/[.07] ${
+          abierta ? 'md:border-noct-accent/60 md:bg-noct-accent/[.12]' : ''
+        }`}
       >
         <Key size={19} className="shrink-0 text-noct-neutral-300" aria-hidden />
         <span className="min-w-0 flex-1">

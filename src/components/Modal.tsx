@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 interface Props {
@@ -25,11 +25,24 @@ const VELO_PANEL =
 const PANEL =
   'md:flex md:h-full md:max-h-none md:w-[420px] md:max-w-none md:flex-col md:overflow-hidden md:rounded-none md:border-y-0 md:border-r-0 md:p-0 md:shadow-[var(--shadow-noct-panel)] xl:w-[440px] 3xl:w-[480px]'
 
+// Lo que el tabulador puede alcanzar dentro del diálogo.
+const ENFOCABLES =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]'
+
 // Ventana modal centrada con el fondo oscurecido. Se cierra con la
 // tecla Escape o tocando fuera de la tarjeta. En movil aparece como
 // hoja inferior; en pantallas grandes queda centrada. Reutilizable
 // para confirmaciones y otros dialogos.
+//
+// EL FOCO VIVE DENTRO MIENTRAS ESTÁ ABIERTO (tarea 340, hallazgo de la 339;
+// el handoff de tableta y escritorio da el panel por "foco atrapado"). Al
+// abrir, el foco entra al diálogo (si un campo con `autoFocus` ya lo tomó,
+// se respeta); Tab y Mayús+Tab dan la vuelta dentro sin salir a la pantalla
+// de detrás del velo; al cerrar vuelve a lo que lo abrió, si sigue en la
+// página. Con dos diálogos abiertos, solo el de encima atrapa.
 export function Modal({ abierto, onCerrar, tituloId, variante = 'dialogo', children }: Props) {
+  const dialogo = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!abierto) return
     function alTeclado(evento: KeyboardEvent) {
@@ -44,6 +57,47 @@ export function Modal({ abierto, onCerrar, tituloId, variante = 'dialogo', child
       document.body.style.overflow = overflowPrevio
     }
   }, [abierto, onCerrar])
+
+  useEffect(() => {
+    if (!abierto) return
+    const previo = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const nodo = dialogo.current
+    if (nodo && !nodo.contains(document.activeElement)) nodo.focus({ preventScroll: true })
+
+    function alTabular(evento: KeyboardEvent) {
+      if (evento.key !== 'Tab' || !nodo) return
+      // Solo el diálogo de encima (el último colgado de <body>) atrapa.
+      const abiertos = document.querySelectorAll('[role="dialog"][aria-modal="true"]')
+      if (abiertos[abiertos.length - 1] !== nodo) return
+      const enfocables = Array.from(nodo.querySelectorAll<HTMLElement>(ENFOCABLES)).filter(
+        (elemento) => !elemento.closest('[inert], [hidden]'),
+      )
+      if (enfocables.length === 0) {
+        evento.preventDefault()
+        nodo.focus({ preventScroll: true })
+        return
+      }
+      const primero = enfocables[0]
+      const ultimo = enfocables[enfocables.length - 1]
+      const activo = document.activeElement
+      if (evento.shiftKey && (activo === primero || activo === nodo || !nodo.contains(activo))) {
+        evento.preventDefault()
+        ultimo.focus()
+      } else if (!evento.shiftKey && (activo === ultimo || activo === nodo || !nodo.contains(activo))) {
+        evento.preventDefault()
+        primero.focus()
+      }
+    }
+    document.addEventListener('keydown', alTabular)
+    return () => {
+      document.removeEventListener('keydown', alTabular)
+      // En un teléfono, devolver el foco a un campo de texto abriría el
+      // teclado sin que nadie lo pidiera: ahí no se devuelve.
+      const campo = previo instanceof HTMLInputElement || previo instanceof HTMLTextAreaElement
+      const tactil = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+      if (previo && previo.isConnected && !(campo && tactil)) previo.focus({ preventScroll: true })
+    }
+  }, [abierto])
 
   if (!abierto) return null
 
@@ -69,11 +123,13 @@ export function Modal({ abierto, onCerrar, tituloId, variante = 'dialogo', child
       onClick={onCerrar}
     >
       <div
+        ref={dialogo}
         role="dialog"
         aria-modal="true"
         aria-labelledby={tituloId}
+        tabIndex={-1}
         onClick={(evento) => evento.stopPropagation()}
-        className={`max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-noct-divider bg-noct-surface p-5 text-noct-text shadow-2xl ${variante === 'hoja' ? PANEL : ''}`}
+        className={`max-h-[calc(100dvh-2rem)] w-full outline-none max-w-sm overflow-y-auto rounded-2xl border border-noct-divider bg-noct-surface p-5 text-noct-text shadow-2xl ${variante === 'hoja' ? PANEL : ''}`}
       >
         {children}
       </div>

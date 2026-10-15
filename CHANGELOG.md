@@ -18,6 +18,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Verificación:** 29 pruebas nuevas en happy-dom con la ventana a 390, 768, 1280 y 1680 (un campo por ancho y en su sitio, el cruce de 768 sin duplicar ni perder lo escrito, el disparador, la acción una vez por ventana, el panel y sus tres cierres, la fila marcada, la tarea sin navegación) y 3 en `sistemaVisual.test.ts` (sombras y tamaños por banda); suite completa, `tsc -b`, lint y build en verde. Capturas a 390, 768 x 1024, 1280 x 832 y 1680 x 1050 en oscuro y claro, revisadas a mano; las de 390 comparadas con `c6ebefb`.
 **Impacto esperado:** en tableta y escritorio la búsqueda siempre a la vista, la acción dominante arriba y la consulta al costado sin tapar la pantalla, con la misma identidad que el teléfono.
 
+### Corregido (diálogos, tarea 340, complemento de T2): el foco entra al panel y a los diálogos, y vuelve al cerrar
+
+**Área modificada:** `src/components/Modal.tsx`; `src/features/boveda/CredencialEnHoja.tsx`; prueba en `src/app/chasisPorAncho.test.tsx`.
+**Tipo:** Corregido (accesibilidad).
+**Motivo:** el handoff de tableta y escritorio da el panel lateral por "foco atrapado", y el `Modal` no movía el foco al abrir ni lo atrapaba (hallazgo de la 339). Con el panel al costado, Tab recorría la pantalla de detrás del velo.
+**Descripción:** al abrir, el foco entra al diálogo (o se queda en el campo con `autoFocus` que ya lo tomó); Tab y Mayús+Tab dan la vuelta dentro, y solo atrapa el diálogo de encima; al cerrar vuelve a lo que lo abrió, salvo a un campo de texto en un teléfono (abriría el teclado). La fila "Credencial" de una guía queda marcada con el tinte de acento mientras su panel está abierto (desde 768 px).
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** con teclado se entra al panel directamente y se vuelve a la fila que lo abrió.
+
 ## 2026-10-13
 
 ### Corregido (búsqueda, hallazgo de la tarea 322): un mismo archivo en dos fichas ya no tumba Resolver

@@ -71,7 +71,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | Paso | Tarea del encargo | Tarea del tablero | Estado |
 |---|---|---|---|
 | T1 + T2 | Chasis (buscador en la barra, disparador global, acción principal en la cabecera, tamaños por banda) y hoja inferior como panel lateral | 339 | Hecho en `feat/responsive-pulgar`, sin integrar |
-| (hallazgo de la 339) | El foco no entra al panel ni a los diálogos al abrirlos | 340 | Pendiente ("Por hacer") |
+| (hallazgo de la 339) | El foco no entra al panel ni a los diálogos al abrirlos | 340 | Hecho en `feat/responsive-pulgar` (con T2), sin integrar |
 
 ### 339. Tableta y escritorio, T1 y T2: el chasis por banda y el panel lateral
 
@@ -639,7 +639,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Descripción:** `src/components/Modal.tsx` (líneas ~33 a 85) declara `role="dialog"` y `aria-modal="true"`, cierra con Esc y con un clic fuera y bloquea el desplazamiento del fondo, pero no mueve el foco al abrir, no lo atrapa ni lo devuelve al cerrar. El handoff de tableta y escritorio daba por hecho "foco atrapado como hoy"; la 339 lo dejó igual que estaba (no era su alcance) y lo documenta en AD-088. Con teclado, en escritorio, Tab recorre la pantalla de detrás del velo.
 - **Motivo:** accesibilidad con teclado y lector de pantalla, más visible ahora que el panel deja la pantalla a la vista.
 - **Impacto:** quien trabaja con teclado entra al panel directamente y vuelve a la fila que lo abrió al cerrarlo.
-- **Prioridad:** Media. **Estado:** Pendiente.
+- **Prioridad:** Media. **Estado:** Hecha en la rama `feat/responsive-pulgar` (2026-10-14, junto a T2), sin integrar: el foco entra al abrir (al diálogo, o al campo con `autoFocus` si ya lo tomó), Tab y Mayús+Tab dan la vuelta dentro (solo el diálogo de encima), y al cerrar vuelve a lo que lo abrió (en un teléfono, nunca a un campo de texto). Prueba en `src/app/chasisPorAncho.test.tsx`.
 - **Área afectada:** `src/components/Modal.tsx` (lo heredan `HojaInferior`, `DialogoEliminar`, `PanelSync` y `HojaFiltro`).
 - **Dependencias:** ninguna.
 
