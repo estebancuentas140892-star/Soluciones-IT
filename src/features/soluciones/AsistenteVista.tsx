@@ -546,7 +546,7 @@ export function AsistenteVista({
           <>
             <BandaTarea>
               <span className="flex h-11 shrink-0 items-center px-1">
-                <span className="flex min-h-[34px] items-center rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text">
+                <span className="flex min-h-[34px] items-center rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text max-md:min-h-10">
                   Final
                 </span>
               </span>
@@ -1737,10 +1737,11 @@ function ContadorPaso({
       // a 14.5 px sobre fondo tenue, en el color del texto. Antes era texto
       // de 13 px en el acento y "dónde estoy" dependía de leer dos líneas
       // pequeñas (hallazgo 2 de la auditoría móvil). El toque sigue siendo
-      // de 44 px: la caja visible mide 34 dentro de él.
+      // de 44 px: la caja visible mide 34 dentro de él; en el teléfono, 40,
+      // la del handoff (tarea 343).
       className="group flex h-11 shrink-0 items-center px-1"
     >
-      <span className="flex min-h-[34px] items-center gap-1 rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text group-hover:bg-noct-text/[.1]">
+      <span className="flex min-h-[34px] items-center gap-1 rounded-[11px] bg-noct-text/[.06] px-2.5 font-mono text-[14.5px] font-semibold text-noct-text group-hover:bg-noct-text/[.1] max-md:min-h-10 max-md:active:bg-noct-presionado">
         {indice + 1}/{total ?? '…'}
         <CaretDown size={12} className="text-noct-neutral-400" aria-hidden />
       </span>

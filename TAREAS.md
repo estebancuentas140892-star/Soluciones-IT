@@ -97,6 +97,25 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 |---|---|---|---|
 | A, B y C | Ficha de equipo, búsqueda global y estados del sistema (esqueletos, sin conexión, error y línea de sincronización) | 342 | Hecha (archivada) |
 
+**ENCARGO DEL 2026-10-16 (SEGUNDA PARTE): FIDELIDAD "1b PULGAR" EN MANTENIMIENTO, FACTURACIÓN Y GUÍA.** Mismo handoff móvil. Siguiente bloque visual que ChatGPT definió sobre `main` (`4916e01`); no reabre las 327 a 342. Solo presentación por debajo de 768 px; desde 768 se conserva lo aprobado. No toca la 322, la 337, Supabase, Dexie, la sincronización, los datos, las rutas ni los modelos de mantenimiento y autorización.
+
+| Bloque | Qué | Tarea del tablero | Estado |
+|---|---|---|---|
+| A, B y C | Mantenimiento, autorizaciones de facturación y remates de la ejecución de guía | 343 | En proceso (rama `feat/fidelidad-pulgar-mantenimiento-facturacion-guia`, sin integrar) |
+
+### 343. Fidelidad Pulgar: mantenimiento, facturación y guía
+
+- **Descripción:** **A, mantenimiento:** lo atrasado en error y lo pospuesto con su pastilla de precaución; lo realizado con su evidencia (si la hay) y "En el historial" en éxito; el antecedente con "Según {fuente}: marca {ESTADO}" y "Ver fuente"; el aviso de "Qué se hizo" en línea con el borde en rojo; las tres respuestas del cierre como tarjetas verticales con lo que hace cada una; el ejemplo "Ej.: limpieza interna, cambio de cable de red". **B, facturación:** el prefijo una sola vez a la vista (sube a la cabecera al desplazarse), la pastilla de siempre (`PastillaEstado`) con su punto, el texto del handoff bajo cada capa, el instrumento vacío del consecutivo, el menú "···" en una hoja con "Marcar como reemplazada" (el formulario de siempre) y Eliminar aparte, y la fila de la lista de 72 con el prefijo en mono. **C, guía:** el contador en su caja de 40, el índice "Pasos" con el número en IBM Plex Mono en filas de 58, "Tengo un problema" en `HojaInferior` con las mismas salidas, y en la hoja de la credencial "Sin salir de la guía" y "Desbloquear" relleno a todo el ancho con "Comprobando…".
+- **Motivo:** encargo del usuario del 2026-10-16, con el detalle de ChatGPT.
+- **Impacto:** visual, en el teléfono. Sin datos, estados, rutas ni funciones nuevas.
+- **Prioridad:** Alta. **Estado:** En proceso.
+- **Área afectada:** `src/features/mantenimientos/MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`, `mantenimiento.ts` y `antecedentes.ts`; `src/features/facturacion/AutorizacionPage.tsx` y `PresentacionAutorizacion.tsx`; `src/features/soluciones/AsistenteVista.tsx`, `HojaPasos.tsx` y `HojaFalla.tsx`; `src/features/boveda/CredencialEnPaso.tsx` y `CredencialEnHoja.tsx`; `src/components/OpcionRadio.tsx`.
+- **Fuera de alcance:** la presentación inicial de la guía (sigue abriéndose en ejecución), "Ir a Resolver" en la pantalla final, el espaciado de "Cómo hacerlo" (regla 27), la 337 (la fila sigue diciendo "Credencial del equipo"), Agenda, Resolver, la ficha de equipo, la búsqueda y los estados del sistema de la 342.
+- **Desde 768:** la composición aprobada no cambia. La única pieza compartida que cambia algo ahí es la pastilla de una autorización, que reutiliza `PastillaEstado` (11 px y su relleno, en vez de 11.5) como pidió el encargo.
+- **Modelo/esfuerzo:** Sonnet 5 / Alto (ejecutada con Opus 5.5).
+- **Verificación (2026-10-16, sobre `4916e01`):** suite completa 226 archivos y 3438 pruebas en verde (en una primera pasada dos pruebas de guías agotaron su espera de 4 s bajo carga; solas pasan 46 de 46 y la suite entera pasó en la segunda), `tsc -b`, lint, build, `verificar-precache` y la prueba sin conexión real (84 de 84, 0 fallos). Sin auditoría visual masiva.
+- **Estado:** implementada en la rama `feat/fidelidad-pulgar-mantenimiento-facturacion-guia`, con push y **sin integrar en `main` ni desplegar**, a la espera de la revisión de ChatGPT.
+
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.

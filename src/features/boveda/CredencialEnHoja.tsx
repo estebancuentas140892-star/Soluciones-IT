@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { VinculoProtegido } from '../../lib/db'
 import { HojaInferior } from '../../components/HojaInferior'
 import { Key, LockSimple } from '../../components/iconos'
+import { useEsAncho } from '../../components/useEsAncho'
 import { CredencialEnPaso } from './CredencialEnPaso'
 import { useTituloDelVinculo } from './useTituloDelVinculo'
 
@@ -23,6 +24,10 @@ import { useTituloDelVinculo } from './useTituloDelVinculo'
 export function CredencialEnHoja({ vinculo }: { vinculo: VinculoProtegido }) {
   const [abierta, setAbierta] = useState(false)
   const titulo = useTituloDelVinculo(vinculo) || (vinculo.tipo === 'equipo' ? 'Credencial del equipo' : 'Credencial')
+  // En el teléfono la hoja tapa la guía: su línea de contexto dice que
+  // consultarla no la abandona ("Sin salir de la guía", tarea 343). Desde 768
+  // es un panel al costado y la guía sigue a la vista.
+  const ancho = useEsAncho()
 
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
@@ -58,7 +63,13 @@ export function CredencialEnHoja({ vinculo }: { vinculo: VinculoProtegido }) {
         </span>
       </button>
 
-      <HojaInferior abierta={abierta} onCerrar={() => setAbierta(false)} titulo={titulo} etiquetaCerrar="Cerrar y volver a la guía">
+      <HojaInferior
+        abierta={abierta}
+        onCerrar={() => setAbierta(false)}
+        titulo={titulo}
+        contexto={ancho ? undefined : 'Sin salir de la guía'}
+        etiquetaCerrar="Cerrar y volver a la guía"
+      >
         <CredencialEnPaso vinculo={vinculo} variante="bloque" />
       </HojaInferior>
     </div>
