@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-16
 
+### Integrado y cerrado (tarea 342): fidelidad visual "1b Pulgar" de la ficha, la búsqueda y los estados del sistema, en `main`
+
+**Área modificada:** `026240a` y `28356f8` (detallados en la entrada de abajo) entran en `main` por avance rápido desde `4953a40`; la 342 sale del tablero y pasa a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**Tipo:** Cambiado.
+**Motivo:** ChatGPT revisó la 342 contra el handoff y la aprobó para integración.
+**Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización, ni el índice de búsqueda).
+**Verificación y estado:** CI en verde para `28356f8`; Vercel Production "success"; `/version.json` de producción en `28356f8`. **Completada y archivada.** El estado vacío móvil de la búsqueda queda en <768, un POS conserva su identidad de equipo y Facturación sigue sin resultados propios en la búsqueda. La 337 sigue pendiente; la 322 sigue separada y sin tocar.
+
 ### Cambiado (tarea 342): fidelidad visual "1b Pulgar" en la ficha, la búsqueda y los estados del sistema
 
 **Área modificada:** `src/features/dispositivos/DispositivoPage.tsx` y `PiezasFicha.tsx`, `src/components/PastillaEstado.tsx`, `FilaDato.tsx`, `BotonFavorito.tsx`, `nocturne.tsx`, `PastillaSync.tsx`, `src/components/Esqueleto.tsx` (nuevo), `EstadoDelSistema.tsx` (nuevo), `useEnLinea.ts` (nuevo), `src/app/Chasis.tsx`, `src/features/personas/ResponsableDelEquipo.tsx`, `src/features/red/ConexionesFicha.tsx`, `src/features/mantenimientos/mantenimiento.ts`, `MantenimientoPage.tsx`, `MantenimientosPage.tsx` y `MantenimientosDelEquipo.tsx`, `src/features/facturacion/autorizacion.ts` y `AutorizacionPage.tsx`, `src/features/busqueda/BuscadorGlobal.tsx`, `ChipsDeAlcance.tsx`, `ResultadosBusqueda.tsx`, `contextoResultados.ts` y `useDatosDeEquipos.ts` (nuevo), `src/index.css`, pruebas, [TAREAS.md](TAREAS.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md), [COMPONENTES_UI.md](COMPONENTES_UI.md) y [BUSCADOR.md](BUSCADOR.md).
@@ -19,7 +27,7 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 - **Estados del sistema:** esqueletos con la forma del contenido en la ficha, el mantenimiento (lista y detalle), la autorización y el buscador, con brillo que respeta "reducir movimiento"; franja de 38 px "Sin conexión. Trabajas con la copia local"; franja de error "N cambios no se subieron" con "Reintentar" (la sincronización existente); línea de 2 px mientras se sincroniza.
 **Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización, ni el índice de búsqueda, ni estados de dominio nuevos).
 **Impacto esperado:** la ficha y la búsqueda del teléfono se leen como el prototipo, los resúmenes del índice dicen si algo pide atención y las esperas y los fallos de red se ven sin bloquear nada. Desde 768 la composición de la 339 no cambia.
-**Verificación:** ver el informe de la tarea en [TAREAS.md](TAREAS.md).
+**Verificación:** ver el informe de la tarea en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 ## 2026-10-15
 

@@ -1,5 +1,24 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-16: fidelidad visual "1b Pulgar" en la ficha, la búsqueda y los estados del sistema
+
+### 342. Fidelidad visual Pulgar: ficha, búsqueda y estados de sistema
+
+**Estado:** Completada (2026-10-16). Implementación del handoff móvil "1b Pulgar" del 2026-10-13 ("Preguntas sobre identidad visual") en lo que ChatGPT encontró lejos del prototipo sobre `main` (`4953a40`). **Revisada por ChatGPT y aprobada para integración**, integrada en `main` por avance rápido, desplegada y verificada en Production. No reabre las 327 a 341.
+
+**Qué quedó integrado (por debajo de 768 px; desde 768, la composición de la 339):**
+1. **Ficha de equipo:** pastilla de estado con punto; copiar la IP en 48 x 48 con icono de 20 y el aviso flotante de siempre; "Asignar" y "Cambiar" a 14/600 y lo anotado por validar en precaución; **"Conectado a" abre la hoja de Conexiones** (también desde 768, donde es el panel lateral), con "Ver en topología"; "Más del equipo" con valores útiles: credenciales **"Bloqueadas"**, mantenimiento **"Atrasado / Hoy / fecha / Al día"** (`resumenDeMantenimientos`) y facturación **"En conflicto / Vencida / Rango agotado / Por validar / Confirmada / Sin autorización"** (`resumenDeFacturacion`), sin estados de dominio nuevos; leyenda de los galones; `Wrench` en "Resolver un problema" (barra fija y cabecera desde 768); el **menú "···" en una `HojaInferior`** con Dar de baja y Eliminar aparte y en rojo (desde 768, la banda de siempre); "Documentar este equipo" con la acción a 14 y la nota a 12 legible.
+2. **Búsqueda global:** rótulos de grupo a 13/650; chip activo relleno de alto contraste; filas de 62 con la IP en IBM Plex Mono a la derecha. **El estado vacío y "Nada coincide con «…»" de Pulgar se limitan a <768**: desde 768 siguen los de `main` ("Sin coincidencias" en su caja punteada), con las mismas salidas (Crear equipo y Limpiar búsqueda). **Un POS conserva su identidad de equipo** (su icono de equipo). **Facturación sigue sin resultados propios en la búsqueda**: las autorizaciones no se indexan y hacerlo pide una indexación específica, fuera de la 342. El índice, MiniSearch, los ids, los resultados y los filtros no cambiaron.
+3. **Estados del sistema:** esqueletos con la forma del contenido (`Esqueleto.tsx`: ficha, mantenimiento, autorización y "Preparando el índice de búsqueda…", en todas las anchuras, con "reducir movimiento" respetado); franja de 38 px "Sin conexión. Trabajas con la copia local"; franja de error "N cambios no se subieron" con "Reintentar" (la sincronización existente); línea de 2 px mientras se sincroniza (`EstadoDelSistema.tsx`). Sin lógica nueva de conexión ni de subida; la ejecución y el editor no las llevan (tarea 223).
+
+**Integración:** `026240a` (implementación, pruebas y documentación) y `28356f8` (corrección: estado vacío de búsqueda solo en el teléfono y POS como equipo), en la rama `feat/fidelidad-pulgar-ficha-busqueda` desde `4953a40`; entraron en `main` por **avance rápido** (`4953a40..28356f8`), sin commit de fusión, squash ni rebase. Este cierre documental va en un commit propio encima.
+
+**Verificación:** sobre `026240a`, suite completa (225 archivos, 3427 pruebas), `tsc -b`, lint, build, `verificar-precache` y la prueba sin conexión real (84 de 84, 0 fallos); sobre `28356f8`, las pruebas afectadas (54 archivos, 740 pruebas), `tsc -b`, lint y build. Integrado: CI en verde, Vercel Production "success" y `/version.json` de producción en `28356f8`. Sin auditoría visual masiva ni capturas, como pidió el encargo.
+
+**Relación con otras tareas:** la **337** sigue pendiente (espera la decisión del usuario); la **322** sigue separada en su rama, sin tocar; la franja sin conexión dentro de la ejecución y el editor sigue siendo la **223**.
+
+**Área afectada:** `src/features/dispositivos/DispositivoPage.tsx` y `PiezasFicha.tsx`, `src/components/PastillaEstado.tsx`, `FilaDato.tsx`, `BotonFavorito.tsx`, `nocturne.tsx`, `PastillaSync.tsx`, `Esqueleto.tsx`, `EstadoDelSistema.tsx` y `useEnLinea.ts` (nuevos), `src/app/Chasis.tsx`, `src/features/personas/ResponsableDelEquipo.tsx`, `src/features/red/ConexionesFicha.tsx`, `src/features/mantenimientos/mantenimiento.ts`, `MantenimientoPage.tsx`, `MantenimientosPage.tsx` y `MantenimientosDelEquipo.tsx`, `src/features/facturacion/autorizacion.ts` y `AutorizacionPage.tsx`, `src/features/busqueda/BuscadorGlobal.tsx`, `ChipsDeAlcance.tsx`, `ResultadosBusqueda.tsx`, `contextoResultados.ts` y `useDatosDeEquipos.ts` (nuevo), `src/index.css` y sus pruebas.
+
 ## Encargo del 2026-10-15: remate de fidelidad móvil "1b Pulgar" (hallazgo posterior a la auditoría del handoff móvil original)
 
 ### 341. Remate de fidelidad móvil "1b Pulgar"
