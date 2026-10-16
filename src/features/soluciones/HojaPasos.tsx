@@ -128,26 +128,36 @@ const ACCION_PERSISTENTE =
 // número con borde discontinuo, que se distingue sin depender del color.
 // En el acento de la ruta (propuesta final): lo hecho relleno, el paso de
 // trabajo con borde, lo pendiente neutro.
+//
+// EN EL TELÉFONO, LA CAJA DEL HANDOFF (tarea 343): el número en IBM Plex Mono
+// a 13.5/600 en una caja de 28 con radio 8 y el tinte del sistema, y el
+// estado dicho con su palabra a la derecha ("Hecho", "Aquí vas", "Saltado").
+// El saltado conserva su borde discontinuo, que se distingue sin color.
+// Desde 768, la insignia redonda de siempre.
+const CAJA_TELEFONO = 'max-md:h-7 max-md:w-7 max-md:rounded-[8px] max-md:font-mono max-md:text-[13.5px] max-md:font-semibold'
+const TINTE_TELEFONO = 'max-md:border-transparent max-md:bg-noct-tinte max-md:text-noct-text'
+
 function InsigniaPaso({ estado, numero }: { estado: EstadoPaso; numero: number }) {
-  const base = 'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-medium'
+  const base = `flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[12px] font-medium ${CAJA_TELEFONO}`
   if (estado === 'hecho') {
     return (
-      <span aria-hidden className={`${base} border-[1.5px] border-noct-accent bg-noct-accent/20 text-noct-accent-200`}>
-        <Check size={13} />
+      <span aria-hidden className={`${base} border-[1.5px] border-noct-accent bg-noct-accent/20 text-noct-accent-200 ${TINTE_TELEFONO}`}>
+        <Check size={13} className="max-md:hidden" />
+        <span className="md:hidden">{numero}</span>
       </span>
     )
   }
   if (estado === 'actual') {
-    return <span aria-hidden className={`${base} border-[1.5px] border-noct-accent text-noct-accent-200`}>{numero}</span>
+    return <span aria-hidden className={`${base} border-[1.5px] border-noct-accent text-noct-accent-200 ${TINTE_TELEFONO}`}>{numero}</span>
   }
   if (estado === 'saltado') {
     return (
-      <span aria-hidden className={`${base} border-[1.5px] border-dashed border-noct-neutral-600 text-noct-neutral-400`}>
+      <span aria-hidden className={`${base} border-[1.5px] border-dashed border-noct-neutral-600 text-noct-neutral-400 max-md:text-noct-neutral-300`}>
         {numero}
       </span>
     )
   }
-  return <span aria-hidden className={`${base} border-[1.5px] border-noct-neutral-600 text-noct-neutral-400`}>{numero}</span>
+  return <span aria-hidden className={`${base} border-[1.5px] border-noct-neutral-600 text-noct-neutral-400 ${TINTE_TELEFONO}`}>{numero}</span>
 }
 
 // Lo que dice la fila a la derecha, solo cuando hay algo que decir: dónde
@@ -160,7 +170,10 @@ function NotaFila({ resumen, persistente = false }: { resumen: ResumenPaso; pers
   // fondo y `aria-current`: "Aquí vas" le quitaría ancho al nombre.
   const nota =
     resumen.estado === 'actual' ? (persistente ? '' : 'Aquí vas') : resumen.estado === 'saltado' ? 'Saltado' : ''
-  if (!nota && !resumen.tieneCuidado) return null
+  // En el teléfono lo hecho también dice su palabra, en éxito: el número ya
+  // no lleva la marca (tarea 343).
+  const hechoEnTelefono = !persistente && resumen.estado === 'hecho'
+  if (!nota && !resumen.tieneCuidado && !hechoEnTelefono) return null
   return (
     <span className="flex shrink-0 items-center gap-1.5">
       {resumen.tieneCuidado && resumen.estado !== 'hecho' && (
@@ -168,11 +181,12 @@ function NotaFila({ resumen, persistente = false }: { resumen: ResumenPaso; pers
       )}
       {nota && (
         <span
-          className={`text-[12px] ${resumen.estado === 'actual' ? 'text-noct-accent-300' : 'text-noct-neutral-400'}`}
+          className={`text-[12px] max-md:text-[13px] max-md:font-[650] ${resumen.estado === 'actual' ? 'text-noct-accent-300' : 'text-noct-neutral-400'}`}
         >
           {nota}
         </span>
       )}
+      {hechoEnTelefono && <span className="text-[13px] font-[650] text-noct-exito md:hidden">Hecho</span>}
     </span>
   )
 }
@@ -283,10 +297,12 @@ export function IndicePasos({
                         ? 'bg-noct-accent/[.12]'
                         : 'hover:bg-noct-text/[.045] active:bg-noct-text/[.08]'
                     }`
-                  : `-mx-2 flex min-h-12 w-[calc(100%+16px)] items-center gap-3 rounded-lg px-2 text-left ${
+                  : // En el teléfono, la fila de 58 del handoff, con radio 12 y
+                    // la respuesta al tocar del sistema (tarea 343).
+                    `-mx-2 flex min-h-12 w-[calc(100%+16px)] items-center gap-3 rounded-lg px-2 text-left max-md:-mx-2.5 max-md:min-h-[58px] max-md:w-[calc(100%+20px)] max-md:rounded-xl max-md:px-2.5 ${
                       resumen.estado === 'actual'
-                        ? 'bg-noct-accent/10'
-                        : 'hover:bg-noct-text/[.06] active:bg-noct-text/[.1]'
+                        ? 'bg-noct-accent/10 max-md:bg-noct-accent/[.14]'
+                        : 'hover:bg-noct-text/[.06] active:bg-noct-text/[.1] max-md:active:bg-noct-presionado'
                     }`
               }
             >
@@ -296,7 +312,7 @@ export function IndicePasos({
               {/* Persistente, el nombre entero: la columna es estrecha y
                   nada aprieta el alto (regla 23). */}
               <span
-                className={`min-w-0 flex-1 py-1.5 text-[14px] leading-[1.35] text-pretty ${
+                className={`min-w-0 flex-1 py-1.5 text-[14px] leading-[1.35] text-pretty ${persistente ? '' : 'max-md:text-[15.5px]'} ${
                   persistente ? '[overflow-wrap:anywhere]' : 'line-clamp-2'
                 } ${
                   resumen.estado === 'actual'

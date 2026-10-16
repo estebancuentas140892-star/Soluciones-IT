@@ -6,9 +6,11 @@ import { Adjuntos } from '../../components/Adjuntos'
 import { avisar } from '../../components/avisosFlotantes'
 import { Campo, CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
 import { EsqueletoMantenimiento } from '../../components/Esqueleto'
-import { CheckCircle } from '../../components/iconos'
+import { Check, CheckCircle, Paperclip, WarningCircle } from '../../components/iconos'
 import { BTN_PRIMARIO_PELIGRO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { OpcionRadio } from '../../components/OpcionRadio'
+import { PastillaEstado } from '../../components/PastillaEstado'
+import { useEsAncho } from '../../components/useEsAncho'
 import { db, type Mantenimiento } from '../../lib/db'
 import {
   esPorValidar,
@@ -19,8 +21,9 @@ import {
 import { cerrarMantenimiento, guardarRegistro } from '../../lib/repositorio'
 import { diasDeCalendario } from '../../lib/vencimiento'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
-import { datosDocumentados } from './antecedentes'
+import { datosDocumentados, estadoMarcadoDe } from './antecedentes'
 import {
+  ERROR_QUE_SE_HIZO,
   errorDeCancelacion,
   errorDeCierre,
   errorDePosposicion,
@@ -98,6 +101,7 @@ function Resumen({ mantenimiento }: { mantenimiento: Mantenimiento }) {
   const fecha = mantenimiento.fechaProgramada
   const restantes = fecha ? diasDeCalendario(fecha, new Date()) : null
   const abierto = estaAbierto(mantenimiento) && !esPorValidar(mantenimiento)
+  const ancho = useEsAncho()
   return (
     <section className="flex flex-col gap-1">
       <h1 className="text-[20px] font-semibold leading-[1.3]">{nombreMantenimiento(mantenimiento.tipo)}</h1>
@@ -110,13 +114,29 @@ function Resumen({ mantenimiento }: { mantenimiento: Mantenimiento }) {
               ? `Pospuesto al ${fechaConAnio(fecha)}`
               : `Programado para el ${fechaConAnio(fecha)}`}
         {/* Solo lo que la fecha no dice ya: atrasado, hoy o mañana. */}
+        {/* En el teléfono lo atrasado va en error, no en precaución (tarea 343). */}
         {abierto && fecha && restantes !== null && restantes <= 1 && (
-          <span className={restantes <= 0 ? 'text-noct-precaucion' : 'text-noct-neutral-400'}>
+          <span
+            className={
+              restantes < 0
+                ? 'text-noct-precaucion max-md:font-semibold max-md:text-noct-error'
+                : restantes === 0
+                  ? 'text-noct-precaucion'
+                  : 'text-noct-neutral-400'
+            }
+          >
             {' · '}
             {textoProgramado(fecha, restantes)}
           </span>
         )}
       </p>
+      {/* POSPUESTO, CON SU SEÑAL EN EL TELÉFONO (tarea 343): la pastilla de
+          precaución con su punto; sigue pendiente. */}
+      {abierto && !ancho && mantenimiento.estado === 'pospuesto' && (
+        <PastillaEstado tono="precaucion" conPunto className="mt-1 self-start">
+          Pospuesto · sigue pendiente
+        </PastillaEstado>
+      )}
       {mantenimiento.observaciones && (
         <p className="whitespace-pre-wrap text-[13px] leading-[1.55] text-noct-neutral-300 [overflow-wrap:anywhere]">
           {mantenimiento.observaciones}
@@ -137,6 +157,8 @@ function Resumen({ mantenimiento }: { mantenimiento: Mantenimiento }) {
 // cierra ni se edita desde aquí.
 function AntecedentePorValidar({ mantenimiento }: { mantenimiento: Mantenimiento }) {
   const datos = datosDocumentados(mantenimiento)
+  const marca = estadoMarcadoDe(mantenimiento.observaciones)
+  const ancho = useEsAncho()
   return (
     <section className="flex flex-col gap-2 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
       <p className="text-[13.5px] font-medium">Antecedente por validar</p>
@@ -166,7 +188,23 @@ function AntecedentePorValidar({ mantenimiento }: { mantenimiento: Mantenimiento
           </dl>
         </div>
       )}
-      <p className="text-[12.5px] text-noct-neutral-400 [overflow-wrap:anywhere]">Fuente: {mantenimiento.fuente}</p>
+      {/* LO QUE DICE LA FUENTE, CON SU NOMBRE REAL (tarea 343): "Según …:
+          marca REALIZADO" y, en el teléfono, la pastilla "Por validar".
+          Documental: no dice que se confirmara. */}
+      <p className="text-[12.5px] text-noct-neutral-400 [overflow-wrap:anywhere] max-md:text-[13px]">
+        {ancho ? 'Fuente: ' : 'Según '}
+        {mantenimiento.fuente}
+        {marca && (
+          <>
+            : marca <span className="font-mono text-noct-neutral-300">{marca}</span>
+          </>
+        )}
+      </p>
+      {!ancho && (
+        <PastillaEstado tono="precaucion" className="self-start">
+          Por validar
+        </PastillaEstado>
+      )}
     </section>
   )
 }
@@ -182,6 +220,22 @@ function FilaDeDato({ etiqueta, children }: { etiqueta: string; children: ReactN
 
 /** Lo que quedó de un mantenimiento cerrado, y su evidencia. */
 function Desenlace({ mantenimiento, ficha }: { mantenimiento: Mantenimiento; ficha: string }) {
+  const ancho = useEsAncho()
+  // La evidencia que ya tiene (fotos, actas): cuelga de la intervención que
+  // lo cerró. Solo se dice si la hay; no se inventa (tarea 343).
+  const evidencias = useLiveQuery(
+    async () =>
+      mantenimiento.historialId
+        ? db.adjuntos
+            .where('[entidadTipo+entidadId]')
+            .equals(['historial', mantenimiento.historialId])
+            .filter((a) => !a.eliminadoEn)
+            .count()
+        : 0,
+    [mantenimiento.historialId],
+    0,
+  )
+  const textoEvidencias = evidencias === 1 ? '1 adjunto' : `${evidencias} adjuntos`
   return (
     <section className="flex flex-col gap-3">
       {mantenimiento.estado === 'realizado' && (
@@ -190,16 +244,41 @@ function Desenlace({ mantenimiento, ficha }: { mantenimiento: Mantenimiento; fic
             <CheckCircle size={16} className="shrink-0" aria-hidden />
             Realizado y registrado en el historial del equipo.
           </p>
-          <div className="divide-y divide-noct-divider">
-            {mantenimiento.fechaRealizada && (
-              <FilaDeDato etiqueta="Se hizo el">{fechaConAnio(mantenimiento.fechaRealizada)}</FilaDeDato>
+          {/* EN EL TELÉFONO, LO HECHO EN SU FORMA (tarea 343, "Realizado y
+              confirmado" del handoff): superficie sólida con la barra verde,
+              los datos y, debajo, su evidencia y que está en el historial. */}
+          <div className="flex flex-col max-md:rounded-2xl max-md:border max-md:border-l-4 max-md:border-noct-divider max-md:border-l-noct-exito max-md:bg-noct-surface max-md:px-3.5 max-md:pb-2.5 max-md:pt-0.5 max-md:shadow-[var(--shadow-noct-elevacion)]">
+            <div className="divide-y divide-noct-divider">
+              {mantenimiento.fechaRealizada && (
+                <FilaDeDato etiqueta="Se hizo el">{fechaConAnio(mantenimiento.fechaRealizada)}</FilaDeDato>
+              )}
+              {mantenimiento.tecnico && <FilaDeDato etiqueta="Lo hizo">{mantenimiento.tecnico}</FilaDeDato>}
+              {mantenimiento.resultado && <FilaDeDato etiqueta="Qué se hizo">{mantenimiento.resultado}</FilaDeDato>}
+              {mantenimiento.fuente && <FilaDeDato etiqueta="Fuente">{mantenimiento.fuente}</FilaDeDato>}
+            </div>
+            {!ancho && (evidencias > 0 || mantenimiento.historialId) && (
+              <p
+                data-meta-realizado
+                className="flex flex-wrap gap-x-3 gap-y-1 border-t border-noct-divider pt-2.5 text-[12.5px] text-noct-neutral-400"
+              >
+                {evidencias > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <Paperclip size={13} aria-hidden />
+                    {textoEvidencias}
+                  </span>
+                )}
+                {mantenimiento.historialId && (
+                  <span className="inline-flex items-center gap-1 text-noct-exito">
+                    <Check size={13} aria-hidden />
+                    En el historial
+                  </span>
+                )}
+              </p>
             )}
-            {mantenimiento.tecnico && <FilaDeDato etiqueta="Lo hizo">{mantenimiento.tecnico}</FilaDeDato>}
-            {mantenimiento.resultado && <FilaDeDato etiqueta="Qué se hizo">{mantenimiento.resultado}</FilaDeDato>}
           </div>
           {mantenimiento.historialId && (
             <div className="flex flex-col gap-1.5">
-              <span className={CLASE_ETIQUETA}>Evidencia (opcional)</span>
+              <span className={CLASE_ETIQUETA}>{evidencias > 0 ? `Evidencia · ${textoEvidencias}` : 'Evidencia (opcional)'}</span>
               <Adjuntos entidadTipo="historial" entidadId={mantenimiento.historialId} sinCabecera />
             </div>
           )}
@@ -217,10 +296,12 @@ function Desenlace({ mantenimiento, ficha }: { mantenimiento: Mantenimiento; fic
   )
 }
 
-const RESPUESTAS: { valor: Respuesta; texto: string }[] = [
-  { valor: 'realizado', texto: 'Se hizo' },
-  { valor: 'pospuesto', texto: 'Se pospone' },
-  { valor: 'cancelado', texto: 'Se cancela' },
+// Las tres respuestas de siempre. En el teléfono cada una es una tarjeta con
+// lo que hace debajo (tarea 343): se lee con una mano antes de elegir.
+const RESPUESTAS: { valor: Respuesta; texto: string; detalle: string }[] = [
+  { valor: 'realizado', texto: 'Se hizo', detalle: 'Queda en el historial del equipo' },
+  { valor: 'pospuesto', texto: 'Se pospone', detalle: 'Sigue pendiente, con otra fecha' },
+  { valor: 'cancelado', texto: 'Se cancela', detalle: 'Con su motivo, en el historial del equipo' },
 ]
 
 // Exportado desde la tarea 330 (rediseño móvil "1b Pulgar", tarea 331): la
@@ -235,6 +316,10 @@ export function RegistrarDesenlace({
 }) {
   const perfil = usePerfilVivo()
   const idPregunta = useId()
+  const idErrorResultado = useId()
+  // En el teléfono, el aviso de "Qué se hizo" va junto a su campo (tarea
+  // 343); desde 768, abajo con los demás, como siempre.
+  const ancho = useEsAncho()
   const [desenlace, setDesenlace] = useState<Respuesta>('realizado')
   const [fechaRealizada, setFechaRealizada] = useState(hoyIso())
   // null hasta que se escribe: mientras tanto se propone el nombre de quien
@@ -254,6 +339,7 @@ export function RegistrarDesenlace({
       : desenlace === 'pospuesto'
         ? errorDePosposicion(nuevaFecha, mantenimiento.fechaProgramada)
         : errorDeCancelacion(motivo)
+  const errorEnLinea = !ancho && intentado && desenlace === 'realizado' && error === ERROR_QUE_SE_HIZO
 
   function elegir(valor: Respuesta) {
     setDesenlace(valor)
@@ -287,9 +373,9 @@ export function RegistrarDesenlace({
         <span id={idPregunta} className={CLASE_ETIQUETA}>
           ¿Cómo terminó?
         </span>
-        <div role="radiogroup" aria-labelledby={idPregunta} className="flex flex-col gap-1.5">
+        <div role="radiogroup" aria-labelledby={idPregunta} className="flex flex-col gap-1.5 max-md:gap-2">
           {RESPUESTAS.map((r) => (
-            <OpcionRadio key={r.valor} activa={desenlace === r.valor} onClick={() => elegir(r.valor)}>
+            <OpcionRadio key={r.valor} activa={desenlace === r.valor} onClick={() => elegir(r.valor)} tarjeta detalle={r.detalle}>
               {r.texto}
             </OpcionRadio>
           ))}
@@ -323,9 +409,20 @@ export function RegistrarDesenlace({
               required
               value={resultado}
               onChange={(e) => setResultado(e.target.value)}
-              className={`resize-y leading-[1.5] ${CLASE_CAMPO}`}
+              placeholder="Ej.: limpieza interna, cambio de cable de red"
+              aria-invalid={errorEnLinea || undefined}
+              aria-describedby={errorEnLinea ? idErrorResultado : undefined}
+              className={`resize-y leading-[1.5] ${CLASE_CAMPO} ${errorEnLinea ? 'max-md:border-noct-error' : ''}`}
             />
           </Campo>
+          {/* EL AVISO, EN LÍNEA (tarea 343): junto al campo que falta, con el
+              borde del campo en rojo; la misma redacción de siempre. */}
+          {errorEnLinea && (
+            <p id={idErrorResultado} role="alert" className="-mt-2 flex items-center gap-1.5 text-[13.5px] text-noct-error">
+              <WarningCircle size={15} className="shrink-0" aria-hidden />
+              {error}
+            </p>
+          )}
         </>
       )}
 
@@ -364,7 +461,7 @@ export function RegistrarDesenlace({
         </Campo>
       )}
 
-      {intentado && error && (
+      {intentado && error && !errorEnLinea && (
         <p role="alert" className="text-[12.5px] text-noct-error">
           {error}
         </p>

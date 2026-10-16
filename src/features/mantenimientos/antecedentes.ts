@@ -181,6 +181,18 @@ export function antecedenteDesdeCronograma(id: string, marca: MarcaDeCronograma)
   }
 }
 
+/**
+ * El estado que marca la fuente de un antecedente, tal como lo guardó
+ * `antecedenteDesdeCronograma` en sus observaciones ("Estado marcado en la
+ * fuente: REALIZADO."), o null si no lo dice o no es uno de los conocidos.
+ * Es para decirlo ("Según … : marca REALIZADO", tarea 343): documental, nunca
+ * el estado del mantenimiento en la app.
+ */
+export function estadoMarcadoDe(observaciones: string): EstadoMarcado | null {
+  const valor = /Estado marcado en la fuente:\s*([A-Z]+)/.exec(observaciones ?? '')?.[1]
+  return valor && (ESTADOS_MARCADOS as readonly string[]).includes(valor) ? (valor as EstadoMarcado) : null
+}
+
 /** Un dato que la fuente de un antecedente aporta, ya redactado para leerlo. */
 export interface DatoDocumentado {
   etiqueta: string
