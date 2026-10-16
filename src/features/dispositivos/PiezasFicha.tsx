@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import type { EstadoConOrigen } from '../../lib/origenNavegacion'
-import { CaretRight, CaretUp, Key, TreeStructure, type IconoProps } from '../../components/iconos'
+import { CaretRight, CaretUp, Key, Wrench, type IconoProps } from '../../components/iconos'
 import { BAJA_CON_LAS_PESTANAS, BTN_PRIMARIO_RELLENO, PEGADA_SOBRE_PESTANAS } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 
@@ -62,6 +62,18 @@ export function AvisosDelEquipo({ avisos }: { avisos: AvisoEquipo[] }) {
   )
 }
 
+// El color del valor de una fila del índice. El valor dice siempre su
+// palabra ("Atrasado", "En conflicto", "Al día"): el color la acompaña, no
+// la sustituye (tarea 342).
+const TONO_VALOR = {
+  neutro: 'text-noct-neutral-400',
+  precaucion: 'text-noct-precaucion',
+  error: 'text-noct-error',
+  exito: 'text-noct-exito',
+} as const
+
+export type TonoValorIndice = keyof typeof TONO_VALOR
+
 // UNA FILA DEL ÍNDICE "MÁS DEL EQUIPO": un solo nivel, con lo que guarda
 // dicho en su valor. El galón dice qué pasa al tocarla: `CaretUp` abre una
 // hoja (se consulta aquí), `CaretRight` una pantalla (se trabaja ahí).
@@ -77,7 +89,7 @@ export function FilaIndice({
   Icono: Icono
   titulo: string
   valor: string
-  tono?: 'neutro' | 'precaucion'
+  tono?: TonoValorIndice
   abre?: 'hoja' | 'pantalla'
   /**
    * Su hoja está abierta (tarea 339). Desde 768 px la hoja es un panel al
@@ -106,16 +118,32 @@ export function FilaIndice({
         >
           {titulo}
         </span>
-        <span
-          className={`max-w-[45%] shrink-0 truncate text-[13.5px] font-[550] ${
-            tono === 'precaucion' ? 'text-noct-precaucion' : 'text-noct-neutral-400'
-          }`}
-        >
-          {valor}
-        </span>
+        <span className={`max-w-[45%] shrink-0 truncate text-[13.5px] font-[550] ${TONO_VALOR[tono]}`}>{valor}</span>
         <Galon size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
       </button>
     </li>
+  )
+}
+
+// LO QUE DICE CADA GALÓN, bajo el índice y solo en el teléfono (tarea 342,
+// handoff móvil "1b Pulgar"): `CaretUp` se consulta en una hoja sin dejar la
+// ficha, `CaretRight` abre su pantalla. Desde 768 la hoja es un panel al
+// costado y la fila que lo abrió queda marcada: la leyenda no aporta.
+export function LeyendaGalones() {
+  return (
+    <p
+      data-leyenda-galones
+      className="flex flex-wrap items-center gap-x-3.5 gap-y-1 pt-2.5 text-[12px] leading-snug text-noct-neutral-500 md:hidden"
+    >
+      <span className="flex items-center gap-1">
+        <CaretUp size={12} aria-hidden />
+        se consulta aquí
+      </span>
+      <span className="flex items-center gap-1">
+        <CaretRight size={12} aria-hidden />
+        abre su pantalla
+      </span>
+    </p>
   )
 }
 
@@ -237,7 +265,7 @@ export function BarraAccionEquipo({
     const credencialesAbiertas = abierta === 'credenciales'
     const contenidoCabecera: ReactNode = (
       <>
-        <TreeStructure size={17} aria-hidden />
+        <Wrench size={17} aria-hidden />
         Resolver un problema
       </>
     )
@@ -291,7 +319,7 @@ export function BarraAccionEquipo({
   }
   const contenido: ReactNode = (
     <>
-      <TreeStructure size={19} aria-hidden />
+      <Wrench size={19} aria-hidden />
       Resolver un problema
     </>
   )

@@ -515,6 +515,27 @@ body {
     transform: none;
   }
 }
+/* LOS ESTADOS DEL SISTEMA (tarea 342, "Estados" del sistema visual móvil).
+   El brillo de un esqueleto (`Esqueleto`) y el avance de la línea de 2 px
+   mientras se sincroniza (`LineaSincronizacion`). Solo los usan utilidades
+   `motion-safe:`: con "reducir movimiento" no se anima nada. */
+@keyframes brillo {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes avance {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(260%);
+  }
+}
 /* La marca de "Guía completada" crece una vez. */
 @keyframes marca-crece {
   0% {

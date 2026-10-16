@@ -13,14 +13,16 @@ import { lineaDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
 import { origenesDistintos, referenciasHacia, resumenImpacto } from '../../lib/grafo'
 import { conectadoA, textoConectadoA } from '../../lib/conexiones'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
-import { conOrigen } from '../../lib/origenNavegacion'
+import { conOrigen, type EstadoConOrigen } from '../../lib/origenNavegacion'
 import { Chasis } from '../../app/Chasis'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { Adjuntos } from '../../components/Adjuntos'
 import { BotonFavorito } from '../../components/BotonFavorito'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { BotonCopiar, FilaDato } from '../../components/FilaDato'
+import { EsqueletoFicha } from '../../components/Esqueleto'
 import { HojaInferior } from '../../components/HojaInferior'
+import { avisar } from '../../components/avisosFlotantes'
 import { MiniaturaPortada } from '../../components/MiniaturaPortada'
 import { ANCHO_AMPLIO, useEsAncho } from '../../components/useEsAncho'
 import { useGrafo } from '../../components/useGrafo'
@@ -30,6 +32,7 @@ import {
   BookOpen,
   CaretDown,
   CaretRight,
+  CaretUp,
   Camera,
   Check,
   Copy,
@@ -53,7 +56,13 @@ import {
   Wrench,
   XCircle,
 } from '../../components/iconos'
-import { BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from '../../components/nocturne'
+import {
+  BTN_GHOST_PELIGRO,
+  BTN_ICONO_SECUNDARIO,
+  BTN_SECUNDARIO,
+  FILA_ACCION_HOJA,
+  FILA_ACCION_HOJA_PELIGRO,
+} from '../../components/nocturne'
 import { ImpactoYDependencias } from '../red/ImpactoYDependencias'
 import { useImpactoEquipo } from '../red/useImpactoEquipo'
 import { ConexionesFicha } from '../red/ConexionesFicha'
@@ -64,7 +73,15 @@ import { procedimientosDeCategoria, procedimientosDeDispositivo } from './proced
 import { problemasDeCategoria, problemasDeDispositivo } from './problemasDeDispositivo'
 import { Historial } from '../historial/Historial'
 import { IniciarDiagnosticoBoton } from './IniciarDiagnosticoBoton'
-import { AvisosDelEquipo, BarraAccionEquipo, FilaIndice, ResolverConEsteEquipo, type AvisoEquipo, type ItemResolver } from './PiezasFicha'
+import {
+  AvisosDelEquipo,
+  BarraAccionEquipo,
+  FilaIndice,
+  LeyendaGalones,
+  ResolverConEsteEquipo,
+  type AvisoEquipo,
+  type ItemResolver,
+} from './PiezasFicha'
 import { ZonaListaEquipos } from './ZonaListaEquipos'
 import { rutaGuiaConEquipo } from '../soluciones/contextoEjecucion'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
@@ -77,8 +94,9 @@ import { ResponsableDelEquipo, ResponsablesAnteriores } from '../personas/Respon
 import { HojaAsignarPersona } from '../personas/HojaAsignarPersona'
 import { esDeBaja, responsablePorValidar } from '../personas/cicloPersona'
 import { useResponsablesAnteriores } from '../personas/useAsignaciones'
-import { conteoDeMantenimientos } from '../mantenimientos/mantenimiento'
-import { conteoDeFacturacion, esCategoriaPos } from '../facturacion/autorizacion'
+import { resumenDeMantenimientos } from '../mantenimientos/mantenimiento'
+import { esCategoriaPos, resumenDeFacturacion } from '../facturacion/autorizacion'
+import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { AutorizacionesDelPos } from '../facturacion/AutorizacionesDelPos'
 
 // LAS HOJAS DE LA FICHA (tarea 329): lo que se consulta sin dejarla. Una
@@ -160,6 +178,9 @@ export function DispositivoPage() {
     [dispositivo],
   )
   const perfil = usePerfilVivo()
+  // Con permiso pero la Bóveda bloqueada, la fila de credenciales lo dice
+  // ("Bloqueadas", tarea 342): sus títulos se ven, lo que dan no.
+  const bovedaAbierta = useBovedaDesbloqueada()
   // Ubicacion como entidad (grupo N3): el dato canonico es `ubicacionId`;
   // `dispositivo.ubicacion` es solo la copia de referencia. Se resuelve
   // en vivo contra la tabla `ubicaciones` (regla de referencia viva), asi
@@ -335,10 +356,14 @@ export function DispositivoPage() {
   const impacto = resumenImpacto(grafo, 'dispositivo', dispositivoId)
 
   if (dispositivo === null) return <Navigate to="/dispositivos" replace />
+  // Mientras se lee la copia local, la forma de la ficha (tarea 342): nada
+  // se afirma antes de leer.
   if (!dispositivo) {
     return (
       <Chasis modo="documento">
-        <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+        <main className="flex flex-1 flex-col px-4 pb-4 pt-2">
+          <EsqueletoFicha />
+        </main>
       </Chasis>
     )
   }
@@ -464,7 +489,8 @@ export function DispositivoPage() {
   // Tarea 321: "Facturación" sale en un POS, o en un equipo de otra
   // categoría que ya use alguna autorización (no se esconde una relación
   // que existe).
-  const facturacion = conteoDeFacturacion(autorizaciones)
+  const facturacion = resumenDeFacturacion(autorizaciones)
+  const mantenimiento = resumenDeMantenimientos(mantenimientos)
   const tieneFacturacion = esCategoriaPos(categoria?.nombre) || autorizaciones.some((a) => !a.eliminadoEn)
   const completitud = completitudDispositivo(dispositivo, esRed)
 
@@ -586,7 +612,8 @@ export function DispositivoPage() {
           <FilaIndice
             Icono={Key}
             titulo="Credenciales"
-            valor={totalCredenciales === 0 ? 'Ninguna' : `${totalCredenciales}`}
+            // Con la Bóveda bloqueada, que las hay pero cerradas (tarea 342).
+            valor={totalCredenciales === 0 ? 'Ninguna' : bovedaAbierta ? `${totalCredenciales}` : 'Bloqueadas'}
             abierta={hoja === 'credenciales'}
             onAbrir={() => setHoja('credenciales')}
           />
@@ -607,11 +634,13 @@ export function DispositivoPage() {
           abierta={hoja === 'adjuntos'}
           onAbrir={() => setHoja('adjuntos')}
         />
-        {/* Mantenimiento se trabaja: abre su pantalla (tarea 331). */}
+        {/* Mantenimiento se trabaja: abre su pantalla (tarea 331). Su valor
+            dice si algo pide atención o si está al día (tarea 342). */}
         <FilaIndice
           Icono={Wrench}
           titulo="Mantenimiento"
-          valor={conteoDeMantenimientos(mantenimientos)}
+          valor={mantenimiento.texto}
+          tono={mantenimiento.tono}
           abre="pantalla"
           onAbrir={() => navigate(`/dispositivos/${dispositivoId}/mantenimientos`, { state: origenEsteEquipo })}
         />
@@ -620,7 +649,7 @@ export function DispositivoPage() {
             Icono={Storefront}
             titulo="Facturación"
             valor={facturacion.texto}
-            tono={facturacion.revisar ? 'precaucion' : 'neutro'}
+            tono={facturacion.tono}
             abierta={hoja === 'facturacion'}
             onAbrir={() => setHoja('facturacion')}
           />
@@ -633,6 +662,7 @@ export function DispositivoPage() {
           onAbrir={() => setHoja('intervenciones')}
         />
       </ul>
+      <LeyendaGalones />
     </section>
   )
 
@@ -672,12 +702,16 @@ export function DispositivoPage() {
           onClick={() => setMenuAbierto((v) => !v)}
           aria-label="Acciones del equipo: favorito, compartir, duplicar, editar, etiqueta QR, reemplazar, dar de baja o eliminar"
           aria-expanded={menuAbierto}
+          aria-haspopup={ancho ? undefined : 'dialog'}
           className={BTN_ICONO_SECUNDARIO}
         >
           <DotsThreeOutline size={17} aria-hidden />
         </button>
       }
-      barra={menuAbierto && (
+      // EN EL TELÉFONO, EL MENÚ ES UNA HOJA (tarea 342, handoff móvil "1b
+      // Pulgar"): ver `MenuEnHoja`, al final. Desde 768, la banda de
+      // siempre bajo la cabecera.
+      barra={menuAbierto && ancho && (
         <div className="flex flex-col gap-3 px-4 pb-3 lg:px-10">
           <div className="flex flex-wrap gap-2">
             <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} variante="menu" />
@@ -830,8 +864,9 @@ export function DispositivoPage() {
                   )}
                 </span>
               )}
-              {/* La misma pastilla de siempre (M-017). */}
-              {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} className="mt-2" />}
+              {/* La misma pastilla de siempre (M-017); en el teléfono, con su
+                  punto delante, como el carnet del handoff (tarea 342). */}
+              {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} conPunto className="mt-2" />}
             </span>
           </div>
           <AvisosDelEquipo avisos={avisos} />
@@ -852,7 +887,7 @@ export function DispositivoPage() {
                   {dispositivo.ip}
                 </p>
               </div>
-              <BotonCopiar etiqueta="Dirección IP" texto={dispositivo.ip} destacado aviso={`IP copiada: ${dispositivo.ip}`} />
+              <BotonCopiar etiqueta="Dirección IP" texto={dispositivo.ip} destacado grande aviso={`IP copiada: ${dispositivo.ip}`} />
             </div>
           )}
 
@@ -892,16 +927,19 @@ export function DispositivoPage() {
           )}
 
           {/* A QUÉ ESTÁ CONECTADO (sección 18): el switch que le da
-              servicio y su puerto, que es lo que se busca en el rack. Abre
-              la topología de este equipo. */}
+              servicio y su puerto, que es lo que se busca en el rack. Desde
+              la tarea 342 abre la hoja de Conexiones (se consulta sin dejar
+              la ficha), que lleva su "Ver en topología". */}
           {subida && (
-            <Link
-              to={`/red/topologia/${dispositivoId}`}
-              state={origenEsteEquipo}
+            <button
+              type="button"
+              onClick={() => setHoja('conexiones')}
+              aria-haspopup="dialog"
+              aria-expanded={hoja === 'conexiones'}
               aria-label={`Conectado a ${textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}${
                 subida.otros > 0 ? ` y ${subida.otros} más` : ''
-              }. Ver conexión`}
-              className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5 hover:bg-noct-text/[.04]"
+              }. Ver sus conexiones`}
+              className="flex min-h-14 w-full items-center gap-3 border-b border-noct-divider py-1.5 text-left text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
             >
               <PlugsConnected size={18} className="shrink-0 text-noct-neutral-500" aria-hidden />
               <span className="min-w-0 flex-1">
@@ -911,8 +949,9 @@ export function DispositivoPage() {
                   {subida.otros > 0 && <span className="font-inter text-noct-neutral-500"> · y {subida.otros} más</span>}
                 </span>
               </span>
-              <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
-            </Link>
+              {/* `CaretUp`: se consulta en una hoja (el galón del índice). */}
+              <CaretUp size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+            </button>
           )}
         </section>
         )}
@@ -1092,6 +1131,20 @@ export function DispositivoPage() {
         </div>
       </HojaInferior>
 
+      {!ancho && (
+        <MenuEnHoja
+          abierta={menuAbierto}
+          onCerrar={() => setMenuAbierto(false)}
+          dispositivoId={dispositivoId}
+          nombre={dispositivo.nombre}
+          origen={origenEsteEquipo}
+          onEliminar={() => {
+            setMenuAbierto(false)
+            setMostrarEliminar(true)
+          }}
+        />
+      )}
+
       <DialogoEliminar
         abierto={mostrarEliminar}
         sensible
@@ -1222,16 +1275,21 @@ function PuertaDocumentar({
 
   return (
     <div id="documentar" className="flex flex-col gap-2">
+      {/* La acción en texto 2 (a 14 en el teléfono, tarea 342) y debajo, a
+          12 en texto 4, la nota de que se hace mejor en el ordenador. Antes
+          la nota iba en neutral-600, por debajo de 4.5:1. */}
       <button
         type="button"
         onClick={() => setAbierta((v) => !v)}
         aria-expanded={abierta}
-        className="flex min-h-11 items-center gap-2 text-left text-[12px] leading-[1.5] text-noct-neutral-400 hover:text-noct-neutral-300"
+        className="flex min-h-11 items-center gap-2 py-1 text-left text-noct-neutral-300 hover:text-noct-text max-md:active:bg-noct-presionado"
       >
-        <PencilSimple size={14} className="shrink-0" aria-hidden />
+        <PencilSimple size={15} className="shrink-0" aria-hidden />
         <span className="min-w-0 flex-1">
-          Documentar este equipo · foto, procedimiento o incidencia
-          <span className="text-noct-neutral-600"> se hace mejor desde el ordenador</span>
+          <span className="block text-[13px] leading-snug max-md:text-[14px]">
+            Documentar este equipo: foto, procedimiento o incidencia
+          </span>
+          <span className="block text-[12px] leading-snug text-noct-neutral-500">Se hace mejor desde el ordenador</span>
         </span>
         <CaretDown
           size={13}
@@ -1316,6 +1374,81 @@ function BotonCompartir({ titulo }: { titulo: string }) {
       {copiado ? <Check size={14} className="text-noct-exito" aria-hidden /> : <ShareNetwork size={14} aria-hidden />}
       {copiado ? 'Enlace copiado' : 'Compartir la ficha'}
     </button>
+  )
+}
+
+// EL MENÚ "···" DE LA FICHA EN EL TELÉFONO (tarea 342, handoff móvil "1b
+// Pulgar"). Antes, una banda de botones dentro de la cabecera, que empujaba
+// la ficha hacia abajo; ahora la hoja de siempre, con una fila de 54 por
+// acción. Lo destructivo va aparte (regla 30): después de un espacio y una
+// línea, en rojo, nunca junto a Editar. Cada acción cierra la hoja al
+// elegirse, menos Favorito, que cambia su estrella a la vista. Compartir
+// confirma con el aviso flotante cuando copia el enlace. Desde 768 la ficha
+// sigue usando la banda: esta hoja solo se monta en el teléfono.
+function MenuEnHoja({
+  abierta,
+  onCerrar,
+  dispositivoId,
+  nombre,
+  origen,
+  onEliminar,
+}: {
+  abierta: boolean
+  onCerrar: () => void
+  dispositivoId: string
+  nombre: string
+  /** Etiquetas vuelve a este equipo, no a su puerta de inventario. */
+  origen: EstadoConOrigen
+  onEliminar: () => void
+}) {
+  async function compartir() {
+    const resultado = await compartirOCopiar(nombre)
+    if (resultado === 'copiado') avisar('Enlace de la ficha copiado', 'copiado')
+    if (resultado !== 'fallo') onCerrar()
+  }
+  const icono = 'shrink-0 text-noct-neutral-300'
+
+  return (
+    <HojaInferior abierta={abierta} onCerrar={onCerrar} titulo="Acciones del equipo" contexto={nombre}>
+      <div role="group" aria-label="Acciones del equipo" className="flex flex-col">
+        <BotonFavorito tipo="dispositivo" entidadId={dispositivoId} variante="hoja" />
+        <button type="button" onClick={() => void compartir()} className={FILA_ACCION_HOJA}>
+          <ShareNetwork size={19} className={icono} aria-hidden />
+          Compartir la ficha
+        </button>
+        <Link to={`/dispositivos/nuevo?copiarDe=${dispositivoId}`} onClick={onCerrar} className={FILA_ACCION_HOJA}>
+          <Copy size={19} className={icono} aria-hidden />
+          Duplicar
+        </Link>
+        <Link to={`/dispositivos/${dispositivoId}/editar`} onClick={onCerrar} className={FILA_ACCION_HOJA}>
+          <PencilSimple size={19} className={icono} aria-hidden />
+          Editar
+        </Link>
+        <Link to="/dispositivos/etiquetas" state={origen} onClick={onCerrar} className={FILA_ACCION_HOJA}>
+          <QrCode size={19} className={icono} aria-hidden />
+          Etiqueta QR
+        </Link>
+        <Link to={`/dispositivos/nuevo?reemplazaA=${dispositivoId}`} onClick={onCerrar} className={FILA_ACCION_HOJA}>
+          <ArrowsClockwise size={19} className={icono} aria-hidden />
+          Reemplazar
+        </Link>
+      </div>
+      {/* Lo que retira el equipo, aparte: 18 px de aire y una línea. */}
+      <div
+        role="group"
+        aria-label="Retirar el equipo"
+        className="mt-[18px] flex flex-col border-t border-noct-divider [&>*:last-child]:border-b-0"
+      >
+        <Link to={`/dispositivos/${dispositivoId}/baja`} onClick={onCerrar} className={FILA_ACCION_HOJA_PELIGRO}>
+          <XCircle size={19} className="shrink-0" aria-hidden />
+          Dar de baja
+        </Link>
+        <button type="button" onClick={onEliminar} className={FILA_ACCION_HOJA_PELIGRO}>
+          <TrashSimple size={19} className="shrink-0" aria-hidden />
+          Eliminar
+        </button>
+      </div>
+    </HojaInferior>
   )
 }
 

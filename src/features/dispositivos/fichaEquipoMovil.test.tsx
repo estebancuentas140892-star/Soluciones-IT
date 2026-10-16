@@ -17,8 +17,16 @@ import {
   textoPantalla,
   tocar,
 } from '../../pruebas/montaje'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { Wrench, type IconoProps } from '../../components/iconos'
 import { bloquear } from '../boveda/sesionBoveda'
 import { DispositivoPage } from './DispositivoPage'
+
+/** El primer trazo de un icono, para saber cuál se dibujó. */
+function trazoDe(Icono: (props: IconoProps) => React.JSX.Element): string | undefined {
+  return /\sd="([^"]+)"/.exec(renderToStaticMarkup(createElement(Icono)))?.[1]
+}
 
 // LA FICHA DE EQUIPO EN EL TELÉFONO (rediseño móvil "1b Pulgar", tarea 329,
 // AD-079): avisos bajo el carnet, "Resolver con este equipo" con tres formas
@@ -191,6 +199,60 @@ describe('la cabecera y el menú', () => {
     expect(eliminar.parentElement).not.toBe(editar.parentElement)
     expect(eliminar.parentElement?.className).toContain('border-t')
   })
+
+  // Tarea 342: en el teléfono el "···" abre una hoja, no una banda en la
+  // cabecera; las seis acciones en filas de 54 y lo destructivo en rojo.
+  it('en el teléfono el menú es una hoja con lo destructivo aparte y en rojo', async () => {
+    await sembrarEquipo({ id: 'pc', nombre: 'PC de prueba' })
+    await montar(RUTAS, '/dispositivos/pc')
+    const menu = await esperarControl(/^Acciones del equipo/)
+    expect(menu.getAttribute('aria-haspopup')).toBe('dialog')
+    await tocar(menu)
+    const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja del menú')
+    expect(hoja.textContent).toContain('Acciones del equipo')
+    const nombres = ['Marcar como favorito', 'Compartir la ficha', 'Duplicar', 'Editar', 'Etiqueta QR', 'Reemplazar', 'Dar de baja', 'Eliminar']
+    for (const nombre of nombres) {
+      const accion = control(nombre) as HTMLElement
+      expect(hoja.contains(accion)).toBe(true)
+      expect(accion.className).toContain('min-h-[54px]')
+    }
+    // Nada de la banda de antes dentro de la cabecera.
+    expect(document.body.querySelector('.sticky')?.contains(control('Editar'))).toBe(false)
+    for (const nombre of ['Dar de baja', 'Eliminar']) expect((control(nombre) as HTMLElement).className).toContain('text-noct-error')
+    expect((control('Editar') as HTMLElement).className).not.toContain('text-noct-error')
+
+    // Eliminar cierra la hoja y pide confirmación.
+    await tocar(control('Eliminar') as HTMLElement)
+    await esperar(() => textoPantalla().includes('¿Eliminar el equipo "PC de prueba"?'), 'la confirmación')
+  })
+})
+
+describe('el carnet y los datos para trabajar en el teléfono (tarea 342)', () => {
+  it('la pastilla lleva su punto, la IP se copia con un botón de 48 y el índice explica sus galones', async () => {
+    await sembrarEquipo({ id: 'pc', nombre: 'PC de prueba', ip: '10.9.9.30', estado: 'Operativo' })
+    await montar(RUTAS, '/dispositivos/pc')
+    await esperar(() => textoPantalla().includes('10.9.9.30'), 'la ficha')
+    const punto = document.body.querySelector('[data-punto-estado]')
+    expect(punto).not.toBeNull()
+    expect(punto?.parentElement?.textContent).toContain('Operativo')
+    const copiar = control('Copiar dirección ip') as HTMLElement
+    expect(copiar.className).toContain('max-md:h-12')
+    expect(copiar.className).toContain('max-md:w-12')
+    expect(copiar.className).toContain('max-md:rounded-[12px]')
+    const leyenda = document.body.querySelector('[data-leyenda-galones]')
+    expect(leyenda?.textContent).toContain('se consulta aquí')
+    expect(leyenda?.textContent).toContain('abre su pantalla')
+    expect(leyenda?.className).toContain('md:hidden')
+  })
+
+  it('mientras se lee la copia local, la forma de la ficha y no "Cargando..."', async () => {
+    await montar(RUTAS, '/dispositivos/pc-que-aun-no-llega')
+    // El equipo no existe: Dexie devuelve `undefined` y la ficha espera.
+    const esqueleto = await esperar(() => document.body.querySelector('[data-esqueleto]'), 'el esqueleto')
+    expect(esqueleto.getAttribute('role')).toBe('status')
+    expect(textoPantalla()).toContain('Leyendo la copia local…')
+    expect(textoPantalla()).not.toContain('Cargando...')
+  })
 })
 
 describe('la barra fija', () => {
@@ -212,6 +274,11 @@ describe('la barra fija', () => {
 
     const resolver = await esperarControl('Resolver un problema con este equipo')
     expect(resolver.className).toContain('bg-noct-accent')
+    // La llave inglesa de "resolver" (tarea 342): el árbol queda para las
+    // guías con preguntas.
+    expect(resolver.querySelector('svg path')?.getAttribute('d')).toBe(trazoDe(Wrench))
+    // Con la Bóveda bloqueada, la fila dice que las hay pero cerradas.
+    await esperar(() => (control(/^Credenciales/)?.textContent ?? '').includes('Bloqueadas'), 'credenciales bloqueadas')
     await tocar(await esperarControl('Credenciales del equipo'))
     const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja')
     await esperar(() => (hoja.textContent ?? '').includes('Acceso de prueba al PC'), 'la credencial')

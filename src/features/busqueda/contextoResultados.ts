@@ -3,6 +3,7 @@ import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 import type { AccionGuia } from '../soluciones/accionGuia'
 import { registrarResolucion, type EventoResolucion } from './medicion'
 import type { ModoBuscador } from './modoConsulta'
+import type { DatosDeEquipo } from './useDatosDeEquipos'
 
 // Lo que toda fila de resultados necesita saber y NINGUNA deberia
 // recalcular por su cuenta (tarea 241): que ofrece cada guia, que se
@@ -55,6 +56,11 @@ export interface ValorContextoResultados {
    * con él, para que una acción pueda pedir la credencial de ESE equipo.
    */
   equipoDeLaConsulta: string | null
+  /**
+   * La IP y si es un POS de cada equipo, por su id (tarea 342): la fila de
+   * un equipo la enseña en el teléfono. Una sola lectura para toda la lista.
+   */
+  equipos: ReadonlyMap<string, DatosDeEquipo>
 }
 
 const VALOR_POR_DEFECTO: ValorContextoResultados = {
@@ -68,6 +74,7 @@ const VALOR_POR_DEFECTO: ValorContextoResultados = {
   estadoDeSalto: {},
   alSaltar: () => undefined,
   equipoDeLaConsulta: null,
+  equipos: new Map(),
 }
 
 export const ContextoResultados = createContext<ValorContextoResultados>(VALOR_POR_DEFECTO)

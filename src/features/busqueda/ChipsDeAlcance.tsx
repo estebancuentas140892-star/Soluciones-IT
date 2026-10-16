@@ -29,9 +29,13 @@ export function ChipsDeAlcance({
             type="button"
             aria-pressed={activo}
             onClick={() => onCambiar(chip.valor)}
+            // EL ACTIVO, RELLENO EN EL TELÉFONO (tarea 342, handoff móvil): el
+            // texto del sistema de fondo y el fondo en su letra, que se lee en
+            // los dos temas sin depender del cian. Desde 768, el tinte de
+            // acento de la 339.
             className={`inline-flex h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-[13.5px] font-semibold transition-colors ${
               activo
-                ? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300'
+                ? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300 max-md:border-noct-text max-md:bg-noct-text max-md:text-noct-bg'
                 : 'border-noct-text/25 text-noct-neutral-200 hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado'
             }`}
           >

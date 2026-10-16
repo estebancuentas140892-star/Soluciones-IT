@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState, useSyncExternalStore } from 'react'
 import { obtenerEstadoSync, sincronizar, suscribirSync } from '../lib/sync'
 import { CloudArrowUp, CloudCheck, CloudSlash } from './iconos'
+import { useEnLinea } from './useEnLinea'
 
 const PanelSync = lazy(() => import('./PanelSync').then((m) => ({ default: m.PanelSync })))
 
@@ -20,20 +21,13 @@ const PanelSync = lazy(() => import('./PanelSync').then((m) => ({ default: m.Pan
 // ancho completo que dibuja el mockup para sin-conexion-con-cambios
 // queda deliberadamente fuera de esta tarea: exigiria reestructurar la
 // fila de tres ranuras de BarraSuperior para todas las pantallas de
-// seccion, un cambio de mayor alcance que el color y el texto.
-
-function suscribirRed(escucha: () => void): () => void {
-  window.addEventListener('online', escucha)
-  window.addEventListener('offline', escucha)
-  return () => {
-    window.removeEventListener('online', escucha)
-    window.removeEventListener('offline', escucha)
-  }
-}
+// seccion, un cambio de mayor alcance que el color y el texto. Desde la
+// tarea 342 esa franja existe en el teléfono (`FranjaEstadoSistema`, que
+// monta el chasis) y comparte con esta pastilla la escucha de la red.
 
 export function PastillaSync() {
   const estado = useSyncExternalStore(suscribirSync, obtenerEstadoSync)
-  const enLinea = useSyncExternalStore(suscribirRed, () => navigator.onLine)
+  const enLinea = useEnLinea()
   const [panelAbierto, setPanelAbierto] = useState(false)
 
   // Al día no tiene nada que decir: solo el icono, mismo hueco de 44x44

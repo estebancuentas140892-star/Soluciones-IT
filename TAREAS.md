@@ -91,6 +91,24 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 |---|---|---|---|
 | 1 a 7 | Hoja inferior, respuesta al tocar, aviso flotante, tamaños mínimos, acción rellena, pantalla final de la guía y tokens | 341 | Hecha (archivada) |
 
+**ENCARGO DEL 2026-10-16: FIDELIDAD VISUAL "1b PULGAR" EN LA FICHA, LA BÚSQUEDA Y LOS ESTADOS DEL SISTEMA.** Mismo handoff móvil del 2026-10-13. ChatGPT revisó `main` (`4953a40`) y definió lo que falta; no es una auditoría ni reabre las 327 a 341. Solo presentación por debajo de 768 px: desde 768 se conserva lo aprobado en la 339. No toca la 322, la 337, Supabase, Dexie ni la sincronización de datos.
+
+| Bloque | Qué | Tarea del tablero | Estado |
+|---|---|---|---|
+| A, B y C | Ficha de equipo, búsqueda global y estados del sistema (esqueletos, sin conexión, error y línea de sincronización) | 342 | En proceso (rama `feat/fidelidad-pulgar-ficha-busqueda`, sin integrar) |
+
+### 342. Fidelidad visual Pulgar: ficha, búsqueda y estados de sistema
+
+- **Descripción:** acercar al prototipo "1b Pulgar" (`Prototipo Soluciones IT.dc.html` y `Sistema visual movil.dc.html`) lo que quedó lejos en el teléfono. **A, ficha:** pastilla de estado con punto, IP con copiar de 48 x 48, verbos del responsable a 14 y "por validar" en precaución, "Conectado a" abre la hoja de Conexiones, valores útiles en "Más del equipo" (credenciales "Bloqueadas", mantenimiento "Atrasado / Hoy / fecha / Al día", facturación "En conflicto / Por validar / Confirmada / Sin autorización"), leyenda de los galones, `Wrench` en "Resolver un problema", el menú "···" en una hoja con lo destructivo aparte y la puerta "Documentar este equipo" legible. **B, búsqueda:** rótulos de grupo a 13/650, chip activo relleno de alto contraste, filas de 62 con la IP en mono, "Nada coincide" compacto con Crear equipo y Limpiar búsqueda, y el estado vacío simplificado. **C, estados:** esqueletos con la forma del contenido (ficha, mantenimiento, autorización e índice de búsqueda), franja "Sin conexión" de 38, franja de error de sincronización con Reintentar y línea de 2 px mientras sincroniza.
+- **Motivo:** encargo del usuario del 2026-10-16, con el detalle de ChatGPT.
+- **Impacto:** visual, en el teléfono. Sin datos, esquema, índice ni sincronización nuevos.
+- **Prioridad:** Alta. **Estado:** En proceso.
+- **Área afectada:** `src/features/dispositivos/DispositivoPage.tsx` y `PiezasFicha.tsx`, `src/components/PastillaEstado.tsx`, `FilaDato.tsx`, `src/features/personas/ResponsableDelEquipo.tsx`, `src/features/mantenimientos/mantenimiento.ts`, `src/features/facturacion/autorizacion.ts`, `src/features/busqueda/BuscadorGlobal.tsx`, `ChipsDeAlcance.tsx` y `ResultadosBusqueda.tsx`, `src/components/Esqueleto.tsx` (nuevo), `src/components/EstadoDelSistema.tsx` (nuevo), `src/app/Chasis.tsx`, `src/features/mantenimientos/MantenimientoPage.tsx`, `src/features/facturacion/AutorizacionPage.tsx` y `src/index.css`.
+- **Fuera de alcance:** la presentación inicial de la guía, la 337, la 322, Agenda, Resolver, Más, la navegación global, la estructura de tableta y escritorio, las búsquedas recientes y la franja sin conexión dentro de la ejecución y el editor (tarea 223).
+- **Modelo/esfuerzo:** Sonnet 5 / Alto (ejecutada con Opus 5.5).
+- **Verificación (2026-10-16, sobre `4953a40`):** suite completa 225 archivos y 3427 pruebas en verde (19 nuevas: `estadosDelSistema.test.tsx`, `busquedaPulgar.test.tsx` y las de la ficha, el mantenimiento y la facturación), `tsc -b`, lint, build, `verificar-precache` y la prueba sin conexión real (84 de 84, 0 fallos). Sin auditoría visual masiva, como pidió el encargo.
+- **Estado:** implementada en la rama `feat/fidelidad-pulgar-ficha-busqueda`, con push y **sin integrar en `main` ni desplegar**. No se archiva hasta que ChatGPT la revise contra el handoff y el usuario decida integrarla.
+
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 
 - **Título:** abrir la Bóveda sin escribir la contraseña maestra cada vez, solo si mantiene el nivel de seguridad actual.

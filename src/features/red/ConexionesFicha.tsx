@@ -72,9 +72,12 @@ export function ConexionesFicha({
     <section className="flex flex-col gap-3">
       <div className={`flex items-center ${sinCabecera ? 'justify-end' : 'justify-between'}`}>
         {!sinCabecera && <TituloSeccion>Conexiones</TituloSeccion>}
+        {/* La salida a la topología: desde la tarea 342 "Conectado a" abre
+            esta hoja, así que este es el paso siguiente. En el teléfono, el
+            verbo a 14 con su objetivo de 44. */}
         <Link
           to={`/red/topologia/${dispositivo.id}`}
-          className="inline-flex items-center gap-1 text-[12px] text-noct-accent-300 hover:text-noct-accent-400"
+          className="inline-flex items-center gap-1 text-[12px] text-noct-accent-300 hover:text-noct-accent-400 max-md:min-h-11 max-md:text-[14px] max-md:font-semibold"
         >
           Ver en topología
           <CaretRight size={12} aria-hidden />

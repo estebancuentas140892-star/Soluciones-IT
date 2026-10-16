@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { alternarFavorito, esFavorito, type TipoFavorito } from '../lib/favoritos'
 import { Star, StarFill } from './iconos'
-import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO } from './nocturne'
+import { BTN_ICONO_SECUNDARIO, BTN_SECUNDARIO, FILA_ACCION_HOJA } from './nocturne'
 
 // Estrella para marcar una ficha como favorita (fase J1). Dos formas:
 // - 'cabecera': boton cuadrado con borde, para la fila de acciones de
@@ -21,13 +21,28 @@ export function BotonFavorito({
   entidadId: string
   /**
    * `menu` (tarea 329): un botón con su palabra, para el menú "···" de una
-   * ficha ("Marcar como favorito" / "Quitar de favoritos").
+   * ficha ("Marcar como favorito" / "Quitar de favoritos"). `hoja` (tarea
+   * 342): lo mismo como fila del menú en hoja del teléfono.
    */
-  variante?: 'cabecera' | 'fila' | 'menu'
+  variante?: 'cabecera' | 'fila' | 'menu' | 'hoja'
 }) {
   const marcado = useLiveQuery(() => esFavorito(tipo, entidadId), [tipo, entidadId]) ?? false
   const etiqueta = marcado ? 'Quitar de favoritos' : 'Marcar como favorito'
   const Icono = marcado ? StarFill : Star
+
+  if (variante === 'hoja') {
+    return (
+      <button
+        type="button"
+        onClick={() => void alternarFavorito(tipo, entidadId)}
+        aria-pressed={marcado}
+        className={FILA_ACCION_HOJA}
+      >
+        <Icono size={19} className={`shrink-0 ${marcado ? 'text-noct-accent' : 'text-noct-neutral-300'}`} aria-hidden />
+        {etiqueta}
+      </button>
+    )
+  }
 
   if (variante === 'menu') {
     return (

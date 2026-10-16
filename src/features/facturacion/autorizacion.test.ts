@@ -7,7 +7,7 @@ import {
   autorizacionDesdeDatos,
   autorizacionesDelPos,
   autorizacionesEnAgenda,
-  conteoDeFacturacion,
+  resumenDeFacturacion,
   DATOS_VACIOS,
   datosDesdeAutorizacion,
   errorDeAutorizacion,
@@ -406,7 +406,7 @@ describe('varios POS y ninguno', () => {
     const fila = autorizacion(autorizacionDesdeDatos('pnt9', pnt9))
     expect(fila).toMatchObject({ estado: 'conflicto', vencimientoConfirmado: null, vencimientoDocumentado: null })
     expect(enAgenda([fila])).toEqual([])
-    expect(conteoDeFacturacion([fila])).toEqual({ texto: 'PRUEBA-CONFLICTO', revisar: true })
+    expect(resumenDeFacturacion([fila], HOY)).toEqual({ texto: 'En conflicto', tono: 'error' })
   })
 
   it('PN10 a PN13: fecha documental sin PDF, por validar y sin aviso aunque esté cerca', () => {
@@ -417,7 +417,7 @@ describe('varios POS y ninguno', () => {
       fuente: 'Hoja de prueba, sin PDF',
     })
     expect(enAgenda([pn10])).toEqual([])
-    expect(conteoDeFacturacion([pn10])).toEqual({ texto: 'PRB', revisar: true })
+    expect(resumenDeFacturacion([pn10], HOY)).toEqual({ texto: 'Por validar', tono: 'precaucion' })
   })
 })
 
@@ -429,20 +429,29 @@ describe('la ficha del POS', () => {
     expect(esCategoriaPos(undefined)).toBe(false)
   })
 
-  it('la fila plegada dice el prefijo en uso, cuántas si son varias, o "Ninguna"; las reemplazadas no cuentan', () => {
-    expect(conteoDeFacturacion([])).toEqual({ texto: 'Ninguna', revisar: false })
-    expect(conteoDeFacturacion([confirmada({ prefijo: 'ZZZ' }), autorizacion({ prefijo: 'AAA', estado: 'reemplazada' })])).toEqual(
-      { texto: 'ZZZ', revisar: false },
-    )
-    // Varios prefijos seguidos pisaban el título a 320 px.
+  // Tarea 342: la fila del índice dice el estado útil, no el prefijo.
+  it('la fila del índice dice el estado útil con su tono; las reemplazadas no cuentan', () => {
+    expect(resumenDeFacturacion([], HOY)).toEqual({ texto: 'Sin autorización', tono: 'neutro' })
+    expect(resumenDeFacturacion([autorizacion({ estado: 'reemplazada' })], HOY)).toEqual({ texto: 'Sin autorización', tono: 'neutro' })
+    expect(resumenDeFacturacion([confirmada({ prefijo: 'ZZZ' }), autorizacion({ prefijo: 'AAA', estado: 'reemplazada' })], HOY)).toEqual({
+      texto: 'Confirmada',
+      tono: 'exito',
+    })
+    expect(resumenDeFacturacion([confirmada({ id: 'a' }), confirmada({ id: 'b' })], HOY)).toEqual({ texto: '2 confirmadas', tono: 'exito' })
+    // Lo que pide atención manda: el conflicto sobre lo demás, y lo por validar sobre lo confirmado.
+    expect(resumenDeFacturacion([confirmada(), autorizacion({ prefijo: 'BBB' })], HOY)).toEqual({ texto: 'Por validar', tono: 'precaucion' })
+    expect(resumenDeFacturacion([autorizacion(), autorizacion({ estado: 'conflicto' })], HOY)).toEqual({ texto: 'En conflicto', tono: 'error' })
+  })
+
+  it('una confirmada vencida o con el rango agotado no se dice "Confirmada"', () => {
+    expect(resumenDeFacturacion([confirmada({ vencimientoConfirmado: dia(-1) })], HOY)).toEqual({ texto: 'Vencida', tono: 'error' })
+    expect(resumenDeFacturacion([confirmada({ vencimientoConfirmado: dia(20) })], HOY)).toEqual({ texto: 'Confirmada', tono: 'exito' })
     expect(
-      conteoDeFacturacion([
-        confirmada({ prefijo: 'ZZZ' }),
-        autorizacion({ prefijo: 'AAA', estado: 'reemplazada' }),
-        autorizacion({ prefijo: 'BBB' }),
-      ]),
-    ).toEqual({ texto: '2 en uso', revisar: true })
-    expect(conteoDeFacturacion([autorizacion({ estado: 'reemplazada' })])).toEqual({ texto: 'Ninguna', revisar: false })
+      resumenDeFacturacion(
+        [confirmada({ consecutivoActual: 8000, consecutivoLeidoEn: dia(-2), consecutivoFuente: 'Lectura de prueba' })],
+        HOY,
+      ),
+    ).toEqual({ texto: 'Rango agotado', tono: 'error' })
   })
 
   it('las del POS: primero las que siguen en uso, las reemplazadas al final, sin eliminadas', () => {

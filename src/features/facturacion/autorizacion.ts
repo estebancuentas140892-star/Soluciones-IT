@@ -177,21 +177,40 @@ export function porUso(
 }
 
 /**
- * Lo que dice la fila plegada "Facturación" de la ficha: el prefijo en
- * uso ("PNC"), cuántas hay si son varias ("2 en uso") o "Ninguna". Varios
- * prefijos seguidos no caben junto al título en un teléfono de 320 px (lo
- * pisaban): se leen al abrir la sección. Con `revisar` en verdadero si
- * alguna pide revisión, para pintar la fila en precaución.
+ * Lo que dice la fila "Facturación" del índice de la ficha: el estado útil
+ * de lo que usa el POS, con el tono de su palabra (tarea 342; antes el
+ * prefijo, que no decía si había algo que atender). Sin estados nuevos:
+ * traduce los de siempre y lo que la Agenda ya deriva de una confirmada.
+ *
+ *   - Ninguna en uso: "Sin autorización".
+ *   - Alguna en conflicto: "En conflicto" (error). Manda sobre lo demás.
+ *   - Alguna confirmada ya vencida o con el rango agotado según una lectura
+ *     confiable: "Vencida" o "Rango agotado" (error). Decir "Confirmada" en
+ *     verde de una autorización que la Agenda da por vencida sería falso.
+ *   - Alguna documentada: "Por validar" (precaución).
+ *   - Todas confirmadas: "Confirmada" o "2 confirmadas" (éxito).
+ *
+ * El prefijo se lee al abrir la hoja: junto al título no cabía en 320 px.
  */
-export function conteoDeFacturacion(
-  autorizaciones: Pick<AutorizacionFacturacion, 'estado' | 'prefijo' | 'eliminadoEn'>[],
-): { texto: string; revisar: boolean } {
+export function resumenDeFacturacion(
+  autorizaciones: Pick<
+    AutorizacionFacturacion,
+    'estado' | 'eliminadoEn' | 'vencimientoConfirmado' | 'rangoHasta' | 'consecutivoActual' | 'consecutivoLeidoEn' | 'consecutivoFuente'
+  >[],
+  hoy: Date = new Date(),
+): { texto: string; tono: 'neutro' | 'precaucion' | 'error' | 'exito' } {
   const enUso = autorizaciones.filter((a) => !a.eliminadoEn && a.estado !== 'reemplazada')
-  if (enUso.length === 0) return { texto: 'Ninguna', revisar: false }
-  return {
-    texto: enUso.length === 1 ? enUso[0].prefijo.trim() : `${enUso.length} en uso`,
-    revisar: enUso.some(necesitaRevision),
-  }
+  if (enUso.length === 0) return { texto: 'Sin autorización', tono: 'neutro' }
+  if (enUso.some((a) => a.estado === 'conflicto')) return { texto: 'En conflicto', tono: 'error' }
+  const confirmadas = enUso.filter((a) => a.estado === 'confirmada')
+  const vencida = confirmadas.some((a) => {
+    const restantes = a.vencimientoConfirmado ? diasDeCalendario(a.vencimientoConfirmado, hoy) : null
+    return restantes !== null && restantes < 0
+  })
+  if (vencida) return { texto: 'Vencida', tono: 'error' }
+  if (confirmadas.some(rangoAgotado)) return { texto: 'Rango agotado', tono: 'error' }
+  if (enUso.some(necesitaRevision)) return { texto: 'Por validar', tono: 'precaucion' }
+  return { texto: enUso.length === 1 ? 'Confirmada' : `${enUso.length} confirmadas`, tono: 'exito' }
 }
 
 /**

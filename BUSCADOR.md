@@ -308,6 +308,15 @@ Si las primeras están cerca, sigue siendo **"Mejores resultados"**, como siempr
 - Los alcances siguen a los grupos (`GRUPOS_BUSQUEDA`): "Guías" junta guías, guías con preguntas, categorías y adjuntos; "Red" son los equipos de una categoría de red (`useIdsDeRed`); el Centro de consulta se ve solo en "Todo". "Facturación" (del diseño) no se dibuja: las autorizaciones no se indexan (tarea 321).
 - En Resolver, los borradores coincidentes (guías) se enseñan en "Todo" y en "Guías".
 
+### 7.12 La presentación del teléfono, fiel al handoff "1b Pulgar" (2026-10-16, tarea 342)
+
+Solo presentación por debajo de 768 px: nada de lo que se indexa, de la consulta, del orden, del agrupado ni de lo que filtra cada chip cambia.
+
+- **Chip activo** relleno (fondo `noct-text`, letra `noct-bg`), legible en los dos temas sin depender del cian; desde 768, el tinte de acento.
+- **Rótulos de grupo** a 13/650 en texto 3 y sin mayúsculas, con su número en mono.
+- **Fila de 62** con su divisor: caja de icono de 38 y radio 11, el nombre a 15.5/600 sin recortar, el contexto a 13. Un equipo con IP la enseña a la derecha en IBM Plex Mono y un POS lleva el glifo de Facturación (`Storefront`). La IP y si es POS se leen por id de la copia local (`useDatosDeEquipos`, como `useIdsDeRed`) y llegan a las filas por `ContextoResultados`: el índice no guarda la IP como campo y no cambia.
+- **En la capa:** "Nada coincide con «…»" compacto, con Crear equipo y Limpiar búsqueda; el estado vacío con un rótulo y los ejemplos (sin búsquedas recientes); y mientras la copia local no se ha leído, el esqueleto "Preparando el índice de búsqueda…" (`EsqueletoBusqueda`) en vez de afirmar que nada coincide. `BuscadorGlobal` lo sabe preguntando a Dexie por las dos tablas que más pesan (dos lecturas seguidas, detrás de las del índice); `useIndiceBusqueda` no cambia.
+
 ## 8. Sugerencias anti duplicados
 
 `buscarSimilares` / `buscarArticulosSimilares` (`useIndiceBusqueda.ts`) reutilizan el mismo índice y la misma expansión de sinónimos, pero además:

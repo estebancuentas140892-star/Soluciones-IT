@@ -173,11 +173,11 @@ afterEach(async () => {
 })
 
 describe('desde la ficha del POS', () => {
-  it('"Facturación" dice "Ninguna" y registra una autorización documentada con ese POS ya marcado', async () => {
+  it('"Facturación" dice "Sin autorización" y registra una autorización documentada con ese POS ya marcado', async () => {
     await sembrarBase()
     await montar(RUTAS, '/dispositivos/pos-a')
     const seccion = await esperar(() => control(/^Facturación/), 'la fila Facturación')
-    expect(seccion.textContent).toContain('Ninguna')
+    expect(seccion.textContent).toContain('Sin autorización')
     await tocar(seccion)
     await tocar(await esperar(() => control('Registrar autorización'), 'Registrar autorización'))
 
@@ -224,7 +224,7 @@ describe('desde la ficha del POS', () => {
     expect(control(/^Facturación/)).toBeNull()
   })
 
-  it('la fila dice prefijo, rango, estado, el vencimiento confirmado y si pide revisión', async () => {
+  it('la fila del índice dice el estado útil y su hoja, prefijo, rango, estado, vencimiento y si pide revisión', async () => {
     await sembrarBase()
     await sembrarAutorizacion({
       id: 'conf',
@@ -237,7 +237,9 @@ describe('desde la ficha del POS', () => {
     await sembrarAutorizacion({ id: 'doc', prefijo: 'DOC', rangoDesde: 4100, rangoHasta: 90000 })
     await montar(RUTAS, '/dispositivos/pos-a')
     const seccion = await esperar(() => control(/^Facturación/), 'la fila Facturación')
-    expect(seccion.textContent).toContain('2 en uso')
+    // Una confirmada y otra por validar: manda lo que pide atención (tarea 342).
+    await esperar(() => (seccion.textContent ?? '').includes('Por validar'), 'el estado útil')
+    expect(seccion.querySelector('.text-noct-precaucion')?.textContent).toBe('Por validar')
     await tocar(seccion)
     await esperar(() => textoPantalla().includes('Rango 4.100 a 90.000'), 'las filas')
     expect(textoPantalla()).toContain('Rango 3.000 a 8.000')

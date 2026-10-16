@@ -83,22 +83,33 @@ export function mantenimientosEnAgenda(
 }
 
 /**
- * Lo que dice la fila plegada "Mantenimiento" de la ficha: el abierto más
- * cercano ("Atrasado", "Hoy", "20 oct") o "Ninguno". Los antecedentes por
- * validar no cuentan: no son trabajo pendiente.
+ * Lo que dice la fila "Mantenimiento" del índice de la ficha, con el tono de
+ * su palabra: el abierto más cercano ("Atrasado" en error, "Hoy" en
+ * precaución, "20 oct") o, sin trabajo pendiente, "Al día" (tarea 342; antes
+ * "Ninguno", que no decía nada). "Al día" va en éxito solo si el equipo tiene
+ * un mantenimiento realizado y confirmado: sin ninguno, no hay nada que
+ * celebrar y va neutro. Los antecedentes por validar no cuentan: no son
+ * trabajo pendiente ni prueban que se hiciera.
  */
-export function conteoDeMantenimientos(mantenimientos: MantenimientoDeAgenda[], hoy: Date = new Date()): string {
+export function resumenDeMantenimientos(
+  mantenimientos: MantenimientoDeAgenda[],
+  hoy: Date = new Date(),
+): { texto: string; tono: 'neutro' | 'precaucion' | 'error' | 'exito' } {
   const fechas = mantenimientos
     .filter(entraEnAgenda)
     .map((m) => m.fechaProgramada as string)
     .sort()
   const primera = fechas[0]
-  if (!primera) return 'Ninguno'
-  const restantes = diasDeCalendario(primera, hoy)
-  if (restantes === null) return 'Ninguno'
-  if (restantes < 0) return 'Atrasado'
-  if (restantes === 0) return 'Hoy'
-  return fechaCorta(primera)
+  const restantes = primera ? diasDeCalendario(primera, hoy) : null
+  if (primera && restantes !== null) {
+    if (restantes < 0) return { texto: 'Atrasado', tono: 'error' }
+    if (restantes === 0) return { texto: 'Hoy', tono: 'precaucion' }
+    return { texto: fechaCorta(primera), tono: 'neutro' }
+  }
+  const realizado = mantenimientos.some(
+    (m) => !m.eliminadoEn && m.validacion === 'confirmado' && m.estado === 'realizado',
+  )
+  return { texto: 'Al día', tono: realizado ? 'exito' : 'neutro' }
 }
 
 // ----------------------------------------------------------------

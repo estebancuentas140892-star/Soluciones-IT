@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
+import { EsqueletoMantenimiento } from '../../components/Esqueleto'
 import { Plus } from '../../components/iconos'
 import { BTN_DELINEADO_CABECERA } from '../../components/nocturne'
 import { db } from '../../lib/db'
@@ -19,10 +20,13 @@ export function MantenimientosPage() {
   const [programando, setProgramando] = useState(false)
 
   if (dispositivo === null || dispositivo?.eliminadoEn) return <Navigate to="/dispositivos" replace />
+  // Mientras se lee, su forma (tarea 342): nada se afirma antes de leer.
   if (dispositivo === undefined) {
     return (
       <Chasis modo="documento">
-        <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+        <main className="flex flex-1 flex-col px-4 pb-4 pt-2">
+          <EsqueletoMantenimiento />
+        </main>
       </Chasis>
     )
   }

@@ -105,12 +105,19 @@ export function BotonCopiar({
   etiqueta,
   texto,
   destacado = false,
+  grande = false,
   conTexto = false,
   aviso,
 }: {
   etiqueta: string
   texto: string
   destacado?: boolean
+  /**
+   * El copiar de la IP del carnet (tarea 342, handoff móvil "1b Pulgar"): en
+   * el teléfono, 48 x 48 con radio 12 y el icono a 20. Va con `destacado`;
+   * desde 768 es el destacado de siempre.
+   */
+  grande?: boolean
   conTexto?: boolean
   /**
    * El aviso flotante al copiar ("IP copiada: 10.0.0.5", tarea 341). Solo
@@ -132,9 +139,13 @@ export function BotonCopiar({
   const clase = conTexto
     ? 'gap-1.5 bg-noct-text/[.07] px-2.5 text-[12.5px] font-medium text-noct-neutral-200 hover:bg-noct-text/[.13] max-md:text-[14px]'
     : destacado
-      ? 'w-11 bg-noct-text/[.06] text-noct-neutral-300 hover:bg-noct-text/[.11]'
+      ? `w-11 bg-noct-text/[.06] text-noct-neutral-300 hover:bg-noct-text/[.11] ${
+          grande ? 'max-md:h-12 max-md:w-12 max-md:rounded-[12px] max-md:text-noct-text max-md:active:bg-noct-presionado' : ''
+        }`
       : 'w-9 text-noct-neutral-400 hover:bg-noct-text/[.05] max-md:w-11'
   const tamano = destacado || conTexto ? 17 : 16
+  // El dibujo de 20 del teléfono va por CSS, que manda sobre el atributo.
+  const claseIcono = grande ? 'max-md:h-5 max-md:w-5' : ''
 
   return (
     <button
@@ -144,9 +155,9 @@ export function BotonCopiar({
       className={`flex h-11 shrink-0 items-center justify-center rounded-lg ${clase}`}
     >
       {copiado ? (
-        <Check size={tamano} className="text-noct-exito" aria-hidden />
+        <Check size={tamano} className={`text-noct-exito ${claseIcono}`} aria-hidden />
       ) : (
-        <Copy size={tamano} aria-hidden />
+        <Copy size={tamano} className={claseIcono} aria-hidden />
       )}
       {conTexto && (copiado ? 'Copiado' : 'Copiar')}
     </button>

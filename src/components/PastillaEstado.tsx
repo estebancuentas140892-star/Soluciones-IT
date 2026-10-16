@@ -41,9 +41,21 @@ const CLASES_POR_TONO: Record<TonoPastilla, string> = {
 const BASE =
   'inline-flex shrink-0 items-center gap-[5px] rounded-full border px-[9px] py-[3px] text-[11px] max-md:text-[12px] font-medium leading-[1.35]'
 
+// LA PASTILLA CON PUNTO DEL TELÉFONO (tarea 342, carnet del handoff móvil
+// "1b Pulgar"): el borde en el color pleno del estado, la palabra a 12/600 y
+// un punto de 6 px delante, así el estado no se lee solo por el color de la
+// palabra. Desde 768 es la pastilla de siempre, sin punto.
+const CLASES_PUNTO_TELEFONO: Record<TonoPastilla, string> = {
+  precaucion: 'max-md:border-noct-precaucion',
+  neutro: 'max-md:border-noct-neutral-500',
+  exito: 'max-md:border-noct-exito',
+  error: 'max-md:border-noct-error',
+}
+
 export function PastillaEstado({
   tono,
   Icono,
+  conPunto = false,
   children,
   className = '',
 }: {
@@ -52,11 +64,18 @@ export function PastillaEstado({
   // una etiqueta, no un control, así que el glifo acompaña al texto en
   // vez de sustituirlo.
   Icono?: ComponentType<IconoProps>
+  /** El punto de color delante de la palabra, solo en el teléfono (tarea 342). */
+  conPunto?: boolean
   children: ReactNode
   className?: string
 }) {
   return (
-    <span className={`${BASE} ${CLASES_POR_TONO[tono]} ${className}`}>
+    <span
+      className={`${BASE} ${CLASES_POR_TONO[tono]} ${
+        conPunto ? `max-md:px-2.5 max-md:font-semibold ${CLASES_PUNTO_TELEFONO[tono]}` : ''
+      } ${className}`}
+    >
+      {conPunto && <span data-punto-estado aria-hidden className="hidden h-1.5 w-1.5 shrink-0 rounded-full bg-current max-md:block" />}
       {Icono && <Icono size={10} aria-hidden />}
       {children}
     </span>
@@ -75,14 +94,17 @@ export function PastillaEstado({
 // color, y una pastilla por nodo sería ruido en un árbol de veinte.
 export function PastillaEstadoDispositivo({
   estado,
+  conPunto = false,
   className = '',
 }: {
   estado: string
+  /** Con el punto del carnet en el teléfono (la ficha del equipo, tarea 342). */
+  conPunto?: boolean
   className?: string
 }) {
   const { etiqueta } = estadoConEtiqueta(estado)
   return (
-    <PastillaEstado tono={tonoEstado(etiqueta)} className={className}>
+    <PastillaEstado tono={tonoEstado(etiqueta)} conPunto={conPunto} className={className}>
       {etiqueta}
     </PastillaEstado>
   )

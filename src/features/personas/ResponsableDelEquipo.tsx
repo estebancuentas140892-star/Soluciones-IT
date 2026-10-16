@@ -119,7 +119,8 @@ export function ResponsableDelEquipo({
         <button
           type="button"
           onClick={() => setCambiando(true)}
-          className="min-h-11 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06] max-md:text-[14px] max-md:active:bg-noct-presionado"
+          // En el teléfono, el verbo del handoff: 14/600 en acento (tarea 342).
+          className="min-h-11 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium text-noct-neutral-300 hover:bg-noct-text/[.06] max-md:text-[14px] max-md:font-semibold max-md:text-noct-accent-300 max-md:active:bg-noct-presionado"
         >
           Cambiar
         </button>
@@ -147,12 +148,14 @@ export function ResponsableDelEquipo({
   return (
     <div className="flex items-center gap-1 pr-2">
       <span className="flex min-h-12 min-w-0 flex-1 items-center gap-2.5 px-3.5 py-1.5 text-[13.5px] text-noct-neutral-200">
-        <User size={15} className="shrink-0 text-noct-neutral-500" aria-hidden />
+        {/* Por validar, en precaución: el icono y lo anotado en su color,
+            como el estado "Por validar" del sistema visual (tarea 342). */}
+        <User size={15} className={`shrink-0 ${porValidar ? 'text-noct-precaucion' : 'text-noct-neutral-500'}`} aria-hidden />
         {/* Un nombre escrito que no es una ficha de persona no se
             presenta como persona ni se resuelve solo (tarea 266): se dice
             que está anotado y por validar. */}
         {porValidar ? (
-          <span className="min-w-0 flex-1 leading-[1.4]">Anotado: «{porValidar}» · por validar</span>
+          <span className="min-w-0 flex-1 leading-[1.4] text-noct-precaucion">Anotado: «{porValidar}» · por validar</span>
         ) : (
           <span className="block min-w-0 flex-1 truncate">Sin responsable</span>
         )}
@@ -160,7 +163,7 @@ export function ResponsableDelEquipo({
       <button
         type="button"
         onClick={() => setAsignando(true)}
-        className="min-h-11 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/10 max-md:text-[14px] max-md:active:bg-noct-presionado"
+        className="min-h-11 shrink-0 rounded-md px-2.5 text-[12.5px] font-medium text-noct-accent-300 hover:bg-noct-accent/10 max-md:text-[14px] max-md:font-semibold max-md:active:bg-noct-presionado"
       >
         Asignar
       </button>

@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Campo, CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
+import { EsqueletoMantenimiento } from '../../components/Esqueleto'
 import { HojaInferior } from '../../components/HojaInferior'
 import { Check, ClockCountdown, ClockCounterClockwise, Note, Plus, SealCheck, User, Wrench } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
@@ -76,7 +77,9 @@ export function MantenimientosDelEquipo({
   )
   const [cerrando, setCerrando] = useState<Mantenimiento | null>(null)
 
-  if (!mantenimientos) return null
+  // Sin leer todavía, la forma de lo que viene (tarea 342): ni "Sin
+  // mantenimientos" ni "al día" antes de mirar.
+  if (!mantenimientos) return <EsqueletoMantenimiento />
   const abiertos = mantenimientos.filter(entraEnAgenda).sort(porFechaProgramada)
   const realizados = mantenimientos
     .filter((m) => m.estado === 'realizado' && !esPorValidar(m))

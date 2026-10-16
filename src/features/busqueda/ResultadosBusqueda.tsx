@@ -1,8 +1,7 @@
 import { Fragment, useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
-import { CaretDown, CaretRight, CaretUp, Crosshair } from '../../components/iconos'
-import { TituloSeccion } from '../../components/nocturne'
+import { CaretDown, CaretRight, CaretUp, Crosshair, Storefront } from '../../components/iconos'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { useAccionesDeGuia } from '../soluciones/useAccionesDeGuia'
 import { AccionesDeResultado } from './AccionesResultado'
@@ -25,6 +24,7 @@ import { agruparResultados, partirTitulo, VISUAL_POR_TIPO } from './resultados'
 import type { ResultadoBusqueda } from './useIndiceBusqueda'
 import { VistaRapidaResultado } from './VistaRapida'
 import { useRanuraVistaRapida } from './ranuraVistaRapida'
+import { useDatosDeEquipos } from './useDatosDeEquipos'
 
 // Presentacion compartida de los resultados del buscador global. El
 // catalogo y el agrupado viven en resultados.ts; el ranking global, en
@@ -102,8 +102,14 @@ export function FilaResultado({
     estadoDeSalto,
     alSaltar,
     equipoDeLaConsulta: equipoConsultado,
+    equipos,
   } = useContextoResultados()
-  const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
+  // Un equipo dice en su fila lo que es (tarea 342): un POS lleva el glifo
+  // de Facturación, y en el teléfono su IP va a la derecha en mono.
+  const equipo = resultado.tipo === 'dispositivo' ? equipos.get(idDeEntidad(resultado.id)) : undefined
+  const visual = VISUAL_POR_TIPO[resultado.tipo]
+  const Icono = equipo?.pos ? Storefront : visual.Icono
+  const tono = visual.tono
   const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
   const conPrefijo = prefijoAtenuado ? partirPorPrefijo(resultado.titulo, consulta) : null
   const conSuTipo = conTipo ? partesSubtituloConTipo(resultado) : null
@@ -145,14 +151,17 @@ export function FilaResultado({
   // sí se recortan: son contexto, no la identidad del resultado.
   const cuerpo = (
     <>
-      <span className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md ${tono}`}>
-        <Icono size={17} aria-hidden />
+      {/* En el teléfono, la caja de 38 con radio 11 del handoff (tarea 342). */}
+      <span
+        className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md max-md:h-[38px] max-md:w-[38px] max-md:rounded-[11px] ${tono}`}
+      >
+        <Icono size={17} className="max-md:h-[19px] max-md:w-[19px]" aria-hidden />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {conPrefijo ? (
           <span
             data-nombre-principal
-            className="min-w-0 text-[15px] leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+            className="min-w-0 text-[15px] leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty] max-md:text-[15.5px]"
           >
             <span className="text-noct-neutral-400 underline decoration-noct-accent-600 decoration-dotted underline-offset-4">
               {conPrefijo.prefijo}
@@ -162,7 +171,7 @@ export function FilaResultado({
         ) : (
           <span
             data-nombre-principal
-            className="min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty]"
+            className="min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty] max-md:text-[15.5px] max-md:font-semibold"
           >
             {pre}
             {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
@@ -171,17 +180,25 @@ export function FilaResultado({
         )}
         {conSuTipo ? (
           // LISTA MIXTA: el tipo, más claro, y el resto del contexto.
-          <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-500">
+          <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-500 max-md:text-[13px]">
             {conSuTipo.tipo && <span className="font-medium text-noct-neutral-300">{conSuTipo.tipo}</span>}
             {conSuTipo.tipo && conSuTipo.detalle && ' · '}
             {conSuTipo.detalle}
           </span>
         ) : (
           resultado.subtitulo && (
-            <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-400">{resultado.subtitulo}</span>
+            <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-400 max-md:text-[13px]">{resultado.subtitulo}</span>
           )
         )}
       </span>
+      {/* LA IP, DATO TÉCNICO, A LA DERECHA (tarea 342): en IBM Plex Mono y
+          solo en el teléfono; desde 768 la vista rápida la dice entera. Es
+          lo que se compara con la etiqueta del equipo sin abrirlo. */}
+      {equipo?.ip && (
+        <span data-ip-resultado className="shrink-0 font-mono text-[13.5px] leading-[1.3] text-noct-neutral-300 md:hidden">
+          {equipo.ip}
+        </span>
+      )}
     </>
   )
 
@@ -293,7 +310,9 @@ export function FilaResultado({
     // dentro de otro control no es HTML valido y el lector de pantalla
     // no sabria cual anuncia (mismo reparto que `FilaArticulo`). El
     // cuerpo es el enlace; las acciones van debajo, en su propia fila.
-    <div className="flex min-w-0 flex-col" onKeyDown={alTeclado}>
+    // En el teléfono, cada resultado con su divisor y la fila a todo el ancho
+    // del contenido, como en el handoff (tarea 342); desde 768, la de siempre.
+    <div className="flex min-w-0 flex-col max-md:mx-2 max-md:border-b max-md:border-noct-divider" onKeyDown={alTeclado}>
       {cabecera}
 
       {/* Las acciones directas. `empty:hidden` deja la fila exactamente
@@ -301,7 +320,7 @@ export function FilaResultado({
           margen sobrante. Con la vista rápida abierta se recogen: la
           vista trae las suyas y repetirlas encima sería ruido. */}
       {conAcciones && !abierta && (
-        <div className="flex flex-wrap items-center gap-2 px-2 pb-2 empty:hidden">
+        <div className="flex flex-wrap items-center gap-2 px-2 pb-2 empty:hidden max-md:px-0">
           <AccionesDeResultado resultado={resultado} desdeMejores={desdeMejores} />
         </div>
       )}
@@ -329,7 +348,10 @@ export function FilaResultado({
   )
 }
 
-const CLASE_FILA = 'flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 text-noct-text'
+// En el teléfono, 62 de alto y sin el margen interior: el divisor y la
+// respuesta al tocar van a todo el ancho del contenido (tarea 342).
+const CLASE_FILA =
+  'flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 text-noct-text max-md:min-h-[62px] max-md:rounded-none max-md:px-0'
 
 export function ResultadosBusqueda({
   resultados,
@@ -366,6 +388,7 @@ export function ResultadosBusqueda({
   enCapa?: boolean
 }) {
   const accionesGuia = useAccionesDeGuia()
+  const equipos = useDatosDeEquipos()
   const lectura = useMemo(() => leerResultados(resultados, consulta), [resultados, consulta])
   // Lo que Resolver ya sabe del equipo de la consulta, leído sin tocar el
   // orden (tarea 290): solo cambia a dónde lleva una guía.
@@ -418,6 +441,7 @@ export function ResultadosBusqueda({
       estadoDeSalto,
       alSaltar,
       equipoDeLaConsulta: equipoConsultado,
+      equipos,
     }),
     [
       accionesGuia,
@@ -430,6 +454,7 @@ export function ResultadosBusqueda({
       estadoDeSalto,
       alSaltar,
       equipoConsultado,
+      equipos,
     ],
   )
 
@@ -526,13 +551,20 @@ export function ResultadosBusqueda({
           return (
           <Fragment key={seccion.clave}>
             <section>
-              <div className="mb-1 flex items-center gap-2 px-0.5">
+              {/* EL RÓTULO DEL GRUPO (tarea 342): en el teléfono, 13/650 en
+                  texto 3 y sin mayúsculas, con su número en mono, como en el
+                  handoff; desde 768, el rótulo de sección de siempre. */}
+              <div className="mb-1 flex items-center gap-2 px-0.5 max-md:mb-0.5 max-md:gap-1.5">
                 <seccion.Icono size={14} className={seccion.tonoIcono} aria-hidden />
-                <TituloSeccion>{seccion.nombre}</TituloSeccion>
+                <h2 className="text-[11px] font-medium uppercase tracking-[0.08em] text-noct-neutral-500 max-md:text-[13px] max-md:font-[650] max-md:normal-case max-md:tracking-normal max-md:text-noct-neutral-400">
+                  {seccion.nombre}
+                </h2>
                 {seccion.sinCuenta ? null : seccion.cuenta ? (
-                  <span className="text-[11px] max-md:text-[12px] text-noct-neutral-500">{seccion.cuenta}</span>
+                  <span className="text-[11px] text-noct-neutral-500 max-md:text-[12px]">{seccion.cuenta}</span>
                 ) : (
-                  <span className="text-[11px] max-md:text-[12px] text-noct-neutral-600">{seccion.items.length}</span>
+                  <span className="text-[11px] text-noct-neutral-600 max-md:font-mono max-md:text-[12px] max-md:text-noct-neutral-500">
+                    {seccion.items.length}
+                  </span>
                 )}
               </div>
               <div className="-mx-2 grid grid-cols-1 @2xl:grid-cols-2">

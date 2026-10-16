@@ -5,6 +5,7 @@ import { Chasis } from '../../app/Chasis'
 import { Adjuntos } from '../../components/Adjuntos'
 import { avisar } from '../../components/avisosFlotantes'
 import { Campo, CLASE_CAMPO, CLASE_ETIQUETA } from '../../components/campos'
+import { EsqueletoMantenimiento } from '../../components/Esqueleto'
 import { CheckCircle } from '../../components/iconos'
 import { BTN_PRIMARIO_PELIGRO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { OpcionRadio } from '../../components/OpcionRadio'
@@ -56,10 +57,14 @@ export function MantenimientoPage() {
   if (mantenimiento === null || (mantenimiento && (mantenimiento.eliminadoEn || mantenimiento.dispositivoId !== dispositivoId))) {
     return <Navigate to={ficha} replace />
   }
+  // Mientras se lee, su forma (tarea 342). Es una tarea: sin chasis todavía,
+  // en la columna de la tarea.
   if (mantenimiento === undefined || dispositivo === undefined) {
     return (
       <div className="nocturne min-h-svh bg-noct-bg font-inter text-noct-text">
-        <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
+        <main className="mx-auto flex w-full max-w-md flex-col px-4 pt-4">
+          <EsqueletoMantenimiento />
+        </main>
       </div>
     )
   }

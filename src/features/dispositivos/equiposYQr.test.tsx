@@ -198,7 +198,15 @@ describe('la ficha del equipo', () => {
     expect(texto).toContain('Taquilla de prueba')
     expect(texto).toContain('Responsable: Persona de prueba')
     expect(texto).toContain('SW-CENTRAL-PRUEBA · Puerto 18')
-    expect(control('Conectado a SW-CENTRAL-PRUEBA · Puerto 18. Ver conexión')?.getAttribute('href')).toBe('/red/topologia/pc')
+    // Desde la tarea 342 se consulta sin dejar la ficha: abre la hoja de
+    // Conexiones, que es la que lleva a la topología.
+    const conectado = control('Conectado a SW-CENTRAL-PRUEBA · Puerto 18. Ver sus conexiones') as HTMLElement
+    expect(conectado.getAttribute('href')).toBeNull()
+    expect(conectado.getAttribute('aria-haspopup')).toBe('dialog')
+    await tocar(conectado)
+    const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja de conexiones')
+    expect(hoja.textContent).toContain('Conexiones')
+    expect(control('Ver en topología')?.getAttribute('href')).toBe('/red/topologia/pc')
   })
 
   // Tarea 266, sección 8 del encargo: un responsable escrito que no es

@@ -1,11 +1,14 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { CaretLeft, MagnifyingGlass, Plus } from '../../components/iconos'
 import { useAltoDelTeclado } from '../../components/useAltoDelTeclado'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
+import { EsqueletoBusqueda } from '../../components/Esqueleto'
 import { ANCHO_ESCRITORIO, useEsAncho } from '../../components/useEsAncho'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
+import { db } from '../../lib/db'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import type { ModoBuscador } from './modoConsulta'
 import { alcanceEfectivo, conteoPorAlcance, filtrarPorAlcance, type Alcance } from './alcanceBusqueda'
@@ -74,6 +77,20 @@ export function BuscadorGlobal({
 
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
+  // ¿YA SE LEYÓ LA COPIA LOCAL? (tarea 342) El índice nace de listas vacías
+  // mientras Dexie lee, y una búsqueda escrita en ese instante diría "Nada
+  // coincide" sin haber mirado. Hasta que las dos tablas que más pesan se
+  // hayan leído (dos lecturas seguidas, detrás de las del índice), la capa
+  // enseña su esqueleto. El índice no cambia.
+  const copiaLeida = useLiveQuery(
+    async () => {
+      await db.articulos.count()
+      await db.dispositivos.count()
+      return true
+    },
+    [],
+    false,
+  )
   // EL ALCANCE (tarea 330): solo filtra lo que ya se encontró.
   const [alcanceElegido, setAlcance] = useState<Alcance>('todo')
   const idsDeRed = useIdsDeRed()
@@ -200,7 +217,7 @@ export function BuscadorGlobal({
       )}
 
       {/* LOS CHIPS DE ALCANCE (tarea 330): solo filtran la vista. */}
-      {buscando && resultados.length > 0 && (
+      {copiaLeida && buscando && resultados.length > 0 && (
         <div className="flex-none px-3.5 pb-2.5 md:border-b md:border-noct-divider md:px-6 md:py-3 xl:px-5">
           <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />
         </div>
@@ -214,12 +231,21 @@ export function BuscadorGlobal({
           className="min-h-0 min-w-0 flex-1 overflow-y-auto border-t border-noct-divider px-4 pb-6 pt-4 md:border-t-0 md:px-6 xl:px-[22px]"
         >
           <ProveedorRanuraVistaRapida value={escritorio ? ranuraVista : null}>
-            {!buscando ? (
-              <div className="flex flex-col gap-1 px-0.5">
-                <p className="text-[14.5px] font-medium leading-snug">¿Qué necesitas resolver?</p>
-                <p className="text-[13px] leading-relaxed text-noct-neutral-400">{AYUDA_BUSCADOR}</p>
-                <p className="mt-1 text-[12.5px] leading-relaxed text-noct-neutral-500">
-                  Tolera errores de escritura y entiende sinónimos: "backup" encuentra "copia de seguridad".
+            {!copiaLeida ? (
+              // Mientras se lee la copia local, la forma de lo que viene.
+              <EsqueletoBusqueda />
+            ) : !buscando ? (
+              // EL ESTADO VACÍO, CON MENOS NIVELES (tarea 342): un rótulo a
+              // 13/650, qué se puede buscar y, debajo, ejemplos reales. Las
+              // búsquedas recientes y "Prueba con" del handoff piden
+              // comportamiento nuevo y no entran aquí.
+              <div className="flex flex-col gap-1.5 px-0.5">
+                <p className="text-[13px] font-[650] text-noct-neutral-400">¿Qué necesitas resolver?</p>
+                <p className="text-[14px] leading-[1.45] text-noct-neutral-300">
+                  Nombre de equipo, IP, persona, ubicación, problema o guía. No hace falta elegir antes qué buscas.
+                </p>
+                <p className="text-[13px] leading-[1.45] text-noct-neutral-400">
+                  {AYUDA_BUSCADOR}. Tolera errores de escritura y entiende sinónimos.
                 </p>
               </div>
             ) : resultados.length > 0 ? (
@@ -241,15 +267,19 @@ export function BuscadorGlobal({
                     resultados públicos, el puente conserva su forma
                     destacada (sección 14 del encargo del 2026-09-16). */}
                 <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} modo={modo} />
-                <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
-                  <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
-                  <div>
-                    <p className="text-[14.5px] font-medium">Sin coincidencias</p>
-                    <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                      Nada coincide con "{consultaCruda}". Prueba otra palabra o revisa la ortografía.
-                    </p>
-                  </div>
-                  <div className="mt-0.5 flex flex-wrap justify-center gap-2">
+                {/* NADA COINCIDE, COMPACTO (tarea 342, handoff móvil): sin la
+                    caja punteada, el glifo en su caja de 52, qué se buscó y
+                    con qué probar. Crear equipo y Limpiar se quedan: son las
+                    salidas que ya tenía. */}
+                <div className="flex flex-col items-center gap-2.5 px-3 pb-3 pt-6 text-center">
+                  <span className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-noct-tinte text-noct-neutral-400">
+                    <MagnifyingGlass size={24} aria-hidden />
+                  </span>
+                  <p className="text-[16px] font-[650] leading-snug [overflow-wrap:anywhere]">Nada coincide con «{consultaCruda}»</p>
+                  <p className="max-w-[280px] text-[13.5px] leading-[1.45] text-noct-neutral-400">
+                    Prueba con el código del equipo, parte de la IP o una palabra del problema.
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap justify-center gap-2">
                     {/* Crear es una salida: no en modo consulta, que vive
                         encima de una tarea. */}
                     {modo === 'normal' && (

@@ -3,7 +3,7 @@ import type { Mantenimiento } from '../../lib/db'
 import { agruparAgenda } from '../inicio/agenda'
 import { calcularPendientes } from '../inicio/pendientes'
 import {
-  conteoDeMantenimientos,
+  resumenDeMantenimientos,
   entraEnAgenda,
   errorDeCancelacion,
   errorDeCierre,
@@ -133,7 +133,7 @@ describe('mantenimientosEnAgenda', () => {
   })
 })
 
-describe('textoProgramado y conteoDeMantenimientos', () => {
+describe('textoProgramado y resumenDeMantenimientos', () => {
   it('dice cuándo toca en pocas palabras', () => {
     expect(textoProgramado('2026-10-09', -1)).toBe('Atrasado 1 día')
     expect(textoProgramado('2026-10-07', -3)).toBe('Atrasado 3 días')
@@ -142,14 +142,33 @@ describe('textoProgramado y conteoDeMantenimientos', () => {
     expect(textoProgramado('2026-10-20', 10)).toBe('Toca el 20 oct')
   })
 
-  it('la fila plegada de la ficha dice el abierto más cercano, sin contar antecedentes', () => {
-    expect(conteoDeMantenimientos([], HOY)).toBe('Ninguno')
-    expect(conteoDeMantenimientos([m('a', { validacion: 'documentado_por_validar' })], HOY)).toBe('Ninguno')
-    expect(conteoDeMantenimientos([m('a', { fechaProgramada: '2026-10-20' }), m('b', { fechaProgramada: '2026-10-15' })], HOY)).toBe('15 oct')
-    expect(conteoDeMantenimientos([m('a', { fechaProgramada: '2026-10-10' })], HOY)).toBe('Hoy')
-    expect(conteoDeMantenimientos([m('a', { fechaProgramada: '2026-10-01' })], HOY)).toBe('Atrasado')
+  it('la fila del índice dice el abierto más cercano con su tono, sin contar antecedentes', () => {
+    expect(resumenDeMantenimientos([m('a', { fechaProgramada: '2026-10-20' }), m('b', { fechaProgramada: '2026-10-15' })], HOY)).toEqual({
+      texto: '15 oct',
+      tono: 'neutro',
+    })
+    expect(resumenDeMantenimientos([m('a', { fechaProgramada: '2026-10-10' })], HOY)).toEqual({ texto: 'Hoy', tono: 'precaucion' })
+    expect(resumenDeMantenimientos([m('a', { fechaProgramada: '2026-10-01' })], HOY)).toEqual({ texto: 'Atrasado', tono: 'error' })
     // Uno lejano también se dice: la ficha no tiene ventana de aviso.
-    expect(conteoDeMantenimientos([m('a', { fechaProgramada: '2027-01-15' })], HOY)).toBe('15 ene')
+    expect(resumenDeMantenimientos([m('a', { fechaProgramada: '2027-01-15' })], HOY).texto).toBe('15 ene')
+  })
+
+  // Tarea 342: sin trabajo pendiente la fila dice "Al día" (antes "Ninguno"),
+  // en éxito solo si hay un realizado confirmado que lo pruebe.
+  it('sin nada pendiente dice "Al día", en éxito solo con un realizado confirmado', () => {
+    expect(resumenDeMantenimientos([], HOY)).toEqual({ texto: 'Al día', tono: 'neutro' })
+    expect(resumenDeMantenimientos([m('a', { validacion: 'documentado_por_validar' })], HOY)).toEqual({ texto: 'Al día', tono: 'neutro' })
+    expect(
+      resumenDeMantenimientos([m('a', { validacion: 'documentado_por_validar', estado: 'realizado', fechaRealizada: '2025-03-01' })], HOY),
+    ).toEqual({ texto: 'Al día', tono: 'neutro' })
+    expect(resumenDeMantenimientos([m('a', { estado: 'realizado', fechaRealizada: '2026-10-02' })], HOY)).toEqual({
+      texto: 'Al día',
+      tono: 'exito',
+    })
+    // Un realizado no tapa lo que sigue abierto.
+    expect(
+      resumenDeMantenimientos([m('a', { estado: 'realizado', fechaRealizada: '2026-10-02' }), m('b', { fechaProgramada: '2026-10-01' })], HOY),
+    ).toEqual({ texto: 'Atrasado', tono: 'error' })
   })
 })
 

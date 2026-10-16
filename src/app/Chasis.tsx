@@ -11,6 +11,7 @@ import { BarraSuperior } from '../components/BarraSuperior'
 import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
 import { DockBusqueda } from '../components/DockBusqueda'
+import { FranjaEstadoSistema, LineaSincronizacion } from '../components/EstadoDelSistema'
 import { Marca } from '../components/Marca'
 import { ANCHO_AMPLIO, ANCHO_ESCRITORIO, useEsAncho } from '../components/useEsAncho'
 import { huecoAvisoActualizacionChasis } from '../components/ranuraAvisoActualizacion'
@@ -752,6 +753,13 @@ export function Chasis(props: Props) {
           reflujan a varias columnas con container queries. El relleno
           inferior lo pone el chasis, no cada pantalla (R22). */}
       <div className="flex min-h-svh min-w-0 flex-1 flex-col">
+        {/* LOS ESTADOS DEL SISTEMA EN EL TELÉFONO (tarea 342): la franja de
+            sin conexión o de error al subir, arriba de todo y fuera de la
+            transición de la pantalla (no se anima al navegar), y la línea de
+            2 px mientras se sincroniza. Solo por debajo de 768 px. Una tarea
+            no las lleva: su franja es la tarea 223. */}
+        <FranjaEstadoSistema />
+        <LineaSincronizacion />
         <div
           data-transicion={direccion}
           // El margen de cada banda (16, 24, 32 y 40) lo pone `src/index.css`

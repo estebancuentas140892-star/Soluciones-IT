@@ -140,7 +140,8 @@ describe('programar desde la ficha del equipo', () => {
     await sembrarBase()
     await montar(RUTAS, '/dispositivos/pc')
     const seccion = await esperar(() => control(/^Mantenimiento/), 'la fila Mantenimiento')
-    expect(seccion.textContent).toContain('Ninguno')
+    // Sin nada pendiente, "Al día" (tarea 342; antes "Ninguno").
+    expect(seccion.textContent).toContain('Al día')
     // Mantenimiento se trabaja en su pantalla (tarea 331): la fila la abre.
     expect(seccion.getAttribute('aria-haspopup')).toBeNull()
     await tocar(seccion)
@@ -186,8 +187,10 @@ describe('programar desde la ficha del equipo', () => {
     })
     await montar(RUTAS, '/dispositivos/pc')
     const seccion = await esperar(() => control(/^Mantenimiento/), 'la fila Mantenimiento')
-    // No es trabajo pendiente: la fila sigue diciendo "Ninguno".
-    expect(seccion.textContent).toContain('Ninguno')
+    // No es trabajo pendiente: la fila sigue "Al día", sin el verde de un
+    // realizado confirmado (tarea 342).
+    expect(seccion.textContent).toContain('Al día')
+    expect(seccion.querySelector('.text-noct-exito')).toBeNull()
     await tocar(seccion)
     await esperar(() => textoPantalla().includes('Documentado, por validar'), 'el bloque aparte')
     expect(textoPantalla()).toContain('Según Cronograma de prueba 2025')

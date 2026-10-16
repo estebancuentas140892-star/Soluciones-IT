@@ -6,6 +6,21 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-16
+
+### Cambiado (tarea 342): fidelidad visual "1b Pulgar" en la ficha, la búsqueda y los estados del sistema
+
+**Área modificada:** `src/features/dispositivos/DispositivoPage.tsx` y `PiezasFicha.tsx`, `src/components/PastillaEstado.tsx`, `FilaDato.tsx`, `BotonFavorito.tsx`, `nocturne.tsx`, `PastillaSync.tsx`, `src/components/Esqueleto.tsx` (nuevo), `EstadoDelSistema.tsx` (nuevo), `useEnLinea.ts` (nuevo), `src/app/Chasis.tsx`, `src/features/personas/ResponsableDelEquipo.tsx`, `src/features/red/ConexionesFicha.tsx`, `src/features/mantenimientos/mantenimiento.ts`, `MantenimientoPage.tsx`, `MantenimientosPage.tsx` y `MantenimientosDelEquipo.tsx`, `src/features/facturacion/autorizacion.ts` y `AutorizacionPage.tsx`, `src/features/busqueda/BuscadorGlobal.tsx`, `ChipsDeAlcance.tsx`, `ResultadosBusqueda.tsx`, `contextoResultados.ts` y `useDatosDeEquipos.ts` (nuevo), `src/index.css`, pruebas, [TAREAS.md](TAREAS.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md), [COMPONENTES_UI.md](COMPONENTES_UI.md) y [BUSCADOR.md](BUSCADOR.md).
+**Tipo:** Cambiado.
+**Motivo:** encargo del usuario del 2026-10-16, con lo que ChatGPT encontró lejos del prototipo móvil del handoff del 2026-10-13. No reabre las 327 a 341.
+**Qué cambia (solo por debajo de 768 px salvo donde se dice):**
+- **Ficha:** pastilla de estado con punto; copiar la IP en 48 x 48 con icono de 20 (con el aviso flotante de siempre); "Asignar" y "Cambiar" a 14/600 y lo anotado por validar en precaución; **"Conectado a" abre la hoja de Conexiones** (también desde 768), que lleva "Ver en topología"; "Más del equipo" dice **"Bloqueadas"** (credenciales con la Bóveda bloqueada), **"Atrasado / Hoy / fecha / Al día"** (mantenimiento; `resumenDeMantenimientos` sustituye a `conteoDeMantenimientos`) y **"En conflicto / Vencida / Rango agotado / Por validar / Confirmada / Sin autorización"** (facturación; `resumenDeFacturacion` sustituye a `conteoDeFacturacion`), cada valor con su tono; leyenda de los galones; `Wrench` en "Resolver un problema" (barra fija y cabecera desde 768); el **menú "···" en una hoja** con lo destructivo aparte y en rojo (desde 768, la banda de siempre); la puerta "Documentar este equipo" con la acción a 14 y la nota a 12 en texto 4 (antes neutral-600, por debajo de 4.5:1).
+- **Búsqueda:** rótulos de grupo a 13/650; chip activo relleno de alto contraste; filas de 62 con la IP en mono a la derecha y el POS con el glifo de Facturación; "Nada coincide con «…»" compacto con Crear equipo y Limpiar búsqueda (todas las anchuras); estado vacío con menos niveles (todas las anchuras); "Preparando el índice de búsqueda…" mientras se lee la copia local.
+- **Estados del sistema:** esqueletos con la forma del contenido en la ficha, el mantenimiento (lista y detalle), la autorización y el buscador, con brillo que respeta "reducir movimiento"; franja de 38 px "Sin conexión. Trabajas con la copia local"; franja de error "N cambios no se subieron" con "Reintentar" (la sincronización existente); línea de 2 px mientras se sincroniza.
+**Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización, ni el índice de búsqueda, ni estados de dominio nuevos).
+**Impacto esperado:** la ficha y la búsqueda del teléfono se leen como el prototipo, los resúmenes del índice dicen si algo pide atención y las esperas y los fallos de red se ven sin bloquear nada. Desde 768 la composición de la 339 no cambia.
+**Verificación:** ver el informe de la tarea en [TAREAS.md](TAREAS.md).
+
 ## 2026-10-15
 
 ### Integrado y cerrado (tarea 336): la prueba sin conexión real, en `main`

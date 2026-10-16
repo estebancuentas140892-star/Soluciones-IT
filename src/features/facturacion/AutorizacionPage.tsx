@@ -4,6 +4,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
+import { EsqueletoAutorizacion } from '../../components/Esqueleto'
 import { HojaInferior } from '../../components/HojaInferior'
 import { CaretRight, DotsThreeOutline, Note, Paperclip, PencilSimple, Pulse, SealCheck, Storefront, TrashSimple } from '../../components/iconos'
 import { BTN_DELINEADO_CABECERA, BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO } from '../../components/nocturne'
@@ -58,11 +59,15 @@ export function AutorizacionPage() {
   )
 
   if (autorizacion === null || autorizacion?.eliminadoEn) return <Navigate to="/facturacion" replace />
+  // Mientras se lee, su forma: el prefijo, el secuencial y las tres capas
+  // del dato (tarea 342). Nada se afirma antes de leer.
   if (!autorizacion) {
     return (
-      <div className="nocturne min-h-svh bg-noct-bg font-inter text-noct-text">
-        <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
-      </div>
+      <Chasis modo="documento">
+        <main className="flex flex-1 flex-col px-4 pb-4 pt-2">
+          <EsqueletoAutorizacion />
+        </main>
+      </Chasis>
     )
   }
 

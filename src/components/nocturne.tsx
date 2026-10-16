@@ -142,3 +142,13 @@ export const BTN_ICONO_SECUNDARIO = `${BTN_BASE} h-11 w-11 shrink-0 border-noct-
 // la misma especificidad y gana la que Tailwind emite despues, no la que
 // se escribe al final del atributo. Mismos 44 x 44 (tarea 262).
 export const BTN_ICONO_PELIGRO = `${BTN_BASE} h-11 w-11 shrink-0 border-transparent p-0 text-noct-error hover:bg-noct-error/10 active:bg-noct-error/20`
+
+// UNA ACCIÓN DE UN MENÚ EN HOJA (tarea 342, el "···" de la ficha en el
+// teléfono del handoff "1b Pulgar"): fila de 54 con su icono de 19 en texto 2
+// y la palabra a 15.5, divisor debajo y la respuesta al tocar del teléfono.
+// Lo destructivo lleva su propia constante, con el juego de color completo
+// (mismo empate de especificidad que las variantes de BTN_GHOST).
+export const FILA_ACCION_HOJA =
+  'flex min-h-[54px] w-full cursor-pointer items-center gap-3.5 border-b border-noct-divider text-left text-[15.5px] leading-snug text-noct-text active:bg-noct-presionado'
+export const FILA_ACCION_HOJA_PELIGRO =
+  'flex min-h-[54px] w-full cursor-pointer items-center gap-3.5 border-b border-noct-divider text-left text-[15.5px] font-[550] leading-snug text-noct-error active:bg-noct-error/(--tinte-estado)'
