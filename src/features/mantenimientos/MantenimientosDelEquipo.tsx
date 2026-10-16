@@ -4,13 +4,15 @@ import { Link } from 'react-router-dom'
 import { Campo, CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 import { EsqueletoMantenimiento } from '../../components/Esqueleto'
 import { HojaInferior } from '../../components/HojaInferior'
-import { Check, ClockCountdown, ClockCounterClockwise, Note, Plus, SealCheck, User, Wrench } from '../../components/iconos'
+import { Check, ClockCountdown, ClockCounterClockwise, Note, Paperclip, Plus, SealCheck, User, Wrench } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
+import { PastillaEstado } from '../../components/PastillaEstado'
 import { ANCHO_TABLETA_HORIZONTAL, useEsAncho } from '../../components/useEsAncho'
 import { db, type Mantenimiento, type TipoMantenimiento } from '../../lib/db'
 import { esPorValidar, fechaConAnio, nombreMantenimiento } from '../../lib/mantenimientos'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { diasDeCalendario } from '../../lib/vencimiento'
+import { estadoMarcadoDe } from './antecedentes'
 import { entraEnAgenda, errorDeProgramacion, hoyIso, textoProgramado } from './mantenimiento'
 import { RegistrarDesenlace } from './MantenimientoPage'
 import { SelectorTipoMantenimiento } from './SelectorTipoMantenimiento'
@@ -76,6 +78,24 @@ export function MantenimientosDelEquipo({
     [dispositivoId],
   )
   const [cerrando, setCerrando] = useState<Mantenimiento | null>(null)
+  // La evidencia de cada realizado (fotos, actas), que cuelga de la
+  // intervención que lo cerró: una sola lectura para toda la lista (tarea 343).
+  const idsHistorial = (mantenimientos ?? []).flatMap((m) => (m.historialId ? [m.historialId] : []))
+  const evidencias = useLiveQuery(
+    async () => {
+      const porIntervencion = new Map<string, number>()
+      if (idsHistorial.length === 0) return porIntervencion
+      const adjuntos = await db.adjuntos
+        .where('[entidadTipo+entidadId]')
+        .anyOf(idsHistorial.map((id) => ['historial', id]))
+        .filter((a) => !a.eliminadoEn)
+        .toArray()
+      for (const adjunto of adjuntos) porIntervencion.set(adjunto.entidadId, (porIntervencion.get(adjunto.entidadId) ?? 0) + 1)
+      return porIntervencion
+    },
+    [idsHistorial.join(',')],
+    new Map<string, number>(),
+  )
 
   // Sin leer todavía, la forma de lo que viene (tarea 342): ni "Sin
   // mantenimientos" ni "al día" antes de mirar.
@@ -111,7 +131,9 @@ export function MantenimientosDelEquipo({
       {tabular ? (
         <TablaRealizados realizados={realizados} />
       ) : (
-        realizados.map((m) => <TarjetaRealizado key={m.id} mantenimiento={m} />)
+        realizados.map((m) => (
+          <TarjetaRealizado key={m.id} mantenimiento={m} evidencias={m.historialId ? (evidencias.get(m.historialId) ?? 0) : 0} />
+        ))
       )}
     </section>
   )
@@ -204,6 +226,8 @@ function TarjetaProgramado({ mantenimiento, onCerrar }: { mantenimiento: Manteni
   const restantes = diasDeCalendario(fecha, new Date()) ?? 0
   const razon = textoProgramado(fecha, restantes)
   const ruta = `/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`
+  const ancho = useEsAncho()
+  const pospuesto = mantenimiento.estado === 'pospuesto'
   return (
     <div className="overflow-hidden rounded-2xl border border-noct-divider bg-noct-surface shadow-[var(--shadow-noct-elevacion)]">
       <Link to={ruta} className="flex flex-col gap-1.5 p-3.5 text-noct-text hover:bg-noct-text/[.03]">
@@ -211,10 +235,25 @@ function TarjetaProgramado({ mantenimiento, onCerrar }: { mantenimiento: Manteni
           <span className="text-[16.5px] font-semibold">{nombreMantenimiento(mantenimiento.tipo)}</span>
           <span className="shrink-0 whitespace-nowrap font-mono text-[13.5px] text-noct-neutral-300">{fechaConAnio(fecha)}</span>
         </span>
-        <span className={`text-[14px] font-semibold ${restantes <= 0 ? 'text-noct-precaucion' : 'text-noct-neutral-300'}`}>
+        {/* En el teléfono lo atrasado va en error y lo pospuesto lleva su
+            pastilla de precaución con su punto (tarea 343). */}
+        <span
+          className={`text-[14px] font-semibold ${
+            restantes < 0
+              ? 'text-noct-precaucion max-md:text-noct-error'
+              : restantes === 0
+                ? 'text-noct-precaucion'
+                : 'text-noct-neutral-300'
+          }`}
+        >
           {razon}
-          {mantenimiento.estado === 'pospuesto' && <span className="font-normal text-noct-neutral-400"> · Pospuesto</span>}
+          {pospuesto && ancho && <span className="font-normal text-noct-neutral-400"> · Pospuesto</span>}
         </span>
+        {pospuesto && !ancho && (
+          <PastillaEstado tono="precaucion" conPunto className="self-start">
+            Pospuesto · sigue pendiente
+          </PastillaEstado>
+        )}
         {mantenimiento.observaciones && (
           <span className="text-[14px] leading-[1.45] text-noct-neutral-300 [overflow-wrap:anywhere]">{mantenimiento.observaciones}</span>
         )}
@@ -233,8 +272,14 @@ function TarjetaProgramado({ mantenimiento, onCerrar }: { mantenimiento: Manteni
   )
 }
 
-/** Un mantenimiento realizado y confirmado: superficie sólida y barra verde. */
-function TarjetaRealizado({ mantenimiento }: { mantenimiento: Mantenimiento }) {
+/**
+ * Un mantenimiento realizado y confirmado: superficie sólida y barra verde.
+ * Debajo, quién, su evidencia si la tiene (tarea 343: se dice, no se
+ * inventa) y "En el historial", que en el teléfono va en éxito con su marca:
+ * es una referencia válida, no un dato apagado.
+ */
+function TarjetaRealizado({ mantenimiento, evidencias }: { mantenimiento: Mantenimiento; evidencias: number }) {
+  const ancho = useEsAncho()
   return (
     <Link
       to={`/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`}
@@ -258,12 +303,24 @@ function TarjetaRealizado({ mantenimiento }: { mantenimiento: Mantenimiento }) {
             {mantenimiento.tecnico}
           </span>
         )}
-        {mantenimiento.historialId && (
+        {evidencias > 0 && (
           <span className="inline-flex items-center gap-1">
-            <ClockCounterClockwise size={13} aria-hidden />
-            en el historial
+            <Paperclip size={13} aria-hidden />
+            {evidencias === 1 ? '1 adjunto' : `${evidencias} adjuntos`}
           </span>
         )}
+        {mantenimiento.historialId &&
+          (ancho ? (
+            <span className="inline-flex items-center gap-1">
+              <ClockCounterClockwise size={13} aria-hidden />
+              en el historial
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-noct-exito">
+              <Check size={13} aria-hidden />
+              En el historial
+            </span>
+          ))}
       </span>
     </Link>
   )
@@ -324,9 +381,16 @@ function TablaRealizados({ realizados }: { realizados: Mantenimiento[] }) {
   )
 }
 
-/** Un antecedente documentado por validar: borde punteado, sin relleno, "según" su fuente. */
+/**
+ * Un antecedente documentado por validar: borde punteado, sin relleno, "según"
+ * su fuente real y lo que esa fuente marca ("marca REALIZADO", tarea 343).
+ * Documentado no es confirmado: lleva "Por validar" y abre su pantalla, donde
+ * se ve la fuente entera.
+ */
 function TarjetaAntecedente({ mantenimiento }: { mantenimiento: Mantenimiento }) {
   const cuando = mantenimiento.fechaProgramada ? fechaConAnio(mantenimiento.fechaProgramada) : 'Sin fecha'
+  const marca = estadoMarcadoDe(mantenimiento.observaciones)
+  const ancho = useEsAncho()
   return (
     <Link
       data-documentado
@@ -337,13 +401,20 @@ function TarjetaAntecedente({ mantenimiento }: { mantenimiento: Mantenimiento })
         <span className="text-[15px] font-[550] text-noct-neutral-200">{nombreMantenimiento(mantenimiento.tipo)}</span>
         <span className="shrink-0 whitespace-nowrap font-mono text-[13px] text-noct-neutral-400">{cuando}</span>
       </span>
-      <span className="text-[13px] text-noct-neutral-400 [overflow-wrap:anywhere]">Según {mantenimiento.fuente}</span>
+      <span className="text-[13px] text-noct-neutral-400 [overflow-wrap:anywhere]">
+        Según {mantenimiento.fuente}
+        {marca && (
+          <>
+            : marca <span className="font-mono text-noct-neutral-300">{marca}</span>
+          </>
+        )}
+      </span>
       <span className="flex items-center justify-between gap-2.5">
         <span className="inline-flex items-center whitespace-nowrap rounded-full border border-noct-precaucion px-2.5 py-px text-[12px] font-semibold text-noct-precaucion">
           Por validar
         </span>
-        <span className="text-[14px] font-semibold text-noct-accent-300" aria-hidden>
-          Ver
+        <span className="flex items-center text-[14px] font-semibold text-noct-accent-300 max-md:min-h-10" aria-hidden>
+          {ancho ? 'Ver' : 'Ver fuente'}
         </span>
       </span>
     </Link>

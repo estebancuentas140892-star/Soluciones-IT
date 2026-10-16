@@ -141,9 +141,16 @@ export function errorDeCierre(
   if (!esFecha(datos.fechaRealizada)) return 'La fecha no es válida.'
   if ((diasDeCalendario(datos.fechaRealizada, hoy) as number) > 0) return 'No puede haberse hecho en una fecha futura.'
   if (!datos.tecnico.trim()) return 'Di quién lo hizo.'
-  if (!datos.resultado.trim()) return 'Di qué se hizo y cómo quedó.'
+  if (!datos.resultado.trim()) return ERROR_QUE_SE_HIZO
   return null
 }
+
+/**
+ * El aviso de cerrar como realizado sin decir qué se hizo. Con nombre propio
+ * para que el formulario lo diga junto a su campo en el teléfono (tarea 343):
+ * la regla y la redacción son las de siempre.
+ */
+export const ERROR_QUE_SE_HIZO = 'Di qué se hizo y cómo quedó.'
 
 /** Posponer: una fecha nueva, de hoy en adelante y distinta de la que tenía. */
 export function errorDePosposicion(

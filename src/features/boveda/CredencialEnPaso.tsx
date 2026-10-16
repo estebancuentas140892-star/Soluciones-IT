@@ -11,7 +11,8 @@ import {
 import { registrarAccesoBoveda } from '../../lib/repositorio'
 import { CampoContrasena } from '../../components/CampoContrasena'
 import { CaretRight, Key, LockSimple } from '../../components/iconos'
-import { BTN_PRIMARIO_DOMINANTE } from '../../components/nocturne'
+import { BTN_PRIMARIO_DOMINANTE, BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
+import { useEsAncho } from '../../components/useEsAncho'
 import { avisar } from '../../components/avisosFlotantes'
 import { FilaVinculo } from '../soluciones/FilaVinculo'
 import { HojaVinculo } from '../soluciones/HojaVinculo'
@@ -477,6 +478,11 @@ function FormularioDesbloqueo() {
   const [contrasena, setContrasena] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [abriendo, setAbriendo] = useState(false)
+  // EN EL TELÉFONO, "DESBLOQUEAR" ES LA ACCIÓN QUE MANDA (tarea 343, regla
+  // 30): la rellena a todo el ancho, debajo del campo, y "Comprobando…"
+  // mientras se comprueba la contraseña (la espera es la de siempre). Desde
+  // 768, el campo y el botón en una fila, como siempre.
+  const ancho = useEsAncho()
 
   async function manejarEnvio(evento: FormEvent) {
     evento.preventDefault()
@@ -495,7 +501,7 @@ function FormularioDesbloqueo() {
         La bóveda está bloqueada. Los datos no entran a la pantalla hasta desbloquearla con la
         contraseña maestra.
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 max-md:flex-col">
         <CampoContrasena
           required
           value={contrasena}
@@ -504,9 +510,13 @@ function FormularioDesbloqueo() {
           className="min-h-11 min-w-0 flex-1 rounded-lg border border-noct-divider bg-noct-bg px-3 py-2 text-sm max-md:text-[16px] text-noct-text caret-noct-accent placeholder:text-noct-neutral-600"
         />
         {/* De dedo, 44 px (R6): se desbloquea de pie, en medio de una guía. */}
-        <button type="submit" disabled={abriendo} className={`min-h-11 shrink-0 ${BTN_PRIMARIO_DOMINANTE} disabled:opacity-45`}>
-          <Key size={14} aria-hidden />
-          {abriendo ? 'Abriendo...' : 'Desbloquear'}
+        <button
+          type="submit"
+          disabled={abriendo}
+          className={ancho ? `min-h-11 shrink-0 ${BTN_PRIMARIO_DOMINANTE} disabled:opacity-45` : `w-full ${BTN_PRIMARIO_RELLENO}`}
+        >
+          <Key size={ancho ? 14 : 18} aria-hidden />
+          {abriendo ? (ancho ? 'Abriendo...' : 'Comprobando…') : 'Desbloquear'}
         </button>
       </div>
       {error && <p className="text-xs text-noct-error">{error}</p>}

@@ -119,9 +119,11 @@ async function rellenar(campo: HTMLInputElement | HTMLTextAreaElement, texto: st
   await pausa()
 }
 
+// Desde la tarea 343 la respuesta del cierre lleva debajo lo que hace ("Se
+// hizo" · "Queda en el historial del equipo"): se busca por su palabra.
 function opcion(texto: string): HTMLElement {
   const encontrada = Array.from(document.body.querySelectorAll<HTMLElement>('[role="radio"]')).find(
-    (el) => (el.textContent ?? '').trim() === texto,
+    (el) => (el.textContent ?? '').trim().startsWith(texto),
   )
   if (!encontrada) throw new Error(`No está la opción "${texto}".`)
   return encontrada
@@ -273,7 +275,8 @@ describe('la pantalla de un antecedente por validar', () => {
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes('Antecedente por validar'), 'su pantalla')
 
-    expect(textoPantalla()).toContain('Fuente: Acta de prueba 2025')
+    // En el teléfono, "Según" su fuente real, con su pastilla "Por validar" (tarea 343).
+    expect(textoPantalla()).toContain('Según Acta de prueba 2025')
     expect(recuadroDocumentado()).toBeNull()
     for (const etiqueta of ['Fecha real documentada', 'Técnico documentado', 'Resultado documentado', 'Lo hizo', 'Se hizo el']) {
       expect(textoPantalla()).not.toContain(etiqueta)
@@ -333,7 +336,8 @@ describe('la pantalla de un antecedente por validar', () => {
     expect(texto).toContain('Resultado documentado')
     expect(texto).toContain('Limpieza de prueba según el acta')
     // La fuente sigue a la vista.
-    expect(textoPantalla()).toContain('Fuente: Acta de prueba 2025')
+    // En el teléfono, "Según" su fuente real, con su pastilla "Por validar" (tarea 343).
+    expect(textoPantalla()).toContain('Según Acta de prueba 2025')
   })
 
   it('con datos documentados sigue siendo "por validar": ni banda de confirmado ni controles de cierre', async () => {
@@ -518,5 +522,131 @@ describe('el mantenimiento de un equipo por ancho', () => {
     await montar(RUTAS, '/dispositivos/pc/mantenimientos')
     await esperar(() => textoPantalla().includes('Se limpió el equipo de prueba'), 'lo hecho')
     expect(document.body.querySelector('[role="table"]')).toBeNull()
+  })
+})
+
+// TAREA 343: EL MANTENIMIENTO EN EL TELÉFONO, FIEL AL HANDOFF "1b Pulgar".
+// Solo presentación: los mismos estados, las mismas tres respuestas y la
+// misma regla de "Qué se hizo". Todo inventado.
+describe('el mantenimiento en el teléfono (tarea 343)', () => {
+  it('lo atrasado va en error y lo pospuesto lleva su pastilla con punto', async () => {
+    await sembrarBase()
+    await sembrarMantenimiento({ id: 'atrasado', fechaProgramada: fechaRelativa(-3) })
+    await sembrarMantenimiento({ id: 'pospuesto', tipo: 'correctivo', estado: 'pospuesto', fechaProgramada: fechaRelativa(4) })
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos')
+    const atrasado = await esperar(
+      () => Array.from(document.body.querySelectorAll('span')).find((s) => s.textContent === 'Atrasado 3 días'),
+      'lo atrasado',
+    )
+    expect(atrasado.className).toContain('max-md:text-noct-error')
+    const pastilla = await esperar(
+      () => Array.from(document.body.querySelectorAll<HTMLElement>('span')).find((s) => s.textContent === 'Pospuesto · sigue pendiente'),
+      'la pastilla de pospuesto',
+    )
+    expect(pastilla.querySelector('[data-punto-estado]')).not.toBeNull()
+    expect(pastilla.className).toContain('text-noct-precaucion')
+  })
+
+  it('lo realizado dice su evidencia y "En el historial" en éxito; sin evidencia no la inventa', async () => {
+    await sembrarBase()
+    await sembrarMantenimiento({
+      id: 'hecho',
+      estado: 'realizado',
+      fechaRealizada: fechaRelativa(-1),
+      tecnico: 'Técnico de prueba',
+      resultado: 'Limpieza de prueba',
+      historialId: 'int-hecho',
+    })
+    await sembrarMantenimiento({
+      id: 'sin-evidencia',
+      tipo: 'correctivo',
+      estado: 'realizado',
+      fechaRealizada: fechaRelativa(-5),
+      tecnico: 'Técnico de prueba',
+      resultado: 'Cambio de prueba',
+      historialId: 'int-sin',
+    })
+    await db.adjuntos.put({
+      id: 'foto-hecho',
+      entidadTipo: 'historial',
+      entidadId: 'int-hecho',
+      nombre: 'foto-de-prueba.jpg',
+      tipo: 'image/jpeg',
+      referencia: 'adjuntos/foto-de-prueba.jpg',
+      updatedAt: AHORA,
+      updatedBy: null,
+      eliminadoEn: null,
+    })
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos')
+    const hecho = await esperar(() => control(/^Mantenimiento preventivo/), 'el realizado')
+    await esperar(() => (hecho.textContent ?? '').includes('1 adjunto'), 'su evidencia')
+    const historial = Array.from(hecho.querySelectorAll('span')).find((s) => s.textContent === 'En el historial')
+    expect(historial?.className).toContain('text-noct-exito')
+    const sin = control(/^Mantenimiento correctivo/) as HTMLElement
+    expect(sin.textContent).not.toContain('adjunto')
+    expect(sin.textContent).toContain('En el historial')
+
+    // Su pantalla lo dice igual, bajo lo hecho.
+    await tocar(hecho)
+    const meta = await esperar(() => {
+      const nodo = document.body.querySelector<HTMLElement>('[data-meta-realizado]')
+      return nodo && (nodo.textContent ?? '').includes('1 adjunto') ? nodo : null
+    }, 'la evidencia en su pantalla')
+    expect(meta.textContent).toContain('En el historial')
+    expect(textoPantalla()).toContain('Evidencia · 1 adjunto')
+  })
+
+  it('un antecedente dice "Según su fuente: marca …" y "Ver fuente", sin darlo por confirmado', async () => {
+    await sembrarBase()
+    await db.mantenimientos.put({
+      ...antecedenteDesdeCronograma('ant-343', {
+        dispositivoId: 'pc',
+        tipo: 'preventivo',
+        estadoMarcado: 'REALIZADO',
+        anio: 2025,
+        hoja: 'Marzo',
+        tituloHoja: 'Cronograma de mantenimiento marzo 2025',
+        dia: 12,
+        fuente: 'Cronograma de prueba 2025, hoja Marzo',
+      }),
+      updatedAt: AHORA,
+      updatedBy: null,
+      eliminadoEn: null,
+    })
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos')
+    await esperar(() => textoPantalla().includes('Según Cronograma de prueba 2025, hoja Marzo: marca REALIZADO'), 'la marca de la fuente')
+    const tarjeta = control(/Cronograma de prueba 2025/) as HTMLElement
+    expect(tarjeta.textContent).toContain('Por validar')
+    expect(tarjeta.textContent).toContain('Ver fuente')
+    expect(tarjeta.textContent).not.toContain('Realizado y confirmado')
+  })
+
+  it('el cierre: tres tarjetas con lo que hace cada una y el aviso de "Qué se hizo" junto a su campo', async () => {
+    await sembrarBase()
+    await sembrarMantenimiento({ id: 'abierto' })
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos/abierto')
+    await esperar(() => document.body.querySelector('[role="radiogroup"]'), 'las respuestas')
+    const respuestas = Array.from(document.body.querySelectorAll<HTMLElement>('[role="radio"]'))
+    expect(respuestas.map((r) => r.firstElementChild?.nextElementSibling?.firstElementChild?.textContent)).toEqual([
+      'Se hizo',
+      'Se pospone',
+      'Se cancela',
+    ])
+    for (const respuesta of respuestas) expect(respuesta.className).toContain('max-md:min-h-[60px]')
+    expect(respuestas[0].textContent).toContain('Queda en el historial del equipo')
+
+    const queSeHizo = campoDe('Qué se hizo y cómo quedó')
+    expect(queSeHizo.getAttribute('placeholder')).toBe('Ej.: limpieza interna, cambio de cable de red')
+    await tocar(control('Cerrar y registrar en el equipo') as HTMLElement)
+    const aviso = await esperar(
+      () => Array.from(document.body.querySelectorAll<HTMLElement>('[role="alert"]')).find((a) => a.textContent === 'Di qué se hizo y cómo quedó.'),
+      'el aviso en línea',
+    )
+    // Junto a su campo, con su borde en rojo, y una sola vez.
+    expect(queSeHizo.getAttribute('aria-invalid')).toBe('true')
+    expect(queSeHizo.getAttribute('aria-describedby')).toBe(aviso.id)
+    expect(queSeHizo.className).toContain('max-md:border-noct-error')
+    expect(document.body.querySelectorAll('[role="alert"]').length).toBe(1)
+    expect(await db.mantenimientos.get('abierto')).toMatchObject({ estado: 'programado' })
   })
 })

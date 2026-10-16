@@ -8,6 +8,19 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-16
 
+### Cambiado (tarea 343): fidelidad visual "1b Pulgar" del mantenimiento, la facturación y la ejecución de guía
+
+**Área modificada:** `src/features/mantenimientos/MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`, `mantenimiento.ts` y `antecedentes.ts`; `src/features/facturacion/AutorizacionPage.tsx` y `PresentacionAutorizacion.tsx`; `src/features/soluciones/AsistenteVista.tsx`, `HojaPasos.tsx` y `HojaFalla.tsx`; `src/features/boveda/CredencialEnPaso.tsx` y `CredencialEnHoja.tsx`; `src/components/OpcionRadio.tsx`; pruebas; [TAREAS.md](TAREAS.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) y [COMPONENTES_UI.md](COMPONENTES_UI.md).
+**Tipo:** Cambiado.
+**Motivo:** encargo del usuario del 2026-10-16 (segunda parte), con el detalle de ChatGPT. No reabre las 327 a 342.
+**Qué cambia (solo por debajo de 768 px):**
+- **Mantenimiento:** lo atrasado en error; lo pospuesto con su pastilla de precaución y punto; lo realizado con su evidencia si la tiene y "En el historial" en éxito; el antecedente con "Según {fuente}: marca {ESTADO}" y "Ver fuente"; las tres respuestas del cierre como tarjetas verticales con lo que hace cada una; el aviso de "Qué se hizo" junto a su campo con el borde en rojo (misma regla y redacción); el ejemplo "Ej.: limpieza interna, cambio de cable de red".
+- **Facturación:** el prefijo una sola vez a la vista; la pastilla de siempre con su punto (`PastillaEstadoAutorizacion` reutiliza `PastillaEstado`, también desde 768); el texto del handoff bajo cada capa; el instrumento vacío del consecutivo; el menú "···" en una hoja con "Marcar como reemplazada" (el formulario de siempre) y Eliminar aparte; filas de 72 con el prefijo en mono en la lista.
+- **Guía:** el contador en su caja de 40; el índice "Pasos" con el número en IBM Plex Mono en filas de 58; "Tengo un problema" en `HojaInferior` con las mismas salidas; en la hoja de la credencial, "Sin salir de la guía" y "Desbloquear" relleno a todo el ancho con "Comprobando…".
+**Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización, ni los datos, ni las rutas, ni los modelos de mantenimiento y autorización).
+**Impacto esperado:** las tres pantallas del teléfono se leen como el prototipo. Desde 768 la composición aprobada no cambia.
+**Verificación:** ver la tarea 343 en [TAREAS.md](TAREAS.md).
+
 ### Integrado y cerrado (tarea 342): fidelidad visual "1b Pulgar" de la ficha, la búsqueda y los estados del sistema, en `main`
 
 **Área modificada:** `026240a` y `28356f8` (detallados en la entrada de abajo) entran en `main` por avance rápido desde `4953a40`; la 342 sale del tablero y pasa a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).

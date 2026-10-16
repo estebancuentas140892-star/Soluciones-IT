@@ -457,11 +457,22 @@ describe('la ficha en tres formas (tarea 331)', () => {
     const prefijo = document.body.querySelector('main h1')
     expect(prefijo?.textContent).toBe('CNF')
     expect(prefijo?.classList.contains('font-mono')).toBe(true)
-    // Eliminar no va junto a Editar: vive en el menú.
+    // Eliminar no va junto a Editar: vive en el menú, que en el teléfono es
+    // una hoja (tarea 343), con editar, marcar como reemplazada y, aparte y
+    // en rojo, eliminar.
     expect(control('Editar')).not.toBeNull()
     expect(control('Eliminar')).toBeNull()
-    await tocar(await esperar(() => control(/^Más acciones/), 'el menú'))
-    expect(control('Eliminar')).not.toBeNull()
+    const menu = await esperar(() => control(/^Acciones de la autorización/), 'el menú')
+    expect(menu.getAttribute('aria-haspopup')).toBe('dialog')
+    await tocar(menu)
+    const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja del menú')
+    const eliminar = control('Eliminar') as HTMLElement
+    expect(hoja.contains(eliminar)).toBe(true)
+    expect(eliminar.className).toContain('text-noct-error')
+    expect(eliminar.parentElement?.className).toContain('border-t')
+    // "Marcar como reemplazada" es el formulario de siempre, donde se elige ese estado.
+    expect(control('Editar autorización')?.getAttribute('href')).toBe('/facturacion/conf/editar')
+    expect(control(/^Marcar como reemplazada/)?.getAttribute('href')).toBe('/facturacion/conf/editar')
   })
 
   it('sin verificar ni lectura lo dice, con sus dos accesos, y una reemplazada se lee atenuada', async () => {
@@ -549,5 +560,58 @@ describe('la Agenda', () => {
     expect(textoPantalla()).toContain('Autorización CNF')
     expect(textoPantalla()).not.toContain('POS de prueba B')
     expect(textoPantalla()).not.toContain('Autorización DOC')
+  })
+})
+
+// TAREA 343: LA AUTORIZACIÓN EN EL TELÉFONO, FIEL AL HANDOFF "1b Pulgar".
+// Solo presentación: las tres capas no se mezclan y nada se estima. Todo
+// inventado.
+describe('la autorización en el teléfono (tarea 343)', () => {
+  it('el carnet: el prefijo una sola vez a la vista, la pastilla con punto y cada capa dice qué es', async () => {
+    await sembrarBase()
+    await sembrarAutorizacion({ id: 'doc', prefijo: 'DOC' })
+    await montar(RUTAS, '/facturacion/doc')
+    await esperar(() => textoPantalla().includes('Lo que dice cada fuente. Nadie lo ha comprobado.'), 'la ficha')
+    // Mientras el carnet está a la vista, la cabecera no repite el prefijo.
+    const cabecera = Array.from(document.body.querySelectorAll('h1')).find((h) => !h.closest('main'))
+    expect(cabecera?.className).toContain('opacity-0')
+    const carnet = document.body.querySelector('main h1')
+    expect(carnet?.textContent).toBe('DOC')
+    const pastilla = carnet?.parentElement?.querySelector('[data-punto-estado]')
+    expect(pastilla?.parentElement?.textContent).toBe('Documentada, por validar')
+    // Las tres capas, en su orden, cada una con lo que representa.
+    const textos = ['Lo que dice cada fuente. Nadie lo ha comprobado.', 'Comprobado con una fuente actual.', 'El consecutivo leído en el POS.']
+    const pantalla = textoPantalla()
+    expect(textos.map((t) => pantalla.indexOf(t))).toEqual([...textos.map((t) => pantalla.indexOf(t))].sort((a, b) => a - b))
+    for (const t of textos) expect(pantalla).toContain(t)
+    // La fuente de cada capa en la suya.
+    expect(document.getElementById('aut-documentado')?.closest('section')?.textContent).toContain('Según Documento de prueba')
+  })
+
+  it('sin lectura, el instrumento vacío: su rótulo, el marcador y el carril, sin ningún número', async () => {
+    await sembrarBase()
+    await sembrarAutorizacion({ id: 'sin', prefijo: 'SIN' })
+    await montar(RUTAS, '/facturacion/sin')
+    const vacio = await esperar(() => document.body.querySelector<HTMLElement>('[data-instrumento-vacio]'), 'el instrumento vacío')
+    expect(vacio.textContent).toContain('Último emitido')
+    expect(vacio.textContent).not.toMatch(/\d/)
+    expect(vacio.className).toContain('md:hidden')
+    expect(vacio.closest('[data-instrumento]')?.textContent).toContain('Sin lectura. No se estima por fechas ni por consumo.')
+  })
+
+  it('la lista: filas de 72 con el prefijo en mono, su estado, el contexto y el galón', async () => {
+    await sembrarBase()
+    await sembrarAutorizacion({ id: 'fila', prefijo: 'FIL' })
+    await montar(RUTAS, '/facturacion')
+    const fila = await esperar(() => control(/^FIL/), 'la fila')
+    expect(fila.className).toContain('max-md:min-h-[72px]')
+    expect(fila.className).toContain('max-md:active:bg-noct-presionado')
+    const prefijo = Array.from(fila.querySelectorAll('span')).find((s) => s.textContent === 'FIL')
+    expect(prefijo?.className).toContain('max-md:font-mono')
+    expect(prefijo?.className).toContain('max-md:text-[17px]')
+    expect(fila.textContent).toContain('Documentada, por validar')
+    expect(fila.textContent).toContain('Rango 3.000 a 8.000')
+    // El galón de pantalla en el teléfono (desde 768, el "Ver" de siempre).
+    expect(Array.from(fila.querySelectorAll('svg')).some((icono) => (icono.getAttribute('class') ?? '').includes('md:hidden'))).toBe(true)
   })
 })

@@ -2,7 +2,9 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import type { ReactNode } from 'react'
 import { db } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { HojaInferior } from '../../components/HojaInferior'
 import { Modal } from '../../components/Modal'
+import { useEsAncho } from '../../components/useEsAncho'
 import { ArrowRight, Camera, CaretRight, Info, Warning, Wrench, X } from '../../components/iconos'
 import { fraseAvanceConservado } from './salidasFalla'
 
@@ -103,6 +105,40 @@ function Salida({
   )
 }
 
+// La misma salida como fila de la hoja del teléfono (tarea 343): 62 de alto,
+// divisor debajo, icono de 19 en texto 2 (en error la contingencia), la
+// palabra a 15.5/600 y su detalle a 13, y la respuesta al tocar del sistema.
+function SalidaFila({
+  Icono,
+  titulo,
+  detalle,
+  tono = 'neutro',
+  onClick,
+}: {
+  Icono: typeof Wrench
+  titulo: string
+  detalle?: ReactNode
+  tono?: 'riesgo' | 'neutro'
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex min-h-[62px] w-full items-center gap-3.5 border-b border-noct-divider py-2 text-left text-noct-text ${
+        tono === 'riesgo' ? 'active:bg-noct-error/(--tinte-estado)' : 'active:bg-noct-presionado'
+      }`}
+    >
+      <Icono size={19} className={`shrink-0 ${tono === 'riesgo' ? 'text-noct-error' : 'text-noct-neutral-300'}`} aria-hidden />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15.5px] font-semibold leading-snug">{titulo}</span>
+        {detalle && <span className="mt-0.5 block text-[13px] leading-snug text-noct-neutral-400">{detalle}</span>}
+      </span>
+      <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+    </button>
+  )
+}
+
 export function HojaFalla({
   abierto,
   onCerrar,
@@ -131,6 +167,80 @@ export function HojaFalla({
     },
     [abierto, solucionArticuloId],
   )
+
+  // EN EL TELÉFONO, LA HOJA DEL HANDOFF (tarea 343): "Tengo un problema" en
+  // la `HojaInferior` de siempre, con las MISMAS salidas, en el mismo orden y
+  // con lo mismo que hacen; solo cambia la forma (filas de 62 con su divisor).
+  // Desde 768, el diálogo de siempre.
+  const ancho = useEsAncho()
+  if (!ancho) {
+    return (
+      <HojaInferior abierta={abierto} onCerrar={onCerrar} titulo="Tengo un problema" contexto={`Algo va mal en el paso ${numeroPaso}`}>
+        <div className="flex flex-col">
+          {tarea && (
+            <p className="text-[13.5px] leading-snug text-noct-neutral-300">
+              En «<span className="text-noct-text">{tarea}</span>».
+            </p>
+          )}
+          <p className="pb-1.5 pt-1 text-[13.5px] leading-[1.45] text-noct-neutral-400">{fraseAvanceConservado(pasosHechos)}</p>
+
+          {contingencia && contingencia !== 'rota' && (
+            <SalidaFila
+              Icono={Wrench}
+              tono="riesgo"
+              titulo="Abrir la contingencia"
+              detalle={
+                <>
+                  «{contingencia.titulo}»
+                  {contingencia.pasos > 0
+                    ? ` · ${contingencia.pasos} ${contingencia.pasos === 1 ? 'paso' : 'pasos'}`
+                    : ''}
+                </>
+              }
+              onClick={onAbrirContingencia}
+            />
+          )}
+          {contingencia === 'rota' && (
+            <p className="my-1.5 rounded-[10px] border border-noct-divider bg-noct-text/[.04] px-3 py-2.5 text-[13px] leading-normal text-noct-neutral-200">
+              La contingencia{solucionArticuloTitulo ? ` «${solucionArticuloTitulo}»` : ''} ya no está disponible
+              en este dispositivo. Avisa a quien mantiene la guía.
+            </p>
+          )}
+          {!solucionArticuloId && (
+            <p className="my-1.5 flex items-start gap-2 rounded-[10px] border border-noct-divider px-3 py-2.5 text-[13px] leading-normal text-noct-neutral-300">
+              <Info size={15} className="mt-px shrink-0 text-noct-neutral-400" aria-hidden />
+              <span>
+                Este paso no tiene una contingencia documentada, así que aquí no hay una reparación que
+                ofrecerte. Puedes detenerte y dejarlo anotado, o seguir con el resto del procedimiento.
+              </span>
+            </p>
+          )}
+          {onFotografiar && <SalidaFila Icono={Camera} titulo="Fotografiar y anotar el problema" onClick={onFotografiar} />}
+          <SalidaFila
+            Icono={X}
+            titulo="Detenerme aquí y dejarlo anotado"
+            detalle="No avanza ni marca nada. Vuelves a este mismo paso con la falla señalada"
+            onClick={onDetenerse}
+          />
+          {onSaltar && (
+            <SalidaFila
+              Icono={ArrowRight}
+              titulo="Seguir con el paso siguiente, sin resolver este"
+              detalle="Queda sin marcar y el índice lo señala como saltado"
+              onClick={onSaltar}
+            />
+          )}
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="mt-1.5 flex min-h-12 w-full items-center justify-center rounded-[11px] text-[15px] font-medium text-noct-neutral-400 active:bg-noct-presionado"
+          >
+            Cancelar
+          </button>
+        </div>
+      </HojaInferior>
+    )
+  }
 
   return (
     <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>

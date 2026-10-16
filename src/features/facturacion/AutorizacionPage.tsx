@@ -1,13 +1,30 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
 import { DialogoEliminar } from '../../components/DialogoEliminar'
 import { EsqueletoAutorizacion } from '../../components/Esqueleto'
 import { HojaInferior } from '../../components/HojaInferior'
-import { CaretRight, DotsThreeOutline, Note, Paperclip, PencilSimple, Pulse, SealCheck, Storefront, TrashSimple } from '../../components/iconos'
-import { BTN_DELINEADO_CABECERA, BTN_GHOST_PELIGRO, BTN_ICONO_SECUNDARIO } from '../../components/nocturne'
+import {
+  ArrowsClockwise,
+  CaretRight,
+  DotsThreeOutline,
+  Note,
+  Paperclip,
+  PencilSimple,
+  Pulse,
+  SealCheck,
+  Storefront,
+  TrashSimple,
+} from '../../components/iconos'
+import {
+  BTN_DELINEADO_CABECERA,
+  BTN_GHOST_PELIGRO,
+  BTN_ICONO_SECUNDARIO,
+  FILA_ACCION_HOJA,
+  FILA_ACCION_HOJA_PELIGRO,
+} from '../../components/nocturne'
 import { useEsAncho } from '../../components/useEsAncho'
 import { formatearNumero, textoRango } from '../../lib/autorizaciones'
 import { db, type AutorizacionFacturacion } from '../../lib/db'
@@ -41,6 +58,20 @@ export function AutorizacionPage() {
   // "Editar" va en la barra fija del teléfono y, desde 768 px, en la
   // cabecera (tarea 339): una sola vez por ventana.
   const ancho = useEsAncho()
+  // EL PREFIJO, UNA SOLA VEZ EN EL TELÉFONO (tarea 343, como la ficha de un
+  // equipo): mientras el carnet está a la vista, la cabecera dice solo a
+  // dónde se vuelve; cuando el prefijo grande sale por arriba, sube a ella.
+  // Desde 768, la cabecera de siempre, con el prefijo.
+  const [nodoPrefijo, setNodoPrefijo] = useState<HTMLElement | null>(null)
+  const [prefijoALaVista, setPrefijoALaVista] = useState(true)
+  useEffect(() => {
+    if (!nodoPrefijo || typeof IntersectionObserver === 'undefined') return
+    const observador = new IntersectionObserver(([entrada]) => setPrefijoALaVista(entrada.isIntersecting), {
+      rootMargin: '-56px 0px 0px 0px',
+    })
+    observador.observe(nodoPrefijo)
+    return () => observador.disconnect()
+  }, [nodoPrefijo])
   const autorizacion = useLiveQuery(
     async () => (await db.autorizaciones_facturacion.get(autorizacionId)) ?? null,
     [autorizacionId],
@@ -91,6 +122,7 @@ export function AutorizacionPage() {
       volverEtiqueta="Autorizaciones"
       titulo={autorizacion.prefijo}
       contexto="Autorización de facturación"
+      tituloVisible={ancho ? undefined : !prefijoALaVista}
       // EDITAR, DELINEADO EN LA CABECERA DESDE 768 PX (tarea 339): no hace
       // avanzar nada, así que no es relleno. Detrás del menú, como en la
       // ficha de un equipo.
@@ -105,15 +137,18 @@ export function AutorizacionPage() {
         <button
           type="button"
           onClick={() => setMenuAbierto((v) => !v)}
-          aria-label="Más acciones: eliminar"
+          aria-label={ancho ? 'Más acciones: eliminar' : 'Acciones de la autorización: editar, marcar como reemplazada o eliminar'}
           aria-expanded={menuAbierto}
+          aria-haspopup={ancho ? undefined : 'dialog'}
           className={BTN_ICONO_SECUNDARIO}
         >
           <DotsThreeOutline size={17} aria-hidden />
         </button>
       }
+      // En el teléfono el menú es una hoja (tarea 343, ver `MenuAutorizacion`
+      // al final); desde 768, la banda de siempre.
       barra={
-        menuAbierto && (
+        menuAbierto && ancho && (
           <div className="flex flex-wrap gap-2 border-t border-noct-divider px-4 pb-3 pt-3">
             <button
               type="button"
@@ -138,10 +173,14 @@ export function AutorizacionPage() {
       <main className="@container flex flex-1 flex-col gap-[22px] px-4 pb-4 pt-4 lg:px-10">
         <section className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="m-0 font-mono text-[30px] font-semibold leading-[1.1] tracking-[-.02em] [overflow-wrap:anywhere]">
+            <h1
+              ref={setNodoPrefijo}
+              className="m-0 font-mono text-[30px] font-semibold leading-[1.1] tracking-[-.02em] [overflow-wrap:anywhere]"
+            >
               {autorizacion.prefijo}
             </h1>
-            <PastillaEstadoAutorizacion estado={autorizacion.estado} />
+            {/* En el teléfono, con su punto (tarea 343). */}
+            <PastillaEstadoAutorizacion estado={autorizacion.estado} conPunto />
           </div>
           {motivo && <p className="text-[14.5px] leading-[1.45] text-noct-neutral-300">{motivo}</p>}
         </section>
@@ -157,6 +196,7 @@ export function AutorizacionPage() {
                 id="aut-documentado"
                 numero={1}
                 titulo="Lo documentado"
+                descripcion="Lo que dice cada fuente. Nadie lo ha comprobado."
                 icono={
                   <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg border-[1.5px] border-dashed border-noct-neutral-400 text-noct-neutral-300">
                     <Note size={15} aria-hidden />
@@ -206,6 +246,7 @@ export function AutorizacionPage() {
                 id="aut-confirmado"
                 numero={2}
                 titulo="Lo confirmado"
+                descripcion="Comprobado con una fuente actual."
                 icono={
                   <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-noct-exito/(--tinte-estado) text-noct-exito">
                     <SealCheck size={16} aria-hidden />
@@ -250,6 +291,7 @@ export function AutorizacionPage() {
                 id="aut-actual"
                 numero={3}
                 titulo="Dato actual"
+                descripcion="El consecutivo leído en el POS."
                 icono={
                   <span className="flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-noct-accent/[.14] text-noct-accent-300">
                     <Pulse size={16} aria-hidden />
@@ -327,6 +369,49 @@ export function AutorizacionPage() {
         {leyendo && <RegistrarLectura autorizacion={autorizacion} alTerminar={() => setLeyendo(false)} />}
       </HojaInferior>
 
+      {/* EL MENÚ "···" EN EL TELÉFONO (tarea 343, handoff móvil): una hoja con
+          editar y marcar como reemplazada y, aparte y en rojo, eliminar.
+          "Marcar como reemplazada" no es otra implementación: lleva al
+          formulario de siempre, donde ese estado se elige. Desde 768, la
+          banda de siempre bajo la cabecera. */}
+      {!ancho && (
+        <HojaInferior
+          abierta={menuAbierto}
+          onCerrar={() => setMenuAbierto(false)}
+          titulo="Acciones de la autorización"
+          contexto={autorizacion.prefijo}
+        >
+          <div role="group" aria-label="Acciones de la autorización" className="flex flex-col">
+            <Link to={`/facturacion/${autorizacionId}/editar`} onClick={() => setMenuAbierto(false)} className={FILA_ACCION_HOJA}>
+              <PencilSimple size={19} className="shrink-0 text-noct-neutral-300" aria-hidden />
+              Editar autorización
+            </Link>
+            {!reemplazada && (
+              <Link to={`/facturacion/${autorizacionId}/editar`} onClick={() => setMenuAbierto(false)} className={FILA_ACCION_HOJA}>
+                <ArrowsClockwise size={19} className="shrink-0 text-noct-neutral-300" aria-hidden />
+                <span className="min-w-0 flex-1 py-1.5">
+                  <span className="block">Marcar como reemplazada</span>
+                  <span className="block text-[13px] text-noct-neutral-400">Se elige en su estado, al editarla</span>
+                </span>
+              </Link>
+            )}
+          </div>
+          <div role="group" aria-label="Eliminar la autorización" className="mt-[18px] flex flex-col border-t border-noct-divider [&>*:last-child]:border-b-0">
+            <button
+              type="button"
+              onClick={() => {
+                setMenuAbierto(false)
+                setMostrarEliminar(true)
+              }}
+              className={FILA_ACCION_HOJA_PELIGRO}
+            >
+              <TrashSimple size={19} className="shrink-0" aria-hidden />
+              Eliminar
+            </button>
+          </div>
+        </HojaInferior>
+      )}
+
       <DialogoEliminar
         abierto={mostrarEliminar}
         titulo={`¿Eliminar la autorización ${autorizacion.prefijo}?`}
@@ -341,14 +426,33 @@ export function AutorizacionPage() {
 const ACCION_DELINEADA =
   'inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border-[1.5px] border-noct-text/25 px-3.5 text-[14px] font-semibold text-noct-text hover:bg-noct-text/[.05]'
 
-/** El rótulo de una capa: su número, su forma y su nombre. */
-function EncabezadoCapa({ id, numero, titulo, icono }: { id: string; numero: number; titulo: string; icono: ReactNode }) {
+/**
+ * El rótulo de una capa: su número, su forma y su nombre. En el teléfono,
+ * debajo, qué representa con las palabras del handoff (tarea 343): las tres
+ * capas son la misma autorización leída de tres maneras, y así se lee.
+ */
+function EncabezadoCapa({
+  id,
+  numero,
+  titulo,
+  descripcion,
+  icono,
+}: {
+  id: string
+  numero: number
+  titulo: string
+  descripcion: string
+  icono: ReactNode
+}) {
   return (
     <div className="flex items-center gap-2">
       {icono}
-      <h2 id={id} className="text-[12.5px] font-bold uppercase tracking-[.06em] text-noct-neutral-300">
-        {numero} · {titulo}
-      </h2>
+      <div className="min-w-0">
+        <h2 id={id} className="text-[12.5px] font-bold uppercase tracking-[.06em] text-noct-neutral-300">
+          {numero} · {titulo}
+        </h2>
+        <p className="text-[12.5px] leading-snug text-noct-neutral-400 md:hidden">{descripcion}</p>
+      </div>
     </div>
   )
 }
@@ -394,7 +498,16 @@ function Consecutivo({
   if (!tieneConsecutivoLeido(autorizacion)) {
     return (
       <div data-instrumento className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5">
-        <span aria-hidden className="flex h-[26px] items-center">
+        {/* EL INSTRUMENTO, VACÍO, EN EL TELÉFONO (tarea 343, handoff): la
+            misma lectura sin número, su rótulo, el marcador en IBM Plex Mono
+            y, si el rango está documentado, su carril sin llenar. Nada se
+            estima. Desde 768, la marca de siempre. */}
+        <span aria-hidden data-instrumento-vacio className="flex flex-col gap-2.5 md:hidden">
+          <span className="text-[12.5px] text-noct-neutral-400">Último emitido</span>
+          <span className="font-mono text-[26px] font-medium leading-none text-noct-neutral-500">—</span>
+          {conRango && <span className="block h-1.5 rounded-[3px] bg-noct-tinte" />}
+        </span>
+        <span aria-hidden className="flex h-[26px] items-center max-md:hidden">
           <span className="block h-[3px] w-7 rounded-full bg-noct-neutral-500" />
         </span>
         <p className="text-[14px] leading-[1.45] text-noct-neutral-300">Sin lectura. No se estima por fechas ni por consumo.</p>
