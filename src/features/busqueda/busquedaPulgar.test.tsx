@@ -23,9 +23,10 @@ import { BuscadorGlobal } from './BuscadorGlobal'
 // LA BÚSQUEDA GLOBAL EN EL TELÉFONO, FIEL AL HANDOFF "1b Pulgar" (tarea
 // 342). Solo presentación: el índice, lo que se busca y lo que filtra cada
 // chip no cambian. Rótulos de grupo a 13/650, el chip activo relleno, filas
-// de 62 con la IP en mono y el POS con el glifo de Facturación, "Nada
-// coincide" compacto con sus dos salidas y el estado vacío con menos
-// niveles. Todo lo sembrado es inventado.
+// de 62 con la IP en mono, "Nada coincide" compacto con sus dos salidas y el
+// estado vacío con menos niveles; desde 768, el estado vacío y "Sin
+// coincidencias" de siempre. Un POS sigue siendo un equipo: las
+// autorizaciones de Facturación no se indexan. Todo lo sembrado es inventado.
 
 const AHORA = '2026-10-16T12:00:00.000Z'
 
@@ -45,8 +46,12 @@ beforeEach(async () => {
   await sembrarGuia({ id: 'g-caja', titulo: 'Caja de prueba: cambiar el rollo', pasos: [pasoPrueba('g-caja-p1', 'Paso', ['Haz algo de prueba'])] })
 })
 
+type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+const ventana = window as unknown as VentanaDePrueba
+
 afterEach(async () => {
   await desmontarTodo()
+  ventana.happyDOM.setViewport({ width: 375, height: 812 })
 })
 
 async function abrir(): Promise<HTMLInputElement> {
@@ -102,10 +107,13 @@ describe('los resultados en el teléfono', () => {
     expect((control(/^Caja de prueba sur/) as HTMLElement).querySelector('[data-ip-resultado]')).toBeNull()
   })
 
-  it('un POS se reconoce: lleva el glifo de Facturación; otro equipo, el de siempre', async () => {
+  // Un POS no es Facturación: sin autorizaciones indexadas no se finge un
+  // resultado de Facturación con su icono.
+  it('un POS sigue siendo un equipo, con el icono de equipo', async () => {
     await escribir(await abrir(), 'caja de prueba')
     const norte = await esperar(() => control(/^Caja de prueba norte/), 'el POS')
-    expect(norte.querySelector('svg path')?.getAttribute('d')).toBe(trazoDe(Storefront))
+    expect(norte.querySelector('svg path')?.getAttribute('d')).toBe(trazoDe(Monitor))
+    expect(norte.querySelector('svg path')?.getAttribute('d')).not.toBe(trazoDe(Storefront))
     const sur = control(/^Caja de prueba sur/) as HTMLElement
     expect(sur.querySelector('svg path')?.getAttribute('d')).toBe(trazoDe(Monitor))
   })
@@ -121,5 +129,29 @@ describe('nada coincide', () => {
     expect(document.body.querySelector('.border-dashed')).toBeNull()
     expect(control('Crear equipo')?.getAttribute('href')).toBe('/dispositivos/nuevo?nombre=zzqxw')
     expect(control('Limpiar búsqueda')).not.toBeNull()
+  })
+})
+
+describe('desde 768, la presentación de siempre', () => {
+  it('el estado vacío y "Sin coincidencias" son los de antes de la 342, con las mismas salidas', async () => {
+    ventana.happyDOM.setViewport({ width: 1024, height: 768 })
+    const campo = await abrir()
+    const rotulo = await esperar(
+      () => Array.from(document.body.querySelectorAll('p')).find((p) => p.textContent === '¿Qué necesitas resolver?'),
+      'el rótulo',
+    )
+    expect(rotulo.className).toContain('text-[14.5px]')
+    expect(rotulo.className).not.toContain('font-[650]')
+    expect(textoPantalla()).toContain('"backup" encuentra "copia de seguridad"')
+    expect(textoPantalla()).not.toContain('No hace falta elegir antes qué buscas.')
+
+    await escribir(campo, 'zzqxw')
+    await esperar(() => textoPantalla().includes('Sin coincidencias'), 'el estado sin resultados')
+    expect(textoPantalla()).toContain('Nada coincide con "zzqxw". Prueba otra palabra o revisa la ortografía.')
+    expect(textoPantalla()).not.toContain('Nada coincide con «zzqxw»')
+    const caja = document.body.querySelector<HTMLElement>('.border-dashed')
+    expect(caja).not.toBeNull()
+    expect(caja?.contains(control('Crear equipo'))).toBe(true)
+    expect(caja?.contains(control('Limpiar búsqueda'))).toBe(true)
   })
 })

@@ -107,6 +107,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Fuera de alcance:** la presentación inicial de la guía, la 337, la 322, Agenda, Resolver, Más, la navegación global, la estructura de tableta y escritorio, las búsquedas recientes y la franja sin conexión dentro de la ejecución y el editor (tarea 223).
 - **Modelo/esfuerzo:** Sonnet 5 / Alto (ejecutada con Opus 5.5).
 - **Verificación (2026-10-16, sobre `4953a40`):** suite completa 225 archivos y 3427 pruebas en verde (19 nuevas: `estadosDelSistema.test.tsx`, `busquedaPulgar.test.tsx` y las de la ficha, el mantenimiento y la facturación), `tsc -b`, lint, build, `verificar-precache` y la prueba sin conexión real (84 de 84, 0 fallos). Sin auditoría visual masiva, como pidió el encargo.
+- **Corrección del 2026-10-16 (segundo commit, pedida por el usuario tras `026240a`):** el estado vacío y "Nada coincide con «…»" de la búsqueda son solo del teléfono; desde 768 vuelven a ser los de `main` ("Sin coincidencias" en su caja punteada, con las mismas salidas). Un resultado de equipo POS conserva su icono de equipo: no se finge un resultado de Facturación. Los resultados propios de Facturación piden indexar las autorizaciones, fuera del alcance de la 342.
 - **Estado:** implementada en la rama `feat/fidelidad-pulgar-ficha-busqueda`, con push y **sin integrar en `main` ni desplegar**. No se archiva hasta que ChatGPT la revise contra el handoff y el usuario decida integrarla.
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro

@@ -57,8 +57,8 @@ export interface ValorContextoResultados {
    */
   equipoDeLaConsulta: string | null
   /**
-   * La IP y si es un POS de cada equipo, por su id (tarea 342): la fila de
-   * un equipo la enseña en el teléfono. Una sola lectura para toda la lista.
+   * La IP de cada equipo, por su id (tarea 342): la fila de un equipo la
+   * enseña en el teléfono. Una sola lectura para toda la lista.
    */
   equipos: ReadonlyMap<string, DatosDeEquipo>
 }

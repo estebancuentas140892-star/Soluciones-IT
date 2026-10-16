@@ -166,6 +166,27 @@ export function BuscadorGlobal({
     />
   )
 
+  // Las salidas cuando nada coincide, las mismas en el teléfono y desde 768.
+  const salidasSinResultados = (
+    <>
+      {/* Crear es una salida: no en modo consulta, que vive encima de una
+          tarea. */}
+      {modo === 'normal' && (
+        <Link
+          to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
+          onClick={onNavegar ?? onCerrar}
+          className={BTN_SECUNDARIO}
+        >
+          <Plus size={15} aria-hidden />
+          Crear equipo
+        </Link>
+      )}
+      <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
+        Limpiar búsqueda
+      </button>
+    </>
+  )
+
   const contenido = (
     <>
       {escritorio ? (
@@ -235,19 +256,30 @@ export function BuscadorGlobal({
               // Mientras se lee la copia local, la forma de lo que viene.
               <EsqueletoBusqueda />
             ) : !buscando ? (
-              // EL ESTADO VACÍO, CON MENOS NIVELES (tarea 342): un rótulo a
-              // 13/650, qué se puede buscar y, debajo, ejemplos reales. Las
-              // búsquedas recientes y "Prueba con" del handoff piden
-              // comportamiento nuevo y no entran aquí.
-              <div className="flex flex-col gap-1.5 px-0.5">
-                <p className="text-[13px] font-[650] text-noct-neutral-400">¿Qué necesitas resolver?</p>
-                <p className="text-[14px] leading-[1.45] text-noct-neutral-300">
-                  Nombre de equipo, IP, persona, ubicación, problema o guía. No hace falta elegir antes qué buscas.
-                </p>
-                <p className="text-[13px] leading-[1.45] text-noct-neutral-400">
-                  {AYUDA_BUSCADOR}. Tolera errores de escritura y entiende sinónimos.
-                </p>
-              </div>
+              ancho ? (
+                <div className="flex flex-col gap-1 px-0.5">
+                  <p className="text-[14.5px] font-medium leading-snug">¿Qué necesitas resolver?</p>
+                  <p className="text-[13px] leading-relaxed text-noct-neutral-400">{AYUDA_BUSCADOR}</p>
+                  <p className="mt-1 text-[12.5px] leading-relaxed text-noct-neutral-500">
+                    Tolera errores de escritura y entiende sinónimos: "backup" encuentra "copia de seguridad".
+                  </p>
+                </div>
+              ) : (
+                // EL ESTADO VACÍO DEL TELÉFONO, CON MENOS NIVELES (tarea 342):
+                // un rótulo a 13/650, qué se puede buscar y, debajo, ejemplos
+                // reales. Las búsquedas recientes y "Prueba con" del handoff
+                // piden comportamiento nuevo y no entran aquí. Desde 768, el
+                // de siempre.
+                <div className="flex flex-col gap-1.5 px-0.5">
+                  <p className="text-[13px] font-[650] text-noct-neutral-400">¿Qué necesitas resolver?</p>
+                  <p className="text-[14px] leading-[1.45] text-noct-neutral-300">
+                    Nombre de equipo, IP, persona, ubicación, problema o guía. No hace falta elegir antes qué buscas.
+                  </p>
+                  <p className="text-[13px] leading-[1.45] text-noct-neutral-400">
+                    {AYUDA_BUSCADOR}. Tolera errores de escritura y entiende sinónimos.
+                  </p>
+                </div>
+              )
             ) : resultados.length > 0 ? (
               <ResultadosBusqueda
                 resultados={visibles}
@@ -267,36 +299,33 @@ export function BuscadorGlobal({
                     resultados públicos, el puente conserva su forma
                     destacada (sección 14 del encargo del 2026-09-16). */}
                 <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} modo={modo} />
-                {/* NADA COINCIDE, COMPACTO (tarea 342, handoff móvil): sin la
-                    caja punteada, el glifo en su caja de 52, qué se buscó y
-                    con qué probar. Crear equipo y Limpiar se quedan: son las
-                    salidas que ya tenía. */}
-                <div className="flex flex-col items-center gap-2.5 px-3 pb-3 pt-6 text-center">
-                  <span className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-noct-tinte text-noct-neutral-400">
-                    <MagnifyingGlass size={24} aria-hidden />
-                  </span>
-                  <p className="text-[16px] font-[650] leading-snug [overflow-wrap:anywhere]">Nada coincide con «{consultaCruda}»</p>
-                  <p className="max-w-[280px] text-[13.5px] leading-[1.45] text-noct-neutral-400">
-                    Prueba con el código del equipo, parte de la IP o una palabra del problema.
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap justify-center gap-2">
-                    {/* Crear es una salida: no en modo consulta, que vive
-                        encima de una tarea. */}
-                    {modo === 'normal' && (
-                      <Link
-                        to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
-                        onClick={onNavegar ?? onCerrar}
-                        className={BTN_SECUNDARIO}
-                      >
-                        <Plus size={15} aria-hidden />
-                        Crear equipo
-                      </Link>
-                    )}
-                    <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
-                      Limpiar búsqueda
-                    </button>
+                {ancho ? (
+                  <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
+                    <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
+                    <div>
+                      <p className="text-[14.5px] font-medium">Sin coincidencias</p>
+                      <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
+                        Nada coincide con "{consultaCruda}". Prueba otra palabra o revisa la ortografía.
+                      </p>
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap justify-center gap-2">{salidasSinResultados}</div>
                   </div>
-                </div>
+                ) : (
+                  // NADA COINCIDE, COMPACTO EN EL TELÉFONO (tarea 342, handoff
+                  // móvil): sin la caja punteada, el glifo en su caja de 52, qué
+                  // se buscó y con qué probar, con las mismas salidas. Desde
+                  // 768, el de siempre.
+                  <div className="flex flex-col items-center gap-2.5 px-3 pb-3 pt-6 text-center">
+                    <span className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-noct-tinte text-noct-neutral-400">
+                      <MagnifyingGlass size={24} aria-hidden />
+                    </span>
+                    <p className="text-[16px] font-[650] leading-snug [overflow-wrap:anywhere]">Nada coincide con «{consultaCruda}»</p>
+                    <p className="max-w-[280px] text-[13.5px] leading-[1.45] text-noct-neutral-400">
+                      Prueba con el código del equipo, parte de la IP o una palabra del problema.
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap justify-center gap-2">{salidasSinResultados}</div>
+                  </div>
+                )}
               </div>
             )}
           </ProveedorRanuraVistaRapida>

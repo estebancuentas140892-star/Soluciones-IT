@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
-import { CaretDown, CaretRight, CaretUp, Crosshair, Storefront } from '../../components/iconos'
+import { CaretDown, CaretRight, CaretUp, Crosshair } from '../../components/iconos'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { useAccionesDeGuia } from '../soluciones/useAccionesDeGuia'
 import { AccionesDeResultado } from './AccionesResultado'
@@ -104,12 +104,9 @@ export function FilaResultado({
     equipoDeLaConsulta: equipoConsultado,
     equipos,
   } = useContextoResultados()
-  // Un equipo dice en su fila lo que es (tarea 342): un POS lleva el glifo
-  // de Facturación, y en el teléfono su IP va a la derecha en mono.
+  const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
+  // En el teléfono, la IP de un equipo va a la derecha en mono (tarea 342).
   const equipo = resultado.tipo === 'dispositivo' ? equipos.get(idDeEntidad(resultado.id)) : undefined
-  const visual = VISUAL_POR_TIPO[resultado.tipo]
-  const Icono = equipo?.pos ? Storefront : visual.Icono
-  const tono = visual.tono
   const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
   const conPrefijo = prefijoAtenuado ? partirPorPrefijo(resultado.titulo, consulta) : null
   const conSuTipo = conTipo ? partesSubtituloConTipo(resultado) : null
