@@ -302,6 +302,14 @@ interface PropsTarea extends PropsComunes {
    * (`useRanuraIndice`), pegada bajo la cabecera.
    */
   amplio?: boolean
+  /**
+   * La cabecera de la EJECUCIÓN DE UNA GUÍA en el teléfono (rediseño móvil,
+   * fase 2, tarea 345; DESPUÉS de Claude Design): la X con su palabra
+   * ("Salir") y, en vez del título recortado, "Tu avance se guarda solo".
+   * El nombre de la guía y el paso van debajo, en la banda que publica la
+   * guía. Solo con `compacta` y por debajo de 768 px.
+   */
+  cabeceraDeGuia?: boolean
 }
 
 type Props = PropsSeccion | PropsDocumento | PropsTarea
@@ -449,6 +457,7 @@ export function Chasis(props: Props) {
             alSalir={props.alSalir}
             alPulsarSalida={props.alPulsarSalida}
             compacta={props.compacta}
+            deGuia={props.cabeceraDeGuia}
             onBuscar={props.compacta && props.conBusqueda ? () => setBuscadorTarea(true) : undefined}
             // La ranura de `BandaTarea` cambia de sitio según la altura
             // de la cabecera: en la compacta va en la MISMA línea que el

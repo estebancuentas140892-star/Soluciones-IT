@@ -98,6 +98,7 @@ export function AsistentePage() {
     <Chasis
       modo="tarea"
       compacta
+      cabeceraDeGuia
       // La ruta del procedimiento en horizontal necesita ancho en
       // escritorio y tableta (tarea 255). En el teléfono no cambia nada.
       amplio

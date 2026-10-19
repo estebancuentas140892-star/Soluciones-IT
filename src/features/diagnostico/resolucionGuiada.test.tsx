@@ -5,6 +5,7 @@ import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import { raizDelProcedimiento } from '../../lib/progresoDiagnostico'
 import { bloquear } from '../boveda/sesionBoveda'
 import {
+  COMPLETAR_Y_SEGUIR,
   abrirCredencial,
   anclarMaestra,
   campoBuscador,
@@ -247,7 +248,7 @@ describe('ejemplo C: las respuestas cambian el camino', () => {
     // Empieza de cero DENTRO del recorrido: no hereda el avance suelto.
     await esperar(() => textoPantalla().includes('Abrir Impresoras y escáneres'), 'la primera acción del procedimiento')
 
-    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('Agregar la impresora compartida de prueba'), 'la segunda acción')
     await tocar(await esperar(() => principal('Completar y terminar'), 'Completar y terminar'))
 
@@ -318,11 +319,11 @@ describe('la comprobación final del procedimiento del recorrido (tarea 308)', (
 
     await tocar(await esperar(() => respuesta('No'), 'la respuesta No'))
     await esperar(() => textoPantalla().includes('Abrir Impresoras y escáneres'), 'la primera acción del procedimiento')
-    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('Agregar la impresora compartida de prueba'), 'la segunda acción')
     // Con comprobaciones, la última acción lleva a ellas: no promete terminar.
     expect(principal('Completar y terminar')).toBeNull()
-    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('¿Quedó resuelto?'), 'la comprobación final')
     expect(textoPantalla()).not.toContain('¿Ahora imprime una página de prueba?')
 
@@ -374,7 +375,7 @@ describe('el procedimiento dentro del recorrido no se pierde', () => {
     await montar(RUTAS, '/diagnostico/rec-impresora')
 
     await tocar(await esperar(() => respuesta('No'), 'la respuesta No'))
-    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir en la primera acción'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir en la primera acción'))
     await esperar(() => textoPantalla().includes('Agregar la impresora compartida de prueba'), 'la segunda acción')
 
     // Volver a la pregunta deshace la respuesta, no lo hecho.
@@ -519,7 +520,7 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-dian')
 
     await esperar(() => textoPantalla().includes('Abrir el POS de prueba'), 'la primera acción')
-    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('¿Encontraste el número de resolución?'), 'la decisión')
 
     await tocar(await esperarControl('No: seguir con «Localizar la resolución de prueba»'))
@@ -527,7 +528,7 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
     // UN SOLO FLUJO (tarea 289): la rama sigue en el sitio de la decisión,
     // sin cabecera de otra guía, y no dice "terminar" a mitad del camino.
     expect(textoPantalla()).not.toContain('Estás realizando')
-    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir la rama'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir la rama'))
 
     // Terminada la rama, lo que venía después de la decisión, en el punto
     // exacto de la guía que se abrió.

@@ -97,6 +97,27 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 |---|---|---|---|
 | A, B y C | Ficha de equipo, búsqueda global y estados del sistema (esqueletos, sin conexión, error y línea de sincronización) | 342 | Hecha (archivada) |
 
+**ENCARGO DEL 2026-10-19: REDISEÑO MÓVIL, FASE 2 (GUÍA, MANTENIMIENTO Y FACTURACIÓN).** Fuente: el DESPUÉS aprobado de Claude Design ("Soluciones IT · Rediseño móvil"); la facturación, que no está en ese archivo, sigue el handoff "1b Pulgar" (sección 08). La fase 1 (Resolver, Búsqueda y Ficha) es la tarea 344, en la rama `feat/rediseno-movil-fase1`, aprobada y sin integrar. Solo presentación por debajo de 768 px; desde 768 se conserva lo aprobado. No toca Supabase, Dexie, la sincronización, los permisos, las búsquedas, los datos ni los modelos.
+
+| Bloque | Qué | Tarea del tablero | Estado |
+|---|---|---|---|
+| A, B y C | Guía en ejecución, mantenimiento y autorizaciones de facturación en el teléfono | 345 | En proceso (rama `feat/rediseno-movil-fase2`, sin integrar) |
+
+### 345. Rediseño móvil, fase 2: guía, mantenimiento y facturación
+
+- **Descripción:** **A, guía:** cabecera con "Salir" y "Tu avance se guarda solo"; la guía, el equipo y el paso entero ("Paso 2 de 4 · …") sobre los segmentos; "Pasos" en vez de "2/4" (el mismo índice); el botón relleno dice a dónde lleva ("Hecho, siguiente acción", "Hecho, ir al paso N", "Hecho, comprobar el resultado") sin cambiar lo que hace; la instrucción a 23/650 y "Cómo hacerlo" con números en círculo; la fila "Clave necesaria" y, en su hoja (contexto "Sin salir de la guía"), el aviso "Se abre aquí. Tu paso sigue debajo, como lo dejaste." y "Volver a la guía". **B, mantenimiento:** el estado en `PastillaEstado` con punto (atrasado con el día que tocaba, hoy, pospuesto), en la pantalla y en la lista; la tarjeta de contexto (qué hay que hacer, la última vez confirmada y el antecedente por validar, solo con lo que existe); "¿Cómo terminó?" en tres segmentos; "Se hizo hoy · lo hiciste tú" con "Cambiar"; la evidencia dicha como es; "Guardar en el historial" fijo abajo. **C, facturación:** la pastilla de la fila con su punto, "Rango … · POS" en una línea, los grupos como frase con su conteo y el nombre de cada capa como frase.
+- **Base:** la 343 (`7ef8960`), traída con `cherry-pick` sobre `main` (`4916e01`) tras revisarla: cubría A2, A3, B2 a B4 y C1 a C5. Su entrada sigue más abajo.
+- **Motivo:** encargo del usuario del 2026-10-19.
+- **Impacto:** visual, en el teléfono. Sin datos, estados, rutas ni funciones nuevas. En la pantalla de un mantenimiento se lee además el último realizado y el antecedente del mismo equipo (la misma consulta local de su lista).
+- **Prioridad:** Alta. **Estado:** En proceso.
+- **Área afectada:** `src/app/Chasis.tsx`, `src/components/BarraTarea.tsx`, `src/components/OpcionRadio.tsx`, `src/features/soluciones/AsistentePage.tsx`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `SenalesDePaso.tsx`, `src/features/boveda/CredencialEnHoja.tsx`, `src/features/mantenimientos/MantenimientoPage.tsx`, `MantenimientosDelEquipo.tsx`, `mantenimiento.ts`, `src/features/facturacion/AutorizacionesPage.tsx`, `AutorizacionPage.tsx`, `PresentacionAutorizacion.tsx`, `src/pruebas/montaje.ts`.
+- **Desde 768:** la composición de `main` no cambia (comprobado con capturas a 768 y 1280 contra `main`, mismos datos). Las dos piezas de la 343 que también cambiaban ahí vuelven a ser solo del teléfono: la pastilla de una autorización (desde 768, la propia de antes) y el ejemplo de "Qué se hizo y cómo quedó".
+- **Pruebas:** las que buscaban "Completar y seguir" usan `COMPLETAR_Y_SEGUIR` (`src/pruebas/montaje.ts`), que acepta los rótulos del teléfono; nuevas en `remateGuiaPulgar.test.tsx` (cabecera, rótulos, hoja de la credencial y 768) y `mantenimientoFlujo.test.tsx` (contexto, segmentos, "Cambiar", pie fijo y 768).
+- **Pendiente:** "Agregar foto" antes de guardar (la evidencia cuelga de la intervención que crea el cierre; adjuntarla antes cambiaría el flujo de datos); la explicación "¿Qué significa?" de confirmado y por validar en su hoja; el rótulo "¿No funciona? Ver qué hacer" del diseño (se conserva "Tengo un problema", como pidió el encargo). Integrar con la 344: las dos ramas tocan `src/app/Chasis.tsx` y los documentos.
+- **Modelo/esfuerzo:** Opus 5.5 / Alto.
+- **Verificación (2026-10-19):** suite completa 226 archivos y 3445 pruebas en verde, `tsc -b`, lint y build.
+- **Estado:** implementada en la rama `feat/rediseno-movil-fase2`, con push y **sin integrar en `main` ni desplegar**, a la espera de la revisión de ChatGPT.
+
 **ENCARGO DEL 2026-10-16 (SEGUNDA PARTE): FIDELIDAD "1b PULGAR" EN MANTENIMIENTO, FACTURACIÓN Y GUÍA.** Mismo handoff móvil. Siguiente bloque visual que ChatGPT definió sobre `main` (`4916e01`); no reabre las 327 a 342. Solo presentación por debajo de 768 px; desde 768 se conserva lo aprobado. No toca la 322, la 337, Supabase, Dexie, la sincronización, los datos, las rutas ni los modelos de mantenimiento y autorización.
 
 | Bloque | Qué | Tarea del tablero | Estado |
@@ -114,7 +135,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Desde 768:** la composición aprobada no cambia. La única pieza compartida que cambia algo ahí es la pastilla de una autorización, que reutiliza `PastillaEstado` (11 px y su relleno, en vez de 11.5) como pidió el encargo.
 - **Modelo/esfuerzo:** Sonnet 5 / Alto (ejecutada con Opus 5.5).
 - **Verificación (2026-10-16, sobre `4916e01`):** suite completa 226 archivos y 3438 pruebas en verde (en una primera pasada dos pruebas de guías agotaron su espera de 4 s bajo carga; solas pasan 46 de 46 y la suite entera pasó en la segunda), `tsc -b`, lint, build, `verificar-precache` y la prueba sin conexión real (84 de 84, 0 fallos). Sin auditoría visual masiva.
-- **Estado:** implementada en la rama `feat/fidelidad-pulgar-mantenimiento-facturacion-guia`, con push y **sin integrar en `main` ni desplegar**, a la espera de la revisión de ChatGPT.
+- **Estado:** implementada en la rama `feat/fidelidad-pulgar-mantenimiento-facturacion-guia`, con push y **sin integrar en `main` ni desplegar**, a la espera de la revisión de ChatGPT. Desde el 2026-10-19 es la base de la 345 (rama `feat/rediseno-movil-fase2`).
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 

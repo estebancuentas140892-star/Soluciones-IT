@@ -13,7 +13,14 @@ import { esPorValidar, fechaConAnio, nombreMantenimiento } from '../../lib/mante
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { diasDeCalendario } from '../../lib/vencimiento'
 import { estadoMarcadoDe } from './antecedentes'
-import { entraEnAgenda, errorDeProgramacion, hoyIso, textoProgramado } from './mantenimiento'
+import {
+  entraEnAgenda,
+  errorDeProgramacion,
+  hoyIso,
+  porFechaProgramada,
+  porFechaRealizadaDesc,
+  textoProgramado,
+} from './mantenimiento'
 import { RegistrarDesenlace } from './MantenimientoPage'
 import { SelectorTipoMantenimiento } from './SelectorTipoMantenimiento'
 
@@ -36,14 +43,6 @@ import { SelectorTipoMantenimiento } from './SelectorTipoMantenimiento'
 // Sin ninguno, un estado vacío que dice qué aparecerá. Programar va abajo,
 // delineado (no hace avanzar nada: la acción rellena es la del cierre); desde
 // 768 px, en la cabecera de la pantalla (tarea 339).
-
-function porFechaProgramada(a: Mantenimiento, b: Mantenimiento): number {
-  return (a.fechaProgramada ?? '').localeCompare(b.fechaProgramada ?? '')
-}
-
-function porFechaRealizadaDesc(a: Mantenimiento, b: Mantenimiento): number {
-  return (b.fechaRealizada ?? '').localeCompare(a.fechaRealizada ?? '')
-}
 
 export function MantenimientosDelEquipo({
   dispositivoId,
@@ -236,19 +235,23 @@ function TarjetaProgramado({ mantenimiento, onCerrar }: { mantenimiento: Manteni
           <span className="shrink-0 whitespace-nowrap font-mono text-[13.5px] text-noct-neutral-300">{fechaConAnio(fecha)}</span>
         </span>
         {/* En el teléfono lo atrasado va en error y lo pospuesto lleva su
-            pastilla de precaución con su punto (tarea 343). */}
-        <span
-          className={`text-[14px] font-semibold ${
-            restantes < 0
-              ? 'text-noct-precaucion max-md:text-noct-error'
-              : restantes === 0
-                ? 'text-noct-precaucion'
-                : 'text-noct-neutral-300'
-          }`}
-        >
-          {razon}
-          {pospuesto && ancho && <span className="font-normal text-noct-neutral-400"> · Pospuesto</span>}
-        </span>
+            pastilla de precaución con su punto (tarea 343). Lo atrasado y lo
+            de hoy, también en la pastilla con su punto (tarea 345, DESPUÉS
+            de Claude Design): el estado se lee sin depender del color. */}
+        {!ancho && restantes <= 0 ? (
+          <PastillaEstado tono={restantes < 0 ? 'error' : 'precaucion'} conPunto className="self-start max-md:py-1 max-md:text-[13px]">
+            {razon}
+          </PastillaEstado>
+        ) : (
+          <span
+            className={`text-[14px] font-semibold ${
+              restantes <= 0 ? 'text-noct-precaucion' : 'text-noct-neutral-300'
+            }`}
+          >
+            {razon}
+            {pospuesto && ancho && <span className="font-normal text-noct-neutral-400"> · Pospuesto</span>}
+          </span>
+        )}
         {pospuesto && !ancho && (
           <PastillaEstado tono="precaucion" conPunto className="self-start">
             Pospuesto · sigue pendiente
@@ -410,9 +413,16 @@ function TarjetaAntecedente({ mantenimiento }: { mantenimiento: Mantenimiento })
         )}
       </span>
       <span className="flex items-center justify-between gap-2.5">
-        <span className="inline-flex items-center whitespace-nowrap rounded-full border border-noct-precaucion px-2.5 py-px text-[12px] font-semibold text-noct-precaucion">
-          Por validar
-        </span>
+        {/* En el teléfono, la pastilla compartida con su punto (tarea 345). */}
+        {ancho ? (
+          <span className="inline-flex items-center whitespace-nowrap rounded-full border border-noct-precaucion px-2.5 py-px text-[12px] font-semibold text-noct-precaucion">
+            Por validar
+          </span>
+        ) : (
+          <PastillaEstado tono="precaucion" conPunto>
+            Por validar
+          </PastillaEstado>
+        )}
         <span className="flex items-center text-[14px] font-semibold text-noct-accent-300 max-md:min-h-10" aria-hidden>
           {ancho ? 'Ver' : 'Ver fuente'}
         </span>

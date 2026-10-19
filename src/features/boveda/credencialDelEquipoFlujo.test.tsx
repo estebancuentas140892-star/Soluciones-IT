@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type PasoProcedimiento, type VinculoProtegido } from '../../lib/db'
 import {
+  COMPLETAR_Y_SEGUIR,
   abrirCredencial,
   anclarMaestra,
   campoBuscador,
@@ -324,7 +325,7 @@ describe('el equipo con el que se trabaja', () => {
   it('retomar sigue con el equipo guardado, y marcar avance lo guarda en la ejecución', async () => {
     await montar(RUTAS, `${RUTA_GUIA}?equipo=imp-b`)
     await datoProtegido('Acceso de prueba B')
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
     await esperarQue(async () => (await db.progresoPasos.get('guia-imp'))?.equipoId === 'imp-b', 'el equipo en la fila')
     await desmontarTodo()
 

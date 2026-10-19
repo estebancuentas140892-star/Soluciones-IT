@@ -19,7 +19,7 @@ import {
   nombreMantenimiento,
 } from '../../lib/mantenimientos'
 import { cerrarMantenimiento, guardarRegistro } from '../../lib/repositorio'
-import { diasDeCalendario } from '../../lib/vencimiento'
+import { diasDeCalendario, fechaCorta } from '../../lib/vencimiento'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { datosDocumentados, estadoMarcadoDe } from './antecedentes'
 import {
@@ -28,6 +28,8 @@ import {
   errorDeCierre,
   errorDePosposicion,
   hoyIso,
+  porFechaProgramada,
+  porFechaRealizadaDesc,
   textoProgramado,
 } from './mantenimiento'
 
@@ -45,6 +47,13 @@ import {
 // Cerrado, la pantalla enseña lo que quedó (y la evidencia). Un
 // antecedente sacado de documentación histórica solo se consulta: está
 // por validar y no se cierra desde aquí.
+//
+// EN EL TELÉFONO (rediseño móvil, fase 2, tarea 345; DESPUÉS de Claude
+// Design), lo pendiente en una sola pantalla que se lee de arriba abajo: el
+// estado en su pastilla ("Atrasado 2 días · tocaba el 17 oct"), una tarjeta
+// con qué hay que hacer, la última vez que se hizo (confirmado) y lo que una
+// fuente antigua anota (por validar), y "¿Cómo terminó?" en tres segmentos,
+// con el registro fijo abajo. Lo que se guarda y cómo, igual que siempre.
 
 type Respuesta = 'realizado' | 'pospuesto' | 'cancelado'
 
@@ -72,6 +81,8 @@ export function MantenimientoPage() {
     )
   }
 
+  // En el teléfono, el registro va fijo abajo: sin el margen de cierre.
+  const porCerrar = estaAbierto(mantenimiento) && !esPorValidar(mantenimiento)
   return (
     <Chasis
       modo="tarea"
@@ -83,8 +94,9 @@ export function MantenimientoPage() {
       vuelta="Mantenimiento"
       salidaEtiqueta="Volver al mantenimiento del equipo"
     >
-      <main className="flex flex-1 flex-col gap-4 px-4 pb-12 pt-[18px]">
+      <main className={`flex flex-1 flex-col gap-4 px-4 pb-12 pt-[18px] ${porCerrar ? 'max-md:pb-0' : ''}`}>
         <Resumen mantenimiento={mantenimiento} />
+        {porCerrar && <ContextoDelMantenimiento mantenimiento={mantenimiento} />}
         {esPorValidar(mantenimiento) ? (
           <AntecedentePorValidar mantenimiento={mantenimiento} />
         ) : estaAbierto(mantenimiento) ? (
@@ -113,16 +125,12 @@ function Resumen({ mantenimiento }: { mantenimiento: Mantenimiento }) {
             : mantenimiento.estado === 'pospuesto'
               ? `Pospuesto al ${fechaConAnio(fecha)}`
               : `Programado para el ${fechaConAnio(fecha)}`}
-        {/* Solo lo que la fecha no dice ya: atrasado, hoy o mañana. */}
-        {/* En el teléfono lo atrasado va en error, no en precaución (tarea 343). */}
-        {abierto && fecha && restantes !== null && restantes <= 1 && (
+        {/* Solo lo que la fecha no dice ya: atrasado, hoy o mañana. En el
+            teléfono, atrasado y hoy van en su pastilla (tarea 345). */}
+        {abierto && fecha && restantes !== null && restantes <= 1 && (ancho || restantes === 1) && (
           <span
             className={
-              restantes < 0
-                ? 'text-noct-precaucion max-md:font-semibold max-md:text-noct-error'
-                : restantes === 0
-                  ? 'text-noct-precaucion'
-                  : 'text-noct-neutral-400'
+              restantes <= 0 ? 'text-noct-precaucion' : 'text-noct-neutral-400'
             }
           >
             {' · '}
@@ -130,17 +138,112 @@ function Resumen({ mantenimiento }: { mantenimiento: Mantenimiento }) {
           </span>
         )}
       </p>
-      {/* POSPUESTO, CON SU SEÑAL EN EL TELÉFONO (tarea 343): la pastilla de
-          precaución con su punto; sigue pendiente. */}
-      {abierto && !ancho && mantenimiento.estado === 'pospuesto' && (
-        <PastillaEstado tono="precaucion" conPunto className="mt-1 self-start">
-          Pospuesto · sigue pendiente
+      {/* EL ESTADO, EN SU PASTILLA, EN EL TELÉFONO (tareas 343 y 345; DESPUÉS
+          de Claude Design): atrasado en error, con el día que tocaba; hoy y
+          pospuesto en precaución. Siempre con su punto. */}
+      {abierto && !ancho && fecha && restantes !== null && (restantes <= 0 || mantenimiento.estado === 'pospuesto') && (
+        <PastillaEstado
+          tono={restantes < 0 ? 'error' : 'precaucion'}
+          conPunto
+          className="mt-1.5 self-start max-md:py-1 max-md:text-[13.5px]"
+        >
+          {restantes < 0
+            ? `${textoProgramado(fecha, restantes)} · tocaba el ${fechaCorta(fecha)}`
+            : restantes === 0
+              ? 'Toca hoy'
+              : 'Pospuesto · sigue pendiente'}
         </PastillaEstado>
       )}
-      {mantenimiento.observaciones && (
+      {/* Lo que hay que hacer, en el teléfono, va en la tarjeta de contexto. */}
+      {mantenimiento.observaciones && (ancho || !abierto) && (
         <p className="whitespace-pre-wrap text-[13px] leading-[1.55] text-noct-neutral-300 [overflow-wrap:anywhere]">
           {mantenimiento.observaciones}
         </p>
+      )}
+    </section>
+  )
+}
+
+// LO QUE HAY QUE SABER ANTES DE CERRARLO, EN EL TELÉFONO (tarea 345, DESPUÉS
+// de Claude Design): en una sola tarjeta, qué hay que hacer (sus
+// observaciones), la última vez que se hizo en este equipo (un mantenimiento
+// cerrado en la app: confirmado) y, aparte y en su forma, lo que una fuente
+// histórica anota (por validar: no cuenta como hecho). Solo lo que existe:
+// sin un cierre anterior se dice que no lo hay; nada se completa ni se
+// deduce. Desde 768, la pantalla de siempre.
+function ContextoDelMantenimiento({ mantenimiento }: { mantenimiento: Mantenimiento }) {
+  const ancho = useEsAncho()
+  const otros = useLiveQuery(
+    () =>
+      db.mantenimientos
+        .where('dispositivoId')
+        .equals(mantenimiento.dispositivoId)
+        .filter((m) => !m.eliminadoEn && m.id !== mantenimiento.id)
+        .toArray(),
+    [mantenimiento.dispositivoId, mantenimiento.id],
+  )
+  if (ancho || !otros) return null
+  const ultima = otros.filter((m) => m.estado === 'realizado' && !esPorValidar(m)).sort(porFechaRealizadaDesc)[0]
+  const antecedente = otros.filter(esPorValidar).sort(porFechaProgramada).at(-1)
+  const marca = antecedente ? estadoMarcadoDe(antecedente.observaciones) : null
+  return (
+    <section
+      aria-label="Antes de cerrarlo"
+      data-contexto-mantenimiento
+      className="flex flex-col divide-y divide-noct-divider overflow-hidden rounded-2xl border border-noct-divider bg-noct-surface"
+    >
+      {mantenimiento.observaciones && (
+        <div className="flex flex-col gap-1 px-3.5 py-3">
+          <h2 className="text-[13px] text-noct-neutral-400">Qué hay que hacer</h2>
+          <p className="whitespace-pre-wrap text-[15px] font-medium leading-[1.45] [overflow-wrap:anywhere]">
+            {mantenimiento.observaciones}
+          </p>
+        </div>
+      )}
+      <div className="flex flex-col gap-1 px-3.5 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-[13px] text-noct-neutral-400">La última vez</h2>
+          {ultima && (
+            <PastillaEstado tono="exito" conPunto>
+              Confirmado
+            </PastillaEstado>
+          )}
+        </div>
+        {ultima ? (
+          <p className="text-[15px] leading-[1.45] [overflow-wrap:anywhere]">
+            {ultima.fechaRealizada && <span className="font-semibold">{fechaConAnio(ultima.fechaRealizada)}</span>}
+            {ultima.tecnico && `${ultima.fechaRealizada ? ', ' : ''}${ultima.tecnico}`}
+            {ultima.resultado && `${ultima.fechaRealizada || ultima.tecnico ? '. ' : ''}${ultima.resultado}`}
+          </p>
+        ) : (
+          <p className="text-[14px] leading-[1.45] text-noct-neutral-400">
+            Todavía no hay uno cerrado en la app para este equipo.
+          </p>
+        )}
+      </div>
+      {antecedente && (
+        <div data-documentado className="flex flex-col gap-1.5 px-3.5 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <PastillaEstado tono="precaucion" conPunto>
+              Por validar
+            </PastillaEstado>
+            <Link
+              to={`/dispositivos/${antecedente.dispositivoId}/mantenimientos/${antecedente.id}`}
+              className="flex min-h-10 items-center text-[14px] font-semibold text-noct-accent-300"
+            >
+              Ver fuente
+            </Link>
+          </div>
+          <p className="text-[13.5px] leading-[1.45] text-noct-neutral-300 [overflow-wrap:anywhere]">
+            Según {antecedente.fuente}
+            {marca && (
+              <>
+                : marca <span className="font-mono">{marca}</span>
+              </>
+            )}
+            {antecedente.fechaProgramada ? ` el ${fechaConAnio(antecedente.fechaProgramada)}` : ''}. No cuenta como hecho.
+          </p>
+        </div>
       )}
     </section>
   )
@@ -331,6 +434,9 @@ export function RegistrarDesenlace({
   const [motivo, setMotivo] = useState('')
   const [intentado, setIntentado] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  // En el teléfono, cuándo y quién se dicen en una línea con "Cambiar"
+  // (tarea 345): casi siempre es hoy y quien tiene la sesión.
+  const [cambiandoQuienYCuando, setCambiandoQuienYCuando] = useState(false)
   const tecnico = tecnicoEscrito ?? perfil?.nombre ?? ''
 
   const error =
@@ -340,6 +446,16 @@ export function RegistrarDesenlace({
         ? errorDePosposicion(nuevaFecha, mantenimiento.fechaProgramada)
         : errorDeCancelacion(motivo)
   const errorEnLinea = !ancho && intentado && desenlace === 'realizado' && error === ERROR_QUE_SE_HIZO
+  // Los campos de cuándo y quién, a la vista: desde 768 siempre; en el
+  // teléfono al pulsar "Cambiar", sin nombre que proponer o si uno falla.
+  // Mientras se lee la sesión (undefined) no se abren, para no saltar.
+  const camposDeQuienYCuando =
+    ancho ||
+    cambiandoQuienYCuando ||
+    (perfil !== undefined && !tecnico.trim()) ||
+    (intentado && desenlace === 'realizado' && error !== null && !errorEnLinea)
+  const detalleElegido = RESPUESTAS.find((r) => r.valor === desenlace)?.detalle
+  const fechaDicha = fechaRealizada === hoyIso() ? `hoy, ${fechaCorta(fechaRealizada)}` : fechaConAnio(fechaRealizada)
 
   function elegir(valor: Respuesta) {
     setDesenlace(valor)
@@ -370,46 +486,90 @@ export function RegistrarDesenlace({
   return (
     <form onSubmit={guardar} noValidate className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-1.5">
-        <span id={idPregunta} className={CLASE_ETIQUETA}>
+        <span id={idPregunta} className={`${CLASE_ETIQUETA} max-md:text-[17px] max-md:font-bold max-md:text-noct-text`}>
           ¿Cómo terminó?
         </span>
-        <div role="radiogroup" aria-labelledby={idPregunta} className="flex flex-col gap-1.5 max-md:gap-2">
+        {/* En el teléfono, tres segmentos y, debajo, lo que hace el elegido
+            (tarea 345); desde 768, las opciones de siempre. */}
+        <div
+          role="radiogroup"
+          aria-labelledby={idPregunta}
+          className="flex flex-col gap-1.5 max-md:grid max-md:grid-cols-3 max-md:gap-2"
+        >
           {RESPUESTAS.map((r) => (
-            <OpcionRadio key={r.valor} activa={desenlace === r.valor} onClick={() => elegir(r.valor)} tarjeta detalle={r.detalle}>
+            <OpcionRadio
+              key={r.valor}
+              activa={desenlace === r.valor}
+              onClick={() => elegir(r.valor)}
+              tarjeta={ancho}
+              segmento={!ancho}
+              detalle={ancho ? r.detalle : undefined}
+            >
               {r.texto}
             </OpcionRadio>
           ))}
         </div>
+        {!ancho && detalleElegido && <p className="text-[13.5px] leading-snug text-noct-neutral-400">{detalleElegido}</p>}
       </div>
 
       {desenlace === 'realizado' && (
         <>
-          <Campo etiqueta="Fecha en que se hizo">
-            <input
-              type="date"
-              required
-              max={hoyIso()}
-              value={fechaRealizada}
-              onChange={(e) => setFechaRealizada(e.target.value)}
-              className={`min-h-11 ${CLASE_CAMPO}`}
-            />
-          </Campo>
-          <Campo etiqueta="Quién lo hizo">
-            <input
-              type="text"
-              required
-              value={tecnico}
-              onChange={(e) => setTecnicoEscrito(e.target.value)}
-              className={`min-h-11 ${CLASE_CAMPO}`}
-            />
-          </Campo>
+          {camposDeQuienYCuando ? (
+            <>
+              <Campo etiqueta="Fecha en que se hizo">
+                <input
+                  type="date"
+                  required
+                  max={hoyIso()}
+                  value={fechaRealizada}
+                  onChange={(e) => setFechaRealizada(e.target.value)}
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                />
+              </Campo>
+              <Campo etiqueta="Quién lo hizo">
+                <input
+                  type="text"
+                  required
+                  value={tecnico}
+                  onChange={(e) => setTecnicoEscrito(e.target.value)}
+                  className={`min-h-11 ${CLASE_CAMPO}`}
+                />
+              </Campo>
+            </>
+          ) : (
+            <div data-quien-y-cuando className="-mt-1 flex flex-wrap items-center gap-x-2 text-[14.5px] text-noct-neutral-300">
+              <span>
+                Se hizo <span className="font-semibold text-noct-text">{fechaDicha}</span>
+                {tecnicoEscrito === null && perfil?.nombre ? (
+                  <>
+                    {' · '}lo hiciste <span className="font-semibold text-noct-text">tú</span>
+                  </>
+                ) : (
+                  tecnico.trim() && (
+                    <>
+                      {' · '}lo hizo <span className="font-semibold text-noct-text">{tecnico}</span>
+                    </>
+                  )
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={() => setCambiandoQuienYCuando(true)}
+                aria-label="Cambiar la fecha o quién lo hizo"
+                className="-mx-1 flex min-h-10 items-center rounded-lg px-1 font-semibold text-noct-accent-300 hover:bg-noct-text/[.05]"
+              >
+                Cambiar
+              </button>
+            </div>
+          )}
           <Campo etiqueta="Qué se hizo y cómo quedó">
             <textarea
               rows={3}
               required
               value={resultado}
               onChange={(e) => setResultado(e.target.value)}
-              placeholder="Ej.: limpieza interna, cambio de cable de red"
+              // El ejemplo, en el teléfono (tarea 343); desde 768, sin él, como siempre.
+              placeholder={ancho ? undefined : 'Ej.: limpieza interna, cambio de cable de red'}
               aria-invalid={errorEnLinea || undefined}
               aria-describedby={errorEnLinea ? idErrorResultado : undefined}
               className={`resize-y leading-[1.5] ${CLASE_CAMPO} ${errorEnLinea ? 'max-md:border-noct-error' : ''}`}
@@ -421,6 +581,18 @@ export function RegistrarDesenlace({
             <p id={idErrorResultado} role="alert" className="-mt-2 flex items-center gap-1.5 text-[13.5px] text-noct-error">
               <WarningCircle size={15} className="shrink-0" aria-hidden />
               {error}
+            </p>
+          )}
+          {/* LA EVIDENCIA, DICHA COMO ES (tarea 345): las fotos y actas cuelgan
+              de la intervención que crea el registro, así que se adjuntan al
+              abrirlo después de guardar. No es un botón que no funcione. */}
+          {!ancho && (
+            <p
+              data-evidencia-al-guardar
+              className="flex items-start gap-2 rounded-[13px] border-[1.5px] border-dashed border-noct-text/20 px-3.5 py-3 text-[13.5px] leading-snug text-noct-neutral-400"
+            >
+              <Paperclip size={17} className="mt-px shrink-0" aria-hidden />
+              Fotos o actas: se adjuntan después de guardar, en el registro que queda en el historial del equipo.
             </p>
           )}
         </>
@@ -467,21 +639,41 @@ export function RegistrarDesenlace({
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={guardando}
-        // Guardar el desenlace hace avanzar: es la acción rellena de la
-        // pantalla (regla 30). Cancelar es destructivo y va delineado en rojo.
-        className={desenlace === 'cancelado' ? `${BTN_PRIMARIO_PELIGRO} min-h-11 self-start px-4 disabled:opacity-50` : `${BTN_PRIMARIO_RELLENO} w-full`}
-      >
-        {guardando
-          ? 'Guardando...'
-          : desenlace === 'realizado'
-            ? 'Cerrar y registrar en el equipo'
-            : desenlace === 'pospuesto'
-              ? 'Posponer'
-              : 'Cancelar mantenimiento'}
-      </button>
+      {/* En la pantalla del teléfono, el registro va fijo abajo (tarea 345);
+          en la hoja de la lista y desde 768, al final del formulario. */}
+      <PieDelRegistro fijo={!ancho && !alTerminar}>
+        <button
+          type="submit"
+          disabled={guardando}
+          // Guardar el desenlace hace avanzar: es la acción rellena de la
+          // pantalla (regla 30). Cancelar es destructivo y va delineado en rojo.
+          className={
+            desenlace === 'cancelado'
+              ? `${BTN_PRIMARIO_PELIGRO} min-h-11 self-start px-4 disabled:opacity-50 max-md:min-h-[54px] max-md:w-full max-md:rounded-[15px] max-md:text-[16px]`
+              : `${BTN_PRIMARIO_RELLENO} w-full`
+          }
+        >
+          {guardando
+            ? 'Guardando...'
+            : desenlace === 'realizado'
+              ? ancho
+                ? 'Cerrar y registrar en el equipo'
+                : // En el teléfono dice dónde queda (tarea 345, DESPUÉS de Claude Design).
+                  'Guardar en el historial'
+              : desenlace === 'pospuesto'
+                ? 'Posponer'
+                : 'Cancelar mantenimiento'}
+        </button>
+      </PieDelRegistro>
     </form>
+  )
+}
+
+function PieDelRegistro({ fijo, children }: { fijo: boolean; children: ReactNode }) {
+  if (!fijo) return children
+  return (
+    <div className="sticky bottom-0 z-10 -mx-4 mt-1 flex flex-col border-t border-noct-divider bg-noct-bg/[.94] px-4 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
+      {children}
+    </div>
   )
 }

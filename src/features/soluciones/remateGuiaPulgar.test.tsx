@@ -65,12 +65,17 @@ afterEach(async () => {
 })
 
 describe('el contador y el índice "Pasos"', () => {
-  it('el contador mide 40 en el teléfono y el índice tiene la anatomía del handoff, sin cambiar a dónde lleva', async () => {
+  it('en el teléfono el contador dice "Pasos", el paso va entero en la cabecera y el índice tiene la anatomía del handoff', async () => {
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes(ACCION), 'la acción')
+    // Desde la tarea 345 (DESPUÉS de Claude Design): "Pasos" de 48 abre el
+    // mismo índice, con el mismo nombre accesible, y el paso se lee arriba.
     const contador = await esperarControl(/^Paso 1 de 2\. Abrir el índice de pasos$/)
-    expect(contador.firstElementChild?.className).toContain('max-md:min-h-10')
-    expect(contador.textContent).toContain('1/2')
+    expect(contador.textContent).toBe('Pasos')
+    expect(contador.className).toContain('min-h-12')
+    const enCabecera = document.body.querySelector<HTMLElement>('[data-paso-en-cabecera]')
+    expect(enCabecera?.textContent).toContain('Revisar un panel de prueba')
+    expect(enCabecera?.textContent).toContain('Paso 1 de 2 · ')
 
     await tocar(contador)
     const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'el índice')
@@ -123,5 +128,56 @@ describe('la credencial en la guía', () => {
     expect(desbloquear.className).toContain('w-full')
     expect(desbloquear.parentElement?.className).toContain('max-md:flex-col')
     expect(document.body.innerHTML).not.toContain('usuario.falso.remate')
+  })
+})
+
+// TAREA 345: LA EJECUCIÓN EN EL TELÉFONO, FIEL AL DESPUÉS DE CLAUDE DESIGN.
+// Solo presentación: la cabecera con "Salir" y el paso entero, "Pasos", el
+// botón que dice a dónde lleva y la hoja de la credencial que lo dice en voz
+// alta. Lo que hace cada control no cambia. Desde 768, como estaba.
+describe('la guía en el teléfono (tarea 345)', () => {
+  type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+  const ventana = window as unknown as VentanaDePrueba
+
+  afterEach(() => {
+    ventana.happyDOM.setViewport({ width: 375, height: 812 })
+  })
+
+  it('la cabecera dice "Salir" y "Tu avance se guarda solo", y el botón dice a dónde lleva', async () => {
+    await montar(RUTAS, RUTA)
+    await esperar(() => textoPantalla().includes(ACCION), 'la acción')
+    expect(textoPantalla()).toContain('Salir')
+    expect(textoPantalla()).toContain('Tu avance se guarda solo')
+    // El nombre de la guía sigue siendo el encabezado de la página.
+    expect(Array.from(document.body.querySelectorAll('h1')).some((h) => h.textContent === 'Revisar un panel de prueba')).toBe(true)
+    // Dentro del paso, "Hecho, siguiente acción"; en su última, el paso al que lleva.
+    await tocar(await esperarControl('Hecho, siguiente acción'))
+    await esperar(() => textoPantalla().includes('Revisa el panel de prueba'), 'la segunda acción')
+    await tocar(await esperarControl('Hecho, ir al paso 2'))
+    await esperar(() => textoPantalla().includes('Cierra el panel de prueba'), 'el paso 2')
+    expect(document.body.querySelector('[data-paso-en-cabecera]')?.textContent).toContain('Paso 2 de 2 · Cerrar el panel de prueba')
+  })
+
+  it('la hoja de la credencial dice que no se sale de la guía y "Volver a la guía" la cierra donde estaba', async () => {
+    await montar(RUTAS, RUTA)
+    await abrirCredencial('Acceso de prueba al panel')
+    const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja')
+    expect(hoja.querySelector('[data-sin-salir-de-la-guia]')?.textContent).toContain('Tu paso sigue debajo, como lo dejaste.')
+    await tocar(control('Volver a la guía') as HTMLElement)
+    await esperar(() => document.body.querySelector('[role="dialog"]') === null, 'la hoja cerrada')
+    expect(textoPantalla()).toContain(ACCION)
+    expect(document.body.innerHTML).not.toContain('usuario.falso.remate')
+  })
+
+  it('desde 768, la cabecera, el contador y el botón de siempre', async () => {
+    ventana.happyDOM.setViewport({ width: 768, height: 1024 })
+    await montar(RUTAS, RUTA)
+    await esperar(() => textoPantalla().includes(ACCION), 'la acción')
+    const contador = await esperarControl(/^Paso 1 de 2\. Abrir el índice de pasos$/)
+    expect(contador.textContent).toContain('1/2')
+    expect(document.body.querySelector('[data-paso-en-cabecera]')).toBeNull()
+    expect(textoPantalla()).not.toContain('Tu avance se guarda solo')
+    expect(control('Completar y seguir')).not.toBeNull()
+    expect(control('Hecho, siguiente acción')).toBeNull()
   })
 })

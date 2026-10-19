@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type BloquePaso, type PasoProcedimiento } from '../../lib/db'
 import { guardarModoEjecucion } from '../../lib/preferenciasEjecucion'
 import {
+  COMPLETAR_Y_SEGUIR,
   anclarMaestra,
   control,
   desmontarTodo,
@@ -247,13 +248,12 @@ async function sembrarDecisionConDestino(): Promise<void> {
 
 /** Toca el control principal de la acción hasta que aparezca `texto`. */
 async function completarHasta(texto: string, intentos = 12): Promise<void> {
-  await esperar(
-    () => textoPantalla().includes(texto) || control(/^Completar y (seguir|terminar)$/),
-    `la ejecución lista para llegar a «${texto}»`,
-  )
+  // En el teléfono el botón dice a dónde lleva (tarea 345); "Completar y terminar" no cambia.
+  const completar = () => control(COMPLETAR_Y_SEGUIR) ?? control('Completar y terminar')
+  await esperar(() => textoPantalla().includes(texto) || completar(), `la ejecución lista para llegar a «${texto}»`)
   for (let i = 0; i < intentos; i++) {
     if (textoPantalla().includes(texto)) return
-    const boton = control(/^Completar y (seguir|terminar)$/)
+    const boton = completar()
     if (!boton) break
     await tocar(boton)
   }
@@ -516,7 +516,7 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     sinArquitectura()
     // El lector de pantalla y el teclado empiezan en la acción.
     expect(document.activeElement?.textContent).toBe('Busca y abre Conexión a Escritorio remoto')
-    expect(control('Completar y seguir')).not.toBeNull()
+    expect(control(COMPLETAR_Y_SEGUIR)).not.toBeNull()
   })
 
   it('lo reutilizado trae su credencial, sigue con "Completar y seguir", comprueba sin "terminar" y continúa en el paso 2', async () => {
@@ -541,7 +541,7 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     expect(control('Completar y terminar')).toBeNull()
     sinArquitectura()
 
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
     await esperar(() => textoPantalla().includes('¿Quedó bien?'), 'la comprobación de lo reutilizado')
     expect(textoPantalla()).not.toContain('Antes de terminar')
     // El lector de pantalla y el teclado siguen en lo que acaba de aparecer.
@@ -577,7 +577,7 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
     await empezarGuia()
     await completarHasta('Abre el programa de caja e ingresa su contraseña')
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
     await esperar(() => textoPantalla().includes('¿Quedó bien?'), 'la comprobación de lo reutilizado')
     // Su pie: "Anterior" y lo que falta, inactivo. Lo de dentro no se
     // "finaliza": sigue solo al marcar su última comprobación.
@@ -666,7 +666,7 @@ describe('un solo flujo: el caso de alimentación (fase 3)', () => {
     expect(textoPantalla()).not.toContain('Antes de empezar')
     sinArquitectura()
     // Actuar dentro ya es haber elegido seguir: la línea de "Retomando" se va.
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
     await esperar(() => textoPantalla().includes('Abre el programa de caja e ingresa su contraseña'), 'la acción siguiente')
     expect(textoPantalla()).not.toContain('Retomando ·')
   })
@@ -695,13 +695,13 @@ describe('un solo flujo: varias guías seguidas (el computador nuevo, fase 3)', 
     await esperar(() => textoPantalla().includes('Abre el correo de prueba e inicia sesión'), 'el paso 1')
     vistos.push(textoPantalla())
     sinArquitectura()
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
 
     await esperar(() => textoPantalla().includes('Crea la firma de prueba en el correo'), 'el paso 2, sin tarjeta que abrir')
     expect(control('Paso 2 de 3. Abrir el índice de pasos')).not.toBeNull()
     vistos.push(textoPantalla())
     sinArquitectura()
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
 
     await esperar(() => textoPantalla().includes('Selecciona Conectar en la impresora de prueba'), 'el paso 3')
     vistos.push(textoPantalla())
@@ -767,7 +767,7 @@ describe('lo opcional sigue siendo un desvío, dicho sin vocabulario interno (fa
     await esperar(() => control(/^No: seguir con/), 'de vuelta en la decisión, sin responder')
     await tocar(await esperarControl(/^No: seguir con/))
     await esperar(() => textoPantalla().includes('Selecciona Puede editar'), 'otra vez el camino del no')
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
     await esperar(() => textoPantalla().includes('Pega el vínculo y envía el correo'), 'lo que venía después')
     sinArquitectura()
   })
@@ -812,12 +812,12 @@ describe('lo que el paso traía no se pierde en el flujo (fase 3)', () => {
     expect(control(/^Más información/)).toBeNull()
     sinArquitectura()
     await tocar(await esperarControl(/^Entiendo, continuar$/))
-    await esperar(() => control('Completar y seguir') !== null, 'la primera acción reutilizada')
+    await esperar(() => control(COMPLETAR_Y_SEGUIR) !== null, 'la primera acción reutilizada')
     expect(textoPantalla()).toContain('Busca y abre Conexión a Escritorio remoto')
     // La acción ya no lo repite.
     expect(textoPantalla()).not.toContain('Si hay ventas abiertas en la caja de prueba, entrar las cierra.')
     // Solo con la primera acción: la siguiente ya no lo repite.
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
     await esperar(() => textoPantalla().includes('Escribe la dirección del servidor de prueba'), 'la segunda acción')
     expect(textoPantalla()).not.toContain('Si hay ventas abiertas en la caja de prueba, entrar las cierra.')
     expect(textoPantalla()).not.toContain('Tener el programa de caja abierto para registrar a la persona.')

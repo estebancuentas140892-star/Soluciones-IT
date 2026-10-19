@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db, type PasoProcedimiento } from '../../lib/db'
 import { guardarModoEjecucion } from '../../lib/preferenciasEjecucion'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   esperar,
@@ -235,9 +236,9 @@ describe('el botón dice la consecuencia', () => {
     expect(control('Paso 1 de 2. Abrir el índice de pasos')).not.toBeNull()
 
     // Hecho, sigue con la tarea, que ya se puede marcar.
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
     await esperar(() => textoPantalla().includes('Revisar la página de inicio'), 'la tarea que lo exigía')
-    expect(control('Completar y seguir')).not.toBeNull()
+    expect(control(COMPLETAR_Y_SEGUIR)).not.toBeNull()
     expect((await db.progresoPasos.get('guia-propuesta'))?.vinculos?.['guia-apoyo']?.pasosHechos).toEqual(['apoyo-p1'])
 
     // "Anterior" la vuelve a leer, ya hecha, sin abrir nada.
@@ -274,7 +275,7 @@ describe('el botón dice la consecuencia', () => {
     await esperar(() => textoPantalla().includes('Pulsar Cerrar'), 'el paso 2')
     // El paso 2 es donde sigue el trabajo (el 1 se apartó al saltarlo).
     expect(textoPantalla()).not.toContain('Solo consulta')
-    expect(control('Completar y seguir')).not.toBeNull()
+    expect(control(COMPLETAR_Y_SEGUIR)).not.toBeNull()
     expect(control('Completar y terminar')).toBeNull()
   })
 })

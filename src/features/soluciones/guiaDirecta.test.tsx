@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db, type BloquePaso, type PasoProcedimiento } from '../../lib/db'
 import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   esperar,
@@ -86,7 +87,7 @@ describe('abrir una guía', () => {
     expect(textoPantalla()).toContain('Paso 1 de 2')
     expect(textoPantalla()).not.toContain('Empecemos')
     expect(textoPantalla()).not.toContain('Ten esto listo antes de empezar')
-    expect(principal('Completar y seguir')).not.toBeNull()
+    expect(control(COMPLETAR_Y_SEGUIR)).not.toBeNull()
   })
 
   it('la dirección antigua /ejecutar lleva a la misma guía', async () => {
@@ -109,7 +110,7 @@ describe('abrir una guía', () => {
     await tocar(await esperarControl('Todo listo, empezar'))
     await esperar(() => textoPantalla().includes('Abrir el programa de caja'), 'la primera acción')
     expect(textoPantalla()).not.toContain('Resolución de prueba en PDF')
-    await tocar((await esperar(() => principal('Completar y seguir'), 'el botón Completar y seguir')) as HTMLElement)
+    await tocar((await esperar(() => control(COMPLETAR_Y_SEGUIR), 'el botón Completar y seguir')) as HTMLElement)
     await esperar(() => textoPantalla().includes('Entrar en Administración'), 'la segunda acción')
     expect(textoPantalla()).not.toContain('Resolución de prueba en PDF')
   })
@@ -121,10 +122,10 @@ describe('los avisos acompañan, no detienen', () => {
     await montar(RUTAS, RUTA)
 
     // Paso 1: dos acciones, ningún aviso.
-    await tocar((await esperar(() => principal('Completar y seguir'), 'Completar y seguir en la acción 1')) as HTMLElement)
+    await tocar((await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir en la acción 1')) as HTMLElement)
     await esperar(() => textoPantalla().includes('Entrar en Administración'), 'la acción 2')
     expect(textoPantalla()).not.toContain('Guardar reemplaza')
-    await tocar((await esperar(() => principal('Completar y seguir'), 'Completar y seguir en la acción 2')) as HTMLElement)
+    await tocar((await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir en la acción 2')) as HTMLElement)
 
     // Paso 2: el riesgo ANTES de la acción, en su propia pantalla (tarea 311),
     // con la acción a la que se refiere. Ni la acción ni su control todavía.
@@ -204,7 +205,7 @@ describe('retomar y volver a empezar', () => {
     await esperar(() => textoPantalla().includes('Entrar en Caja'), 'retoma en la acción pendiente')
     expect(textoPantalla()).toContain('Retomando · paso 1 de 2')
 
-    await tocar((await esperar(() => principal('Completar y seguir'), 'Completar y seguir')) as HTMLElement)
+    await tocar((await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir')) as HTMLElement)
     // Sigue en el MISMO paso (tercera acción), pero la línea ya no está.
     await esperar(() => textoPantalla().includes('Pulsar Nueva'), 'la acción siguiente del mismo paso')
     expect(textoPantalla()).toContain('Paso 1 de 2')

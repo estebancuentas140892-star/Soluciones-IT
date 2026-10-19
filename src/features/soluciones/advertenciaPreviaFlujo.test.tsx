@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type BloquePaso, type MicroPasoComoHacer, type OpcionDecision, type PasoProcedimiento, type ResultadoVisual } from '../../lib/db'
 import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   esperar,
@@ -122,7 +123,7 @@ async function enLaAccion(texto: string): Promise<void> {
 
 async function completar(texto: string): Promise<void> {
   await enLaAccion(texto)
-  await tocar(await esperar(() => principal('Completar y seguir'), `"Completar y seguir" en «${texto}»`))
+  await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), `"Completar y seguir" en «${texto}»`))
 }
 
 async function entiendo(): Promise<void> {
@@ -157,7 +158,7 @@ describe('una acción sin advertencia', () => {
     await enLaAccion(ACCION_1)
     expect(textoPantalla()).not.toContain('Antes de continuar')
     expect(principal('Entiendo, continuar')).toBeNull()
-    expect(principal('Completar y seguir')).not.toBeNull()
+    expect(control(COMPLETAR_Y_SEGUIR)).not.toBeNull()
   })
 
   it('un dato técnico no genera pantalla: sigue dentro de su acción', async () => {
@@ -200,7 +201,7 @@ describe('Precaución: la advertencia previa y después la acción', () => {
     const boton = principal('Entiendo, continuar') as HTMLElement
     expect(boton.className).toContain('bg-noct-accent')
     expect(boton.className).not.toContain('noct-error')
-    expect(principal('Completar y seguir')).toBeNull()
+    expect(control(COMPLETAR_Y_SEGUIR)).toBeNull()
   })
 
   it('"Entiendo, continuar" lleva a la acción, que no repite el riesgo y conserva todo lo suyo', async () => {

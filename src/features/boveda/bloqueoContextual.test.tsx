@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type PasoProcedimiento, type VinculoProtegido } from '../../lib/db'
 import {
+  COMPLETAR_Y_SEGUIR,
   abrirCredencial,
   anclarMaestra,
   control,
@@ -206,7 +207,7 @@ describe('qué hace "Bloquear Bóveda"', () => {
     // La guía no cambió: misma pantalla, misma acción, sin completar nada.
     expect(ubicacionActual().pathname).toBe(ruta)
     expect(document.body.querySelector('h2[data-foco-lectura]')?.textContent).toBe(ACCION)
-    expect(control('Completar y seguir')).not.toBeNull()
+    expect(control(COMPLETAR_Y_SEGUIR)).not.toBeNull()
     await pausa(100)
     expect(await db.progresoPasos.get('guia-boveda')).toEqual(avanceAntes)
   })

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { AvisoFlotante } from '../../components/AvisoFlotante'
 import { retirarAviso } from '../../components/avisosFlotantes'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   esperar,
@@ -113,7 +114,7 @@ describe('salir de la guía a medias', () => {
     await montar([{ ruta: '*', elemento: <AvisoFlotante /> }], '/')
     await montar(RUTAS, RUTA)
 
-    await tocar(await esperarControl('Completar y seguir'))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
     await esperar(() => textoPantalla().includes('Pasar el paño'), 'el paso 2')
     await tocar(await esperarControl('Salir de la guía'))
 

@@ -129,6 +129,14 @@ function opcion(texto: string): HTMLElement {
   return encontrada
 }
 
+// En el teléfono (tarea 345) el registro dice dónde queda, y cuándo y quién
+// van en una línea con "Cambiar", que abre sus dos campos.
+const GUARDAR = 'Guardar en el historial'
+
+async function cambiarQuienYCuando(): Promise<void> {
+  await tocar(await esperar(() => control('Cambiar la fecha o quién lo hizo'), 'Cambiar'))
+}
+
 beforeEach(async () => {
   await limpiarBase()
 })
@@ -230,6 +238,7 @@ describe('la pantalla de mantenimiento del equipo (tarea 331)', () => {
     await tocar(await esperar(() => control('Cerrar mantenimiento: Mantenimiento correctivo'), 'Cerrar mantenimiento'))
     const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja')
     expect(hoja.querySelector('[role="radiogroup"]')).not.toBeNull()
+    await cambiarQuienYCuando()
     await rellenar(campoDe('Quién lo hizo'), 'Técnico de prueba')
     // Sin decir qué se hizo no se cierra, y lo dice en línea.
     await tocar(hoja.querySelector<HTMLElement>('button[type="submit"]') as HTMLElement)
@@ -395,21 +404,28 @@ describe('desde la Agenda hasta cerrarlo', () => {
     await tocar(control(/PC de prueba/) as HTMLElement)
     await esperar(() => ubicacionActual().pathname === '/dispositivos/pc/mantenimientos/m1', 'su pantalla')
 
-    // "Se hizo" viene elegido; propone hoy y el nombre de quien tiene la sesión.
-    await esperar(() => control('Cerrar y registrar en el equipo'), 'el cierre')
+    // "Se hizo" viene elegido; propone hoy y el nombre de quien tiene la
+    // sesión: en el teléfono lo dice en una línea, y "Cambiar" abre los campos.
+    await esperar(() => control(GUARDAR), 'el cierre')
     expect(opcion('Se hizo').getAttribute('aria-checked')).toBe('true')
+    const linea = await esperar(() => {
+      const nodo = document.body.querySelector<HTMLElement>('[data-quien-y-cuando]')
+      return nodo && (nodo.textContent ?? '').includes('lo hiciste tú') ? nodo : null
+    }, 'cuándo y quién')
+    expect(linea.textContent).toContain('Se hizo hoy')
+    await cambiarQuienYCuando()
     expect(campoDe('Fecha en que se hizo').value).toBe(fechaRelativa(0))
     await esperarQue(async () => campoDe('Quién lo hizo').value === PERFIL_PRUEBA.nombre, 'el técnico propuesto')
 
     // Sin decir qué se hizo no cierra.
-    await tocar(control('Cerrar y registrar en el equipo') as HTMLElement)
+    await tocar(control(GUARDAR) as HTMLElement)
     await esperar(() => textoPantalla().includes('Di qué se hizo y cómo quedó.'), 'el aviso')
     expect((await db.mantenimientos.get('m1'))?.estado).toBe('programado')
 
     await rellenar(campoDe('Fecha en que se hizo'), fechaRelativa(-1))
     await rellenar(campoDe('Quién lo hizo'), 'Técnico de prueba')
     await rellenar(campoDe('Qué se hizo y cómo quedó'), 'Limpieza interna; queda operativo.')
-    await tocar(control('Cerrar y registrar en el equipo') as HTMLElement)
+    await tocar(control(GUARDAR) as HTMLElement)
 
     await esperar(() => textoPantalla().includes('Realizado y registrado en el historial del equipo.'), 'el cierre hecho')
     const cerrado = (await db.mantenimientos.get('m1')) as Mantenimiento
@@ -439,7 +455,7 @@ describe('desde la Agenda hasta cerrarlo', () => {
     await sembrarBase()
     await sembrarMantenimiento({ id: 'm2' })
     await montar(RUTAS, '/dispositivos/pc/mantenimientos/m2')
-    await esperar(() => control('Cerrar y registrar en el equipo'), 'la pantalla')
+    await esperar(() => control(GUARDAR), 'la pantalla')
 
     await tocar(opcion('Se pospone'))
     await rellenar(campoDe('Nueva fecha'), fechaRelativa(7))
@@ -529,7 +545,7 @@ describe('el mantenimiento de un equipo por ancho', () => {
 // Solo presentación: los mismos estados, las mismas tres respuestas y la
 // misma regla de "Qué se hizo". Todo inventado.
 describe('el mantenimiento en el teléfono (tarea 343)', () => {
-  it('lo atrasado va en error y lo pospuesto lleva su pastilla con punto', async () => {
+  it('lo atrasado va en su pastilla de error y lo pospuesto en la de precaución, las dos con punto', async () => {
     await sembrarBase()
     await sembrarMantenimiento({ id: 'atrasado', fechaProgramada: fechaRelativa(-3) })
     await sembrarMantenimiento({ id: 'pospuesto', tipo: 'correctivo', estado: 'pospuesto', fechaProgramada: fechaRelativa(4) })
@@ -538,7 +554,9 @@ describe('el mantenimiento en el teléfono (tarea 343)', () => {
       () => Array.from(document.body.querySelectorAll('span')).find((s) => s.textContent === 'Atrasado 3 días'),
       'lo atrasado',
     )
-    expect(atrasado.className).toContain('max-md:text-noct-error')
+    // Desde la tarea 345, en su pastilla con punto (DESPUÉS de Claude Design).
+    expect(atrasado.className).toContain('text-noct-error')
+    expect(atrasado.querySelector('[data-punto-estado]')).not.toBeNull()
     const pastilla = await esperar(
       () => Array.from(document.body.querySelectorAll<HTMLElement>('span')).find((s) => s.textContent === 'Pospuesto · sigue pendiente'),
       'la pastilla de pospuesto',
@@ -621,23 +639,24 @@ describe('el mantenimiento en el teléfono (tarea 343)', () => {
     expect(tarjeta.textContent).not.toContain('Realizado y confirmado')
   })
 
-  it('el cierre: tres tarjetas con lo que hace cada una y el aviso de "Qué se hizo" junto a su campo', async () => {
+  it('el cierre: tres segmentos, lo que hace el elegido debajo y el aviso de "Qué se hizo" junto a su campo', async () => {
     await sembrarBase()
     await sembrarMantenimiento({ id: 'abierto' })
     await montar(RUTAS, '/dispositivos/pc/mantenimientos/abierto')
     await esperar(() => document.body.querySelector('[role="radiogroup"]'), 'las respuestas')
     const respuestas = Array.from(document.body.querySelectorAll<HTMLElement>('[role="radio"]'))
-    expect(respuestas.map((r) => r.firstElementChild?.nextElementSibling?.firstElementChild?.textContent)).toEqual([
-      'Se hizo',
-      'Se pospone',
-      'Se cancela',
-    ])
-    for (const respuesta of respuestas) expect(respuesta.className).toContain('max-md:min-h-[60px]')
-    expect(respuestas[0].textContent).toContain('Queda en el historial del equipo')
+    // Desde la tarea 345, segmentos de 48 sin círculo (DESPUÉS de Claude Design).
+    expect(respuestas.map((r) => r.textContent)).toEqual(['Se hizo', 'Se pospone', 'Se cancela'])
+    for (const respuesta of respuestas) expect(respuesta.className).toContain('max-md:min-h-12')
+    expect(textoPantalla()).toContain('Queda en el historial del equipo')
+    await tocar(opcion('Se pospone'))
+    expect(textoPantalla()).toContain('Sigue pendiente, con otra fecha')
+    expect(textoPantalla()).not.toContain('Queda en el historial del equipo')
+    await tocar(opcion('Se hizo'))
 
     const queSeHizo = campoDe('Qué se hizo y cómo quedó')
     expect(queSeHizo.getAttribute('placeholder')).toBe('Ej.: limpieza interna, cambio de cable de red')
-    await tocar(control('Cerrar y registrar en el equipo') as HTMLElement)
+    await tocar(control(GUARDAR) as HTMLElement)
     const aviso = await esperar(
       () => Array.from(document.body.querySelectorAll<HTMLElement>('[role="alert"]')).find((a) => a.textContent === 'Di qué se hizo y cómo quedó.'),
       'el aviso en línea',
@@ -648,5 +667,107 @@ describe('el mantenimiento en el teléfono (tarea 343)', () => {
     expect(queSeHizo.className).toContain('max-md:border-noct-error')
     expect(document.body.querySelectorAll('[role="alert"]').length).toBe(1)
     expect(await db.mantenimientos.get('abierto')).toMatchObject({ estado: 'programado' })
+  })
+})
+
+// TAREA 345: EL MANTENIMIENTO EN EL TELÉFONO, FIEL AL DESPUÉS DE CLAUDE
+// DESIGN. Solo presentación: lo que se guarda y cómo no cambia. Todo inventado.
+describe('el mantenimiento en el teléfono (tarea 345)', () => {
+  type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+  const ventana = window as unknown as VentanaDePrueba
+
+  afterEach(() => {
+    ventana.happyDOM.setViewport({ width: 375, height: 812 })
+  })
+
+  it('dice qué hay que hacer, la última vez (confirmada) y lo que anota una fuente (por validar)', async () => {
+    await sembrarBase()
+    await sembrarMantenimiento({ id: 'abierto', fechaProgramada: fechaRelativa(-2), observaciones: 'Limpiar el equipo de prueba' })
+    await sembrarMantenimiento({
+      id: 'antes',
+      estado: 'realizado',
+      fechaRealizada: '2026-07-15',
+      tecnico: 'Técnico de prueba',
+      resultado: 'Limpieza general de prueba',
+    })
+    await sembrarMantenimiento({
+      id: 'ant',
+      fechaProgramada: '2026-03-10',
+      validacion: 'documentado_por_validar',
+      fuente: 'Planilla de prueba',
+      observaciones: 'Estado marcado en la fuente: REALIZADO.',
+    })
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos/abierto')
+    const contexto = await esperar(
+      () => document.body.querySelector<HTMLElement>('[data-contexto-mantenimiento]'),
+      'la tarjeta de contexto',
+    )
+    const texto = contexto.textContent ?? ''
+    expect(texto).toContain('Qué hay que hacer')
+    expect(texto).toContain('Limpiar el equipo de prueba')
+    expect(texto).toContain('La última vez')
+    expect(texto).toContain('Confirmado')
+    expect(texto).toContain('15 jul 2026, Técnico de prueba. Limpieza general de prueba')
+    const documentado = contexto.querySelector<HTMLElement>('[data-documentado]')
+    expect(documentado?.textContent).toContain('Por validar')
+    expect(documentado?.textContent).toContain('Según Planilla de prueba: marca REALIZADO el 10 mar 2026. No cuenta como hecho.')
+    expect(documentado?.querySelector('a')?.getAttribute('href')).toBe('/dispositivos/pc/mantenimientos/ant')
+    // El estado, en su pastilla de error con el día que tocaba.
+    const atrasado = Array.from(document.body.querySelectorAll<HTMLElement>('span')).find((s) =>
+      (s.textContent ?? '').startsWith('Atrasado 2 días · tocaba el'),
+    )
+    expect(atrasado?.querySelector('[data-punto-estado]')).not.toBeNull()
+    expect(atrasado?.className).toContain('text-noct-error')
+  })
+
+  it('sin un cierre anterior lo dice, sin inventar ninguno', async () => {
+    await sembrarBase()
+    await sembrarMantenimiento({ id: 'abierto' })
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos/abierto')
+    const contexto = await esperar(
+      () => document.body.querySelector<HTMLElement>('[data-contexto-mantenimiento]'),
+      'la tarjeta de contexto',
+    )
+    expect(contexto.textContent).toContain('Todavía no hay uno cerrado en la app para este equipo.')
+    expect(contexto.textContent).not.toContain('Confirmado')
+    expect(contexto.querySelector('[data-documentado]')).toBeNull()
+  })
+
+  it('el registro va fijo abajo, dice la evidencia como es y guarda lo de siempre', async () => {
+    await sembrarBase()
+    await sembrarMantenimiento({ id: 'abierto' })
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos/abierto')
+    const guardar = await esperar(() => control(GUARDAR), 'el registro')
+    expect(guardar.parentElement?.className).toContain('sticky')
+    expect(document.body.querySelector('[data-evidencia-al-guardar]')?.textContent).toContain('se adjuntan después de guardar')
+    // Sin "Cambiar", no hay campos de fecha ni de quién.
+    await esperar(() => (document.body.querySelector('[data-quien-y-cuando]')?.textContent ?? '').includes('lo hiciste tú'), 'cuándo y quién')
+    expect(() => campoDe('Fecha en que se hizo')).toThrow()
+    await rellenar(campoDe('Qué se hizo y cómo quedó'), 'Limpieza de prueba')
+    await tocar(guardar)
+    await esperarQue(async () => (await db.mantenimientos.get('abierto'))?.estado === 'realizado', 'se cierra')
+    expect(await db.mantenimientos.get('abierto')).toMatchObject({
+      fechaRealizada: fechaRelativa(0),
+      tecnico: PERFIL_PRUEBA.nombre,
+      resultado: 'Limpieza de prueba',
+    })
+  })
+
+  it('a 768 px, el cierre de siempre: opciones con su círculo, los campos a la vista y "Cerrar y registrar en el equipo"', async () => {
+    ventana.happyDOM.setViewport({ width: 768, height: 1024 })
+    await sembrarBase()
+    await sembrarMantenimiento({ id: 'abierto', observaciones: 'Limpiar el equipo de prueba' })
+    await montar(RUTAS, '/dispositivos/pc/mantenimientos/abierto')
+    await esperar(() => control('Cerrar y registrar en el equipo'), 'el cierre de siempre')
+    expect(control(GUARDAR)).toBeNull()
+    expect(document.body.querySelector('[data-contexto-mantenimiento]')).toBeNull()
+    expect(document.body.querySelector('[data-quien-y-cuando]')).toBeNull()
+    expect(document.body.querySelector('[data-evidencia-al-guardar]')).toBeNull()
+    expect(campoDe('Fecha en que se hizo').value).toBe(fechaRelativa(0))
+    for (const respuesta of document.body.querySelectorAll<HTMLElement>('[role="radio"]')) {
+      expect(respuesta.className).not.toContain('max-md:min-h-12')
+      expect(respuesta.firstElementChild?.getAttribute('aria-hidden')).toBe('true')
+    }
+    expect(textoPantalla()).toContain('Limpiar el equipo de prueba')
   })
 })

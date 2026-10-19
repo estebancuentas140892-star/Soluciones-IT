@@ -207,6 +207,15 @@ export async function esperarQue(condicion: () => Promise<boolean>, que: string,
   }
 }
 
+/**
+ * El botón que completa la acción en curso. Desde 768 dice "Completar y
+ * seguir"; en el teléfono dice a dónde lleva (tarea 345, DESPUÉS de Claude
+ * Design): "Hecho, siguiente acción" dentro del paso y, en su última acción,
+ * "Hecho, ir al paso 3" o "Hecho, comprobar el resultado". Hace lo mismo.
+ */
+export const COMPLETAR_Y_SEGUIR =
+  /^(Completar y seguir|Hecho, siguiente acción|Hecho, ir al paso \d+|Hecho, comprobar el resultado)$/
+
 /** Nombre accesible simple: el aria-label o, si no hay, el texto visible. */
 function nombreDe(elemento: Element): string {
   return (elemento.getAttribute('aria-label') ?? elemento.textContent ?? '').replace(/\s+/g, ' ').trim()

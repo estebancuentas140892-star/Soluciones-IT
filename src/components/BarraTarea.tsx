@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { padreDe, vueltaDeTarea } from '../lib/navegacion'
 import { MagnifyingGlass, X } from './iconos'
+import { useEsAncho } from './useEsAncho'
 
 // Cabecera del nivel 3 del chasis (tarea 185, mockup 4c del handoff
 // "Auditoría de Soluciones TI"). Es la única pantalla que puede quedarse
@@ -88,6 +89,13 @@ interface Props {
    * abandonar el procedimiento. Sin esta prop, el boton no existe.
    */
   onBuscar?: () => void
+  /**
+   * La ejecución de una guía (tarea 345): en el teléfono la X dice "Salir" y
+   * la fila dice "Tu avance se guarda solo"; el nombre de la guía sigue
+   * siendo el encabezado de la página, para el lector, y se lee debajo, en la
+   * banda de la guía. Desde 768, la cabecera compacta de siempre.
+   */
+  deGuia?: boolean
 }
 
 export function BarraTarea({
@@ -104,19 +112,50 @@ export function BarraTarea({
   compacta = false,
   trailing,
   onBuscar,
+  deGuia = false,
 }: Props) {
   const { pathname } = useLocation()
+  const ancho = useEsAncho()
+  const guiaEnTelefono = compacta && deGuia && !ancho
   const destino = salidaA ?? padreDe(pathname)?.to ?? '/'
   const rutaVuelta = vuelta ?? vueltaDeTarea(pathname)
 
   if (compacta) {
+    // La X de la guía en el teléfono lleva su palabra: es la salida, y salir
+    // no pierde el avance (tarea 345).
+    const claseSalida = guiaEnTelefono
+      ? 'flex min-h-12 shrink-0 items-center gap-1.5 rounded-lg pl-2 pr-2 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.07]'
+      : 'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text'
+    const contenidoSalida = (
+      <>
+        <X size={guiaEnTelefono ? 20 : 19} aria-hidden />
+        {guiaEnTelefono && <span aria-hidden>Salir</span>}
+      </>
+    )
     return (
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-surface/[.95] backdrop-blur-[12px]">
         {/* 56 de alto en la tableta y 60 en el escritorio (tarea 339, T5). */}
         <div
           className={`flex items-center gap-1 pl-1 pr-1 md:min-h-14 md:gap-2 md:pl-2.5 md:pr-4 xl:min-h-[60px] xl:pr-6 ${contexto ? 'min-h-[50px] py-0.5' : 'h-11'}`}
         >
-          {alSalir ? (
+          {guiaEnTelefono ? (
+            alSalir ? (
+              <button type="button" onClick={alSalir} aria-label={salidaEtiqueta} title={salidaEtiqueta} className={claseSalida}>
+                {contenidoSalida}
+              </button>
+            ) : (
+              <Link
+                to={destino}
+                state={salidaEstado}
+                onClick={alPulsarSalida}
+                aria-label={salidaEtiqueta}
+                title={salidaEtiqueta}
+                className={claseSalida}
+              >
+                {contenidoSalida}
+              </Link>
+            )
+          ) : alSalir ? (
             <button
               type="button"
               onClick={alSalir}
@@ -138,7 +177,15 @@ export function BarraTarea({
               <X size={19} aria-hidden />
             </Link>
           )}
-          {contexto ? (
+          {guiaEnTelefono ? (
+            <div className="min-w-0 flex-1 text-center">
+              <h1 className="sr-only">{titulo}</h1>
+              {/* Entera: a 320 baja a dos líneas antes que recortarse. */}
+              <p aria-hidden className="line-clamp-2 text-[13px] leading-tight text-noct-neutral-400 text-balance">
+                Tu avance se guarda solo
+              </p>
+            </div>
+          ) : contexto ? (
             // Dos líneas: con qué (12 px, el mínimo de texto) y qué (14 px
             // seminegrita). El título se recorta en una línea: entero se
             // lee en el índice de pasos, que abre el contador.
