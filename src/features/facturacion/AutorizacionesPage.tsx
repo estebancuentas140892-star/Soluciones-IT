@@ -49,7 +49,11 @@ export function AutorizacionesPage() {
     if (filas.length === 0) return null
     return (
       <section className="flex flex-col gap-1">
-        <TituloSeccion>{titulo}</TituloSeccion>
+        {/* En el teléfono, el grupo como frase y con cuántas tiene (tarea 345). */}
+        <TituloSeccion className="max-md:flex max-md:items-baseline max-md:gap-2 max-md:text-[15px] max-md:font-semibold max-md:normal-case max-md:tracking-normal max-md:text-noct-text">
+          {titulo}
+          <span className="font-mono text-[13px] font-normal text-noct-neutral-500 md:hidden">{filas.length}</span>
+        </TituloSeccion>
         <ul className="flex flex-col divide-y divide-noct-divider">
           {filas.map((a) => (
             <li key={a.id}>

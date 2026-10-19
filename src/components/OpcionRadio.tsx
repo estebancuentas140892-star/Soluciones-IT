@@ -19,11 +19,20 @@ const OPCION_INACTIVA = 'border-noct-divider text-noct-neutral-300 hover:bg-noct
 // elige con una mano. Desde 768, la opción de siempre.
 const TARJETA_TELEFONO =
   'max-md:min-h-[60px] max-md:gap-3 max-md:rounded-[13px] max-md:border-[1.5px] max-md:px-3.5 max-md:py-2.5 max-md:text-[15.5px] max-md:active:bg-noct-presionado'
+// EL SEGMENTO DEL TELÉFONO (tarea 345, cierre de un mantenimiento del DESPUÉS
+// de Claude Design): las respuestas lado a lado, de 48, centradas y sin el
+// círculo; lo que hace la elegida lo dice quien lo usa, debajo. Solo en el
+// teléfono: desde 768 nadie lo pide.
+const SEGMENTO_TELEFONO =
+  'max-md:min-h-12 max-md:justify-center max-md:rounded-[13px] max-md:border-[1.5px] max-md:px-1 max-md:text-center max-md:text-[14.5px] max-md:font-semibold max-md:leading-tight max-md:active:bg-noct-presionado max-[374px]:text-[13.5px]'
+const SEGMENTO_ACTIVO = 'max-md:text-noct-accent-300'
+const SEGMENTO_INACTIVO = 'max-md:border-noct-text/20 max-md:text-noct-text'
 
 export function OpcionRadio({
   activa,
   onClick,
   tarjeta = false,
+  segmento = false,
   detalle,
   children,
 }: {
@@ -31,6 +40,8 @@ export function OpcionRadio({
   onClick: () => void
   /** En el teléfono, como tarjeta de 60 con su detalle (tarea 343). */
   tarjeta?: boolean
+  /** En el teléfono, como segmento de 48 sin círculo (tarea 345). */
+  segmento?: boolean
   /** Lo que esa respuesta hace, en una línea a 13 bajo la palabra. */
   detalle?: ReactNode
   children: ReactNode
@@ -41,16 +52,20 @@ export function OpcionRadio({
       role="radio"
       aria-checked={activa}
       onClick={onClick}
-      className={`${OPCION} ${activa ? OPCION_ACTIVA : OPCION_INACTIVA} ${tarjeta ? TARJETA_TELEFONO : ''}`}
+      className={`${OPCION} ${activa ? OPCION_ACTIVA : OPCION_INACTIVA} ${tarjeta ? TARJETA_TELEFONO : ''} ${
+        segmento ? `${SEGMENTO_TELEFONO} ${activa ? SEGMENTO_ACTIVO : SEGMENTO_INACTIVO}` : ''
+      }`}
     >
-      <span
-        aria-hidden
-        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-          activa ? 'border-noct-accent' : 'border-noct-neutral-600'
-        } ${tarjeta ? 'max-md:h-5 max-md:w-5 max-md:border-[1.5px]' : ''}`}
-      >
-        {activa && <span className={`h-2 w-2 rounded-full bg-noct-accent ${tarjeta ? 'max-md:h-2.5 max-md:w-2.5' : ''}`} />}
-      </span>
+      {!segmento && (
+        <span
+          aria-hidden
+          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+            activa ? 'border-noct-accent' : 'border-noct-neutral-600'
+          } ${tarjeta ? 'max-md:h-5 max-md:w-5 max-md:border-[1.5px]' : ''}`}
+        >
+          {activa && <span className={`h-2 w-2 rounded-full bg-noct-accent ${tarjeta ? 'max-md:h-2.5 max-md:w-2.5' : ''}`} />}
+        </span>
+      )}
       <span className="min-w-0 flex-1">
         {tarjeta ? <span className="max-md:block max-md:font-semibold max-md:text-noct-text">{children}</span> : children}
         {/* Con `tarjeta`, el detalle es del teléfono: desde 768 la opción es la de siempre. */}

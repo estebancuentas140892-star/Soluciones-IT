@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type BloquePaso, type MicroPasoComoHacer, type OpcionDecision, type PasoProcedimiento } from '../../lib/db'
 import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   escribir,
@@ -299,7 +300,8 @@ describe('una acción a la vez (Modo Foco)', () => {
     // pequeño como el de "Dato técnico".
     expect(clases).toContain('text-[16px]')
     expect(clases.filter((c) => /^text-\[(2[0-9]|[3-9][0-9])px\]$|^text-(xl|[2-9]xl)$/.test(c))).toEqual([])
-    expect(instruccion().classList.contains('min-[375px]:text-[26px]')).toBe(true)
+    // 26 px desde 768; en el teléfono, 23 a 650 (tarea 345, DESPUÉS de Claude Design).
+    expect(instruccion().classList.contains('md:text-[26px]')).toBe(true)
     const rotulo = como.firstElementChild as HTMLElement
     expect(rotulo.textContent).toBe('Cómo hacerlo')
     expect(rotulo.classList.contains('uppercase')).toBe(true)
@@ -328,7 +330,7 @@ describe('una acción a la vez (Modo Foco)', () => {
     await esperar(() => listasComoHacerlo()[0], 'la lista de la primera acción')
     comprobarLista()
 
-    await tocar(await esperarControl(/^Completar y seguir$/))
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
     const siguiente = await esperar(
       () => listasComoHacerlo().find((ol) => frases(ol)[0] === 'Pulsa Otro.'),
       'la lista de la acción siguiente',

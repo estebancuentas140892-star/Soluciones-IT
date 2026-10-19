@@ -40,6 +40,16 @@ function dias(n: number): string {
   return n === 1 ? '1 día' : `${n} días`
 }
 
+/** Lo programado, de lo más próximo a lo más lejano. */
+export function porFechaProgramada(a: Mantenimiento, b: Mantenimiento): number {
+  return (a.fechaProgramada ?? '').localeCompare(b.fechaProgramada ?? '')
+}
+
+/** Lo hecho, de lo más reciente a lo más antiguo. */
+export function porFechaRealizadaDesc(a: Mantenimiento, b: Mantenimiento): number {
+  return (b.fechaRealizada ?? '').localeCompare(a.fechaRealizada ?? '')
+}
+
 /** "Atrasado 3 días", "Toca hoy", "Toca mañana", "Toca el 20 oct". Corto: es la razón de una fila en el teléfono. */
 export function textoProgramado(fecha: string, diasRestantes: number): string {
   if (diasRestantes < 0) return `Atrasado ${dias(-diasRestantes)}`

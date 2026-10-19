@@ -11,6 +11,7 @@ import {
 import { CAMPOS_BLOQUE_VACIOS, normalizarProcedimiento } from '../../lib/procedimiento'
 import { guardarModoEjecucion } from '../../lib/preferenciasEjecucion'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   esperar,
@@ -162,7 +163,7 @@ async function pasarLaAdvertencia(): Promise<void> {
 async function completar(texto: string): Promise<void> {
   await esperar(() => textoPantalla().includes(texto), `la acción «${texto}»`)
   await pasarLaAdvertencia()
-  await tocar(await esperar(() => principal('Completar y seguir'), `"Completar y seguir" en «${texto}»`))
+  await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), `"Completar y seguir" en «${texto}»`))
 }
 
 function casillas(): HTMLElement[] {

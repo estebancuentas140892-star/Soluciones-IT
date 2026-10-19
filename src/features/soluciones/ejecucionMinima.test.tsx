@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type BloquePaso, type MicroPasoComoHacer, type PasoProcedimiento, type ResultadoVisual } from '../../lib/db'
 import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   esperar,
@@ -159,7 +160,7 @@ function imagenDelResultado(): HTMLImageElement | null {
 }
 
 async function completarYSeguir() {
-  await tocar(await esperarControl('Completar y seguir'))
+  await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
 }
 
 async function verElPasoEntero() {
@@ -191,8 +192,10 @@ describe('una sola instrucción principal', () => {
     expect(instrucciones()).toHaveLength(1)
     const [h2] = instrucciones()
     expect(h2.textContent).toBe(ACCION_1)
-    expect(h2.classList.contains('min-[375px]:text-[26px]')).toBe(true)
+    // En el teléfono 23 px a 650 y desde 768, 26 (tarea 345, DESPUÉS de Claude Design).
+    expect(h2.classList.contains('md:text-[26px]')).toBe(true)
     expect(h2.classList.contains('text-[23px]')).toBe(true)
+    expect(h2.classList.contains('max-md:font-[650]')).toBe(true)
     // Nunca se recorta: parte la línea dentro de su columna (regla 23).
     expect(h2.classList.contains('min-w-0')).toBe(true)
     expect(h2.classList.contains('[overflow-wrap:anywhere]')).toBe(true)

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db, type BloquePaso, type PasoProcedimiento } from '../../lib/db'
 import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   esperar,
@@ -141,7 +142,7 @@ describe('qué hacer, sin los textos heredados del paso (tarea 307)', () => {
     }
 
     // La última acción del paso tampoco: sin imagen, no hay "Debes ver".
-    await tocar(await esperar(() => control(/^Completar y seguir$/), 'completar y seguir'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'completar y seguir'))
     await esperar(() => textoPantalla().includes('Escribe control printers'), 'la segunda acción')
     expect(textoPantalla()).not.toContain('Debes ver')
     expect(textoPantalla()).not.toContain('La ventana Dispositivos e impresoras')

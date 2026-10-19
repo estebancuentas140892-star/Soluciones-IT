@@ -4,6 +4,7 @@ import { db, type BloquePaso, type OpcionDecision, type PasoProcedimiento } from
 import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import { guardarModoEjecucion } from '../../lib/preferenciasEjecucion'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   esperar,
@@ -120,7 +121,7 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
     // Los dos caminos miden lo mismo: el total se sabe antes de responder.
     expect(control(/^Paso 1 de 4\. Abrir el índice de pasos$/)).not.toBeNull()
 
-    await tocar(await esperar(() => principal('Completar y seguir'), 'Completar y seguir'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('¿Qué versión del programa de prueba usas?'), 'la pregunta')
     // La pregunta es la acción: sus respuestas con su ayuda, y el pie dice lo que falta.
     expect(textoPantalla()).toContain('Veo el menú Archivo arriba.')
@@ -141,7 +142,7 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
     expect(avance?.pasosHechos).toEqual(['cp-p1'])
 
     // El camino clásico vuelve a los pasos comunes: después del 2, el de guardar.
-    await tocar(await esperar(() => principal('Completar y seguir'), 'cerrar el camino clásico'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'cerrar el camino clásico'))
     await esperar(() => textoPantalla().includes('Comprobar que el archivo existe'), 'el paso común')
     expect(control(/^Paso 3 de 4\. Abrir el índice de pasos$/)).not.toBeNull()
 
@@ -157,10 +158,10 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
   it('"Anterior" vuelve por el camino recorrido y cambiar la respuesta recalcula la ruta sin pasos fantasma', async () => {
     await sembrarCopia()
     await montar(RUTAS, RUTA_COPIA)
-    await tocar(await esperar(() => principal('Completar y seguir'), 'la primera acción'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'la primera acción'))
     await tocar(await esperar(() => opcion('Versión clásica'), 'la respuesta clásica'))
     await esperar(() => textoPantalla().includes('Abrir Archivo y elegir Exportar'), 'el camino clásico')
-    await tocar(await esperar(() => principal('Completar y seguir'), 'cerrar el camino clásico'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'cerrar el camino clásico'))
     await esperar(() => textoPantalla().includes('Comprobar que el archivo existe'), 'el paso común')
 
     // Desde el paso común, "Anterior" lleva al camino que se recorrió (el 2), no al 3.
@@ -194,9 +195,9 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
     expect(avance?.instruccionesHechas).toEqual(expect.arrayContaining(['cp-p1-t1', 'cp-version']))
 
     // El camino nuevo llega a los mismos pasos comunes y la guía termina con sus cuatro pasos.
-    await tocar(await esperar(() => principal('Completar y seguir'), 'cerrar el camino nuevo'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'cerrar el camino nuevo'))
     await esperar(() => textoPantalla().includes('Comprobar que el archivo existe'), 'el paso común')
-    await tocar(await esperar(() => principal('Completar y seguir'), 'cerrar el paso común'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'cerrar el paso común'))
     await esperar(() => textoPantalla().includes('Copiar el archivo a la carpeta de la persona'), 'el último paso')
     await tocar(await esperar(() => principal('Completar y terminar'), 'terminar'))
     await esperar(() => textoPantalla().includes('Guía completada'), 'la guía terminada')
@@ -206,7 +207,7 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
   it('recargar conserva la ruta elegida y retoma en su paso', async () => {
     await sembrarCopia()
     const primera = await montar(RUTAS, RUTA_COPIA)
-    await tocar(await esperar(() => principal('Completar y seguir'), 'la primera acción'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'la primera acción'))
     await tocar(await esperar(() => opcion('Versión nueva'), 'la respuesta nueva'))
     await esperar(() => textoPantalla().includes('Abrir Configuración y elegir Exportar'), 'el camino nuevo')
     await primera.desmontar()
@@ -263,9 +264,9 @@ describe('una respuesta que abre otra guía', () => {
     // La guía de la respuesta, en el sitio, como acciones de este paso.
     await esperar(() => textoPantalla().includes('Descargar el controlador de prueba'), 'la guía de la respuesta')
     expect(control(/^Paso 1 de 2\. Abrir el índice de pasos$/)).not.toBeNull()
-    await tocar(await esperar(() => principal('Completar y seguir'), 'la primera acción de la guía'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'la primera acción de la guía'))
     await esperar(() => textoPantalla().includes('Ejecutar el instalador de prueba'), 'la segunda acción de la guía')
-    await tocar(await esperar(() => principal('Completar y seguir'), 'la última acción de la guía'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'la última acción de la guía'))
 
     // Terminada, el recorrido sigue con el paso siguiente de la guía que se abrió.
     await esperar(() => textoPantalla().includes('Imprimir la hoja de prueba'), 'el paso siguiente')
@@ -279,7 +280,7 @@ describe('una respuesta que abre otra guía', () => {
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('Instalar el controlador de prueba'), 'la guía de la respuesta, hecha')
     expect(textoPantalla()).toContain('Descargar el controlador de prueba')
-    expect(principal('Completar y seguir')).toBeNull()
+    expect(control(COMPLETAR_Y_SEGUIR)).toBeNull()
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('¿La impresora de prueba tiene su controlador?'), 'la pregunta')
     expect(opcion('No, falta instalarlo')?.textContent).toContain('Tu respuesta')
@@ -331,7 +332,7 @@ describe('una guía reutilizada con su propia pregunta', () => {
     await tocar(await esperar(() => opcion('La nueva'), 'la pregunta de la guía reutilizada'))
     await esperar(() => textoPantalla().includes('Hacer lo de la nueva'), 'el camino elegido, en el flujo')
     expect(textoPantalla()).not.toContain('Hacer lo de la clásica')
-    await tocar(await esperar(() => principal('Completar y seguir'), 'terminar lo reutilizado'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'terminar lo reutilizado'))
     await esperar(() => textoPantalla().includes('Cerrar todo'), 'el paso siguiente de la guía que se abrió')
 
     // Revisado con "Anterior", el paso se lee: solo el camino que se recorrió.

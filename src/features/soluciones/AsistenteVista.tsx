@@ -47,6 +47,7 @@ import {
   CaretRight,
   Check,
   LinkSimple,
+  ListChecks,
   SealCheck,
   Warning,
   Wrench,
@@ -812,6 +813,17 @@ export function AsistenteVista({
     (!integrada || integracion.terminaLaGuia)
   // El número que ve el técnico es el de la guía que abrió.
   const numeroPasoVisible = integrada ? integracion.numeroPaso : indiceActual + 1
+  // EL BOTÓN DICE A DÓNDE LLEVA (tarea 345, DESPUÉS de Claude Design: "Hecho,
+  // ir al paso 3"): al cerrar la última acción del paso, el paso al que se
+  // pasa o la comprobación final. En el flujo de otra guía, o cuando lo que
+  // sigue depende de una respuesta, no se promete nada: el rótulo de siempre.
+  const rotuloAlCerrarElPaso = integrada
+    ? null
+    : destinoTrasEste !== null
+      ? `Hecho, ir al paso ${destinoTrasEste + 1}`
+      : ruta.pendiente === null && verificacionFinal.length > 0
+        ? 'Hecho, comprobar el resultado'
+        : null
 
   // Etiqueta de la acción dominante (M-R3: una acción fija abajo que
   // dice qué va a pasar) y, cuando no se puede avanzar, la razón escrita
@@ -1011,6 +1023,14 @@ export function AsistenteVista({
   // Lo que orienta en la guía principal: los segmentos (solo en el
   // teléfono), dentro de la cabecera compacta desde la tarea 328, y entre
   // la cabecera y el paso, la línea de estado.
+  // EL PASO, DOMINANTE, EN LA CABECERA DEL TELÉFONO (rediseño móvil, fase 2,
+  // tarea 345; DESPUÉS de Claude Design): sobre los segmentos, de qué guía y
+  // con qué equipo, y "Paso 2 de 4 · Vacía la cola de impresión". El
+  // contador "2/4" deja su sitio a "Pasos", que abre el mismo índice.
+  const lineaDeLaGuia = [articulo?.titulo, equipoDeLaEjecucion && !equipoDeLaEjecucion.eliminadoEn ? equipoDeLaEjecucion.nombre : null]
+    .filter(Boolean)
+    .join(' · ')
+  const pasoEnCabecera = `Paso ${indiceActual + 1}${totalPasos === null ? '' : ` de ${totalPasos}`} · ${tituloPaso}`
   const estadoUI =
     nivel === 0 ? (
       <div className="flex flex-none flex-col">
@@ -1018,6 +1038,17 @@ export function AsistenteVista({
             en el cuerpo, donde iban antes. */}
         <BandaBajoTarea enLineaSinCabecera>
           {(enCabecera) => (
+            <>
+            {enCabecera && !esAncho && (
+              <div data-paso-en-cabecera className="flex min-w-0 flex-col gap-0.5 px-4 pb-2 pt-0.5">
+                {lineaDeLaGuia && (
+                  <p className="truncate text-[14px] leading-snug text-noct-neutral-400">{lineaDeLaGuia}</p>
+                )}
+                <p className="text-[17px] font-[650] leading-snug text-noct-text text-pretty [overflow-wrap:anywhere]">
+                  {pasoEnCabecera}
+                </p>
+              </div>
+            )}
             <SegmentosDePasos
               resumenes={resumenes}
               total={totalPasos}
@@ -1027,6 +1058,7 @@ export function AsistenteVista({
               conComprobacion={verificacionFinal.length > 0}
               enCabecera={enCabecera}
             />
+            </>
           )}
         </BandaBajoTarea>
         <LineaDeEstado estado={estadoLinea} />
@@ -1146,6 +1178,7 @@ export function AsistenteVista({
           numeroPaso={indiceActual + 1}
           totalPasos={totalPasos}
           cierraLaGuia={!pasoActualHecho && terminaDeVerdad}
+          rotuloAlCerrarElPaso={rotuloAlCerrarElPaso}
           requisitos={requisitosVisibles}
           entrarPorElFinal={entradaPorElFinal === paso.id}
           // Desde la primera acción de lo reutilizado, "Anterior" vuelve a
@@ -1727,6 +1760,23 @@ function ContadorPaso({
   /** El índice ya está a la vista (desde 1280): no abre ninguna hoja. */
   persistente?: boolean
 }) {
+  const ancho = useEsAncho()
+  // EN EL TELÉFONO, "PASOS" (tarea 345, DESPUÉS de Claude Design): el paso ya
+  // lo dice la cabecera, entero; este botón abre el índice y lo dice.
+  if (!ancho) {
+    return (
+      <button
+        type="button"
+        onClick={onAbrirIndice}
+        aria-haspopup="dialog"
+        aria-label={nombreDelContador(indice, total)}
+        className="flex min-h-12 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[15.5px] font-semibold text-noct-accent-300 hover:bg-noct-text/[.05] active:bg-noct-presionado"
+      >
+        <ListChecks size={20} className="shrink-0" aria-hidden />
+        <span aria-hidden>Pasos</span>
+      </button>
+    )
+  }
   return (
     <button
       type="button"

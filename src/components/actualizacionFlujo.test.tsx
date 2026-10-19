@@ -10,6 +10,7 @@ import {
   type RegistroActualizable,
 } from '../lib/actualizacionApp'
 import {
+  COMPLETAR_Y_SEGUIR,
   control,
   desmontarTodo,
   esperar,
@@ -267,7 +268,7 @@ describe('con una guía en curso, el aviso no tapa sus controles', () => {
     const aviso = await esperar(textoAviso, 'el aviso')
     expect(barra.contains(aviso)).toBe(true)
     expect(aviso.closest('.fixed')).toBeNull()
-    for (const nombre of [ANTERIOR_FOCO, /^Completar y seguir$/, /^Tengo un problema con esta acción/]) {
+    for (const nombre of [ANTERIOR_FOCO, COMPLETAR_Y_SEGUIR, /^Tengo un problema con esta acción/]) {
       const boton = botonDeLaBarra(barra, nombre)
       expect(boton, String(nombre)).not.toBeNull()
       expect(vaAntesQue(aviso, boton!)).toBe(true)
@@ -296,7 +297,7 @@ describe('con una guía en curso, el aviso no tapa sus controles', () => {
     await montarAviso(activar)
     await esperar(textoAviso, 'el aviso')
 
-    await tocar(await esperar(() => control(/^Completar y seguir$/), 'Completar y seguir'))
+    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('Entrar en la sección de prueba'), 'la acción 2')
     expect(activar).not.toHaveBeenCalled()
     expect(textoAviso()).not.toBeNull()

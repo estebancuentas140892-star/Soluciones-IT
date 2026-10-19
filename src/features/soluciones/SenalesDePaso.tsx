@@ -50,8 +50,10 @@ const TAMANOS_COMO_HACERLO = {
 
 // El número de cada microacción en la ejecución: una caja de 24 px con el
 // contador `micro` de su lista (ver `ComoHacerlo`).
+// En el teléfono, el número en un círculo de 26 (tarea 345, DESPUÉS de Claude
+// Design); desde 768, la caja de 24 de siempre.
 const NUMERO_EN_CAJA =
-  'relative min-h-6 pl-9 [counter-increment:micro] before:absolute before:left-0 before:top-[-1px] before:flex before:h-6 before:w-6 before:items-center before:justify-center before:rounded-[7px] before:bg-noct-text/[.06] before:font-mono before:text-[13px] before:font-semibold before:text-noct-neutral-300 before:content-[counter(micro)]'
+  'relative min-h-6 pl-9 [counter-increment:micro] before:absolute before:left-0 before:top-[-1px] before:flex before:h-6 before:w-6 before:items-center before:justify-center before:rounded-[7px] before:bg-noct-text/[.06] before:font-mono before:text-[13px] before:font-semibold before:text-noct-neutral-300 before:content-[counter(micro)] max-md:min-h-[26px] max-md:pl-[38px] max-md:before:h-[26px] max-md:before:w-[26px] max-md:before:rounded-full max-md:before:bg-noct-text/[.08] max-md:before:text-[14px] max-md:before:text-noct-text'
 
 // CÓMO HACERLO (tarea 303; una sola lista numerada desde la tarea 310,
 // AD-071): las microacciones de la acción (ver `src/lib/comoHacer.ts`).
@@ -95,7 +97,10 @@ export function ComoHacerlo({
     <div className={`flex min-w-0 flex-col gap-1 ${className}`}>
       <p
         id={idRotulo}
-        className={`flex items-center gap-1.5 font-semibold uppercase tracking-[.06em] text-noct-neutral-400 ${tamano.rotulo}`}
+        // En la acción del teléfono, "Cómo hacerlo" como una frase (tarea 345).
+        className={`flex items-center gap-1.5 font-semibold uppercase tracking-[.06em] text-noct-neutral-400 ${tamano.rotulo} ${
+          variante === 'accion' ? 'max-md:text-[15px] max-md:font-bold max-md:normal-case max-md:tracking-normal max-md:text-noct-neutral-300' : ''
+        }`}
       >
         <ArrowElbowDownRight size={tamano.icono} className="shrink-0" aria-hidden />
         {ROTULO_COMO_HACERLO}

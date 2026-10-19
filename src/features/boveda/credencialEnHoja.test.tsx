@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db, type PasoProcedimiento } from '../../lib/db'
 import {
+  COMPLETAR_Y_SEGUIR,
   abrirCredencial,
   anclarMaestra,
   control,
@@ -101,7 +102,7 @@ describe('la credencial de la acción, como fila que abre su hoja', () => {
     // La guía no se movió: misma ruta, misma acción, sin completar nada.
     expect(ubicacionActual().pathname).toBe(RUTA)
     expect(document.body.querySelector('h2[data-foco-lectura]')?.textContent).toBe(ACCION)
-    expect(control('Completar y seguir')).not.toBeNull()
+    expect(control(COMPLETAR_Y_SEGUIR)).not.toBeNull()
     await pausa(100)
     expect(await db.progresoPasos.get('guia-hoja')).toEqual(avanceAntes)
   })

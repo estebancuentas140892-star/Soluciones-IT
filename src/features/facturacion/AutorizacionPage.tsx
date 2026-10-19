@@ -430,6 +430,8 @@ const ACCION_DELINEADA =
  * El rótulo de una capa: su número, su forma y su nombre. En el teléfono,
  * debajo, qué representa con las palabras del handoff (tarea 343): las tres
  * capas son la misma autorización leída de tres maneras, y así se lee.
+ * Desde la tarea 345, en el teléfono el nombre va como frase, a 15, igual
+ * que los rótulos de la guía y del mantenimiento: sin mayúsculas sostenidas.
  */
 function EncabezadoCapa({
   id,
@@ -448,10 +450,13 @@ function EncabezadoCapa({
     <div className="flex items-center gap-2">
       {icono}
       <div className="min-w-0">
-        <h2 id={id} className="text-[12.5px] font-bold uppercase tracking-[.06em] text-noct-neutral-300">
+        <h2
+          id={id}
+          className="text-[12.5px] font-bold uppercase tracking-[.06em] text-noct-neutral-300 max-md:text-[15px] max-md:font-semibold max-md:normal-case max-md:tracking-normal max-md:text-noct-text"
+        >
           {numero} · {titulo}
         </h2>
-        <p className="text-[12.5px] leading-snug text-noct-neutral-400 md:hidden">{descripcion}</p>
+        <p className="text-[12.5px] leading-snug text-noct-neutral-400 md:hidden max-md:text-[13px]">{descripcion}</p>
       </div>
     </div>
   )

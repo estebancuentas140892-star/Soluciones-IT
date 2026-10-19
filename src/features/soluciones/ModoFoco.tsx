@@ -4,6 +4,7 @@ import type { BloquePaso, PasoAdjunto, PasoProcedimiento } from '../../lib/db'
 import type { Elecciones } from '../../lib/rutaProcedimiento'
 import { mismoVinculoProtegido } from '../../lib/vinculoProtegido'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
+import { useEsAncho } from '../../components/useEsAncho'
 import { ComoHacerlo, DatoTecnico, DebesVer } from './SenalesDePaso'
 import {
   ArrowRight,
@@ -142,6 +143,12 @@ interface Props {
   // un paso saltado): sin otro paso por hacer, la última acción dice
   // "Completar y terminar"; si no, "Completar y seguir".
   cierraLaGuia: boolean
+  /**
+   * Lo que dice el botón principal en el teléfono al cerrar la ÚLTIMA acción
+   * del paso: "Hecho, ir al paso 3" o "Hecho, comprobar el resultado" (tarea
+   * 345). Sin él, o desde 768, el rótulo de siempre.
+   */
+  rotuloAlCerrarElPaso?: string | null
   instruccionesHechas: ReadonlySet<string>
   // ¿La guía vinculada del paso ya está completa? La resuelve quien
   // llama con lectura en vivo; aquí decide si la primera tarea del
@@ -328,8 +335,12 @@ export const BOTON_ANTERIOR =
 // palabras largas en dos líneas de más. Peso 550, la jerarquía la da el
 // tamaño y no el negro. El color lo pone cada uso. Nunca se recorta (regla
 // 23): parte la línea dentro de su columna.
+//
+// EN EL TELÉFONO, 23 PX A 650 (tarea 345, DESPUÉS de Claude Design): la frase
+// manda por su peso y deja sitio a "Cómo hacerlo" y a la clave en la misma
+// pantalla. Desde 768, como estaba.
 export const TEXTO_INSTRUCCION =
-  'min-w-0 text-[23px] font-[550] leading-[1.28] tracking-[-.012em] text-pretty [overflow-wrap:anywhere] min-[375px]:text-[26px]'
+  'min-w-0 text-[23px] font-[550] leading-[1.28] tracking-[-.012em] text-pretty [overflow-wrap:anywhere] max-md:font-[650] max-md:leading-[1.3] md:text-[26px]'
 
 // EL CONTROL GRANDE DEL PIE, con la gramática de la propuesta final: el
 // icono y el rótulo dicen la consecuencia (la marca cierra, la flecha solo
@@ -395,6 +406,7 @@ export function ModoFoco({
   numeroPaso,
   totalPasos,
   cierraLaGuia,
+  rotuloAlCerrarElPaso = null,
   instruccionesHechas,
   subSatisfecho,
   guiaDelPasoDisponible = true,
@@ -423,6 +435,9 @@ export function ModoFoco({
   renderEnvioAEquipo,
 }: Props) {
   const tareas = tareasParaFoco(paso, tituloPaso, guiaIntegrable, elecciones)
+  // Teléfono o desde 768 (el rótulo del botón principal, tarea 345). Aquí, antes
+  // de cualquier salida temprana: es un hook.
+  const ancho = useEsAncho()
 
   // Una entrada de guía ('guia-de-tarea', 'guia-de-respuesta') está
   // cumplida cuando su guía terminó en esta ejecución: el avance es por
@@ -739,6 +754,17 @@ export function ModoFoco({
   // seguir".
   const quedaTrabajoEnElPaso = tareas.some((t) => t.id !== tarea.id && !cumplida(t))
   const esUltimoTrabajo = cierraLaGuia && !quedaTrabajoEnElPaso
+  // EN EL TELÉFONO, EL BOTÓN DICE A DÓNDE LLEVA (tarea 345, DESPUÉS de Claude
+  // Design): "Hecho, siguiente acción" dentro del paso y, en su última acción,
+  // "Hecho, ir al paso 3" o "Hecho, comprobar el resultado". Lo que hace no
+  // cambia: marca la acción y trae lo siguiente. Desde 768, el de siempre.
+  const rotuloCompletar = esUltimoTrabajo
+    ? 'Completar y terminar'
+    : ancho
+      ? 'Completar y seguir'
+      : quedaTrabajoEnElPaso
+        ? 'Hecho, siguiente acción'
+        : (rotuloAlCerrarElPaso ?? 'Completar y seguir')
 
   // Desde una acción con advertencia previa, "Anterior" vuelve a ella: la
   // navegación refleja exactamente lo que se acaba de leer (tarea 311).
@@ -1098,7 +1124,7 @@ export function ModoFoco({
     // la instrucción, ya dice qué clase de trabajo es.
     principal = (
       <BotonPrincipal
-        etiqueta={esUltimoTrabajo ? 'Completar y terminar' : 'Completar y seguir'}
+        etiqueta={rotuloCompletar}
         icono="marca"
         onClick={completarYContinuar}
       />
@@ -1480,8 +1506,10 @@ function EtiquetaDeAccion({
         ? { Icono: Question, palabra: 'Decide', color: 'text-noct-neutral-300' }
         : { Icono: CursorClick, palabra: 'Qué hacer', color: 'text-noct-accent-300' }
   return (
-    <p className="flex items-center gap-2 text-[12.5px] leading-snug">
-      <span className={`inline-flex items-center gap-1.5 font-bold uppercase tracking-[.06em] ${color}`}>
+    <p className="flex items-center gap-2 text-[12.5px] leading-snug max-md:text-[14px]">
+      {/* En el teléfono, sin mayúsculas (tarea 345, DESPUÉS de Claude Design):
+          "Qué hacer" se lee como una frase, no como un rótulo técnico. */}
+      <span className={`inline-flex items-center gap-1.5 font-bold uppercase tracking-[.06em] max-md:normal-case max-md:tracking-normal ${color}`}>
         <Icono size={14} className="shrink-0" aria-hidden />
         {palabra}
       </span>
