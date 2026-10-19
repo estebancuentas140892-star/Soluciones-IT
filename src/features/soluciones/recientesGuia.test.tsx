@@ -62,7 +62,8 @@ describe('caso H: recientes de una guía que se empieza desde la búsqueda', () 
 
     // La fila del resultado es la única puerta: ya no hay botón "Empezar".
     expect(control(/^Empezar/)).toBeNull()
-    await tocar(await esperarControl(/^Configurar la impresora de prueba/))
+    // En el teléfono, la guía que mejor coincide se abre con "Abrir la guía" (tarea 344).
+    await tocar(await esperarControl(/^(Abrir la guía: )?Configurar la impresora de prueba/))
 
     await esperar(
       () => ubicacionActual().pathname === '/soluciones/cat-pruebas/guia-impresora',

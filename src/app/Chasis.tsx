@@ -175,6 +175,15 @@ interface PropsSeccion extends PropsComunes {
    * vez y los resultados empiezan más arriba.
    */
   tituloContraido?: boolean
+  /**
+   * Sin la barra superior, solo por debajo de 768 px (rediseño móvil, fase 1,
+   * tarea 344): Resolver mientras busca es una pantalla de búsqueda, con su
+   * regreso y su campo arriba, como el DESPUÉS de Claude Design. Desde 768
+   * la barra no cambia.
+   */
+  sinCabeceraEnTelefono?: boolean
+  /** Una acción en la fila del título, solo en el teléfono (ver `BarraSuperior`). */
+  accionTelefono?: ReactNode
 }
 
 interface PropsDocumento extends PropsComunes {
@@ -627,7 +636,7 @@ export function Chasis(props: Props) {
         </div>
         {props.barra}
       </div>
-    ) : (
+    ) : props.sinCabeceraEnTelefono && !ancho ? null : (
       <BarraSuperior
         titulo={props.titulo}
         conLupa={props.conLupa ?? true}
@@ -638,6 +647,7 @@ export function Chasis(props: Props) {
         // el último salto real si lo hay (M-R2) y si no el padre declarado.
         volver={volverDeSeccion}
         buscador={ancho ? props.buscador : undefined}
+        accionTelefono={props.accionTelefono}
       >
         {props.barra}
       </BarraSuperior>

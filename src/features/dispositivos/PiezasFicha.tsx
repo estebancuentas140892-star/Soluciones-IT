@@ -77,6 +77,9 @@ export type TonoValorIndice = keyof typeof TONO_VALOR
 // UNA FILA DEL ÍNDICE "MÁS DEL EQUIPO": un solo nivel, con lo que guarda
 // dicho en su valor. El galón dice qué pasa al tocarla: `CaretUp` abre una
 // hoja (se consulta aquí), `CaretRight` una pantalla (se trabaja ahí).
+// EN EL TELÉFONO, SIEMPRE `CaretRight` (tarea 344, DESPUÉS de Claude Design):
+// la ficha ya no necesita una leyenda que explique sus flechas; toda fila
+// lleva a lo que guarda, y la hoja se abre encima, sin perder la ficha.
 export function FilaIndice({
   Icono,
   titulo,
@@ -100,7 +103,6 @@ export function FilaIndice({
   abierta?: boolean
   onAbrir: () => void
 }) {
-  const Galon = abre === 'hoja' ? CaretUp : CaretRight
   return (
     <li>
       <button
@@ -119,31 +121,14 @@ export function FilaIndice({
           {titulo}
         </span>
         <span className={`max-w-[45%] shrink-0 truncate text-[13.5px] font-[550] ${TONO_VALOR[tono]}`}>{valor}</span>
-        <Galon size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+        {abre === 'hoja' && <CaretUp size={14} className="hidden shrink-0 text-noct-neutral-500 md:block" aria-hidden />}
+        <CaretRight
+          size={14}
+          className={`shrink-0 text-noct-neutral-500 ${abre === 'hoja' ? 'md:hidden' : ''}`}
+          aria-hidden
+        />
       </button>
     </li>
-  )
-}
-
-// LO QUE DICE CADA GALÓN, bajo el índice y solo en el teléfono (tarea 342,
-// handoff móvil "1b Pulgar"): `CaretUp` se consulta en una hoja sin dejar la
-// ficha, `CaretRight` abre su pantalla. Desde 768 la hoja es un panel al
-// costado y la fila que lo abrió queda marcada: la leyenda no aporta.
-export function LeyendaGalones() {
-  return (
-    <p
-      data-leyenda-galones
-      className="flex flex-wrap items-center gap-x-3.5 gap-y-1 pt-2.5 text-[12px] leading-snug text-noct-neutral-500 md:hidden"
-    >
-      <span className="flex items-center gap-1">
-        <CaretUp size={12} aria-hidden />
-        se consulta aquí
-      </span>
-      <span className="flex items-center gap-1">
-        <CaretRight size={12} aria-hidden />
-        abre su pantalla
-      </span>
-    </p>
   )
 }
 
@@ -155,6 +140,8 @@ export interface ItemResolver {
   tipo: string
   titulo: string
   extra?: string
+  /** Cuántos pasos tiene la guía, para la fila corta del teléfono (tarea 344). */
+  pasos?: number
 }
 
 // RESOLVER CON ESTE EQUIPO: hasta tres filas (los problemas frecuentes
@@ -166,18 +153,28 @@ export interface ItemResolver {
 // con el ancho): quien lo usa pasa hasta `visiblesEscritorio` filas; por
 // debajo de 1280 las que pasan de `visibles` se esconden con CSS y "Ver N"
 // aparece según lo que de verdad se ve en cada banda.
+//
+// LA FILA CORTA DEL TELÉFONO (tarea 344, DESPUÉS de Claude Design;
+// `compacta`): el título entero y debajo, en una línea, qué es y cuántos
+// pasos tiene; sin icono ni síntoma. Tres guías de títulos largos ya no se
+// comen la primera pantalla de la ficha: lo primero son los datos del
+// equipo, y las guías siguen a un desplazamiento, con "Ver N".
 export function ResolverConEsteEquipo({
   items,
   total,
   onVerTodos,
   visibles = 3,
   visiblesEscritorio = visibles,
+  compacta = false,
+  titulo = 'Resolver con este equipo',
 }: {
   items: ItemResolver[]
   total: number
   onVerTodos: () => void
   visibles?: number
   visiblesEscritorio?: number
+  compacta?: boolean
+  titulo?: string
 }) {
   if (items.length === 0) return null
   const vistosTelefono = Math.min(items.length, visibles)
@@ -187,8 +184,11 @@ export function ResolverConEsteEquipo({
   return (
     <section aria-labelledby="resolver-con-este-equipo" className="flex flex-col">
       <div className="flex items-baseline justify-between gap-2 pb-0.5">
-        <h2 id="resolver-con-este-equipo" className="text-[17px] font-semibold tracking-[-.01em]">
-          Resolver con este equipo
+        <h2
+          id="resolver-con-este-equipo"
+          className={compacta ? 'text-[18px] font-[650] tracking-[-.01em]' : 'text-[17px] font-semibold tracking-[-.01em]'}
+        >
+          {titulo}
         </h2>
         {(verEnTelefono || verEnEscritorio) && (
           <button
@@ -201,10 +201,35 @@ export function ResolverConEsteEquipo({
             } ${verEnEscritorio ? 'xl:flex' : 'xl:hidden'}`}
           >
             Ver {total}
-            <CaretUp size={13} aria-hidden />
+            {compacta ? <CaretRight size={14} aria-hidden /> : <CaretUp size={13} aria-hidden />}
           </button>
         )}
       </div>
+      {compacta ? (
+        <ul className="flex flex-col rounded-2xl border border-noct-divider bg-noct-surface px-3.5 [&>li:last-child>a]:border-b-0">
+          {items.slice(0, vistosTelefono).map((item) => (
+            <li key={item.id}>
+              <Link
+                to={item.ruta}
+                className="flex min-h-[60px] items-center gap-3 border-b border-noct-divider py-2.5 text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
+              >
+                <span className="min-w-0 flex-1">
+                  {/* El título es la identidad de la guía: no se recorta (regla 23). */}
+                  <span data-nombre-principal className="block min-w-0 text-[16px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+                    {item.titulo}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[14px] leading-snug text-noct-neutral-400">
+                    {[item.tipo, item.pasos ? `${item.pasos} ${item.pasos === 1 ? 'paso' : 'pasos'}` : null]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </span>
+                <CaretRight size={16} className="shrink-0 text-noct-neutral-500" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
       <ul className="flex flex-col">
         {items.slice(0, vistosEscritorio).map((item, i) => (
           <li key={item.id} className={i >= vistosTelefono ? 'hidden xl:block' : undefined}>
@@ -231,6 +256,7 @@ export function ResolverConEsteEquipo({
           </li>
         ))}
       </ul>
+      )}
     </section>
   )
 }
@@ -246,15 +272,24 @@ export function ResolverConEsteEquipo({
 // delineado con su palabra y después el relleno de 40, a la derecha del
 // todo. La barra fija solo se monta en el teléfono (la ficha lo decide con
 // `useEsAncho`, y por si acaso lleva `md:hidden`).
+//
+// EN EL TELÉFONO, "CLAVE" CON SU PALABRA (tarea 344, DESPUÉS de Claude
+// Design): a la izquierda, delineada, antes de "Resolver un problema". Solo
+// existe si la Bóveda tiene una clave vinculada a ESTE equipo y quien mira
+// tiene permiso de Bóveda (lo decide la ficha, como siempre); abre la misma
+// hoja de credenciales. La Bóveda, su desbloqueo y sus permisos no cambian.
 export function BarraAccionEquipo({
   resolver,
   onCredenciales,
+  totalClaves = 1,
   variante = 'barra',
   abierta = null,
 }: {
   /** A dónde lleva "Resolver un problema": el diagnóstico de la categoría o la hoja con todo. */
   resolver: { to: string; estado?: EstadoConOrigen } | { onAbrir: () => void } | null
   onCredenciales: (() => void) | null
+  /** Cuántas claves de la Bóveda dan acceso al equipo ("Clave" o "Claves"). */
+  totalClaves?: number
   variante?: 'barra' | 'cabecera'
   /** Qué hoja de las dos está abierta, para marcar su botón mientras dure (solo en la cabecera). */
   abierta?: 'resolver' | 'credenciales' | null
@@ -317,13 +352,15 @@ export function BarraAccionEquipo({
       </>
     )
   }
+  // Por debajo de 360 px, sin la llave inglesa y un punto más pequeño, para
+  // que "Resolver un problema" quepa en una línea junto a "Clave" (tarea 344).
   const contenido: ReactNode = (
     <>
-      <Wrench size={19} aria-hidden />
+      <Wrench size={19} className="max-[359px]:hidden" aria-hidden />
       Resolver un problema
     </>
   )
-  const clase = `${BTN_PRIMARIO_RELLENO} min-w-0 flex-1`
+  const clase = `${BTN_PRIMARIO_RELLENO} min-w-0 flex-1 max-[359px]:px-3 max-[359px]:text-[15px]`
   return (
     <div
       className={`sticky ${PEGADA_SOBRE_PESTANAS} ${BAJA_CON_LAS_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden lg:px-10`}
@@ -332,7 +369,19 @@ export function BarraAccionEquipo({
           274): esta barra se pega a la misma altura que la franja del
           chasis, y una de las dos taparía a la otra. */}
       <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
-      <div className="flex gap-2">
+      <div className="flex gap-2.5">
+        {onCredenciales && (
+          <button
+            type="button"
+            onClick={onCredenciales}
+            aria-haspopup="dialog"
+            aria-label={totalClaves === 1 ? 'Clave del equipo' : 'Claves del equipo'}
+            className="flex h-[54px] min-w-[104px] shrink-0 items-center justify-center gap-2 rounded-[15px] border-[1.5px] border-noct-text/25 px-3.5 text-[16px] font-semibold text-noct-text hover:bg-noct-text/[.06] max-md:active:bg-noct-presionado max-[359px]:min-w-0 max-[359px]:gap-1.5 max-[359px]:px-3"
+          >
+            <Key size={20} aria-hidden />
+            {totalClaves === 1 ? 'Clave' : 'Claves'}
+          </button>
+        )}
         {resolver &&
           ('to' in resolver ? (
             <Link to={resolver.to} state={resolver.estado} aria-label="Resolver un problema con este equipo" className={clase}>
@@ -349,17 +398,6 @@ export function BarraAccionEquipo({
               {contenido}
             </button>
           ))}
-        {onCredenciales && (
-          <button
-            type="button"
-            onClick={onCredenciales}
-            aria-haspopup="dialog"
-            aria-label="Credenciales del equipo"
-            className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[15px] border-[1.5px] border-noct-text/25 text-noct-text hover:bg-noct-text/[.06] max-md:active:bg-noct-presionado"
-          >
-            <Key size={21} aria-hidden />
-          </button>
-        )}
       </div>
     </div>
   )

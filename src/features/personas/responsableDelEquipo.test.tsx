@@ -121,8 +121,12 @@ beforeEach(async () => {
   await sembrarPerfil(false)
 })
 
+type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+const ventana = window as unknown as VentanaDePrueba
+
 afterEach(async () => {
   await desmontarTodo()
+  ventana.happyDOM.setViewport({ width: 375, height: 812 })
 })
 
 describe('la regla de la prueba', () => {
@@ -205,7 +209,10 @@ describe('el responsable en la ficha del equipo (tarea 316)', () => {
     expect(control('Asignar')).not.toBeNull()
   })
 
-  it('sin responsable: lo dice la línea de identidad, con "Asignar", y la fila no se dibuja', async () => {
+  // Desde 768 (sin cambios). En el teléfono, desde la tarea 344, la fila
+  // "Sin responsable" con su "Asignar" va en los datos para trabajar.
+  it('desde 768, sin responsable: lo dice la línea de identidad, con "Asignar", y la fila no se dibuja', async () => {
+    ventana.happyDOM.setViewport({ width: 1024, height: 768 })
     await sembrarCategoria()
     await sembrarEquipo({ id: 'pc', nombre: 'PC Libre de prueba', estado: 'operativo', ip: '10.9.9.40' })
     await montar(RUTAS, '/dispositivos/pc')
@@ -214,6 +221,16 @@ describe('el responsable en la ficha del equipo (tarea 316)', () => {
     expect(control('Asignar un responsable')).not.toBeNull()
     expect(textoPantalla()).not.toContain('Responsable: ')
     expect(textoPantalla()).not.toContain('Sin responsable')
+  })
+
+  it('en el teléfono, sin responsable: la fila "Sin responsable" con "Asignar", en los datos', async () => {
+    await sembrarCategoria()
+    await sembrarEquipo({ id: 'pc', nombre: 'PC Libre de prueba', estado: 'operativo', ip: '10.9.9.40' })
+    await montar(RUTAS, '/dispositivos/pc')
+    await esperar(() => textoPantalla().includes('Sin responsable'), 'la fila del responsable')
+    expect(textoPantalla()).not.toContain('sin responsable')
+    expect(control('Asignar')).not.toBeNull()
+    expect(control('Asignar un responsable')).toBeNull()
   })
 
   it('"Cambiar" sigue abriendo qué pasa con el equipo', async () => {

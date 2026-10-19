@@ -33,6 +33,12 @@ export const ProveedorCampoEnBarra = CampoEnBarraContexto.Provider
 // lo escribo aquí"), así que la variante `destacada` mide 52 px, con el
 // texto a 16 px (sin el zoom de iOS al enfocar) y el borde neutro un
 // punto más visible en reposo. El resto de la app sigue con los 46 px.
+//
+// `resolver` (rediseño móvil, fase 1, tarea 344; DESPUÉS de Claude Design):
+// el campo de Resolver en el teléfono, ARRIBA y no en el dock. Borde de
+// acento de 2 px siempre (es lo primero que se toca), 17 px de texto y la
+// lupa en acento. Su alto lo da la pantalla: 60 al abrir Resolver, 52 en la
+// búsqueda.
 export function CampoBusqueda({
   valor,
   onCambiar,
@@ -40,6 +46,7 @@ export function CampoBusqueda({
   textoAlternativo,
   refCampo,
   variante = 'normal',
+  onEnfocar,
   className = '',
 }: {
   valor: string
@@ -56,7 +63,9 @@ export function CampoBusqueda({
   // `paleta` (tarea 339, T6): el campo de la paleta del buscador global
   // desde 1280. Sin caja: es la cabecera de la paleta, que ya es la
   // superficie; la lupa en acento y el texto a 18 px.
-  variante?: 'normal' | 'destacada' | 'dock' | 'paleta'
+  variante?: 'normal' | 'destacada' | 'dock' | 'paleta' | 'resolver'
+  /** El campo recibe el foco (Resolver abre su búsqueda en el teléfono). */
+  onEnfocar?: () => void
   className?: string
 }) {
   const enBarra = useContext(CampoEnBarraContexto)
@@ -64,7 +73,8 @@ export function CampoBusqueda({
   // `dock` (tarea 330): el de abajo, al pulgar. Mismo alto que `destacada`
   // (52 px), más redondo, con borde y sombra: flota sobre la lista.
   const dock = variante === 'dock' && !enBarra
-  const destacada = (variante === 'destacada' || variante === 'dock') && !enBarra
+  const resolver = variante === 'resolver' && !enBarra
+  const destacada = (variante === 'destacada' || variante === 'dock' || resolver) && !enBarra
   const paleta = variante === 'paleta' && !enBarra
 
   // En la barra (tarea 339): 44 px en tableta y 48 desde 1280, con el
@@ -74,6 +84,8 @@ export function CampoBusqueda({
     ? 'h-11 gap-2.5 rounded-xl pl-3.5 pr-1.5 shadow-[var(--shadow-noct-elevacion)] xl:h-12 xl:rounded-[13px] xl:pl-4'
     : paleta
       ? 'h-16 min-w-0 flex-1 gap-3'
+    : resolver
+      ? 'gap-3 border-2 pl-4 pr-1.5'
     : dock
       ? 'h-[52px] gap-2.5 rounded-2xl pl-4 pr-3.5 shadow-[0_6px_20px_rgba(0,0,0,.16)]'
       : destacada
@@ -81,7 +93,7 @@ export function CampoBusqueda({
         : 'h-[46px] gap-2.5 rounded-lg px-3.5'
   const borde = paleta
     ? ''
-    : buscando
+    : buscando || resolver
     ? 'border-noct-accent'
     : dock || enBarra
       ? 'border-noct-text/25'
@@ -98,15 +110,17 @@ export function CampoBusqueda({
       // borde más `ring-1`: 2 px de acento, tan visibles como el anillo
       // global que sustituyen, y distintos del borde de 1 px que queda
       // cuando hay texto escrito pero el foco está en otra parte.
+      // En `resolver` el borde ya es de 2 px (`forma`): sin el de 1 px de la
+      // base, que competiría con él por la misma propiedad.
       className={`flex items-center ${
         paleta
           ? ''
-          : 'border bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent'
+          : `${resolver ? '' : 'border '}bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent`
       } ${forma} ${borde} ${className}`}
     >
       <MagnifyingGlass
-        size={destacada || paleta ? 20 : 18}
-        className={`shrink-0 ${buscando || dock || enBarra || paleta ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
+        size={resolver ? 22 : destacada || paleta ? 20 : 18}
+        className={`shrink-0 ${buscando || dock || enBarra || paleta || resolver ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
         aria-hidden
       />
       <input
@@ -114,6 +128,7 @@ export function CampoBusqueda({
         type="search"
         value={valor}
         onChange={(evento) => onCambiar(evento.target.value)}
+        onFocus={onEnfocar}
         placeholder={textoAlternativo ?? `Buscar en ${alcance}`}
         aria-label={`Buscar en ${alcance}`}
         data-campo-busqueda
@@ -124,6 +139,8 @@ export function CampoBusqueda({
             ? 'text-[15px] xl:text-[15.5px]'
             : paleta
               ? 'text-[18px] font-medium'
+              : resolver
+                ? 'text-[17px]'
               : destacada
                 ? 'text-[16px]'
                 : // En el teléfono, 16 para que iOS no amplíe al enfocar (tarea 341).
@@ -136,10 +153,10 @@ export function CampoBusqueda({
           onClick={() => onCambiar('')}
           aria-label="Borrar la búsqueda"
           className={`flex shrink-0 items-center justify-center text-noct-neutral-300 hover:text-noct-text ${
-            enBarra || paleta ? 'h-9 w-9 rounded-[9px] hover:bg-noct-text/[.05]' : '-mr-3 h-11 w-11'
+            enBarra || paleta ? 'h-9 w-9 rounded-[9px] hover:bg-noct-text/[.05]' : resolver ? 'h-11 w-11' : '-mr-3 h-11 w-11'
           }`}
         >
-          <XCircleFill size={destacada ? 19 : 18} aria-hidden />
+          <XCircleFill size={resolver ? 22 : destacada ? 19 : 18} aria-hidden />
         </button>
       )}
       {enBarra?.accesorio && (

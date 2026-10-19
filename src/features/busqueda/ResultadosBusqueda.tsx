@@ -1,8 +1,13 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { Fragment, useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
-import { CaretDown, CaretRight, CaretUp, Crosshair } from '../../components/iconos'
+import { CaretDown, CaretRight, CaretUp, Check, Crosshair } from '../../components/iconos'
+import { BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
+import { useEsAncho } from '../../components/useEsAncho'
+import { db } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
+import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { useAccionesDeGuia } from '../soluciones/useAccionesDeGuia'
 import { AccionesDeResultado } from './AccionesResultado'
 import { useAnotarBusqueda } from './busquedaEnHistorial'
@@ -15,6 +20,7 @@ import { PuenteBoveda } from './PuenteBoveda'
 import {
   cuentaDeTipo,
   filasConPrefijoComun,
+  lecturaParaTelefono,
   partesSubtituloConTipo,
   partirPorPrefijo,
   tipoComun,
@@ -51,6 +57,80 @@ import { useDatosDeEquipos } from './useDatosDeEquipos'
 // resto de los mejores). Si las primeras están cerca, sigue siendo
 // "Mejores resultados", como siempre. Son los mismos resultados, en el
 // mismo orden y con las mismas acciones: solo cambia lo que se afirma.
+
+// ABRIR UN RESULTADO: a dónde lleva, con qué estado y qué se mide al tocarlo.
+// Lo comparten la fila y la tarjeta de "La guía que mejor coincide" del
+// teléfono (tarea 344): las dos abren lo mismo, de la misma forma.
+function useAbrirResultado(resultado: ResultadoBusqueda, desdeMejores: boolean) {
+  const {
+    accionesGuia,
+    onNavegar,
+    onResolver,
+    consulta: consultaCruda,
+    huboDesbloqueo,
+    estadoDeSalto,
+    alSaltar,
+    equipoDeLaConsulta: equipoConsultado,
+  } = useContextoResultados()
+  return {
+    // Una guía se abre con el equipo que la consulta identifica, si
+    // es uno solo (tarea 290): "la impresora de mercadeo no imprime".
+    to: resultado.tipo === 'articulo' ? rutaGuiaConEquipo(resultado.ruta, equipoConsultado) : resultado.ruta,
+    // DE DONDE VENGO, PARA PODER VOLVER (seccion 7 del encargo).
+    // Se reutiliza el sistema de origen que ya existe: abrir una
+    // credencial desde aqui y volver devuelve a esta pantalla, no a
+    // la lista raiz de la Boveda. Desde el 2026-09-16 el origen lleva
+    // tambien la busqueda, que el regreso repone (seccion 13).
+    state: estadoDeSalto,
+    onClick: () => {
+      // ABRIR UNA GUIA ES EMPEZARLA O RETOMARLA (encargo del
+      // 2026-09-17): la guia se abre en su primer paso pendiente, asi
+      // que su antiguo boton "Empezar" repetia este enlace y se retiro.
+      // El recorrido cuenta igual, con el verbo que corresponde.
+      const accionGuia = resultado.tipo === 'articulo' ? accionesGuia.get(idDeEntidad(resultado.id)) : undefined
+      if (accionGuia) {
+        onResolver(
+          eventoDeResolucion({
+            accion: accionGuia.estado === 'continuar' ? 'continuar_guia' : 'empezar_guia',
+            tipo: resultado.tipo,
+            desdeMejores,
+            consulta: consultaCruda,
+            huboDesbloqueo,
+          }),
+        )
+      }
+      // Abrir una guia con preguntas ES empezarla (arranca en su
+      // primera pregunta o la retoma, tarea 263): sin boton propio,
+      // como una guia, y el recorrido cuenta con su verbo de siempre.
+      if (resultado.tipo === 'diagnostico') {
+        onResolver(
+          eventoDeResolucion({
+            accion: 'iniciar_diagnostico',
+            tipo: resultado.tipo,
+            desdeMejores,
+            consulta: consultaCruda,
+            huboDesbloqueo,
+          }),
+        )
+      }
+      // Abrir un equipo ES la accion de un equipo: no lleva boton
+      // propio (seria repetir este enlace), pero el recorrido cuenta.
+      if (resultado.tipo === 'dispositivo') {
+        onResolver(
+          eventoDeResolucion({
+            accion: 'abrir_equipo',
+            tipo: resultado.tipo,
+            desdeMejores,
+            consulta: consultaCruda,
+            huboDesbloqueo,
+          }),
+        )
+      }
+      alSaltar()
+      onNavegar?.()
+    },
+  }
+}
 
 export function FilaResultado({
   resultado,
@@ -90,20 +170,8 @@ export function FilaResultado({
   /** Para la medicion del recorrido (seccion 17). */
   desdeMejores?: boolean
 }) {
-  const {
-    accionesGuia,
-    onNavegar,
-    onResolver,
-    consulta: consultaCruda,
-    huboDesbloqueo,
-    modo,
-    vistaAbierta,
-    alternarVista,
-    estadoDeSalto,
-    alSaltar,
-    equipoDeLaConsulta: equipoConsultado,
-    equipos,
-  } = useContextoResultados()
+  const { modo, vistaAbierta, alternarVista, equipos } = useContextoResultados()
+  const abrir = useAbrirResultado(resultado, desdeMejores)
   const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
   // En el teléfono, la IP de un equipo va a la derecha en mono (tarea 342).
   const equipo = resultado.tipo === 'dispositivo' ? equipos.get(idDeEntidad(resultado.id)) : undefined
@@ -206,62 +274,9 @@ export function FilaResultado({
         ref={(nodo) => {
           fila.current = nodo
         }}
-        // Una guía se abre con el equipo que la consulta identifica, si
-        // es uno solo (tarea 290): "la impresora de mercadeo no imprime".
-        to={resultado.tipo === 'articulo' ? rutaGuiaConEquipo(resultado.ruta, equipoConsultado) : resultado.ruta}
-        // DE DONDE VENGO, PARA PODER VOLVER (seccion 7 del encargo).
-        // Se reutiliza el sistema de origen que ya existe: abrir una
-        // credencial desde aqui y volver devuelve a esta pantalla, no a
-        // la lista raiz de la Boveda. Desde el 2026-09-16 el origen lleva
-        // tambien la busqueda, que el regreso repone (seccion 13).
-        state={estadoDeSalto}
-        onClick={() => {
-          // ABRIR UNA GUIA ES EMPEZARLA O RETOMARLA (encargo del
-          // 2026-09-17): la guia se abre en su primer paso pendiente, asi
-          // que su antiguo boton "Empezar" repetia este enlace y se retiro.
-          // El recorrido cuenta igual, con el verbo que corresponde.
-          const accionGuia = resultado.tipo === 'articulo' ? accionesGuia.get(idDeEntidad(resultado.id)) : undefined
-          if (accionGuia) {
-            onResolver(
-              eventoDeResolucion({
-                accion: accionGuia.estado === 'continuar' ? 'continuar_guia' : 'empezar_guia',
-                tipo: resultado.tipo,
-                desdeMejores,
-                consulta: consultaCruda,
-                huboDesbloqueo,
-              }),
-            )
-          }
-          // Abrir una guia con preguntas ES empezarla (arranca en su
-          // primera pregunta o la retoma, tarea 263): sin boton propio,
-          // como una guia, y el recorrido cuenta con su verbo de siempre.
-          if (resultado.tipo === 'diagnostico') {
-            onResolver(
-              eventoDeResolucion({
-                accion: 'iniciar_diagnostico',
-                tipo: resultado.tipo,
-                desdeMejores,
-                consulta: consultaCruda,
-                huboDesbloqueo,
-              }),
-            )
-          }
-          // Abrir un equipo ES la accion de un equipo: no lleva boton
-          // propio (seria repetir este enlace), pero el recorrido cuenta.
-          if (resultado.tipo === 'dispositivo') {
-            onResolver(
-              eventoDeResolucion({
-                accion: 'abrir_equipo',
-                tipo: resultado.tipo,
-                desdeMejores,
-                consulta: consultaCruda,
-                huboDesbloqueo,
-              }),
-            )
-          }
-          alSaltar()
-          onNavegar?.()
-        }}
+        to={abrir.to}
+        state={abrir.state}
+        onClick={abrir.onClick}
         className={`${CLASE_FILA} hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado`}
       >
         {cuerpo}
@@ -345,6 +360,78 @@ export function FilaResultado({
   )
 }
 
+// LA GUÍA QUE MEJOR COINCIDE, EN EL TELÉFONO (rediseño móvil, fase 1, tarea
+// 344; DESPUÉS de Claude Design). Cuando lo primero del orden global (el de
+// `mejores.ts`, que no cambia) es una guía, se destaca sola: qué es, su
+// título entero, cuántos pasos y cuánto toma, y "Abrir la guía", que dice
+// lo que pasa al tocarla. Es una COINCIDENCIA, no un diagnóstico: si otras
+// están cerca (confianza "cercana") se dice que hay otras parecidas debajo.
+// Abre exactamente lo que abriría su fila (`useAbrirResultado`).
+function GuiaQueMejorCoincide({ resultado, cercana }: { resultado: ResultadoBusqueda; cercana: boolean }) {
+  const { accionesGuia } = useContextoResultados()
+  const abrir = useAbrirResultado(resultado, true)
+  const esGuia = resultado.tipo === 'articulo'
+  const id = idDeEntidad(resultado.id)
+  const accion = esGuia ? accionesGuia.get(id) : undefined
+  const minutos = useLiveQuery(
+    async () => (esGuia ? (normalizarProcedimiento((await db.articulos.get(id))?.procedimiento)?.tiempoEstimadoMin ?? null) : null),
+    [esGuia, id],
+    null,
+  )
+  const { tipo, detalle } = partesSubtituloConTipo(resultado)
+  const medida = [
+    accion && accion.total > 0 ? `${accion.total} ${accion.total === 1 ? 'paso' : 'pasos'}${accion.totalAbierto ? ' o más' : ''}` : null,
+    minutos ? `unos ${minutos} min` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ')
+  const continuar = accion?.estado === 'continuar' && accion.pendiente.tipo === 'paso'
+  return (
+    <section aria-labelledby="guia-mejor-coincide" className="flex flex-col gap-2">
+      <h2 id="guia-mejor-coincide" className={ROTULO_TELEFONO}>
+        La guía que mejor coincide
+      </h2>
+      <div className="flex flex-col gap-3.5 rounded-[18px] border-[1.5px] border-noct-accent bg-noct-surface p-4">
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-[14px] leading-snug text-noct-neutral-400">{[tipo, detalle].filter(Boolean).join(' · ')}</span>
+          <span data-nombre-principal className="min-w-0 text-[21px] font-[650] leading-[1.2] text-pretty [overflow-wrap:anywhere]">
+            {resultado.titulo}
+          </span>
+          {(medida || esGuia) && (
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] text-noct-neutral-300">
+              {medida && <span>{medida}</span>}
+              {continuar && accion.pendiente.tipo === 'paso' ? (
+                <span className="font-semibold text-noct-accent-300">Vas en el paso {accion.pendiente.numero}</span>
+              ) : (
+                esGuia && (
+                  <span className="inline-flex items-center gap-1 font-semibold text-noct-exito">
+                    <Check size={15} aria-hidden />
+                    Publicada
+                  </span>
+                )
+              )}
+            </span>
+          )}
+        </div>
+        <Link
+          to={abrir.to}
+          state={abrir.state}
+          onClick={abrir.onClick}
+          aria-label={`${continuar ? 'Continuar la guía' : 'Abrir la guía'}: ${resultado.titulo}`}
+          className={`${BTN_PRIMARIO_RELLENO} w-full`}
+        >
+          {continuar ? 'Continuar la guía' : 'Abrir la guía'}
+        </Link>
+      </div>
+      {cercana && <p className="px-0.5 text-[14px] leading-snug text-noct-neutral-400">Hay otras guías parecidas debajo.</p>}
+    </section>
+  )
+}
+
+// El rótulo de una sección de resultados en el teléfono (tarea 344): 15 px
+// en texto 2, sin mayúsculas, como el DESPUÉS de Claude Design.
+const ROTULO_TELEFONO = 'text-[15px] font-[650] leading-snug text-noct-neutral-300'
+
 // En el teléfono, 62 de alto y sin el margen interior: el divisor y la
 // respuesta al tocar van a todo el ancho del contenido (tarea 342).
 const CLASE_FILA =
@@ -397,6 +484,13 @@ export function ResultadosBusqueda({
     () => agruparResultados(separar ? sinLosMejores(resultados, mejores) : resultados),
     [resultados, mejores, separar],
   )
+  // EN EL TELÉFONO, LA MISMA RESPUESTA LEÍDA DE OTRA FORMA (tarea 344,
+  // `lecturaParaTelefono`): la guía que mejor coincide destacada y lo demás
+  // por tipo. Solo donde las filas navegan; en modo consulta, encima de una
+  // tarea, la lista de siempre. Desde 768, la de siempre.
+  const ancho = useEsAncho()
+  const enTelefono = !ancho && filaNavega(modo)
+  const telefono = useMemo(() => lecturaParaTelefono(resultados, mejores), [resultados, mejores])
 
   // UNA VISTA RÁPIDA A LA VEZ, y atada a la consulta que la abrió: si el
   // técnico cambia lo escrito, la vista se recoge sola (su fila puede ni
@@ -458,6 +552,56 @@ export function ResultadosBusqueda({
   // Cuánto pesa el puente a la Bóveda (sección 14): cede ante una
   // coincidencia pública fuerte. Solo mira lo que ya está en pantalla.
   const prominencia = prominenciaPuenteBoveda(resultados, consultaCruda)
+
+  if (enTelefono) {
+    // Los que estaban entre los mejores conservan su acción directa y
+    // cuentan como "desde mejores" en la medición, como antes.
+    const entreLosMejores = new Set(mejores.map((resultado) => resultado.id))
+    const puente = (
+      <PuenteBoveda consulta={consultaCruda} onDesbloqueada={onDesbloqueada} prominencia={prominencia} modo={modo} />
+    )
+    return (
+      <ContextoResultados.Provider value={contexto}>
+        <div className="flex flex-col gap-5">
+          {telefono.destacada && (
+            <GuiaQueMejorCoincide resultado={telefono.destacada} cercana={lectura.confianza !== 'alta'} />
+          )}
+          {telefono.grupos.map((grupo, indice) => {
+            const conPrefijo = filasConPrefijoComun(grupo.items, consulta)
+            return (
+              <Fragment key={grupo.id}>
+                <section>
+                  <div className="mb-0.5 flex items-center gap-1.5 px-0.5">
+                    <grupo.Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
+                    <h2 className={ROTULO_TELEFONO}>
+                      {grupo.id === 'soluciones' && telefono.destacada ? 'Otras guías' : grupo.nombre}
+                    </h2>
+                    <span className="font-mono text-[12.5px] text-noct-neutral-500">{grupo.items.length}</span>
+                  </div>
+                  <div className="-mx-2 grid grid-cols-1">
+                    {grupo.items.map((item) => (
+                      <FilaResultado
+                        key={item.id}
+                        resultado={item}
+                        consulta={consulta}
+                        prefijoAtenuado={conPrefijo.has(item.id)}
+                        conAcciones={!separar || entreLosMejores.has(item.id)}
+                        desdeMejores={separar && entreLosMejores.has(item.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+                {/* El puente, detrás del primer bloque de lo encontrado: ni
+                    encima de lo que ya responde ni enterrado al final. */}
+                {indice === 0 && puente}
+              </Fragment>
+            )
+          })}
+          {telefono.grupos.length === 0 && puente}
+        </div>
+      </ContextoResultados.Provider>
+    )
+  }
 
   // Las secciones, en orden: "Mejores resultados" (si aporta algo) y los
   // grupos de siempre. Se arma la lista para poder intercalar el puente

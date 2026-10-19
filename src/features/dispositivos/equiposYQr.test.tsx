@@ -218,8 +218,8 @@ describe('la ficha del equipo', () => {
     await montar(RUTAS, '/dispositivos/pc-archivo')
     await esperar(() => textoPantalla().includes('Anotado: «Archivo» · por validar'), 'el responsable')
 
-    // La identidad dice que no hay nadie a cargo; la fila, lo anotado.
-    expect(textoPantalla()).toContain('sin responsable')
+    // La fila dice lo anotado, por validar, con su "Asignar" (en el teléfono
+    // el carnet ya no lo repite: el responsable va en los datos, tarea 344).
     expect(textoPantalla()).not.toContain('Responsable: Archivo')
     expect(control('Asignar')).not.toBeNull()
   })
@@ -243,7 +243,10 @@ describe('la ficha del equipo', () => {
     expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain('Más datos del equipo')
   })
 
-  it('después de lo de arriba, "Resolver con este equipo" (los problemas primero) y al final "Más del equipo"', async () => {
+  // En el teléfono (tarea 344, DESPUÉS de Claude Design): los datos, el
+  // mantenimiento a la vista, "Guías para este equipo" en filas cortas y al
+  // final "Información del equipo".
+  it('después de lo de arriba, el mantenimiento, las guías (los problemas primero) y al final la información', async () => {
     await sembrarInventario()
     await sembrarGuiasDelEquipo()
     await montar(RUTAS, '/dispositivos/pc')
@@ -252,12 +255,14 @@ describe('la ficha del equipo', () => {
 
     const texto = textoPantalla().toLowerCase()
     const conectado = texto.indexOf('conectado a')
-    const resolver = texto.indexOf('resolver con este equipo')
+    const mantenimiento = texto.indexOf('mantenimiento')
+    const resolver = texto.indexOf('guías para este equipo')
     const problema = texto.indexOf('la caja de prueba no enciende')
     const procedimiento = texto.indexOf('configurar la caja de prueba')
-    const masDelEquipo = texto.indexOf('más del equipo')
+    const masDelEquipo = texto.indexOf('información del equipo')
     expect(conectado).toBeGreaterThan(-1)
-    expect(conectado).toBeLessThan(resolver)
+    expect(conectado).toBeLessThan(mantenimiento)
+    expect(mantenimiento).toBeLessThan(resolver)
     expect(resolver).toBeLessThan(problema)
     expect(problema).toBeLessThan(procedimiento)
     expect(procedimiento).toBeLessThan(masDelEquipo)

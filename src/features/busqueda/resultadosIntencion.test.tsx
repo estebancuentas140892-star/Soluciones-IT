@@ -41,9 +41,13 @@ beforeEach(async () => {
   await sembrarPerfil(false)
 })
 
+type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+const ventana = window as unknown as VentanaDePrueba
+
 afterEach(async () => {
   await desmontarTodo()
   bloquear()
+  ventana.happyDOM.setViewport({ width: 375, height: 812 })
 })
 
 async function sembrarImpresoras(): Promise<void> {
@@ -79,8 +83,14 @@ function seccion(rotulo: string): HTMLElement | null {
   return titulo?.closest('section') ?? null
 }
 
+// "Mejor coincidencia" y "Mejores resultados" son la lectura desde 768 px (y la
+// del modo consulta en todos los anchos). En el teléfono, desde la tarea 344,
+// lo mismo se lee por tipo: sus pruebas, en el bloque siguiente.
 describe('la confianza en pantalla', () => {
+  const enTableta = () => ventana.happyDOM.setViewport({ width: 1024, height: 768 })
+
   it('una opción claramente superior se dice: "Mejor coincidencia" y debajo "Otras coincidencias"', async () => {
+    enTableta()
     await sembrarImpresoras()
     await montar(RUTAS, '/')
     await buscar('impresora mercadeo')
@@ -98,6 +108,7 @@ describe('la confianza en pantalla', () => {
   })
 
   it('una consulta ambigua no finge certeza: sigue siendo "Mejores resultados"', async () => {
+    enTableta()
     await sembrarImpresoras()
     await montar(RUTAS, '/')
     await buscar('impresora')
@@ -108,6 +119,7 @@ describe('la confianza en pantalla', () => {
   })
 
   it('el puente a la Bóveda va detrás del bloque entero, no entre "Mejor" y "Otras"', async () => {
+    enTableta()
     await sembrarPerfil(true)
     await anclarMaestra()
     bloquear()
@@ -130,5 +142,45 @@ describe('la confianza en pantalla', () => {
     // Ninguna fila es un enlace: el equipo se consulta en su vista rápida.
     expect(document.body.querySelector('a[href^="/dispositivos/"]')).toBeNull()
     expect(seccion('Mejor coincidencia')?.querySelector('button[aria-expanded]')).not.toBeNull()
+  })
+})
+
+// LA MISMA RESPUESTA EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design): el
+// orden global no cambia; lo primero, si es una guía, va destacado con "Abrir
+// la guía", y lo demás por tipo, en el orden de su mejor resultado.
+describe('la confianza en pantalla, en el teléfono', () => {
+  it('buscando un equipo concreto, "Equipos" va primero y no se destaca ninguna guía', async () => {
+    await sembrarImpresoras()
+    await montar(RUTAS, '/')
+    await buscar('impresora mercadeo')
+
+    await esperar(() => seccion('Equipos'), 'el grupo de equipos')
+    const rotulos = secciones()
+    expect(rotulos).not.toContain('La guía que mejor coincide')
+    expect(rotulos).not.toContain('Mejor coincidencia')
+    expect(rotulos).not.toContain('Mejores resultados')
+    expect(rotulos.indexOf('Equipos')).toBeLessThan(rotulos.indexOf('Guías'))
+    // El equipo pedido, primero en su grupo.
+    expect(seccion('Equipos')?.querySelector('a[href^="/dispositivos/"]')?.textContent).toContain('Impresora Mercadeo')
+  })
+
+  it('una guía primera se destaca con "Abrir la guía", y si otras están cerca se dice', async () => {
+    await sembrarImpresoras()
+    await sembrarGuia({
+      id: 'guia-otra',
+      titulo: 'Conectar una impresora compartida',
+      pasos: [pasoPrueba('otra-p1', 'Agregar la impresora', ['Agregar la impresora compartida'])],
+    })
+    await montar(RUTAS, '/')
+    await buscar('conectar una impresora')
+
+    const destacada = await esperar(() => seccion('La guía que mejor coincide'), 'la guía destacada')
+    const abrir = destacada.querySelector<HTMLAnchorElement>('a[aria-label^="Abrir la guía: "]')
+    expect(abrir?.textContent).toBe('Abrir la guía')
+    expect(abrir?.getAttribute('href')).toMatch(/^\/soluciones\//)
+    expect(destacada.textContent).toContain('Publicada')
+    // No es un diagnóstico: si hay otras parecidas, lo dice.
+    expect(destacada.textContent).toContain('Hay otras guías parecidas debajo.')
+    expect(secciones()).toContain('Otras guías')
   })
 })

@@ -151,8 +151,12 @@ function respuesta(etiqueta: string): HTMLElement | null {
 }
 
 /** El enlace de un resultado o de una fila de Recientes, por su título. */
+// Por su texto o por su nombre accesible: en el teléfono la guía que mejor
+// coincide se abre con "Abrir la guía", cuyo nombre lleva el título (tarea 344).
 function enlaceDe(titulo: string): HTMLAnchorElement | undefined {
-  return Array.from(document.body.querySelectorAll('a')).find((a) => a.textContent?.includes(titulo))
+  return Array.from(document.body.querySelectorAll('a')).find(
+    (a) => a.textContent?.includes(titulo) || a.getAttribute('aria-label')?.includes(titulo),
+  )
 }
 
 beforeEach(async () => {
@@ -386,9 +390,10 @@ describe('el procedimiento dentro del recorrido no se pierde', () => {
     // Salir guarda: Resolver lo ofrece en Recientes, diciendo dónde va.
     await tocar(await esperarControl('Guardar el avance y salir'))
     await esperar(() => ubicacionActual().pathname === '/', 'sale a Resolver')
+    // En el teléfono, "Sigue donde ibas" (tarea 344): dice dónde va y su botón lo retoma.
     const fila = await esperar(() => enlaceDe(TITULO_IMPRESORA), 'el recorrido en Recientes')
-    expect(fila.textContent).toContain(`Haciendo «${TITULO_CONECTAR}»`)
-    expect(fila.getAttribute('aria-label')).toBe(`Continuar ${TITULO_IMPRESORA}`)
+    expect(fila.closest('section')?.textContent).toContain(`Haciendo «${TITULO_CONECTAR}»`)
+    expect(fila.getAttribute('aria-label')).toBe(`Continuar: ${TITULO_IMPRESORA}`)
     // Y la guía suelta no aparece como empezada: no es una tarea pendiente global.
     expect(document.body.querySelector('a[href="/soluciones/cat-pruebas/guia-conectar"]')).toBeNull()
 

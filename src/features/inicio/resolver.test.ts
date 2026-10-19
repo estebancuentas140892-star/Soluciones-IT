@@ -12,6 +12,7 @@ import {
   guiasRecientes,
   juntarRecientes,
   recorridosRecientes,
+  textoSinUrgencias,
 } from './resolver'
 
 // Lo que acompaña al buscador de Resolver (encargo del 2026-09-22). Todo
@@ -92,6 +93,33 @@ function pendiente(clave: string, diasRestantes: number | null, categoria: ItemP
     origen: 'Bóveda',
   }
 }
+
+// "Tu trabajo de hoy" sin nada urgente, en el teléfono (tarea 344): en
+// palabras, nombrando solo lo que la Agenda guarda de verdad.
+describe('textoSinUrgencias', () => {
+  it('con la Agenda vacía, solo que no hay nada atrasado ni para hoy', () => {
+    expect(textoSinUrgencias(AGENDA_VACIA)).toBe('Nada atrasado ni para hoy.')
+  })
+
+  it('nombra lo próximo, lo que está en curso y lo que espera revisión, con su número', () => {
+    const agenda: Agenda = {
+      ...AGENDA_VACIA,
+      proximos: [pendiente('p1', 5), pendiente('p2', 20)],
+      enCurso: [pendiente('b1', null, 'borrador')],
+      porRevisar: [pendiente('s1', null, 'sugerencia')],
+    }
+    expect(textoSinUrgencias(agenda)).toBe('Nada atrasado ni para hoy. En la Agenda: 2 próximos, 1 en curso y 1 por revisar.')
+  })
+
+  it('en singular y sin lo que no hay', () => {
+    expect(textoSinUrgencias({ ...AGENDA_VACIA, proximos: [pendiente('p1', 5)] })).toBe(
+      'Nada atrasado ni para hoy. En la Agenda: 1 próximo.',
+    )
+    expect(textoSinUrgencias({ ...AGENDA_VACIA, porRevisar: [pendiente('s1', null, 'sugerencia')], enCurso: [pendiente('b1', null, 'borrador')] })).toBe(
+      'Nada atrasado ni para hoy. En la Agenda: 1 en curso y 1 por revisar.',
+    )
+  })
+})
 
 describe('asuntosDeAtencion', () => {
   it('junta vencidos, de hoy y próximos, en ese orden, y recorta a tres', () => {

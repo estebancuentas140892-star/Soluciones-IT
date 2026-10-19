@@ -364,6 +364,15 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 <a id="51-resolver"></a>
 ### 5.1 Resolver
 
+**REDISEÑO MÓVIL, FASE 1 (desde el 2026-10-19, tarea 344, DESPUÉS de Claude Design).** Solo por debajo de 768 px; manda sobre el bloque "1b Pulgar" de abajo donde choque. Desde 768 todo sigue como se describe más abajo.
+- **Cabecera:** "Resolver" con el escáner QR, la sincronización y la cuenta; debajo, "Encuentra qué hacer ante un problema técnico.".
+- **El buscador, arriba** (no en el dock): el mismo campo ("Buscar en Soluciones IT"), de 60 px con borde de acento, marcador "Describe el problema o un equipo" ("El problema o un equipo" por debajo de 360 px). Debajo, "Prueba con:" y los ejemplos (no imprime, usuario bloqueado, impresora mercadeo) como botones que escriben la consulta.
+- **Sigue donde ibas:** la guía a medias más reciente: qué es, su título entero, "Vas en el paso N de M", un segmento por paso y el botón relleno "Continuar en el paso N" (en una guía con preguntas, dónde va y "Continuar"). Es la única acción rellena de la pantalla.
+- **Tu trabajo de hoy:** con "Agenda (N)" a la derecha (abre la Agenda). Lo vencido y lo de hoy, hasta tres, en la fila de la Agenda dentro de una tarjeta, y "Y N más..." si hay más. Sin nada urgente, una frase en verde: "Nada atrasado ni para hoy. En la Agenda: 2 próximos, 1 en curso y 1 por revisar." (solo lo que haya).
+- **¿Qué está fallando?:** las categorías con guías publicadas para ejecutar (hasta seis, las más usadas primero), en tarjetas de dos en dos con su icono, su nombre y cuántas guías tienen; cada una abre el catálogo filtrado por ella. Debajo, siempre, "Ver todas las guías (N)".
+- **Recientes** y la **bienvenida del primer día**, al final.
+- **La búsqueda:** tocar el campo (el teclado se abre en el mismo gesto) o escribir convierte la pantalla en la búsqueda: sin la cabecera, el regreso "Volver a Resolver" (borra lo escrito y vuelve) y el campo arriba, pegado al desplazarse; desplazar lo encontrado cierra el teclado. Sin nada escrito, "Puedes escribir" con los ejemplos. Con resultados, los chips de alcance, "La guía que mejor coincide" y lo demás por tipo (BUSCADOR.md 7.13). Nada coincide: "Nada coincide con «…»" con Buscar solo en Guías, Crear equipo y Limpiar búsqueda. Volver de una ficha o de una guía repone lo escrito, como siempre.
+
 **REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 330, [DECISIONES.md](DECISIONES.md) AD-080).** La cabecera es de una sola fila: **"Resolver" a 25 px**, la sincronización y la cuenta. **Se retiran la pregunta "¿Qué necesitas resolver?" y la línea de ayuda** de debajo. Manda sobre lo que sigue donde choque.
 - **El buscador baja al dock**: el mismo campo ("Buscar en Soluciones IT", marcador "Describe qué necesitas resolver…"), de 52 px, pegado sobre la barra de pestañas, con el escáner de 52 px al lado. Con el teclado abierto sube con él; desplazar la lista con el dedo cierra el teclado. Escribir enseña los resultados en la pantalla, como siempre. **Desde 768 px (tarea 339)** el mismo campo va en la barra superior, junto al título, con el escáner dentro.
 - **Necesita atención** (si hay algo con fecha): el título a 17 px con "Agenda" a la derecha, **tres contadores** (vencidos, para hoy y próximos; el número en IBM Plex Mono y en su color si hay alguno) que abren la Agenda, y debajo hasta tres asuntos en su fila: una **barra lateral de 4 px** del color de su estado, el icono neutro, el nombre entero a 15,5 px, la razón en su color y el verbo a 14 px. Sin nada con fecha, la línea de siempre que abre la Agenda si guarda algo más.
@@ -641,6 +650,14 @@ Hallazgos **M-004**, **M-005** y **M-009**, regla **M-R8**. Había **nueve copia
 #### 5.3.1 Ficha de dispositivo (`DispositivoPage`)
 
 **Ruta:** `/dispositivos/:dispositivoId` · **Nivel:** Documento. Vista 360°.
+
+**REDISEÑO MÓVIL, FASE 1 (desde el 2026-10-19, tarea 344, DESPUÉS de Claude Design).** Solo por debajo de 768 px; manda sobre el bloque "1b Pulgar" de abajo donde choque. Desde 768 la ficha no cambia.
+- **El carnet:** encima del nombre, lo que el nombre no dice (categoría, marca y modelo, con la regla de la tarea 277); el nombre a 28 px con todo el ancho (sin el icono de 52); el estado en su pastilla con punto; debajo, los avisos del equipo.
+- **Datos para trabajar, en una tarjeta:** la IP en IBM Plex Mono a 20 px con "Copiar" (icono y palabra); la ubicación; el responsable, siempre (con "Cambiar", o "Sin responsable" / lo anotado por validar con "Asignar"); "Conectado a", que abre la hoja de Conexiones.
+- **Mantenimiento, a la vista:** una fila con su estado ("Nada programado", "Atrasado", "Toca hoy", "Programado para el 20 oct" o "Al día") y "Ver", que abre la pantalla de mantenimiento del equipo.
+- **Guías para este equipo:** hasta tres, los problemas frecuentes primero, en filas cortas (el título entero y "Problema frecuente · 4 pasos"); "Ver N" abre la hoja con todas y el diagnóstico de su categoría. Cada una abre la guía con este equipo.
+- **Información del equipo:** el índice de siempre (Más datos, Si falla caen, Conexiones, Credenciales y Datos protegidos con permiso, Adjuntos, Facturación si aplica, Intervenciones), sin Mantenimiento (va arriba) y sin la leyenda de los galones: todas las filas llevan el galón hacia la derecha.
+- **La barra fija:** "Clave" (o "Claves"), delineada y con su palabra, a la izquierda de "Resolver un problema". Solo aparece con permiso de Bóveda y alguna credencial vinculada a este equipo; abre la hoja "Clave del equipo" con sus credenciales, como antes la llave. Sin permiso no hay ni botón ni fila.
 
 
 **REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 329, [DECISIONES.md](DECISIONES.md) AD-079).** Cambia cómo se presenta la ficha, no sus datos ni sus funciones. Manda sobre lo que sigue donde choquen:

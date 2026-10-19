@@ -318,6 +318,16 @@ Solo presentación por debajo de 768 px: nada de lo que se indexa, de la consult
 - **Facturación no tiene resultados propios:** las autorizaciones no se indexan (tarea 321). Que aparezcan en la búsqueda pide una indexación específica, fuera del alcance de la 342; un POS no las sustituye.
 - **En la capa, solo en el teléfono:** "Nada coincide con «…»" compacto, con Crear equipo y Limpiar búsqueda, y el estado vacío con un rótulo y los ejemplos (sin búsquedas recientes); desde 768, "Sin coincidencias" en su caja punteada y el estado vacío de siempre, con las mismas salidas. En todas las anchuras, y mientras la copia local no se ha leído, el esqueleto "Preparando el índice de búsqueda…" (`EsqueletoBusqueda`) en vez de afirmar que nada coincide. `BuscadorGlobal` lo sabe preguntando a Dexie por las dos tablas que más pesan (dos lecturas seguidas, detrás de las del índice); `useIndiceBusqueda` no cambia.
 
+### 7.13 La lectura del teléfono: la guía que mejor coincide y lo demás por tipo (2026-10-19, tarea 344)
+
+Solo presentación por debajo de 768 px y donde las filas navegan (en modo consulta, la lista de siempre): lo que se indexa, MiniSearch, la consulta, el orden de `mejores.ts`, la confianza, los alcances y el puente de la Bóveda no cambian.
+
+- **`lecturaParaTelefono(resultados, mejores)`** (`presentacionResultados.ts`): si lo primero de los mejores es una guía (con pasos o con preguntas) se destaca y sale de su grupo; lo demás va por grupo (Guías, Equipos, Bóveda...), los grupos en el orden de su mejor resultado y, dentro de cada uno, lo que estaba entre los mejores primero. Buscando un equipo por su nombre, Equipos va antes que Guías.
+- **"La guía que mejor coincide"** (`GuiaQueMejorCoincide` en `ResultadosBusqueda.tsx`): tipo y categoría, el título entero, "N pasos · unos M min" (de la ruta de `accionDeGuia` y de `tiempoEstimadoMin`), "Publicada" o "Vas en el paso N", y el botón "Abrir la guía" ("Continuar la guía" si hay avance). Abre lo mismo que su fila (`useAbrirResultado`: el equipo de la consulta, el origen con la búsqueda y la medición). Es una coincidencia, no un diagnóstico: con confianza cercana dice "Hay otras guías parecidas debajo.".
+- **Rótulos de grupo** a 15/650 en texto 2 (antes 13/650); con la guía destacada, el grupo de guías se llama "Otras guías". Las filas son las de siempre; las que estaban entre los mejores conservan su acción directa.
+- **El puente de la Bóveda**, detrás del primer grupo (o de la guía destacada si no hay grupos).
+- **La capa del buscador global** lleva el campo arriba también en el teléfono, junto al regreso, y comparte con Resolver "Puedes escribir" y "Nada coincide con «…»" (`EstadosBusquedaMovil.tsx`).
+
 ## 8. Sugerencias anti duplicados
 
 `buscarSimilares` / `buscarArticulosSimilares` (`useIndiceBusqueda.ts`) reutilizan el mismo índice y la misma expansión de sinónimos, pero además:

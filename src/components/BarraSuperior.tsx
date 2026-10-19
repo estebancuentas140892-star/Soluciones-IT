@@ -51,6 +51,7 @@ export function BarraSuperior({
   tituloContraido = false,
   volver,
   buscador,
+  accionTelefono,
   children,
 }: {
   titulo: string
@@ -73,6 +74,10 @@ export function BarraSuperior({
   // 339). Lo decide el chasis: por debajo de 768 lo monta en el dock, y
   // nunca en los dos sitios a la vez.
   buscador?: ReactNode
+  // Una acción de la sección en la fila del título, solo por debajo de 768
+  // px (tarea 344): el escáner de Resolver, que en el teléfono ya no va junto
+  // a un dock. Desde 768 va dentro del campo de la barra.
+  accionTelefono?: ReactNode
   children?: ReactNode
 }) {
   const { perfil } = useAuth()
@@ -133,6 +138,7 @@ export function BarraSuperior({
           </button>
         )}
         <div className="flex shrink-0 items-center gap-0.5 md:ml-auto">
+          {!ancho && accionTelefono}
           <PastillaSync />
           {conLupa && !ancho && (
             <button

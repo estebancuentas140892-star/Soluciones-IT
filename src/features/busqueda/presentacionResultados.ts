@@ -1,5 +1,6 @@
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import { ETIQUETA_TIPO, subtituloConTipo } from './mejores'
+import { agruparResultados, type GrupoResultados } from './resultados'
 import type { ResultadoBusqueda, TipoResultado } from './useIndiceBusqueda'
 
 // CÓMO SE LEE UNA LISTA DE RESULTADOS (propuesta final de Claude Design,
@@ -104,4 +105,34 @@ export function partesSubtituloConTipo(resultado: ResultadoBusqueda): { tipo: st
     return { tipo: primero.trim(), detalle: resto.join(' · ') }
   }
   return { tipo: '', detalle: completo }
+}
+
+/**
+ * LA LECTURA DEL TELÉFONO (rediseño móvil, fase 1, tarea 344; DESPUÉS de
+ * Claude Design). Los mismos resultados, en el mismo orden global, leídos de
+ * otra forma: en vez de "Mejores resultados" (cinco filas con el mismo peso,
+ * que había que leer todas para decidir), lo primero del orden global se
+ * destaca si es una guía, y lo demás va por tipo (Guías, Equipos, Bóveda...),
+ * para que se distinga a qué se llega. Los grupos van en el orden de su
+ * mejor resultado y, dentro de cada uno, lo que estaba entre los mejores va
+ * primero: buscando un equipo por su nombre, Equipos sube por encima de
+ * Guías. Nada se filtra ni se reordena en el índice: es presentación.
+ */
+export function lecturaParaTelefono(
+  resultados: ResultadoBusqueda[],
+  mejores: ResultadoBusqueda[],
+): { destacada: ResultadoBusqueda | null; grupos: GrupoResultados[] } {
+  const primera = mejores[0]
+  const destacada = primera && (primera.tipo === 'articulo' || primera.tipo === 'diagnostico') ? primera : null
+  const rango = new Map(mejores.map((resultado, indice) => [resultado.id, indice]))
+  const posicion = (resultado: ResultadoBusqueda) => rango.get(resultado.id) ?? Number.MAX_SAFE_INTEGER
+  const grupos = agruparResultados(destacada ? resultados.filter((r) => r.id !== destacada.id) : resultados)
+    .map((grupo, orden) => ({
+      grupo: { ...grupo, items: [...grupo.items].sort((a, b) => posicion(a) - posicion(b)) },
+      orden,
+      mejor: Math.min(...grupo.items.map(posicion)),
+    }))
+    .sort((a, b) => a.mejor - b.mejor || a.orden - b.orden)
+    .map(({ grupo }) => grupo)
+  return { destacada, grupos }
 }

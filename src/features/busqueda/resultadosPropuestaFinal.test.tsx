@@ -34,8 +34,12 @@ beforeEach(async () => {
   await sembrarPerfil(false)
 })
 
+type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+const ventana = window as unknown as VentanaDePrueba
+
 afterEach(async () => {
   await desmontarTodo()
+  ventana.happyDOM.setViewport({ width: 375, height: 812 })
 })
 
 async function buscar(texto: string): Promise<void> {
@@ -45,15 +49,21 @@ async function buscar(texto: string): Promise<void> {
 
 /** El bloque de la pregunta (lo que se pliega). */
 describe('Resolver mientras se escribe', () => {
-  it('sin la pregunta: el buscador vive en el dock de abajo y no se pliega nada al escribir (tarea 330)', async () => {
+  // En el teléfono, desde la tarea 344, el campo va arriba (antes, en el dock).
+  it('sin la pregunta: el buscador va arriba, en su sitio, y escribir no lo duplica (tarea 344)', async () => {
     await montar(RUTAS, '/')
     await buscar('i')
     expect(textoPantalla()).not.toContain('¿Qué necesitas resolver?')
-    expect(document.body.querySelector('[data-dock-busqueda] input[type="search"]')).not.toBeNull()
+    expect(document.body.querySelector('[data-buscador-resolver] input[type="search"]')).not.toBeNull()
+    expect(document.body.querySelector('[data-dock-busqueda]')).toBeNull()
+    expect(document.body.querySelectorAll('input[type="search"]')).toHaveLength(1)
   })
 })
 
-describe('la lista de resultados', () => {
+// La lectura de siempre, desde 768 px (en el teléfono, por tipo: tarea 344).
+describe('la lista de resultados, desde 768 px', () => {
+  beforeEach(() => ventana.happyDOM.setViewport({ width: 1024, height: 768 }))
+
   it('homogénea: lo buscado se atenúa, lo que distingue queda en claro y el tipo sube al encabezado', async () => {
     await sembrarEquipo({ id: 'imp-1', nombre: 'Impresora Mercadeo', marca: 'KYOCERA', modelo: 'ECOSYS M3655' })
     await sembrarEquipo({ id: 'imp-2', nombre: 'Impresora Logística', marca: 'RICOH', modelo: 'MP 501' })
