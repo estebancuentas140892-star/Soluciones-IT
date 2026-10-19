@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   cuentaDeTipo,
   filasConPrefijoComun,
+  lecturaParaTelefono,
   MINIMO_FILAS_PREFIJO,
   partesSubtituloConTipo,
   partirPorPrefijo,
@@ -23,6 +24,43 @@ const IMPRESORAS = [
   resultado('i3', 'dispositivo', 'Impresora Logística', 'RICOH · MP 501'),
   resultado('i4', 'dispositivo', 'Impresora Caja PN', 'HP · LaserJet MFP M527'),
 ]
+
+// LA LECTURA DEL TELÉFONO (tarea 344): los mismos resultados, en el mismo
+// orden global, con la guía primera destacada y lo demás por tipo.
+describe('lecturaParaTelefono', () => {
+  const guia1 = resultado('g1', 'articulo', 'Revisar una impresora que no imprime', 'Impresoras')
+  const guia2 = resultado('g2', 'articulo', 'Liberar la cola de impresión', 'Impresoras')
+  const preguntas = resultado('d1', 'diagnostico', 'La impresora no imprime', 'Impresoras')
+  const equipo = resultado('e1', 'dispositivo', 'Impresora Mercadeo', 'Impresoras')
+
+  it('destaca lo primero del orden global si es una guía, y no lo repite en su grupo', () => {
+    const { destacada, grupos } = lecturaParaTelefono([guia1, guia2, equipo], [guia1, equipo, guia2])
+    expect(destacada).toBe(guia1)
+    expect(grupos.flatMap((g) => g.items)).not.toContain(guia1)
+  })
+
+  it('una guía con preguntas también es una guía que se destaca', () => {
+    expect(lecturaParaTelefono([preguntas, guia1], [preguntas, guia1]).destacada).toBe(preguntas)
+  })
+
+  it('si lo primero es un equipo no destaca nada, y Equipos va antes que Guías', () => {
+    const { destacada, grupos } = lecturaParaTelefono([guia1, guia2, equipo], [equipo, guia2])
+    expect(destacada).toBeNull()
+    expect(grupos.map((g) => g.nombre)).toEqual(['Equipos', 'Guías'])
+  })
+
+  it('dentro de un grupo, lo que estaba entre los mejores va primero y el resto en su orden', () => {
+    const otra = resultado('g3', 'articulo', 'Atasco de papel', 'Impresoras')
+    const { grupos } = lecturaParaTelefono([guia1, guia2, otra, equipo], [equipo, otra])
+    expect(grupos.find((g) => g.nombre === 'Guías')?.items).toEqual([otra, guia1, guia2])
+  })
+
+  it('sin mejores (una consulta sin palabras útiles) quedan los grupos de siempre, en su orden', () => {
+    const { destacada, grupos } = lecturaParaTelefono([equipo, guia1], [])
+    expect(destacada).toBeNull()
+    expect(grupos.map((g) => g.nombre)).toEqual(['Guías', 'Equipos'])
+  })
+})
 
 describe('partirPorPrefijo', () => {
   it('parte el título original por la consulta normalizada, sin tocar mayúsculas ni tildes', () => {

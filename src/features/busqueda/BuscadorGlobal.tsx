@@ -16,7 +16,14 @@ import { ChipsDeAlcance } from './ChipsDeAlcance'
 import { useIdsDeRed } from './useIdsDeRed'
 import { PuenteBoveda } from './PuenteBoveda'
 import { ProveedorRanuraVistaRapida } from './ranuraVistaRapida'
-import { AYUDA_BUSCADOR, MARCADOR_BUSCADOR } from './resultados'
+import { NadaCoincide, PuedesEscribir } from './EstadosBusquedaMovil'
+import {
+  ANCHO_MARCADOR_COMPLETO,
+  AYUDA_BUSCADOR,
+  MARCADOR_BUSCADOR,
+  MARCADOR_BUSCADOR_ESTRECHO,
+  MARCADOR_BUSCADOR_TELEFONO,
+} from './resultados'
 import { ResultadosBusqueda } from './ResultadosBusqueda'
 import { buscar, useIndiceBusqueda } from './useIndiceBusqueda'
 
@@ -102,6 +109,7 @@ export function BuscadorGlobal({
   // vista rápida al lado (tarea 339, T6). Son puntos de montaje distintos.
   const ancho = useEsAncho()
   const escritorio = useEsAncho(ANCHO_ESCRITORIO)
+  const marcadorCompleto = useEsAncho(ANCHO_MARCADOR_COMPLETO)
   const [ranuraVista, setRanuraVista] = useState<HTMLElement | null>(null)
 
   // `onCerrar` llega como flecha nueva en cada render de quien abre la
@@ -152,17 +160,22 @@ export function BuscadorGlobal({
 
   const titulo = modo === 'consulta' ? 'Consultar sin salir de la tarea' : 'Buscar en Soluciones IT'
 
-  // EL MISMO CAMPO, EN UN SOLO SITIO (tarea 339, T6): abajo, al pulgar, en el
-  // teléfono; arriba desde 768 (la tableta tiene el teclado abajo y el campo
-  // arriba no queda tapado); y desde 1280, la cabecera de la paleta.
+  // EL MISMO CAMPO, EN UN SOLO SITIO (tarea 339, T6): arriba desde 768 (la
+  // tableta tiene el teclado abajo y el campo arriba no queda tapado) y,
+  // desde 1280, la cabecera de la paleta. EN EL TELÉFONO, TAMBIÉN ARRIBA
+  // (tarea 344, DESPUÉS de Claude Design; antes, abajo al pulgar): junto al
+  // regreso, con la forma del campo de Resolver, que es el mismo buscador.
   const campoUI = (
     <CampoBusqueda
       valor={query}
       onCambiar={setQuery}
       alcance="Soluciones IT"
-      textoAlternativo={MARCADOR_BUSCADOR}
+      textoAlternativo={
+        ancho ? MARCADOR_BUSCADOR : marcadorCompleto ? MARCADOR_BUSCADOR_TELEFONO : MARCADOR_BUSCADOR_ESTRECHO
+      }
       refCampo={campo}
-      variante={escritorio ? 'paleta' : ancho ? 'normal' : 'dock'}
+      variante={escritorio ? 'paleta' : ancho ? 'normal' : 'resolver'}
+      className={ancho ? '' : 'h-[52px] rounded-[14px]'}
     />
   )
 
@@ -208,23 +221,21 @@ export function BuscadorGlobal({
           </button>
         </div>
       ) : (
-        // LA CABECERA DE LA BÚSQUEDA (rediseño móvil "1b Pulgar", tarea 330):
-        // el regreso a la izquierda y qué es. En el teléfono el campo baja al
-        // pulgar; desde 768 ocupa el sitio del título (T6).
-        <div className="flex min-h-[50px] flex-none items-center gap-1 px-1 py-0.5 md:h-16 md:gap-2.5 md:border-b md:border-noct-divider md:py-0 md:pl-3 md:pr-6">
+        // LA CABECERA DE LA BÚSQUEDA: el regreso a la izquierda y el campo.
+        // Desde 768 ocupa el sitio del título (T6); en el teléfono también
+        // desde la tarea 344 (antes, el título y el campo abajo, tarea 330).
+        // Qué es la capa lo dice su nombre accesible, y en modo consulta la
+        // línea de debajo.
+        <div className="flex min-h-[50px] flex-none items-center gap-0.5 py-2.5 pl-1 pr-4 md:h-16 md:gap-2.5 md:border-b md:border-noct-divider md:py-0 md:pl-3 md:pr-6">
           <button
             type="button"
             onClick={onCerrar}
             aria-label="Cerrar el buscador"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-accent-300 hover:bg-noct-text/[.05] md:text-noct-neutral-200"
           >
-            <CaretLeft size={20} aria-hidden />
+            <CaretLeft size={ancho ? 20 : 22} aria-hidden />
           </button>
-          {ancho ? (
-            <div className="min-w-0 flex-1">{campoUI}</div>
-          ) : (
-            <h2 className="min-w-0 flex-1 truncate text-[17px] font-semibold">{titulo}</h2>
-          )}
+          <div className="min-w-0 flex-1">{campoUI}</div>
         </div>
       )}
 
@@ -265,20 +276,11 @@ export function BuscadorGlobal({
                   </p>
                 </div>
               ) : (
-                // EL ESTADO VACÍO DEL TELÉFONO, CON MENOS NIVELES (tarea 342):
-                // un rótulo a 13/650, qué se puede buscar y, debajo, ejemplos
-                // reales. Las búsquedas recientes y "Prueba con" del handoff
-                // piden comportamiento nuevo y no entran aquí. Desde 768, el
-                // de siempre.
-                <div className="flex flex-col gap-1.5 px-0.5">
-                  <p className="text-[13px] font-[650] text-noct-neutral-400">¿Qué necesitas resolver?</p>
-                  <p className="text-[14px] leading-[1.45] text-noct-neutral-300">
-                    Nombre de equipo, IP, persona, ubicación, problema o guía. No hace falta elegir antes qué buscas.
-                  </p>
-                  <p className="text-[13px] leading-[1.45] text-noct-neutral-400">
-                    {AYUDA_BUSCADOR}. Tolera errores de escritura y entiende sinónimos.
-                  </p>
-                </div>
+                // EL ESTADO VACÍO DEL TELÉFONO (tarea 344, DESPUÉS de Claude
+                // Design; antes, el de la tarea 342): qué se puede escribir y
+                // los ejemplos como botones que escriben la consulta, los
+                // mismos de Resolver. Desde 768, el de siempre.
+                <PuedesEscribir onElegir={setQuery} />
               )
             ) : resultados.length > 0 ? (
               <ResultadosBusqueda
@@ -312,19 +314,10 @@ export function BuscadorGlobal({
                   </div>
                 ) : (
                   // NADA COINCIDE, COMPACTO EN EL TELÉFONO (tarea 342, handoff
-                  // móvil): sin la caja punteada, el glifo en su caja de 52, qué
-                  // se buscó y con qué probar, con las mismas salidas. Desde
-                  // 768, el de siempre.
-                  <div className="flex flex-col items-center gap-2.5 px-3 pb-3 pt-6 text-center">
-                    <span className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-noct-tinte text-noct-neutral-400">
-                      <MagnifyingGlass size={24} aria-hidden />
-                    </span>
-                    <p className="text-[16px] font-[650] leading-snug [overflow-wrap:anywhere]">Nada coincide con «{consultaCruda}»</p>
-                    <p className="max-w-[280px] text-[13.5px] leading-[1.45] text-noct-neutral-400">
-                      Prueba con el código del equipo, parte de la IP o una palabra del problema.
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap justify-center gap-2">{salidasSinResultados}</div>
-                  </div>
+                  // móvil; desde la tarea 344, el mismo de la búsqueda de
+                  // Resolver): sin la caja punteada, qué se buscó y con qué
+                  // probar, con las mismas salidas. Desde 768, el de siempre.
+                  <NadaCoincide consulta={consultaCruda}>{salidasSinResultados}</NadaCoincide>
                 )}
               </div>
             )}
@@ -340,16 +333,6 @@ export function BuscadorGlobal({
           />
         )}
       </div>
-
-      {/* EL CAMPO, ABAJO, AL PULGAR (tarea 330), solo en el teléfono: con el
-          teclado abierto, pegado a él. El marcador invita a contar lo que
-          pasa (tarea 288) y la etiqueta accesible sigue diciendo el alcance
-          (regla M-R8). */}
-      {!ancho && (
-        <div className="flex-none border-t border-noct-divider bg-noct-bg px-3 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5">
-          {campoUI}
-        </div>
-      )}
 
       {/* Los atajos que ya existen, dichos donde hay teclado (desde 1280). */}
       {escritorio && (
@@ -406,9 +389,9 @@ export function BuscadorGlobal({
       aria-modal="true"
       aria-label={titulo}
       className="nocturne fixed inset-0 z-[60] flex flex-col bg-noct-bg font-inter text-[15px] leading-[1.55] text-noct-text"
-      // Con el teclado abierto (iOS no encoge la página), todo sube por
-      // encima de él: el campo, abajo, queda pegado al teclado. Desde 768 el
-      // campo está arriba y no hace falta.
+      // Con el teclado abierto (iOS no encoge la página), la lista termina
+      // por encima de él: lo último encontrado no queda tapado. Desde 768 no
+      // hace falta.
       style={!ancho && teclado > 0 ? { paddingBottom: teclado } : undefined}
     >
       {contenido}

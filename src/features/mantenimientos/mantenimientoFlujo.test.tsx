@@ -140,8 +140,9 @@ describe('programar desde la ficha del equipo', () => {
     await sembrarBase()
     await montar(RUTAS, '/dispositivos/pc')
     const seccion = await esperar(() => control(/^Mantenimiento/), 'la fila Mantenimiento')
-    // Sin nada pendiente, "Al día" (tarea 342; antes "Ninguno").
-    expect(seccion.textContent).toContain('Al día')
+    // Sin ninguno registrado, en el teléfono "Nada programado" (tarea 344);
+    // en el índice de 768 en adelante, "Al día" (tarea 342; antes "Ninguno").
+    expect(seccion.textContent).toContain('Nada programado')
     // Mantenimiento se trabaja en su pantalla (tarea 331): la fila la abre.
     expect(seccion.getAttribute('aria-haspopup')).toBeNull()
     await tocar(seccion)

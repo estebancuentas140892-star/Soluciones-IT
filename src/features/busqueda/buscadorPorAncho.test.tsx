@@ -50,13 +50,18 @@ async function abrirConsulta(): Promise<void> {
 }
 
 describe('el campo del buscador global, en un solo sitio', () => {
-  it('a 390 px abajo, al pulgar, con el título arriba', async () => {
+  // Desde la tarea 344 (DESPUÉS de Claude Design) el teléfono también lleva
+  // el campo arriba, junto al regreso, como la búsqueda de Resolver. Qué es
+  // la capa lo dicen su nombre accesible y la línea del modo consulta.
+  it('a 390 px arriba, junto al regreso, y la capa dice qué es', async () => {
     await abrirConsulta()
     expect(campos()).toHaveLength(1)
     const capa = dialogo() as HTMLElement
-    expect(capa.querySelector('h2')?.textContent).toBe('Consultar sin salir de la tarea')
-    // El campo es lo último de la capa.
-    expect(capa.lastElementChild?.contains(campoBuscador())).toBe(true)
+    expect(capa.getAttribute('aria-label')).toBe('Consultar sin salir de la tarea')
+    expect(capa.firstElementChild?.contains(campoBuscador())).toBe(true)
+    expect(capa.firstElementChild?.querySelector('button[aria-label="Cerrar el buscador"]')).not.toBeNull()
+    expect(capa.lastElementChild?.contains(campoBuscador())).toBe(false)
+    expect(capa.textContent).toContain('Modo consulta: lo que abras aquí no te saca de lo que estás haciendo.')
   })
 
   it('a 768 px arriba, en el sitio del título', async () => {

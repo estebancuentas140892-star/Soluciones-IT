@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../../lib/db'
 import { alternarFavorito } from '../../lib/favoritos'
@@ -7,6 +8,7 @@ import {
   campoBuscador,
   control,
   desmontarTodo,
+  escribir,
   esperar,
   limpiarBase,
   montar,
@@ -151,10 +153,23 @@ async function esperarTexto(que: string): Promise<string> {
   return textoPantalla()
 }
 
-/** Resolver pintado: su puerta al catálogo, "Todas" (`Todas las guías`), siempre está. */
+/**
+ * Resolver pintado: su puerta al catálogo siempre está ("Todas", con nombre
+ * "Todas las guías", desde 768; "Ver todas las guías (N)" en el teléfono).
+ */
 async function esperarResolver(): Promise<string> {
-  await esperar(() => control('Todas las guías'), 'aparece "Todas las guías"')
+  await esperar(() => control(/^(Ver t|T)odas las guías/), 'aparece "Todas las guías"')
   return textoPantalla()
+}
+
+type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+const ventanaDePrueba = window as unknown as VentanaDePrueba
+
+// DESDE 768 PX RESOLVER NO CAMBIA (rediseño móvil, fase 1, tarea 344): sus
+// pruebas de siempre corren a 1024, donde siguen describiendo lo que hay. El
+// teléfono tiene las suyas, más abajo.
+function enTableta(): void {
+  ventanaDePrueba.happyDOM.setViewport({ width: 1024, height: 768 })
 }
 
 beforeEach(async () => {
@@ -164,6 +179,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await desmontarTodo()
+  ventanaDePrueba.happyDOM.setViewport({ width: 375, height: 812 })
 })
 
 describe('La agenda completa (/agenda)', () => {
@@ -363,13 +379,16 @@ describe('La agenda completa (/agenda)', () => {
   })
 })
 
-describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
-  it('el buscador vive en el dock de abajo, sin la pregunta (tarea 330)', async () => {
+describe('Resolver desde 768 px: la pregunta, el buscador y solo lo que ayuda (sin cambios)', () => {
+  beforeEach(enTableta)
+
+  it('el buscador va en la barra, sin dock y sin la pregunta (tareas 330 y 339)', async () => {
     await montar(RUTAS, '/')
     await esperarResolver()
     const texto = textoPantalla()
     expect(campoBuscador()).not.toBeNull()
-    expect(campoBuscador()?.closest('[data-dock-busqueda]')).not.toBeNull()
+    expect(campoBuscador()?.closest('[data-dock-busqueda]')).toBeNull()
+    expect(campoBuscador()?.closest('[data-buscador-resolver]')).toBeNull()
     // La cabecera es de una fila: sin "¿Qué necesitas resolver?".
     expect(texto).not.toContain('¿Qué necesitas resolver?')
     // El marcador invita a contar lo que pasa (tarea 288; antes "Problema,
@@ -526,7 +545,9 @@ describe('Resolver: la pregunta, el buscador y solo lo que ayuda', () => {
   })
 })
 
-describe('Resolver: el número de la pestaña', () => {
+describe('Resolver desde 768 px: el número de la pestaña', () => {
+  beforeEach(enTableta)
+
   it('cuenta los vencidos y los de hoy', async () => {
     await sembrarAcceso('c1', 'Panel del router', -30)
     await sembrarAcceso('c2', 'Portal de nómina', 0)
@@ -556,7 +577,9 @@ describe('Resolver: el número de la pestaña', () => {
   })
 })
 
-describe('Resolver: permisos', () => {
+describe('Resolver desde 768 px: permisos', () => {
+  beforeEach(enTableta)
+
   it('sin permiso de bóveda no asoma ni el título de un acceso', async () => {
     await sembrarPerfil(false)
     await sembrarAcceso('c1', 'Panel del router', -30)
@@ -573,10 +596,12 @@ describe('Resolver: permisos', () => {
 describe('Resolver en móvil y en escritorio', () => {
   const matchMediaOriginal = window.matchMedia
 
+  // Con ratón, también el ancho del escritorio: el campo solo recibe el foco
+  // desde 768 (en el teléfono enfocarlo abre la búsqueda, tarea 344).
   function fingirPuntero(fino: boolean): void {
     window.matchMedia = ((consulta: string) =>
       ({
-        matches: fino && consulta.includes('pointer: fine'),
+        matches: fino && (consulta.includes('pointer: fine') || consulta.includes('min-width')),
         media: consulta,
         onchange: null,
         addListener: () => {},
@@ -605,9 +630,145 @@ describe('Resolver en móvil y en escritorio', () => {
     await sembrarAcceso('c1', 'Panel del router', -30)
     await montar(RUTAS, '/')
 
-    const texto = await esperarTexto('Necesita atención')
+    const texto = await esperarTexto('Tu trabajo de hoy')
     expect(document.activeElement).not.toBe(campoBuscador())
     expect(texto).toContain('Panel del router')
+    expect(texto).not.toContain('Puedes escribir')
+  })
+})
+
+// RESOLVER EN EL TELÉFONO (rediseño móvil, fase 1, tarea 344; DESPUÉS de
+// Claude Design). El buscador arriba y de verdad (tocarlo abre el teclado),
+// "¿Qué está fallando?" con las categorías reales, la guía a medias con un
+// botón que dice a dónde lleva y el trabajo de hoy dicho en palabras. Buscar
+// es su propia pantalla: el regreso, el campo y lo encontrado.
+describe('Resolver en el teléfono (tarea 344)', () => {
+  const buscadorArriba = () => document.body.querySelector<HTMLElement>('[data-buscador-resolver]')
+  async function enfocar(campo: HTMLInputElement): Promise<void> {
+    await act(async () => {
+      campo.focus()
+    })
+  }
+
+  it('el campo va arriba, bajo el título, y no en el dock; dice para qué sirve la sección', async () => {
+    await montar(RUTAS, '/')
+    await esperarResolver()
+    const campo = campoBuscador() as HTMLInputElement
+    expect(campo.closest('[data-buscador-resolver]')).not.toBeNull()
+    expect(campo.closest('[data-dock-busqueda]')).toBeNull()
+    expect(document.body.querySelectorAll('input[aria-label="Buscar en Soluciones IT"]')).toHaveLength(1)
+    // El marcador dice que también se busca un equipo; el nombre accesible, el alcance.
+    expect(campo.placeholder).toBe('Describe el problema o un equipo')
+    expect(campo.getAttribute('aria-label')).toBe('Buscar en Soluciones IT')
+    const texto = textoPantalla()
+    expect(texto).toContain('Encuentra qué hacer ante un problema técnico.')
+    expect(texto).toContain('Prueba con:')
+    expect(texto).toContain('¿Qué está fallando?')
+    // Ni los contadores ni "Necesita atención" del diseño anterior.
+    expect(texto).not.toContain('Necesita atención')
+  })
+
+  it('tocar el campo abre la búsqueda con el teclado: qué escribir, ejemplos y el regreso', async () => {
+    await montar(RUTAS, '/')
+    await esperarResolver()
+    const campo = campoBuscador() as HTMLInputElement
+    await enfocar(campo)
+    await esperarTexto('Puedes escribir')
+    // Es el MISMO campo, con el foco: cambiar de forma no lo desmonta.
+    expect(campoBuscador()).toBe(campo)
+    expect(document.activeElement).toBe(campo)
+    // La pantalla de búsqueda: sin el título de la sección ni lo de Resolver.
+    expect(textoPantalla()).not.toContain('¿Qué está fallando?')
+    expect(textoPantalla()).not.toContain('Encuentra qué hacer')
+    expect(buscadorArriba()?.className).toContain('sticky')
+    // Un ejemplo escribe la consulta.
+    await tocar(await esperar(() => control('no imprime'), 'el ejemplo "no imprime"'))
+    expect(campo.value).toBe('no imprime')
+    // El regreso borra lo escrito y vuelve a Resolver.
+    await tocar(await esperar(() => control('Volver a Resolver'), 'el regreso'))
+    expect(campoBuscador()?.value).toBe('')
+    expect(await esperarTexto('¿Qué está fallando?')).not.toContain('Puedes escribir')
+  })
+
+  it('escribir abre lo encontrado y nada que coincida lo dice con sus salidas', async () => {
+    await montar(RUTAS, '/')
+    await esperarResolver()
+    await escribir(campoBuscador() as HTMLInputElement, 'zzqxw')
+    await esperarTexto('Nada coincide con «zzqxw»')
+    expect(control('Volver a Resolver')).not.toBeNull()
+    expect(control('Crear equipo')?.getAttribute('href')).toBe('/dispositivos/nuevo?nombre=zzqxw')
+    expect(control('Buscar solo en Guías')).not.toBeNull()
+    await tocar(control('Limpiar búsqueda') as HTMLElement)
+    expect(campoBuscador()?.value).toBe('')
+  })
+
+  it('"Tu trabajo de hoy" enseña lo urgente con su fila y "Agenda (N)" abre la agenda entera', async () => {
+    await sembrarAcceso('c1', 'Panel del router', -30)
+    await sembrarAcceso('c2', 'Portal de nómina', 0)
+    await sembrarAcceso('c3', 'Hosting', 3)
+    await montar(RUTAS, '/')
+    const texto = await esperarTexto('Tu trabajo de hoy')
+    expect(texto).toContain('Panel del router')
+    expect(texto).toContain('Portal de nómina')
+    // Lo próximo no es de hoy: queda en la Agenda.
+    expect(texto).not.toContain('Hosting')
+    const agenda = await esperar(() => control('Abrir la Agenda: 3 asuntos'), 'el enlace a la agenda')
+    expect(agenda.textContent).toContain('Agenda (3)')
+    await tocar(agenda)
+    expect(ubicacionActual().pathname).toBe('/agenda')
+  })
+
+  it('sin nada urgente lo dice en palabras y nombra lo que guarda la Agenda', async () => {
+    await sembrarAcceso('c1', 'Hosting', 10)
+    await sembrarBorradorPropio('b1', 'Cambiar el tóner')
+    await sembrarSugerenciaDelEquipo('e1', 'La impresora no imprime')
+    await montar(RUTAS, '/')
+    const texto = await esperarTexto('Nada atrasado ni para hoy.')
+    expect(texto).toContain('En la Agenda: 1 próximo, 1 en curso y 1 por revisar.')
+    expect(texto).not.toContain('Cambiar el tóner')
+  })
+
+  it('"Sigue donde ibas" dice el paso y "Continuar en el paso N" la retoma', async () => {
+    await sembrarGuia({
+      id: 'guia-1',
+      titulo: 'Instalar la impresora de prueba',
+      pasos: [pasoPrueba('g1-p1', 'Primer paso', ['Hacer algo']), pasoPrueba('g1-p2', 'Segundo paso', ['Otra cosa'])],
+    })
+    await db.progresoPasos.put({
+      articuloId: 'guia-1',
+      pasosHechos: ['g1-p1'],
+      instruccionesHechas: ['g1-p1-t1'],
+      verificacionHecha: [],
+      actualizadoEn: new Date().toISOString(),
+    })
+    await registrarVisita('articulo', 'guia-1')
+    await montar(RUTAS, '/')
+    const texto = await esperarTexto('Sigue donde ibas')
+    expect(texto).toContain('Vas en el paso 2 de 2')
+    const continuar = await esperar(() => control(/^Continuar en el paso 2: Instalar la impresora/), 'el botón')
+    expect(continuar.textContent).toBe('Continuar en el paso 2')
+    await tocar(continuar)
+    expect(ubicacionActual().pathname).toBe('/soluciones/cat-pruebas/guia-1')
+  })
+
+  it('"¿Qué está fallando?" lleva a cada categoría real y "Ver todas las guías" al catálogo', async () => {
+    await sembrarGuia({ id: 'g1', titulo: 'Guía de impresoras', categoriaId: 'cat-imp', pasos: [pasoPrueba('a1', 'Paso', ['Hacer'])] })
+    await db.categorias.update('cat-imp', { nombre: 'Impresoras' })
+    await sembrarGuia({ id: 'g2', titulo: 'Guía de POS', categoriaId: 'cat-pos', pasos: [pasoPrueba('b1', 'Paso', ['Hacer'])] })
+    await db.categorias.update('cat-pos', { nombre: 'POS', orden: 0 })
+    await montar(RUTAS, '/')
+    expect((await esperar(() => control(/^Ver todas las guías/), 'el catálogo')).textContent).toContain('Ver todas las guías (2)')
+    await tocar(await esperar(() => control(/^Impresoras: 1 guía/), 'la categoría Impresoras'))
+    expect(ubicacionActual().pathname).toBe('/soluciones')
+    expect(ubicacionActual().search).toBe('?categoria=cat-imp')
+  })
+
+  it('sin permiso de bóveda tampoco asoma el título de un acceso', async () => {
+    await sembrarPerfil(false)
+    await sembrarAcceso('c1', 'Panel del router', -30)
+    await montar(RUTAS, '/')
+    const texto = await esperarTexto('Tu trabajo de hoy')
+    expect(texto).not.toContain('Panel del router')
   })
 })
 

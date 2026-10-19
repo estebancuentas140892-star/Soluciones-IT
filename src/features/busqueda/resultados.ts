@@ -70,6 +70,27 @@ export const MARCADOR_BUSCADOR = 'Describe qué necesitas resolver…'
  */
 export const AYUDA_BUSCADOR = 'Ej.: no imprime, usuario bloqueado, impresora mercadeo'
 
+/**
+ * El marcador del buscador en el teléfono (rediseño móvil, fase 1, tarea
+ * 344; DESPUÉS de Claude Design): dice además que se puede buscar un
+ * equipo, que es lo que una persona nueva no adivina. Cabe entero a 390 px.
+ */
+export const MARCADOR_BUSCADOR_TELEFONO = 'Describe el problema o un equipo'
+/** El mismo, para el teléfono más estrecho (menos de 360 px), donde aquel se cortaba. */
+export const MARCADOR_BUSCADOR_ESTRECHO = 'El problema o un equipo'
+/** Por debajo de este ancho va `MARCADOR_BUSCADOR_ESTRECHO`. */
+export const ANCHO_MARCADOR_COMPLETO = '(min-width: 22.5rem)'
+
+/**
+ * Los mismos ejemplos, uno por uno, para tocarlos (rediseño móvil, fase 1,
+ * tarea 344): en el teléfono Resolver y la búsqueda los ofrecen como
+ * botones que escriben la consulta. Salen de `AYUDA_BUSCADOR`, para que los
+ * dos nunca digan cosas distintas.
+ */
+export const EJEMPLOS_BUSCADOR: readonly string[] = AYUDA_BUSCADOR.replace(/^Ej\.:\s*/, '')
+  .split(',')
+  .map((ejemplo) => ejemplo.trim())
+
 // Los resultados se agrupan por fuente (los modulos con contenido
 // buscable), no por los tipos internos: el tecnico piensa en "donde
 // esta", no en el tipo de dato. Cada tipo cae en su grupo.

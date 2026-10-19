@@ -77,13 +77,13 @@ import {
   AvisosDelEquipo,
   BarraAccionEquipo,
   FilaIndice,
-  LeyendaGalones,
   ResolverConEsteEquipo,
   type AvisoEquipo,
   type ItemResolver,
 } from './PiezasFicha'
 import { ZonaListaEquipos } from './ZonaListaEquipos'
 import { rutaGuiaConEquipo } from '../soluciones/contextoEjecucion'
+import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { CredencialesDelEquipo } from './CredencialesDelEquipo'
 import { ProblemasDelEquipo } from './ProblemasDelEquipo'
@@ -460,6 +460,7 @@ export function DispositivoPage() {
   // (los del equipo y después los de su categoría), luego los procedimientos;
   // las tres primeras a la vista y el resto en su hoja. Cada una abre la guía
   // con este equipo (tarea 290).
+  const pasosDe = (articulo: (typeof articulos)[number]) => normalizarProcedimiento(articulo.procedimiento)?.pasos.length
   const formasDeResolver: ItemResolver[] = [
     ...problemas.map((a) => ({
       id: a.id,
@@ -468,6 +469,7 @@ export function DispositivoPage() {
       tipo: 'Problema frecuente',
       titulo: a.titulo,
       extra: a.sintomas[0],
+      pasos: pasosDe(a),
     })),
     ...procedimientos.map((a) => ({
       id: a.id,
@@ -475,6 +477,7 @@ export function DispositivoPage() {
       Icono: BookOpen,
       tipo: etiquetaDeTipo(a.tipo),
       titulo: a.titulo,
+      pasos: pasosDe(a),
     })),
   ]
 
@@ -568,6 +571,22 @@ export function DispositivoPage() {
   const hayImpacto = equiposEnRiesgo > 0 || cadenaDependencia.length > 0
   const conCredenciales = Boolean(perfil?.puedeVerBoveda)
 
+  const abrirMantenimiento = () =>
+    navigate(`/dispositivos/${dispositivoId}/mantenimientos`, { state: origenEsteEquipo })
+  // EL MANTENIMIENTO, A LA VISTA EN EL TELÉFONO (tarea 344): lo mismo que dice
+  // su fila del índice, en una frase. Sin ninguno registrado, "Nada
+  // programado" (decir "Al día" de algo que nunca se programó confunde).
+  const lineaMantenimiento =
+    mantenimiento.texto === 'Atrasado'
+      ? 'Atrasado'
+      : mantenimiento.texto === 'Hoy'
+        ? 'Toca hoy'
+        : mantenimiento.texto !== 'Al día'
+          ? `Programado para el ${mantenimiento.texto}`
+          : mantenimientos.some((m) => !m.eliminadoEn)
+            ? 'Al día'
+            : 'Nada programado'
+
   // A dónde lleva "Resolver un problema": el diagnóstico de su categoría si
   // existe; si no, la hoja con todo lo que se resuelve con el equipo.
   const resolverBarra = hayDiagnosticos
@@ -586,10 +605,21 @@ export function DispositivoPage() {
       aria-labelledby="mas-del-equipo"
       className="flex flex-col xl:sticky xl:top-[84px] xl:col-start-2 xl:row-span-2 xl:row-start-1 3xl:static"
     >
-      <h2 id="mas-del-equipo" className="pb-1 text-[17px] font-semibold tracking-[-.01em] xl:pb-1.5">
-        Más del equipo
+      <h2
+        id="mas-del-equipo"
+        className={
+          ancho ? 'pb-1 text-[17px] font-semibold tracking-[-.01em] xl:pb-1.5' : 'pb-2 text-[18px] font-[650] tracking-[-.01em]'
+        }
+      >
+        {ancho ? 'Más del equipo' : 'Información del equipo'}
       </h2>
-      <ul className="flex flex-col md:grid md:grid-cols-2 md:gap-x-7 xl:flex">
+      <ul
+        className={
+          ancho
+            ? 'flex flex-col md:grid md:grid-cols-2 md:gap-x-7 xl:flex'
+            : 'flex flex-col rounded-2xl border border-noct-divider bg-noct-surface px-3.5 [&>li:last-child>button]:border-b-0'
+        }
+      >
         <FilaIndice Icono={Info} titulo="Más datos" valor={`${totalMasDatos}`} abierta={hoja === 'datos'} onAbrir={() => setHoja('datos')} />
         {hayImpacto && (
           <FilaIndice
@@ -635,15 +665,19 @@ export function DispositivoPage() {
           onAbrir={() => setHoja('adjuntos')}
         />
         {/* Mantenimiento se trabaja: abre su pantalla (tarea 331). Su valor
-            dice si algo pide atención o si está al día (tarea 342). */}
-        <FilaIndice
-          Icono={Wrench}
-          titulo="Mantenimiento"
-          valor={mantenimiento.texto}
-          tono={mantenimiento.tono}
-          abre="pantalla"
-          onAbrir={() => navigate(`/dispositivos/${dispositivoId}/mantenimientos`, { state: origenEsteEquipo })}
-        />
+            dice si algo pide atención o si está al día (tarea 342). En el
+            teléfono tiene su propia fila, a la vista, bajo los datos para
+            trabajar (tarea 344): aquí no se repite. */}
+        {ancho && (
+          <FilaIndice
+            Icono={Wrench}
+            titulo="Mantenimiento"
+            valor={mantenimiento.texto}
+            tono={mantenimiento.tono}
+            abre="pantalla"
+            onAbrir={abrirMantenimiento}
+          />
+        )}
         {tieneFacturacion && (
           <FilaIndice
             Icono={Storefront}
@@ -662,7 +696,6 @@ export function DispositivoPage() {
           onAbrir={() => setHoja('intervenciones')}
         />
       </ul>
-      <LeyendaGalones />
     </section>
   )
 
@@ -818,6 +851,43 @@ export function DispositivoPage() {
             a la derecha le quitaba ancho al nombre, que a 28 px partía
             palabras ("Administracio-n"). Después, sus avisos. */}
         <section aria-label="Identidad del equipo" className="flex flex-col gap-3 pt-2">
+          {/* EL CARNET EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design):
+              qué es, encima; el nombre a 28 px con todo el ancho (sin el
+              icono, que lo partía en más líneas; la foto, si la hay, a la
+              derecha) y el estado con su palabra.
+              Quién responde de él va en los datos para trabajar, con su
+              "Asignar" si no hay nadie. Desde 768, el de siempre. */}
+          {!ancho ? (
+            <div className="flex items-start gap-3 px-0.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                {lineaTipo && (
+                  <span data-linea-identidad className="text-[14.5px] leading-snug text-noct-neutral-400 [overflow-wrap:anywhere]">
+                    {lineaTipo}
+                  </span>
+                )}
+                <span
+                  ref={setNodoNombre}
+                  data-nombre-equipo
+                  className="block text-[28px] font-[650] leading-[1.1] tracking-[-.02em] text-pretty [overflow-wrap:anywhere]"
+                >
+                  {dispositivo.nombre}
+                </span>
+                {dispositivo.estado && (
+                  <PastillaEstadoDispositivo estado={dispositivo.estado} conPunto className="mt-1 self-start" />
+                )}
+              </div>
+              {/* Con foto, a la derecha: también identifica el equipo. */}
+              {dispositivo.foto && (
+                <span className="h-14 w-14 shrink-0 overflow-hidden rounded-[14px] bg-noct-text/[.06]">
+                  <MiniaturaPortada
+                    referencia={dispositivo.foto.referencia}
+                    alt={dispositivo.nombre}
+                    className="h-full w-full object-cover"
+                  />
+                </span>
+              )}
+            </div>
+          ) : (
           <div className="flex items-start gap-3.5">
             <span className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-[14px] bg-noct-text/[.06] text-noct-neutral-300">
               {dispositivo.foto ? (
@@ -869,6 +939,7 @@ export function DispositivoPage() {
               {dispositivo.estado && <PastillaEstadoDispositivo estado={dispositivo.estado} conPunto className="mt-2" />}
             </span>
           </div>
+          )}
           <AvisosDelEquipo avisos={avisos} />
         </section>
         <HojaAsignarPersona dispositivo={dispositivo} abierto={asignando} onCerrar={() => setAsignando(false)} />
@@ -877,8 +948,13 @@ export function DispositivoPage() {
             tarjeta: filas con su divisor. Su IP en IBM Plex Mono a 20 px
             con copiar, dónde está, quién responde de él y a qué está
             conectado. Sin ninguno, no hay bloque. */}
-        {(dispositivo.ip || ubicacionNombre || personaVivaACargo || anotadoPorValidar || subida) && (
-        <section aria-label="Datos para trabajar" className="flex flex-col md:grid md:grid-cols-2 md:gap-x-8">
+        {(dispositivo.ip || ubicacionNombre || personaVivaACargo || anotadoPorValidar || subida || (!ancho && sinResponsable)) && (
+        <section
+          aria-label="Datos para trabajar"
+          // En el teléfono, una tarjeta (tarea 344): los datos que se usan con
+          // el equipo delante, juntos y separados de lo demás.
+          className="flex flex-col md:grid md:grid-cols-2 md:gap-x-8 max-md:rounded-2xl max-md:border max-md:border-noct-divider max-md:bg-noct-surface max-md:px-3.5 max-md:[&>*:last-child]:border-b-0"
+        >
           {dispositivo.ip && (
             <div className="flex min-h-[68px] items-center gap-3 border-b border-noct-divider">
               <div className="min-w-0 flex-1">
@@ -887,7 +963,16 @@ export function DispositivoPage() {
                   {dispositivo.ip}
                 </p>
               </div>
-              <BotonCopiar etiqueta="Dirección IP" texto={dispositivo.ip} destacado grande aviso={`IP copiada: ${dispositivo.ip}`} />
+              {/* En el teléfono, "Copiar" con su palabra (tarea 344): el
+                  icono solo no decía qué hacía. */}
+              <BotonCopiar
+                etiqueta="Dirección IP"
+                texto={dispositivo.ip}
+                destacado={ancho}
+                grande={ancho}
+                conTexto={!ancho}
+                aviso={`IP copiada: ${dispositivo.ip}`}
+              />
             </div>
           )}
 
@@ -921,8 +1006,9 @@ export function DispositivoPage() {
               alguien lo anotó. Sus filas traen su propio margen (las de la
               tarjeta de antes): se compensa aquí. */}
           {aplicaResponsable && (
-            <div className="-mx-3.5 border-b border-noct-divider empty:hidden md:mx-0 md:[&>*]:-mx-3.5">
-              <ResponsableDelEquipo dispositivo={dispositivo} origen={origenEsteEquipo} ocultarSiNoHay />
+            // Su divisor, al margen de las demás filas; la fila, compensada.
+            <div className="border-b border-noct-divider empty:hidden [&>*]:-mx-3.5">
+              <ResponsableDelEquipo dispositivo={dispositivo} origen={origenEsteEquipo} ocultarSiNoHay={ancho} />
             </div>
           )}
 
@@ -949,11 +1035,35 @@ export function DispositivoPage() {
                   {subida.otros > 0 && <span className="font-inter text-noct-neutral-500"> · y {subida.otros} más</span>}
                 </span>
               </span>
-              {/* `CaretUp`: se consulta en una hoja (el galón del índice). */}
-              <CaretUp size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+              {/* `CaretUp`: se consulta en una hoja (el galón del índice). En
+                  el teléfono, el galón de siempre (tarea 344). */}
+              <CaretUp size={14} className="hidden shrink-0 text-noct-neutral-500 md:block" aria-hidden />
+              <CaretRight size={14} className="shrink-0 text-noct-neutral-500 md:hidden" aria-hidden />
             </button>
           )}
         </section>
+        )}
+
+        {/* EL MANTENIMIENTO, A LA VISTA (tarea 344, DESPUÉS de Claude Design):
+            en el teléfono, su fila bajo los datos, con lo que dice y "Ver",
+            que abre su pantalla. Desde 768 sigue en el índice. */}
+        {!ancho && (
+          <button
+            type="button"
+            onClick={abrirMantenimiento}
+            className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border border-noct-divider bg-noct-surface px-3.5 py-3 text-left text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
+          >
+            <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-noct-text/[.06] text-noct-neutral-300">
+              <Wrench size={20} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[16px] font-semibold leading-snug">Mantenimiento</span>
+              <span className={`block text-[14.5px] leading-snug ${TONO_LINEA_MANTENIMIENTO[mantenimiento.tono]}`}>
+                {lineaMantenimiento}
+              </span>
+            </span>
+            <span className="shrink-0 text-[15px] font-semibold text-noct-accent-300">Ver</span>
+          </button>
         )}
 
         <ResolverConEsteEquipo
@@ -962,6 +1072,8 @@ export function DispositivoPage() {
           onVerTodos={() => setHoja('resolver')}
           visibles={3}
           visiblesEscritorio={5}
+          compacta={!ancho}
+          titulo={ancho ? undefined : 'Guías para este equipo'}
         />
         </div>
 
@@ -984,6 +1096,7 @@ export function DispositivoPage() {
           <BarraAccionEquipo
             resolver={resolverBarra}
             onCredenciales={conCredenciales && totalCredenciales > 0 ? () => setHoja('credenciales') : null}
+            totalClaves={totalCredenciales}
           />
         )}
       </main>
@@ -1049,7 +1162,13 @@ export function DispositivoPage() {
       </HojaInferior>
 
       {conCredenciales && (
-        <HojaInferior abierta={hoja === 'credenciales'} onCerrar={cerrarHoja} titulo="Credenciales" contexto={dispositivo.nombre}>
+        <HojaInferior
+          abierta={hoja === 'credenciales'}
+          onCerrar={cerrarHoja}
+          // En el teléfono la abre "Clave" (tarea 344): la hoja se llama igual.
+          titulo={ancho ? 'Credenciales' : totalCredenciales > 1 ? 'Claves del equipo' : 'Clave del equipo'}
+          contexto={dispositivo.nombre}
+        >
           {totalCredenciales > 0 ? (
             <div className="flex flex-col">
               <CredencialesDelEquipo dispositivoId={dispositivoId} puedeVerBoveda />
@@ -1157,6 +1276,15 @@ export function DispositivoPage() {
     </Chasis>
   )
 }
+
+// El color de la línea del mantenimiento del teléfono: el de su fila del
+// índice, que dice siempre su palabra (tarea 342).
+const TONO_LINEA_MANTENIMIENTO = {
+  neutro: 'text-noct-neutral-400',
+  precaucion: 'text-noct-precaucion',
+  error: 'text-noct-error',
+  exito: 'text-noct-exito',
+} as const
 
 // Icono de cada paso sugerido (hallazgo O1).
 const ICONO_PASO: Record<PasoSiguiente['clave'], typeof Camera> = {

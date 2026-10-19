@@ -244,7 +244,8 @@ describe('caso J: Bóveda sin permiso', () => {
   it('no hay puente, ni credenciales, ni ninguna pista de lo protegido', async () => {
     await sembrarPerfil(false)
     await buscarEnInicio('administrador POS')
-    await esperar(() => textoPantalla().includes('Sin coincidencias'), 'el estado vacío')
+    // En el teléfono, "Nada coincide con «…»" (tarea 344); desde 768, "Sin coincidencias".
+    await esperar(() => textoPantalla().includes('Nada coincide con «administrador POS»'), 'el estado vacío')
 
     expect(control('Desbloquear y buscar')).toBeNull()
     // En lo que responde la búsqueda. La pestaña "Bóveda" de la barra es
@@ -261,7 +262,8 @@ describe('caso J: Bóveda sin permiso', () => {
     await sembrarPerfil(false)
     await anclarMaestra()
     await buscarEnInicio('administrador POS')
-    await esperar(() => textoPantalla().includes('Sin coincidencias'), 'el estado vacío')
+    // En el teléfono, "Nada coincide con «…»" (tarea 344); desde 768, "Sin coincidencias".
+    await esperar(() => textoPantalla().includes('Nada coincide con «administrador POS»'), 'el estado vacío')
 
     expect(textoPantalla()).not.toContain('Administrador POS')
     expect(control(/^Ver /)).toBeNull()

@@ -72,8 +72,12 @@ beforeEach(async () => {
   await sembrarCategorias()
 })
 
+type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+const ventana = window as unknown as VentanaDePrueba
+
 afterEach(async () => {
   await desmontarTodo()
+  ventana.happyDOM.setViewport({ width: 375, height: 812 })
 })
 
 describe('Equipos', () => {
@@ -100,7 +104,9 @@ describe('Equipos', () => {
   })
 })
 
-describe('la ficha del equipo', () => {
+describe('la ficha del equipo, desde 768 px (sin cambios)', () => {
+  beforeEach(() => ventana.happyDOM.setViewport({ width: 1024, height: 768 }))
+
   // La identidad (propuesta final de Claude Design, 2026-10-01): el nombre
   // (a 28 px desde la tarea 329, el carnet) y, debajo, la línea de identidad.
   function nombreEnIdentidad(nombre: string): HTMLElement | null {
@@ -150,6 +156,41 @@ describe('la ficha del equipo', () => {
     )
     expect(textoPantalla()).not.toContain('Sin responsable')
     expect(document.body.querySelector('button[aria-label="Asignar un responsable"]')).not.toBeNull()
+  })
+})
+
+// EL CARNET EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design): lo que el
+// nombre no dice va ENCIMA de él, con la misma regla (no repetir lo que el
+// nombre ya dice), y quién responde del equipo va en los datos para trabajar.
+describe('la ficha del equipo en el teléfono (tarea 344)', () => {
+  function nombreEnIdentidad(nombre: string): HTMLElement | null {
+    return (
+      Array.from(document.body.querySelectorAll<HTMLElement>('span')).find(
+        (s) => s.textContent === nombre && s.hasAttribute('data-nombre-equipo'),
+      ) ?? null
+    )
+  }
+  const lineaSobreElNombre = (nombre: string) => nombreEnIdentidad(nombre)?.previousElementSibling?.textContent ?? null
+
+  it('encima del nombre calla la categoría que el nombre ya dice y deja la marca y el modelo', async () => {
+    await sembrarEquipo({ id: 'imp', nombre: 'Impresora Taquilla', categoriaId: 'cat-imp', marca: 'HP', modelo: 'LaserJet' })
+    await montar(RUTAS, '/dispositivos/imp')
+    await esperar(() => lineaSobreElNombre('Impresora Taquilla') === 'HP LaserJet', 'la línea de identidad')
+    // El icono de 52 ya no le quita ancho al nombre (sin foto, nada a su lado).
+    expect(document.body.querySelector('section[aria-label="Identidad del equipo"] [class~="h-[52px]"]')).toBeNull()
+  })
+
+  it('sin nadie a cargo, la fila "Sin responsable" con "Asignar" en los datos, no en la línea', async () => {
+    await sembrarEquipo({ id: 'imp', nombre: 'Impresora Taquilla', categoriaId: 'cat-imp', marca: 'HP', modelo: 'LaserJet' })
+    await montar(RUTAS, '/dispositivos/imp')
+    const datos = await esperar(
+      () => document.body.querySelector<HTMLElement>('section[aria-label="Datos para trabajar"]'),
+      'los datos para trabajar',
+    )
+    await esperar(() => datos.textContent?.includes('Sin responsable'), 'la fila del responsable')
+    expect(Array.from(datos.querySelectorAll('button')).some((b) => b.textContent === 'Asignar')).toBe(true)
+    expect(lineaSobreElNombre('Impresora Taquilla')).toBe('HP LaserJet')
+    expect(document.body.querySelector('button[aria-label="Asignar un responsable"]')).toBeNull()
   })
 })
 

@@ -115,9 +115,13 @@ beforeEach(async () => {
   await sembrarPerfil(true)
 })
 
+type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+const ventana = window as unknown as VentanaDePrueba
+
 afterEach(async () => {
   await desmontarTodo()
   bloquear()
+  ventana.happyDOM.setViewport({ width: 375, height: 812 })
 })
 
 describe('la regla de la prueba', () => {
@@ -139,7 +143,12 @@ describe('la regla de la prueba', () => {
   })
 })
 
-describe('Resolver: el nombre principal de un resultado se lee entero', () => {
+// "Mejores resultados", "Mejor coincidencia" y "Otras coincidencias" son la
+// lectura desde 768 px; en el teléfono, desde la tarea 344, la guía que mejor
+// coincide va destacada y lo demás por tipo (sus pruebas, más abajo).
+describe('Resolver desde 768 px: el nombre principal de un resultado se lee entero', () => {
+  beforeEach(() => ventana.happyDOM.setViewport({ width: 1024, height: 768 }))
+
   it('lista mixta, en "Mejores resultados": la guía larga no lleva tope de líneas', async () => {
     await sembrarGuiaLarga()
     await sembrarEquipo({ id: 'imp-mercadeo', nombre: 'Impresora Mercadeo', marca: 'Ricoh', ubicacion: 'Mercadeo' })
@@ -242,6 +251,34 @@ describe('Resolver: el nombre principal de un resultado se lee entero', () => {
   })
 })
 
+describe('Resolver en el teléfono: la guía destacada y los grupos se leen enteros (tarea 344)', () => {
+  it('"La guía que mejor coincide" no corta su título, ni las filas de los grupos', async () => {
+    await sembrarGuiaLarga()
+    await sembrarGuia({
+      id: 'guia-red',
+      titulo: 'Conectar una impresora de red',
+      pasos: [pasoPrueba('red-p1', 'Conectar', ['Conectar el cable de red'])],
+    })
+    await sembrarEquipo({ id: 'imp-mercadeo', nombre: 'Impresora Mercadeo', marca: 'Ricoh', ubicacion: 'Mercadeo' })
+    await montar(RUTAS, '/')
+    await buscar('agregar una impresora al computador mediante su direccion ip')
+
+    const guia = await esperar(() => nombre(LARGO), 'la guía con su título completo')
+    expect(seccionDe(guia)).toBe('La guía que mejor coincide')
+    esperarEntero(guia)
+    for (const titulo of nombres()) esperarEntero(titulo)
+  })
+
+  it('un nombre excepcionalmente largo, destacado, parte línea en vez de salirse', async () => {
+    const excepcional =
+      'Agregar una impresora al computador mediante su dirección IP cuando el controlador del fabricante no aparece en la lista de Windows y hay que instalarlo desde \\\\servidor-impresion-sede-principal\\controladores-impresoras-segundo-piso'
+    await sembrarGuiaLarga('guia-excepcional', excepcional)
+    await montar(RUTAS, '/')
+    await buscar('controlador del fabricante')
+    esperarEntero(await esperar(() => nombre(excepcional), 'el nombre excepcional completo'))
+  })
+})
+
 describe('Resolver sin escribir: Recientes y Atención', () => {
   it('Recientes no recorta el título de la guía', async () => {
     await sembrarGuiaLarga()
@@ -271,8 +308,9 @@ describe('Resolver sin escribir: Recientes y Atención', () => {
     })
     await montar(RUTAS, '/')
 
+    // En el teléfono, en "Tu trabajo de hoy" (tarea 344); es la misma fila.
     const fila = await esperar(() => nombre(acceso), 'el acceso vencido en Atención')
-    expect(seccionDe(fila)).toBe('Necesita atención')
+    expect(seccionDe(fila)).toBe('Tu trabajo de hoy')
     esperarEntero(fila)
   })
 })

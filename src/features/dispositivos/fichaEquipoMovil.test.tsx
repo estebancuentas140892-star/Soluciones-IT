@@ -29,10 +29,12 @@ function trazoDe(Icono: (props: IconoProps) => React.JSX.Element): string | unde
 }
 
 // LA FICHA DE EQUIPO EN EL TELÉFONO (rediseño móvil "1b Pulgar", tarea 329,
-// AD-079): avisos bajo el carnet, "Resolver con este equipo" con tres formas
-// y "Ver N", el índice "Más del equipo" con sus hojas, el menú "···" con
-// Favorito y Compartir y lo destructivo aparte, y la llave de las
-// credenciales en la barra fija. Lo de antes (la identidad, los datos para
+// AD-079; jerarquía del DESPUÉS de Claude Design desde la tarea 344): avisos
+// bajo el carnet, los datos para trabajar en su tarjeta con "Copiar", el
+// mantenimiento a la vista, "Guías para este equipo" en filas cortas con
+// "Ver N", "Información del equipo" con sus hojas, el menú "···" con
+// Favorito y Compartir y lo destructivo aparte, y "Clave" con su palabra en
+// la barra fija. Lo de antes (la identidad, los datos para
 // trabajar, cada hoja por dentro) lo siguen vigilando equiposYQr,
 // contextoEquipoPantallas, responsableDelEquipo, facturacionFlujo y
 // mantenimientoFlujo.
@@ -68,8 +70,12 @@ beforeEach(async () => {
   await sembrarCategorias()
 })
 
+type VentanaDePrueba = { happyDOM: { setViewport: (vista: { width: number; height: number }) => void } }
+const ventana = window as unknown as VentanaDePrueba
+
 afterEach(async () => {
   await desmontarTodo()
+  ventana.happyDOM.setViewport({ width: 375, height: 812 })
 })
 
 describe('los avisos del equipo', () => {
@@ -136,7 +142,36 @@ describe('los avisos del equipo', () => {
 })
 
 describe('resolver con este equipo', () => {
-  it('tres formas a la vista, los problemas primero, y "Ver N" abre todas con su equipo', async () => {
+  // En el teléfono (tarea 344): filas cortas, solo las tres que se ven, con
+  // qué es y cuántos pasos tiene, sin icono ni síntoma.
+  it('en el teléfono, tres guías en filas cortas, los problemas primero, y "Ver N" abre todas', async () => {
+    await sembrarEquipo({ id: 'pc', nombre: 'PC de prueba' })
+    await sembrarArticulo('prob-1', 'Problema de prueba uno', 'problema_frecuente')
+    await sembrarArticulo('prob-2', 'Problema de prueba dos', 'problema_frecuente')
+    await sembrarArticulo('proc-1', 'Procedimiento de prueba uno', 'configuracion')
+    await sembrarArticulo('proc-2', 'Procedimiento de prueba dos', 'configuracion')
+    await montar(RUTAS, '/dispositivos/pc')
+
+    const seccion = await esperar(
+      () => document.body.querySelector<HTMLElement>('section[aria-labelledby="resolver-con-este-equipo"]'),
+      'Guías para este equipo',
+    )
+    expect(seccion.querySelector('h2')?.textContent).toBe('Guías para este equipo')
+    await esperar(() => seccion.querySelectorAll('a').length === 3, 'tres guías')
+    const enlaces = Array.from(seccion.querySelectorAll('a'))
+    expect(seccion.querySelector('li.hidden')).toBeNull()
+    expect(enlaces.slice(0, 2).every((a) => (a.textContent ?? '').includes('Problema frecuente · 1 paso'))).toBe(true)
+    // Sin el síntoma ni el icono: el título y una línea.
+    expect(seccion.textContent).not.toContain('Síntoma de')
+    expect(enlaces.every((a) => a.getAttribute('href')?.endsWith('?equipo=pc'))).toBe(true)
+
+    await tocar(await esperarControl('Ver las 4 formas de resolver con este equipo'))
+    const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja')
+    await esperar(() => (hoja.textContent ?? '').includes('Procedimiento de prueba dos'), 'todas')
+  })
+
+  it('desde 768, tres formas a la vista, los problemas primero, y "Ver N" abre todas con su equipo', async () => {
+    ventana.happyDOM.setViewport({ width: 1024, height: 768 })
     await sembrarEquipo({ id: 'pc', nombre: 'PC de prueba' })
     await sembrarArticulo('prob-1', 'Problema de prueba uno', 'problema_frecuente')
     await sembrarArticulo('prob-2', 'Problema de prueba dos', 'problema_frecuente')
@@ -227,22 +262,32 @@ describe('la cabecera y el menú', () => {
   })
 })
 
-describe('el carnet y los datos para trabajar en el teléfono (tarea 342)', () => {
-  it('la pastilla lleva su punto, la IP se copia con un botón de 48 y el índice explica sus galones', async () => {
+describe('el carnet y los datos para trabajar en el teléfono (tareas 342 y 344)', () => {
+  it('la pastilla lleva su punto, la IP se copia con "Copiar" y el índice no necesita leyenda', async () => {
     await sembrarEquipo({ id: 'pc', nombre: 'PC de prueba', ip: '10.9.9.30', estado: 'Operativo' })
     await montar(RUTAS, '/dispositivos/pc')
     await esperar(() => textoPantalla().includes('10.9.9.30'), 'la ficha')
     const punto = document.body.querySelector('[data-punto-estado]')
     expect(punto).not.toBeNull()
     expect(punto?.parentElement?.textContent).toContain('Operativo')
+    // "Copiar" con su palabra (tarea 344), dentro de la tarjeta de los datos.
     const copiar = control('Copiar dirección ip') as HTMLElement
-    expect(copiar.className).toContain('max-md:h-12')
-    expect(copiar.className).toContain('max-md:w-12')
-    expect(copiar.className).toContain('max-md:rounded-[12px]')
-    const leyenda = document.body.querySelector('[data-leyenda-galones]')
-    expect(leyenda?.textContent).toContain('se consulta aquí')
-    expect(leyenda?.textContent).toContain('abre su pantalla')
-    expect(leyenda?.className).toContain('md:hidden')
+    expect(copiar.textContent).toBe('Copiar')
+    expect(copiar.closest('section[aria-label="Datos para trabajar"]')?.className).toContain('max-md:rounded-2xl')
+    // "Información del equipo", sin la leyenda de los galones.
+    expect(textoPantalla()).toContain('Información del equipo')
+    expect(document.body.querySelector('[data-leyenda-galones]')).toBeNull()
+    expect(textoPantalla()).not.toContain('se consulta aquí')
+  })
+
+  it('el mantenimiento va a la vista, con lo que dice y "Ver", y no se repite en el índice', async () => {
+    await sembrarEquipo({ id: 'pc', nombre: 'PC de prueba', ip: '10.9.9.30' })
+    await montar(RUTAS, '/dispositivos/pc')
+    const fila = await esperarControl(/^Mantenimiento\s*Nada programado/)
+    expect(fila.textContent).toContain('Mantenimiento')
+    expect(fila.textContent).toContain('Ver')
+    const indice = document.body.querySelector<HTMLElement>('section[aria-labelledby="mas-del-equipo"]')
+    expect(indice?.textContent).not.toContain('Mantenimiento')
   })
 
   it('mientras se lee la copia local, la forma de la ficha y no "Cargando..."', async () => {
@@ -256,7 +301,7 @@ describe('el carnet y los datos para trabajar en el teléfono (tarea 342)', () =
 })
 
 describe('la barra fija', () => {
-  it('"Resolver un problema" va relleno y la llave abre las credenciales del equipo en su hoja', async () => {
+  it('"Resolver un problema" va relleno y "Clave", con su palabra, abre la clave del equipo en su hoja', async () => {
     await sembrarPerfil(true)
     await sembrarEquipo({ id: 'pc', nombre: 'PC de prueba' })
     await sembrarArticulo('prob-1', 'Problema de prueba uno', 'problema_frecuente')
@@ -279,9 +324,14 @@ describe('la barra fija', () => {
     expect(resolver.querySelector('svg path')?.getAttribute('d')).toBe(trazoDe(Wrench))
     // Con la Bóveda bloqueada, la fila dice que las hay pero cerradas.
     await esperar(() => (control(/^Credenciales/)?.textContent ?? '').includes('Bloqueadas'), 'credenciales bloqueadas')
-    await tocar(await esperarControl('Credenciales del equipo'))
+    // "Clave" con su palabra, delante de "Resolver un problema" (tarea 344).
+    const clave = await esperarControl('Clave del equipo')
+    expect(clave.textContent).toBe('Clave')
+    expect(clave.compareDocumentPosition(resolver) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await tocar(clave)
     const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja')
     await esperar(() => (hoja.textContent ?? '').includes('Acceso de prueba al PC'), 'la credencial')
+    expect(hoja.textContent).toContain('Clave del equipo')
     // Solo su título: nada de la Bóveda se descifra aquí.
     expect(document.body.innerHTML).not.toContain('usuario.falso.pc')
   })
@@ -291,6 +341,7 @@ describe('la barra fija', () => {
     await sembrarArticulo('prob-1', 'Problema de prueba uno', 'problema_frecuente')
     await montar(RUTAS, '/dispositivos/pc')
     await esperarControl('Resolver un problema con este equipo')
+    expect(control('Clave del equipo')).toBeNull()
     expect(control('Credenciales del equipo')).toBeNull()
     expect(control(/^Credenciales/)).toBeNull()
   })

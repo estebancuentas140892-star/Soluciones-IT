@@ -9,15 +9,19 @@ import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
   ArrowRight,
   BookOpen,
+  CaretLeft,
   CaretRight,
   ClockCountdown,
   MagnifyingGlass,
   PencilSimple,
   Plus,
+  QrCode,
   TreeStructure,
 } from '../../components/iconos'
 import { ROTULO_RECORRIDO } from '../../lib/diagnostico'
-import { BTN_SECUNDARIO } from '../../components/nocturne'
+import { BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { ANCHO_TABLETA, coincide, useEsAncho } from '../../components/useEsAncho'
+import { EjemplosBusqueda, NadaCoincide, PuedesEscribir } from '../busqueda/EstadosBusquedaMovil'
 import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
@@ -26,7 +30,12 @@ import { ChipsDeAlcance } from '../busqueda/ChipsDeAlcance'
 import { useIdsDeRed } from '../busqueda/useIdsDeRed'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { BorradoresCoincidentes, GuiasEnBorrador } from '../busqueda/BorradoresCoincidentes'
-import { MARCADOR_BUSCADOR } from '../busqueda/resultados'
+import {
+  ANCHO_MARCADOR_COMPLETO,
+  MARCADOR_BUSCADOR,
+  MARCADOR_BUSCADOR_ESTRECHO,
+  MARCADOR_BUSCADOR_TELEFONO,
+} from '../busqueda/resultados'
 import {
   borradoresCoincidentes,
   esBorradorVivo,
@@ -34,7 +43,7 @@ import {
   repartirBorradores,
   sinLosYaOficiales,
 } from '../busqueda/borradoresEnBusqueda'
-import { normalizarTexto } from '../soluciones/iconosSoluciones'
+import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
 import { articulosSinTerminar, pasoDeTotal } from '../soluciones/sinTerminar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { obtenerActividadReciente } from '../historial/actividadEquipo'
@@ -43,10 +52,13 @@ import { agruparAgenda, type Agenda } from './agenda'
 import {
   accesosRapidos,
   asuntosDeAtencion,
+  ATENCION_VISIBLES,
+  esGuiaPublicadaEjecutable,
   guiasRecientes,
   juntarRecientes,
   partesPuertaAgenda,
   recorridosRecientes,
+  textoSinUrgencias,
   type AccesoRapido,
   type GuiaReciente,
 } from './resolver'
@@ -103,8 +115,23 @@ export function ResolverPage() {
   useEffect(() => {
     const conPunteroFino =
       typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
-    if (conPunteroFino) refCampo.current?.focus({ preventScroll: true })
+    // Solo desde 768: en el teléfono enfocar el campo abre su búsqueda
+    // (tarea 344), y una ventana estrecha con ratón llegaría a ella sin
+    // haber tocado nada.
+    if (conPunteroFino && coincide(ANCHO_TABLETA)) refCampo.current?.focus({ preventScroll: true })
   }, [])
+  // EN EL TELÉFONO, BUSCAR ES SU PROPIA PANTALLA (rediseño móvil, fase 1,
+  // tarea 344; DESPUÉS de Claude Design). El campo está ARRIBA, bajo el
+  // título, y es un campo de verdad: tocarlo abre el teclado en el mismo
+  // gesto. Al enfocarlo, Resolver se convierte en la búsqueda: el regreso a
+  // la izquierda, el campo arriba y, debajo, qué escribir o lo encontrado.
+  // Se sale con el regreso, que borra lo escrito; perder el foco no saca de
+  // ella (desplazar los resultados cierra el teclado, no la búsqueda). Es
+  // el mismo campo en las dos formas: no se desmonta, así que el foco y el
+  // teclado no se pierden al cambiar. Desde 768, todo como estaba.
+  const ancho = useEsAncho()
+  const marcadorCompleto = useEsAncho(ANCHO_MARCADOR_COMPLETO)
+  const [abiertaEnTelefono, setAbiertaEnTelefono] = useState(false)
   // La bóveda se abrió desde el puente de la propia búsqueda, sin salir
   // de aquí: cuenta una interacción más en la medición del recorrido.
   const [huboDesbloqueo, setHuboDesbloqueo] = useState(false)
@@ -122,6 +149,26 @@ export function ResolverPage() {
   // al instante, no la versión diferida, para que el pliegue no llegue
   // tarde y mueva el campo con los resultados ya a la vista.
   const escribiendo = query.trim().length > 0
+  const busquedaEnTelefono = !ancho && (abiertaEnTelefono || escribiendo)
+  function salirDeLaBusqueda() {
+    setQuery('')
+    setAbiertaEnTelefono(false)
+    refCampo.current?.blur()
+  }
+  // Desplazar lo encontrado con el dedo cierra el teclado: se está mirando,
+  // no escribiendo (lo mismo que hacía el dock).
+  useEffect(() => {
+    if (!busquedaEnTelefono) return
+    function alArrastrar(evento: TouchEvent) {
+      const campo = refCampo.current
+      if (!campo || document.activeElement !== campo) return
+      // Arrastrar sobre el propio campo no cuenta: es el que se usa.
+      if (evento.target instanceof Node && campo.closest('label')?.contains(evento.target)) return
+      campo.blur()
+    }
+    window.addEventListener('touchmove', alArrastrar, { passive: true })
+    return () => window.removeEventListener('touchmove', alArrastrar)
+  }, [busquedaEnTelefono])
 
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
@@ -212,149 +259,252 @@ export function ResolverPage() {
   const hayBloquesReales =
     pendientes.length > 0 || avances.size > 0 || recientes.some((r) => r.enCurso !== null)
 
+  // Cuántas guías se pueden ejecutar: "Ver todas las guías (N)" en el teléfono.
+  const totalGuias = useMemo(() => articulos.filter(esGuiaPublicadaEjecutable).length, [articulos])
+
+  // Las salidas cuando nada coincide, las mismas en todos los anchos.
+  const salidasSinResultados = (
+    <>
+      <Link to={`/soluciones?q=${encodeURIComponent(consultaCruda)}`} className={BTN_SECUNDARIO}>
+        <MagnifyingGlass size={15} aria-hidden />
+        Buscar solo en Guías
+      </Link>
+      <Link to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`} className={BTN_SECUNDARIO}>
+        <Plus size={15} aria-hidden />
+        Crear equipo
+      </Link>
+      <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
+        Limpiar búsqueda
+      </button>
+    </>
+  )
+  // NADA COINCIDE, COMPACTO EN EL TELÉFONO (tarea 344): el mismo estado que
+  // la capa del buscador global, con las salidas dentro. Si hay borradores
+  // que coinciden no es "nada coincide": se queda el aviso de siempre.
+  const nadaCoincideEnTelefono = !ancho && borradoresQueCoinciden.length === 0
+
+  // LO ENCONTRADO: la misma lista en todos los anchos; solo cambia, en el
+  // teléfono, cómo se dice que nada coincide.
+  const encontrado = (
+    <div className="flex flex-col gap-4">
+      {resultados.length > 0 && <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />}
+      {/* La guía en borrador que coincide en el título, DELANTE de
+          todo lo demás, salvo que ya haya una publicada que también
+          coincida en el título: esa conserva la prioridad. */}
+      {conBorradores && !hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
+
+      {resultados.length > 0 ? (
+        <ResultadosBusqueda
+          resultados={visibles}
+          consulta={consulta}
+          consultaCruda={consultaCruda}
+          onDesbloqueada={() => setHuboDesbloqueo(true)}
+          huboDesbloqueo={huboDesbloqueo}
+        />
+      ) : (
+        <>
+          {/* Estado vacío más útil: con la bóveda bloqueada, "no se
+              encontró nada" no es toda la verdad, porque sus accesos ni
+              siquiera se buscaron. */}
+          <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} />
+          {borradoresQueCoinciden.length > 0 ? (
+            // NO ES "SIN COINCIDENCIAS": hay algo escrito sobre esto,
+            // solo que sin publicar.
+            <div className="rounded-lg border border-dashed border-noct-neutral-700 px-4 py-4">
+              <p className="text-[14.5px] font-medium">No hay una guía publicada con esta búsqueda.</p>
+              <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
+                Lo que hay está sin publicar y lleva su aviso.
+              </p>
+            </div>
+          ) : nadaCoincideEnTelefono ? (
+            <NadaCoincide consulta={consultaCruda}>{salidasSinResultados}</NadaCoincide>
+          ) : (
+            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
+              <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
+              <div>
+                <p className="text-[14.5px] font-medium">Sin coincidencias</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
+                  Nada coincide con "{consultaCruda}" en Soluciones IT. Prueba otra palabra o revisa la
+                  ortografía.
+                </p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {conBorradores && hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
+
+      {/* BORRADORES COINCIDENTES: los que solo coinciden por
+          etiqueta, categoría o tipo. En su propio bloque, nunca
+          mezclados con los oficiales. */}
+      {conBorradores && <BorradoresCoincidentes
+        borradores={secundarios}
+        consulta={consulta}
+        consultaCruda={consultaCruda}
+      />}
+
+      {resultados.length === 0 && !nadaCoincideEnTelefono && (
+        <div className="flex flex-wrap justify-center gap-2">{salidasSinResultados}</div>
+      )}
+    </div>
+  )
+
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila, el primero de los
     // cuatro destinos. `conLupa={false}` (regla M-R8, "un buscador por
     // pantalla"): esta pantalla trae su propio buscador, así que la lupa
-    // del chasis sería el segundo de la misma pantalla. Desde la tarea 330
-    // la cabecera es de una fila (título, sincronización y cuenta) y el
-    // buscador baja al dock: la pregunta "¿Qué necesitas resolver?" y la
-    // línea de ayuda se retiran.
+    // del chasis sería el segundo de la misma pantalla.
     //
-    // EL BUSCADOR, AL PULGAR EN EL TELÉFONO (tarea 330) Y EN LA BARRA DESDE
-    // 768 PX (tarea 339): el mismo de siempre, montado por el chasis en un
-    // solo sitio. En el dock va sobre las pestañas y, con el teclado
-    // abierto, sobre el teclado. El marcador sigue invitando a describir lo
-    // que pasa (tarea 288).
+    // EL BUSCADOR, EN LA BARRA DESDE 768 PX (tarea 339): el mismo de
+    // siempre, montado por el chasis junto al título. EN EL TELÉFONO, ARRIBA
+    // (tarea 344, DESPUÉS de Claude Design; antes, en el dock al pulgar de la
+    // tarea 330): lo monta esta pantalla bajo el título, y mientras busca la
+    // barra superior se retira para que la búsqueda tenga su regreso y su
+    // campo arriba. Un solo campo vivo en cada ancho (regla M-R8).
     <Chasis
       titulo="Resolver"
       conLupa={false}
       tituloContraido={escribiendo}
+      sinCabeceraEnTelefono={busquedaEnTelefono}
+      // EL ESCÁNER, EN LA FILA DEL TÍTULO DEL TELÉFONO (tarea 344): es otra
+      // forma de buscar y se conserva, pero ya no le quita ancho al campo,
+      // que ahora va arriba y entero. Desde 768 sigue dentro del campo.
+      accionTelefono={
+        <Link
+          to="/escaner"
+          aria-label="Escanear QR"
+          title="Escanear QR"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
+        >
+          <QrCode size={21} aria-hidden />
+        </Link>
+      }
+      // En el teléfono, bajo el título, para qué sirve la sección (DESPUÉS de
+      // Claude Design: "cada sección dice para qué sirve bajo su título").
+      barra={
+        ancho ? undefined : (
+          <p className="px-4 pb-3 text-[15px] leading-snug text-noct-neutral-300">
+            Encuentra qué hacer ante un problema técnico.
+          </p>
+        )
+      }
       buscador={
-        <CampoBusqueda
-          valor={query}
-          onCambiar={setQuery}
-          alcance="Soluciones IT"
-          textoAlternativo={MARCADOR_BUSCADOR}
-          refCampo={refCampo}
-          variante="dock"
-        />
+        ancho ? (
+          <CampoBusqueda
+            valor={query}
+            onCambiar={setQuery}
+            alcance="Soluciones IT"
+            textoAlternativo={MARCADOR_BUSCADOR}
+            refCampo={refCampo}
+            variante="dock"
+          />
+        ) : undefined
       }
     >
-      <main className="@container flex-1 px-4 pb-6 pt-4">
-        {buscando ? (
-          <div className="flex flex-col gap-4">
-            {resultados.length > 0 && <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />}
-            {/* La guía en borrador que coincide en el título, DELANTE de
-                todo lo demás, salvo que ya haya una publicada que también
-                coincida en el título: esa conserva la prioridad. */}
-            {conBorradores && !hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
-
-            {resultados.length > 0 ? (
-              <ResultadosBusqueda
-                resultados={visibles}
-                consulta={consulta}
-                consultaCruda={consultaCruda}
-                onDesbloqueada={() => setHuboDesbloqueo(true)}
-                huboDesbloqueo={huboDesbloqueo}
-              />
-            ) : (
-              <>
-                {/* Estado vacío más útil: con la bóveda bloqueada, "no se
-                    encontró nada" no es toda la verdad, porque sus accesos ni
-                    siquiera se buscaron. */}
-                <PuenteBoveda consulta={consultaCruda} onDesbloqueada={() => setHuboDesbloqueo(true)} />
-                {borradoresQueCoinciden.length > 0 ? (
-                  // NO ES "SIN COINCIDENCIAS": hay algo escrito sobre esto,
-                  // solo que sin publicar.
-                  <div className="rounded-lg border border-dashed border-noct-neutral-700 px-4 py-4">
-                    <p className="text-[14.5px] font-medium">No hay una guía publicada con esta búsqueda.</p>
-                    <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                      Lo que hay está sin publicar y lleva su aviso.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-12 text-center">
-                    <MagnifyingGlass size={30} className="text-noct-neutral-600" aria-hidden />
-                    <div>
-                      <p className="text-[14.5px] font-medium">Sin coincidencias</p>
-                      <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                        Nada coincide con "{consultaCruda}" en Soluciones IT. Prueba otra palabra o revisa la
-                        ortografía.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {conBorradores && hayPublicadaEnTitulo && <GuiasEnBorrador borradores={destacados} consulta={consulta} consultaCruda={consultaCruda} />}
-
-            {/* BORRADORES COINCIDENTES: los que solo coinciden por
-                etiqueta, categoría o tipo. En su propio bloque, nunca
-                mezclados con los oficiales. */}
-            {conBorradores && <BorradoresCoincidentes
-              borradores={secundarios}
-              consulta={consulta}
-              consultaCruda={consultaCruda}
-            />}
-
-            {resultados.length === 0 && (
-              <div className="flex flex-wrap justify-center gap-2">
-                <Link to={`/soluciones?q=${encodeURIComponent(consultaCruda)}`} className={BTN_SECUNDARIO}>
-                  <MagnifyingGlass size={15} aria-hidden />
-                  Buscar solo en Guías
-                </Link>
-                <Link
-                  to={`/dispositivos/nuevo?nombre=${encodeURIComponent(consultaCruda)}`}
-                  className={BTN_SECUNDARIO}
-                >
-                  <Plus size={15} aria-hidden />
-                  Crear equipo
-                </Link>
-                <button type="button" onClick={() => setQuery('')} className={BTN_SECUNDARIO}>
-                  Limpiar búsqueda
-                </button>
+      {ancho ? (
+        <main className="@container flex-1 px-4 pb-6 pt-4">
+          {buscando ? (
+            encontrado
+          ) : (
+            // TRES ZONAS CON IDENTIDAD FIJA (tarea 339, T3; handoff de tableta y
+            // escritorio): A, lo que urge (Necesita atención); B, mi trabajo
+            // (Seguir donde ibas y Recientes); C, el catálogo (Guías). El orden
+            // de lectura no cambia nunca; el ancho del contenedor decide cuántas
+            // caben lado a lado. Por debajo de 880 px, una columna (tableta
+            // vertical); desde 880, A | B y C debajo, de lado a lado tras una
+            // línea (tableta horizontal y escritorio). Desde 1100 de contenido
+            // (1680, T10), las tres lado a lado, con C como un índice vertical
+            // de 252. Sin bloques nuevos.
+            <div className="flex flex-col gap-[22px] md:gap-[30px] @[880px]:grid @[880px]:grid-cols-2 @[880px]:items-start @[880px]:gap-x-10 @[1100px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_252px] @[1100px]:gap-x-11">
+              {!agendaCargando && <BloqueAtencion agenda={agenda} />}
+              {(seguir || otrasRecientes.length > 0) && (
+                <div className="flex flex-col gap-[22px] md:gap-[26px]">
+                  {/* SEGUIR DONDE IBAS (tarea 330): la guía a medias más
+                      reciente, en una tarjeta con su avance. Las demás
+                      recientes siguen debajo, en su lista. */}
+                  {seguir && <BloqueSeguir guia={seguir} />}
+                  <BloqueRecientes recientes={otrasRecientes} />
+                </div>
+              )}
+              <div className="@[880px]:col-span-2 @[880px]:border-t @[880px]:border-noct-divider @[880px]:pt-5 @[1100px]:col-span-1 @[1100px]:border-t-0 @[1100px]:pt-0">
+                <BloqueAccesos accesos={accesos} />
               </div>
-            )}
-          </div>
-        ) : (
-          // TRES ZONAS CON IDENTIDAD FIJA (tarea 339, T3; handoff de tableta y
-          // escritorio): A, lo que urge (Necesita atención); B, mi trabajo
-          // (Seguir donde ibas y Recientes); C, el catálogo (Guías). El orden
-          // de lectura no cambia nunca; el ancho del contenedor decide cuántas
-          // caben lado a lado. Por debajo de 880 px, una columna (teléfono y
-          // tableta vertical); desde 880, A | B y C debajo, de lado a lado
-          // tras una línea (tableta horizontal y escritorio). Desde 1100 de
-          // contenido (1680, T10), las tres lado a lado, con C como un índice
-          // vertical de 252. Sin bloques nuevos.
-          <div className="flex flex-col gap-[22px] md:gap-[30px] @[880px]:grid @[880px]:grid-cols-2 @[880px]:items-start @[880px]:gap-x-10 @[1100px]:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_252px] @[1100px]:gap-x-11">
-            {!agendaCargando && <BloqueAtencion agenda={agenda} />}
-            {(seguir || otrasRecientes.length > 0) && (
-              <div className="flex flex-col gap-[22px] md:gap-[26px]">
-                {/* SEGUIR DONDE IBAS (tarea 330): la guía a medias más
-                    reciente, en una tarjeta con su avance. Las demás
-                    recientes siguen debajo, en su lista. */}
-                {seguir && <BloqueSeguir guia={seguir} />}
-                <BloqueRecientes recientes={otrasRecientes} />
-              </div>
-            )}
-            <div className="@[880px]:col-span-2 @[880px]:border-t @[880px]:border-noct-divider @[880px]:pt-5 @[1100px]:col-span-1 @[1100px]:border-t-0 @[1100px]:pt-0">
-              <BloqueAccesos accesos={accesos} />
+
+              {/* Bienvenida del primer día: los tres pasos que dejan al
+                  técnico listo para trabajar sin señal. Va al final para no
+                  empujar nada, se retira sola en cuanto hay trabajo real y,
+                  cumplida, no vuelve. */}
+              {consultasListas && (
+                <div className="empty:hidden @[880px]:col-span-2 @[1100px]:col-span-3">
+                  <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
+                </div>
+              )}
             </div>
-
-            {/* Bienvenida del primer día: los tres pasos que dejan al
-                técnico listo para trabajar sin señal. Va al final para no
-                empujar nada, se retira sola en cuanto hay trabajo real y,
-                cumplida, no vuelve. */}
-            {consultasListas && (
-              <div className="empty:hidden @[880px]:col-span-2 @[1100px]:col-span-3">
-                <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
-              </div>
+          )}
+        </main>
+      ) : (
+        // RESOLVER EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design). Al
+        // abrir: el campo arriba con ejemplos, la guía a
+        // medias, el trabajo de hoy dicho en palabras y "¿Qué está fallando?"
+        // con las categorías reales. Buscando: el regreso, el campo y lo
+        // encontrado. El campo es el MISMO elemento en las dos formas (mismo
+        // sitio del árbol): cambiar de forma no le quita el foco.
+        <main className="flex-1 px-4 pb-6">
+          <div
+            data-buscador-resolver
+            className={
+              busquedaEnTelefono
+                ? 'sticky top-0 z-20 -mx-4 flex items-center gap-0.5 bg-noct-bg/[.94] py-2.5 pl-1 pr-4 backdrop-blur-[12px]'
+                : 'pt-3.5'
+            }
+          >
+            {busquedaEnTelefono && (
+              <button
+                type="button"
+                onClick={salirDeLaBusqueda}
+                aria-label="Volver a Resolver"
+                title="Volver a Resolver"
+                className="flex h-[52px] w-11 shrink-0 items-center justify-center rounded-lg text-noct-accent-300 hover:bg-noct-text/[.05]"
+              >
+                <CaretLeft size={22} aria-hidden />
+              </button>
             )}
+            <div className="min-w-0 flex-1">
+              <CampoBusqueda
+                valor={query}
+                onCambiar={setQuery}
+                alcance="Soluciones IT"
+                textoAlternativo={marcadorCompleto ? MARCADOR_BUSCADOR_TELEFONO : MARCADOR_BUSCADOR_ESTRECHO}
+                refCampo={refCampo}
+                variante="resolver"
+                onEnfocar={() => setAbiertaEnTelefono(true)}
+                className={busquedaEnTelefono ? 'h-[52px] rounded-[14px]' : 'h-[60px] rounded-2xl'}
+              />
+            </div>
           </div>
-        )}
-      </main>
+          {busquedaEnTelefono ? (
+            <div className="pt-1.5">
+              {/* Sin la barra superior, el nombre de la pantalla para el lector. */}
+              <h1 className="sr-only">Buscar en Soluciones IT</h1>
+              {buscando ? encontrado : <PuedesEscribir onElegir={setQuery} />}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-[26px] pt-3">
+              <EjemplosBusqueda conRotulo onElegir={setQuery} />
+              {seguir && <SeguirEnTelefono guia={seguir} />}
+              {!agendaCargando && <TrabajoDeHoy agenda={agenda} total={pendientes.length} />}
+              <QueEstaFallando accesos={accesos} totalGuias={totalGuias} />
+              <BloqueRecientes recientes={otrasRecientes} />
+              {consultasListas && (
+                <div className="empty:hidden">
+                  <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      )}
     </Chasis>
   )
 }
@@ -437,24 +587,7 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
         <span data-nombre-principal className="text-[16px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere]">
           {guia.titulo}
         </span>
-        {avance && avance.total > 0 && (
-          <span aria-hidden className="flex gap-1">
-            {avance.total <= 12 ? (
-              Array.from({ length: avance.total }, (_, i) => (
-                <span
-                  key={i}
-                  className={`h-[5px] min-w-0 flex-1 rounded-[3px] ${
-                    i < avance.hechos ? 'bg-noct-accent' : i === avance.hechos ? 'bg-noct-text' : 'bg-noct-neutral-700'
-                  }`}
-                />
-              ))
-            ) : (
-              <span className="h-[5px] flex-1 overflow-hidden rounded-[3px] bg-noct-neutral-700">
-                <span className="block h-full bg-noct-accent" style={{ width: `${Math.round((avance.hechos / avance.total) * 100)}%` }} />
-              </span>
-            )}
-          </span>
-        )}
+        {avance && <SegmentosAvance avance={avance} />}
         <span className="flex items-center justify-between gap-2">
           <span className="min-w-0 text-[13.5px] text-noct-neutral-300">{detalle}</span>
           <span className="flex shrink-0 items-center gap-1.5 text-[14px] font-semibold text-noct-accent-300">
@@ -462,6 +595,172 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
             <ArrowRight size={15} aria-hidden />
           </span>
         </span>
+      </Link>
+    </section>
+  )
+}
+
+// El avance de una guía a medias: un segmento por paso (hechos en acento,
+// el actual en claro) y, con muchos pasos, una barra. Lo comparten la
+// tarjeta de tableta y escritorio y la del teléfono.
+function SegmentosAvance({ avance }: { avance: NonNullable<GuiaReciente['avance']> }) {
+  if (avance.total <= 0) return null
+  return (
+    <span aria-hidden className="flex gap-1">
+      {avance.total <= 12 ? (
+        Array.from({ length: avance.total }, (_, i) => (
+          <span
+            key={i}
+            className={`h-[5px] min-w-0 flex-1 rounded-[3px] ${
+              i < avance.hechos ? 'bg-noct-accent' : i === avance.hechos ? 'bg-noct-text' : 'bg-noct-neutral-700'
+            }`}
+          />
+        ))
+      ) : (
+        <span className="h-[5px] flex-1 overflow-hidden rounded-[3px] bg-noct-neutral-700">
+          <span className="block h-full bg-noct-accent" style={{ width: `${Math.round((avance.hechos / avance.total) * 100)}%` }} />
+        </span>
+      )}
+    </span>
+  )
+}
+
+// SIGUE DONDE IBAS, EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design):
+// qué guía es, en qué paso va y un botón que dice a dónde lleva ("Continuar
+// en el paso 2"). Es la única acción rellena de Resolver (regla 30): retomar
+// lo que se dejó a medias es lo que hace avanzar.
+function SeguirEnTelefono({ guia }: { guia: GuiaReciente }) {
+  const conPreguntas = guia.tipo === 'diagnostico'
+  const avance = guia.avance
+  const numero = avance ? Math.min(avance.hechos + 1, avance.total) : null
+  const donde =
+    guia.enCurso ??
+    (avance && numero !== null ? `Vas en el ${pasoDeTotal(numero, avance.total, avance.totalAbierto ?? false)}` : '')
+  const verbo = guia.enCurso === null && numero !== null ? `Continuar en el paso ${numero}` : 'Continuar'
+  return (
+    <section aria-labelledby="resolver-seguir" className="flex flex-col gap-2.5">
+      <h2 id="resolver-seguir" className="text-[19px] font-[650] tracking-[-.01em]">
+        Sigue donde ibas
+      </h2>
+      <div className="flex flex-col gap-3 rounded-2xl border border-noct-divider bg-noct-surface p-4">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className="text-[14px] text-noct-neutral-400">
+            {conPreguntas ? ROTULO_RECORRIDO : ['Guía', guia.categoriaNombre].filter(Boolean).join(' · ')}
+            {guia.borrador ? ' · Borrador' : ''}
+          </span>
+          <span data-nombre-principal className="min-w-0 text-[18px] font-[650] leading-[1.25] text-pretty [overflow-wrap:anywhere]">
+            {guia.titulo}
+          </span>
+          {donde && <span className="text-[15px] leading-snug text-noct-neutral-300">{donde}</span>}
+        </div>
+        {avance && <SegmentosAvance avance={avance} />}
+        <Link
+          to={guia.ruta}
+          state={ORIGEN_RESOLVER}
+          aria-label={`${verbo}: ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
+          className={`${BTN_PRIMARIO_RELLENO} w-full`}
+        >
+          {verbo}
+        </Link>
+      </div>
+    </section>
+  )
+}
+
+// TU TRABAJO DE HOY, EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design).
+// Lo que urge (vencido o para hoy) con la fila de la Agenda, que ya dice el
+// estado con palabra y la acción con su verbo; sin nada urgente, una frase
+// que lo dice y nombra lo que la Agenda guarda. Sin los tres contadores: en
+// cero ocupaban la parte alta sin decir nada. "Agenda (N)" la abre entera.
+function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
+  const urgentes = [
+    ...agenda.vencidos.map((item) => ({ item, estado: 'vencido' as const })),
+    ...agenda.hoy.map((item) => ({ item, estado: 'hoy' as const })),
+  ]
+  const visibles = urgentes.slice(0, ATENCION_VISIBLES)
+  return (
+    <section aria-labelledby="resolver-hoy" className="flex flex-col gap-2.5">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 id="resolver-hoy" className="text-[19px] font-[650] tracking-[-.01em]">
+          Tu trabajo de hoy
+        </h2>
+        <Link
+          to="/agenda"
+          // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe).
+          aria-label={total > 0 ? `Abrir la Agenda: ${total} ${total === 1 ? 'asunto' : 'asuntos'}` : 'Abrir la Agenda'}
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[15px] font-semibold text-noct-accent-300 hover:underline"
+        >
+          {total > 0 ? `Agenda (${total})` : 'Agenda'}
+          <CaretRight size={13} aria-hidden />
+        </Link>
+      </div>
+      {visibles.length > 0 ? (
+        <div className="flex flex-col rounded-2xl border border-noct-divider bg-noct-surface px-3.5 [&>a:last-child]:border-b-0">
+          {visibles.map(({ item, estado }) => (
+            <FilaAgenda key={item.clave} item={item} estado={estado} />
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-2xl bg-noct-exito/(--tinte-estado) px-4 py-3.5 text-[15.5px] font-semibold leading-snug text-noct-exito">
+          {textoSinUrgencias(agenda)}
+        </p>
+      )}
+      {urgentes.length > visibles.length && (
+        <p className="px-0.5 text-[14px] text-noct-neutral-400">
+          Y {urgentes.length - visibles.length} más para hoy o atrasados en la Agenda.
+        </p>
+      )}
+    </section>
+  )
+}
+
+// ¿QUÉ ESTÁ FALLANDO?, EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design):
+// las categorías reales con guías para ejecutar, en tarjetas de dos en dos
+// con su icono y cuántas guías tienen, para quien no sabe qué escribir.
+// Cada una abre el catálogo filtrado (el mismo enlace de siempre) y "Ver
+// todas las guías" está siempre: es la puerta al catálogo.
+function QueEstaFallando({ accesos, totalGuias }: { accesos: AccesoRapido[]; totalGuias: number }) {
+  return (
+    <section aria-labelledby="resolver-falla" className="flex flex-col gap-2.5">
+      <h2 id="resolver-falla" className="text-[19px] font-[650] tracking-[-.01em]">
+        ¿Qué está fallando?
+      </h2>
+      {accesos.length > 0 && (
+        <div className="grid grid-cols-2 gap-2.5">
+          {accesos.map((acceso) => {
+            const Icono = iconoDeCategoria(acceso.nombre)
+            return (
+              <Link
+                key={acceso.categoriaId}
+                to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
+                state={ORIGEN_RESOLVER}
+                aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
+                className="flex min-h-24 min-w-0 flex-col items-start gap-2.5 rounded-2xl border border-noct-divider bg-noct-surface p-3.5 text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-accent/[.14] text-noct-accent-300"
+                >
+                  <Icono size={20} />
+                </span>
+                <span className="flex min-w-0 max-w-full flex-col">
+                  <span className="text-[16.5px] font-[650] leading-[1.25] [overflow-wrap:anywhere]">{acceso.nombre}</span>
+                  <span className="text-[14px] text-noct-neutral-400">
+                    {acceso.guias} {acceso.guias === 1 ? 'guía' : 'guías'}
+                  </span>
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+      <Link
+        to="/soluciones"
+        state={ORIGEN_RESOLVER}
+        className="flex min-h-[52px] items-center justify-between gap-2 rounded-[14px] border-[1.5px] border-noct-text/25 px-4 text-[16px] font-semibold text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado"
+      >
+        <span>Ver todas las guías{totalGuias > 0 ? ` (${totalGuias})` : ''}</span>
+        <CaretRight size={18} className="shrink-0" aria-hidden />
       </Link>
     </section>
   )

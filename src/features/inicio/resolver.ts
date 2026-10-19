@@ -102,6 +102,28 @@ export function partesPuertaAgenda(
 }
 
 /**
+ * "TU TRABAJO DE HOY" SIN NADA URGENTE (rediseño móvil, fase 1, tarea 344;
+ * DESPUÉS de Claude Design): dicho con palabras, no con tres contadores en
+ * cero. Lo que la Agenda guarda además (lo próximo, lo que está en curso y
+ * lo que espera revisión) se nombra para que se sepa si vale la pena
+ * abrirla; lo que no hay no se nombra.
+ */
+export function textoSinUrgencias(agenda: Agenda): string {
+  const partes = [
+    agenda.proximos.length > 0
+      ? `${agenda.proximos.length} ${agenda.proximos.length === 1 ? 'próximo' : 'próximos'}`
+      : null,
+    agenda.enCurso.length > 0 ? `${agenda.enCurso.length} en curso` : null,
+    agenda.porRevisar.length > 0 ? `${agenda.porRevisar.length} por revisar` : null,
+  ].filter((parte): parte is string => parte !== null)
+  const enLaAgenda =
+    partes.length === 0
+      ? ''
+      : ` En la Agenda: ${partes.length === 1 ? partes[0] : `${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}`}.`
+  return `Nada atrasado ni para hoy.${enLaAgenda}`
+}
+
+/**
  * ¿Es una guía que se puede ejecutar y que el equipo da por buena? Viva,
  * publicada (lo que no trae estado es anterior al campo y era oficial) y
  * con pasos. Es el criterio de los accesos rápidos: una categoría que

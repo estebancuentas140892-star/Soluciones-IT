@@ -159,7 +159,9 @@ describe('Resolver no pide elegir herramienta', () => {
     await escribir(await esperar(campoBuscador, 'el buscador de Resolver'), 'no puede iniciar sesión')
     const primero = await esperar(primerResultado, 'el primer resultado')
     expect(primero.getAttribute('href')).toBe('/diagnostico/rec-sesion')
-    expect(primero.textContent).toContain('Guía con preguntas')
+    // Su tipo, junto a ella (en el teléfono, en la tarjeta de la guía que
+    // mejor coincide, tarea 344).
+    expect(primero.closest('section')?.textContent).toContain('Guía con preguntas')
 
     await tocar(primero)
     await esperar(() => textoPantalla().includes('¿Qué mensaje aparece al entrar?'), 'la primera pregunta')

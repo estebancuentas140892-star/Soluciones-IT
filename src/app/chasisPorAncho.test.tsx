@@ -66,6 +66,8 @@ const AHORA = '2026-10-14T12:00:00.000Z'
 
 const campos = (alcance: string) => document.body.querySelectorAll(`input[aria-label="Buscar en ${alcance}"]`)
 const enDock = (elemento: Element | null) => elemento?.closest('[data-dock-busqueda]') ?? null
+// Resolver en el teléfono lleva su campo arriba, bajo el título (tarea 344).
+const arribaEnResolver = (elemento: Element | null) => elemento?.closest('[data-buscador-resolver]') ?? null
 const enCabecera = (elemento: Element | null) => elemento?.closest('.sticky.top-0') ?? null
 const controles = (nombre: string) =>
   Array.from(document.body.querySelectorAll<HTMLElement>('button, a')).filter(
@@ -93,25 +95,35 @@ describe('el buscador de una raíz se monta una sola vez', () => {
       ],
       entrada: '/',
       alcance: 'Soluciones IT',
+      // Desde la tarea 344, en el teléfono el campo va arriba y no en el dock.
+      enTelefono: 'arriba' as const,
     },
     {
       nombre: 'Equipos',
       rutas: [{ ruta: '/dispositivos', elemento: <DispositivosPage /> }],
       entrada: '/dispositivos',
       alcance: 'Equipos',
+      enTelefono: 'dock' as const,
     },
   ]
 
   for (const raiz of RAICES) {
     for (const [etiqueta, vista] of ANCHOS) {
-      it(`${raiz.nombre} a ${etiqueta} px: un campo, ${vista.width < 768 ? 'en el dock' : 'en la barra superior'}`, async () => {
+      const dondeEnTelefono = raiz.enTelefono === 'dock' ? 'en el dock' : 'arriba, bajo el título'
+      it(`${raiz.nombre} a ${etiqueta} px: un campo, ${vista.width < 768 ? dondeEnTelefono : 'en la barra superior'}`, async () => {
         verA(vista)
         await montar(raiz.rutas, raiz.entrada)
         const campo = await esperar(() => campos(raiz.alcance)[0], `aparece el buscador de ${raiz.nombre}`)
         expect(campos(raiz.alcance)).toHaveLength(1)
-        // El escáner va con el campo: al lado en el dock, dentro en la barra.
+        // El escáner va con el campo: al lado en el dock, dentro en la barra;
+        // en Resolver del teléfono, en la fila del título (tarea 344).
         expect(controles('Escanear QR')).toHaveLength(1)
-        if (vista.width < 768) {
+        if (vista.width < 768 && raiz.enTelefono === 'arriba') {
+          expect(arribaEnResolver(campo)).not.toBeNull()
+          expect(enDock(campo)).toBeNull()
+          expect(document.body.querySelector('[data-dock-busqueda]')).toBeNull()
+          expect(enCabecera(controles('Escanear QR')[0])).not.toBeNull()
+        } else if (vista.width < 768) {
           expect(enDock(campo)).not.toBeNull()
           expect(enCabecera(campo)).toBeNull()
         } else {
@@ -146,7 +158,7 @@ describe('el buscador de una raíz se monta una sola vez', () => {
       '/',
     )
     await escribir(await esperar(() => campoBuscador(), 'aparece el buscador'), 'impresora')
-    expect(enDock(campoBuscador())).not.toBeNull()
+    expect(arribaEnResolver(campoBuscador())).not.toBeNull()
 
     await act(async () => verA(ESCRITORIO))
     await pausa()
@@ -158,7 +170,8 @@ describe('el buscador de una raíz se monta una sola vez', () => {
     await act(async () => verA(TELEFONO))
     await pausa()
     expect(campos('Soluciones IT')).toHaveLength(1)
-    expect(enDock(campoBuscador())).not.toBeNull()
+    expect(arribaEnResolver(campoBuscador())).not.toBeNull()
+    expect(campoBuscador()?.value).toBe('impresora')
   })
 })
 
