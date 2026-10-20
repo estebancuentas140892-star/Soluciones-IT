@@ -364,7 +364,7 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 <a id="51-resolver"></a>
 ### 5.1 Resolver
 
-**RESOLVER MÁS SIMPLE EN EL TELÉFONO (desde el 2026-10-20, tarea 346, rama `feat/busqueda-aproximada-resolver-simple`, sin integrar).** Solo por debajo de 768 px; manda sobre el bloque de la fase 1 de abajo donde choque. Desde 768 todo sigue igual. Responde primero "¿Qué necesitas resolver?":
+**RESOLVER MÁS SIMPLE EN EL TELÉFONO (desde el 2026-10-20, tarea 346).** Solo por debajo de 768 px; manda sobre el bloque de la fase 1 de abajo donde choque. Desde 768 todo sigue igual. Responde primero "¿Qué necesitas resolver?":
 - **Cabecera:** "Resolver" pequeño (14 px) en la barra, con el escáner QR, la sincronización y la cuenta; sin la frase "Encuentra qué hacer ante un problema técnico.".
 - **La pregunta y el campo:** "¿Qué necesitas resolver?" a 24 px y, debajo, el mismo campo de 60 px y "Prueba con:" con los ejemplos.
 - **Sigue donde ibas:** solo si hay una guía a medias, una fila: "Sigue donde ibas · paso 2 de 3" (o dónde va una guía con preguntas), el título entero y "Continuar". Toda la fila se toca y su nombre accesible dice a dónde lleva ("Continuar en el paso 2: …"). Es la única acción rellena.

@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-20
 
+### Integrado y publicado (tarea 346): búsquedas que toleran errores en Resolver y Equipos, y Resolver más simple en el teléfono, en `main`
+
+**Área modificada:** `4d1563f` (detallado en la entrada de abajo) entra en `main` por avance rápido desde `8d1206e`; la 346 sale del tablero y pasa a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**Tipo:** Cambiado.
+**Motivo:** revisión técnica favorable de ChatGPT y aprobación del usuario para integrar y publicar.
+**Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización).
+**Verificación y estado:** antes de integrar, 3517 pruebas, `tsc -b`, lint, build, `verificar-precache` y sin conexión real (90 de 90) en verde; Resolver revisado a 390 y 320 px. CI en verde para `4d1563f`; Vercel Production "success"; `/version.json` de producción en `4d1563f`; el aviso "Actualizar" lleva de `8d1206e` a `4d1563f` sin reinstalar y sin perder los datos locales. **Completada y archivada.** La 337 sigue pendiente; la 322, separada y sin tocar.
+
 ### Cambiado (tarea 346): búsquedas que toleran errores en Resolver y Equipos, y Resolver más simple en el teléfono, en la rama `feat/busqueda-aproximada-resolver-simple`, sin integrar
 
 **Área modificada:** `src/lib/coincidenciaAproximada.ts` (nuevo), `src/lib/texto.ts`, `src/features/busqueda/useIndiceBusqueda.ts`, `consultaNatural.ts`, `mejores.ts`, `ResultadosBusqueda.tsx` y `BuscadorGlobal.tsx`; `src/features/dispositivos/busquedaEquipos.ts`, `DispositivosPage.tsx` y `ZonaListaEquipos.tsx`; `src/features/inicio/ResolverPage.tsx`; `src/features/soluciones/iconosSoluciones.ts`; `scripts/prueba-sin-conexion.mjs`; pruebas; [TAREAS.md](TAREAS.md), [BUSCADOR.md](BUSCADOR.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md), [COMPONENTES_UI.md](COMPONENTES_UI.md) y [DECISIONES.md](DECISIONES.md) AD-090.
@@ -20,7 +28,7 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Qué cambia en Resolver (solo por debajo de 768 px):** "¿Qué necesitas resolver?" a 24 px sobre el campo y "Resolver" pequeño en la barra, sin la frase "Encuentra qué hacer ante un problema técnico."; "Prueba con:" pegado al campo; "Sigue donde ibas" en una sola fila ("Sigue donde ibas · paso 2 de 3", el título y "Continuar"), solo si hay una guía a medias; "Guías por categoría" en accesos de una línea con su icono y cuántas guías tiene cada una, y "Todas las guías (N)" (antes "¿Qué está fallando?" en cuatro mosaicos y "Ver todas las guías (N)"); "Tu trabajo de hoy" detrás, sin tarjeta, con lo atrasado y lo de hoy en su fila y su color, y "Agenda (N)"; Recientes y la bienvenida del primer día, como estaban. A 390 px la pantalla mide 1032 px de alto (antes 1383). Desde 768 nada cambia.
 **Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización, ni las rutas, ni los permisos).
 **Impacto esperado:** "daniel garcia" encuentra a Daniel Gracia (dicho como posible) sin dejar de poner primero a Daniel García; "no impirme" encuentra "La impresora no imprime" y propone "no imprime"; "impresra" encuentra "impresora"; Equipos encuentra por persona con o sin tildes y con errores. Resolver en el teléfono se lee de arriba abajo en el orden de la necesidad.
-**Verificación:** ver la tarea 346 en [TAREAS.md](TAREAS.md). **Pendiente:** la aprobación del usuario; no está en `main` ni desplegada.
+**Verificación:** ver la tarea 346 en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Integrada y publicada el 2026-10-20 (entrada de arriba).
 
 ### Integrado y publicado (tareas 343, 344 y 345): rediseño móvil, fases 1 y 2, en `main`
 

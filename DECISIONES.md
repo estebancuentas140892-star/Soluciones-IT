@@ -969,7 +969,7 @@ Cada decisión indica su estado (Vigente / Revisada / Descartada), su contexto, 
 
 ## AD-090. Coincidencia aproximada común: Damerau-Levenshtein sobre el vocabulario, sin subir la tolerancia de MiniSearch
 
-- **Estado:** Propuesta (2026-10-20, tarea 346), implementada en la rama `feat/busqueda-aproximada-resolver-simple` desde `8d1206e`, **sin integrar** hasta la aprobación del usuario.
+- **Estado:** Vigente (2026-10-20, tarea 346; hecha en la rama `feat/busqueda-aproximada-resolver-simple` desde `8d1206e`, aprobada por el usuario e **integrada en `main` por avance rápido** (`4d1563f`), desplegada y verificada en Production).
 - **Contexto:** "daniel garcia" no encontraba a Daniel Gracia y "no impirme" no encontraba nada: MiniSearch tolera erratas con Levenshtein, donde dos letras cambiadas de sitio cuestan 2, y con `fuzzy: 0.2` una palabra de 6 o 7 letras solo tolera 1. Equipos filtraba por subcadena y distinguía tildes. Y a la vez la tolerancia ya traía de más: un serial encontraba el de otro equipo por una cifra.
 - **Decisión 1, una regla común en `src/lib/coincidenciaAproximada.ts`:** normalización sin tildes ni mayúsculas (exacta, no aproximada), la tolerancia de siempre (`toleranciaDe`), Damerau-Levenshtein con corte, y lo escrito como un valor (con dígitos o símbolos de IP, ruta, correo o modificador) que nunca se aproxima (`palabrasLiterales`). La usan el índice global y `buscarEquipos`.
 - **Decisión 2, no subir la tolerancia, contar mejor.** En vez de un `fuzzy` mayor (que traería medio índice por cada palabra), el índice guarda su vocabulario y busca aparte, como una errata, solo los términos que Damerau alcanza y Levenshtein no: las transposiciones. Es el mismo número de errores, contado como lo cuenta una persona.
