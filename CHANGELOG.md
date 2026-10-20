@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-20
 
+### Integrado y publicado (tarea 347): cada guía, con su divisor, en Recientes y en los resultados de Resolver, en `main`
+
+**Área modificada:** `137be28` (detallado en la entrada de abajo) entra en `main` por avance rápido desde `2b51109`; la 347 sale del tablero y pasa a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**Tipo:** Cambiado.
+**Motivo:** revisión técnica favorable de ChatGPT y aprobación del usuario para integrar y publicar.
+**Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización).
+**Verificación y estado:** antes de integrar, sobre `137be28`: suite completa (231 archivos y 3519 pruebas), `tsc -b`, lint y build en verde; en el navegador, con el banco de pruebas a 375 px, cada guía de Recientes y de los resultados ("impresora") con su divisor, la última de cada grupo sin él y 12 px arriba y abajo; abrir un resultado o un reciente y volver funciona como antes (la búsqueda se conserva); a 768 px, sin divisores nuevos. CI en verde para `137be28` (ejecución `39461698852`); Vercel Production "success" (despliegue `7205885072`); `/version.json` de producción en `137be28`; por contenido, `max-md:border-noct-divider-fuerte` y `max-md:last:border-b-0` en los trozos `ResolverPage` y `ResultadosBusqueda` que precachea `sw.js`. El aviso "Actualizar" lleva de `2b51109` a `137be28` con una sola recarga, sin reinstalar, sin bucle y sin perder los datos locales. **Completada y archivada.** La 337 sigue pendiente; la 322, separada y sin tocar.
+
 ### Cambiado (tarea 347): cada guía, con su divisor, en Recientes y en los resultados de Resolver, en la rama `fix/separadores-guias-resolver`, sin integrar
 
 **Área modificada:** `src/features/inicio/ResolverPage.tsx` (`FilaReciente`), `src/features/busqueda/ResultadosBusqueda.tsx` (`FilaResultado`, `CLASE_FILA`) y `BorradoresCoincidentes.tsx` (`FilaBorrador`); prueba nueva `separadoresGuias.test.tsx`; [TAREAS.md](TAREAS.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) y [COMPONENTES_UI.md](COMPONENTES_UI.md).
@@ -16,7 +24,7 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Qué cambia (solo por debajo de 768 px):** un divisor horizontal con el trazo fuerte entre cada guía de Recientes, de los resultados de la búsqueda y de los borradores que coinciden, sin divisor detrás de la última de cada lista; 12 px arriba y abajo en cada fila (antes 8 o 9); en Recientes, la fila a todo el ancho del contenido y el título a 15,5/600 con el detalle a 13 en gris, como en la búsqueda. Iconos, acciones y comportamiento, iguales.
 **Estructura de datos:** sin cambios.
 **Impacto esperado:** cada guía se reconoce como una, también con títulos de varias líneas y en el tema claro. Desde 768 nada cambia (capturas idénticas byte a byte).
-**Verificación:** ver la tarea 347 en [TAREAS.md](TAREAS.md). **Pendiente:** la revisión; no está en `main` ni desplegada.
+**Verificación:** ver la tarea 347 en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md). Integrada y publicada el 2026-10-20 (entrada de arriba).
 
 ### Integrado y publicado (tarea 346): búsquedas que toleran errores en Resolver y Equipos, y Resolver más simple en el teléfono, en `main`
 

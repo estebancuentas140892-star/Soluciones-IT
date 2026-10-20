@@ -1,5 +1,19 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-20 (legibilidad): distinguir cada guía en Resolver
+
+### 347. Cada guía, con su divisor, en Recientes y en los resultados de Resolver
+
+**Estado:** Completada (2026-10-20). Implementada en la rama `fix/separadores-guias-resolver` desde `main` (`2b51109`), un solo commit; revisión técnica favorable de ChatGPT y aprobación del usuario; integrada en `main` por **avance rápido** (`2b51109..137be28`), sin commit de fusión, squash ni rebase; desplegada y verificada en Production. Este cierre documental va en un commit propio encima.
+
+**Qué quedó integrado (solo por debajo de 768 px):** cada guía de Recientes (`FilaReciente`), de los resultados de la búsqueda (`FilaResultado`) y de los borradores que coinciden (`FilaBorrador`) lleva un divisor horizontal con el trazo fuerte (`border-noct-divider-fuerte`, que tiene su valor claro), la última de cada lista sin él (`last:border-b-0`), y 12 px arriba y abajo (antes 8 o 9). En Recientes la fila va a todo el ancho del contenido y el título pasa a 15,5/600 con el detalle a 13 en gris, como en la búsqueda. Iconos, acciones, enlaces, navegación y comportamiento, iguales; sin tarjetas, sombras ni bloques nuevos. Desde 768, nada cambia.
+
+**Verificación:** antes de la revisión, en la rama: 40 archivos y 633 pruebas afectadas y la nueva `src/features/inicio/separadoresGuias.test.tsx`, `tsc -b`, lint, build y la suite completa; capturas a 320, 390 y 768 px en oscuro y claro, en reposo y buscando "impresora": desde 768, idénticas byte a byte a `main`. Antes de integrar, sobre `137be28`: suite completa 231 archivos y 3519 pruebas, `tsc -b`, lint y build en verde; en el navegador, con el banco de pruebas a 375 px, Recientes y los resultados de "impresora" con un divisor entre cada guía, ninguno detrás de la última de cada grupo y 12 px arriba y abajo; abrir un resultado (a su guía) o un reciente (a su diagnóstico) y volver funciona como antes, y la búsqueda se conserva al volver; a 768 px, sin divisores nuevos y con el relleno de antes. **Después de integrar (reglas 14 y 21):** CI en verde para `137be28` (ejecución `39461698852`: pruebas, lint y build); Vercel Production "success" (despliegue `7205885072`); `/version.json` de producción en `137be28`; por contenido, `max-md:border-noct-divider-fuerte` y `max-md:last:border-b-0` en los trozos `ResolverPage` y `ResultadosBusqueda` que precachea `sw.js`. El aviso "Actualizar", en un navegador con `2b51109` instalada: apareció al reabrir la app ("Versión nueva disponible"), recargó una sola vez a `137be28` sin reinstalar, el precache quedó con el `index` nuevo y sin el viejo, sin bucle de recargas y con los datos locales (localStorage e IndexedDB) intactos.
+
+**Relación con otras tareas:** el buscador de la **346** no cambia; la **337** sigue pendiente y la **322** separada en su rama, sin tocar. Sin migraciones de Supabase ni cambios de Dexie, de la sincronización ni de datos.
+
+**Área afectada:** `src/features/inicio/ResolverPage.tsx` (`FilaReciente`), `src/features/busqueda/ResultadosBusqueda.tsx` (`FilaResultado` y `CLASE_FILA`), `src/features/busqueda/BorradoresCoincidentes.tsx` (`FilaBorrador`); prueba nueva `src/features/inicio/separadoresGuias.test.tsx`.
+
 ## Encargo del 2026-10-20: búsquedas que toleran errores y Resolver más simple en el teléfono
 
 ### 346. Búsqueda aproximada en Resolver y Equipos, y Resolver más simple en el teléfono
