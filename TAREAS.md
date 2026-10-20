@@ -4,17 +4,6 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
-**ENCARGO DEL 2026-10-19: REDISEÑO MÓVIL, FASE 1 (DESPUÉS de Claude Design "Soluciones IT · Rediseño móvil").** Solo por debajo de 768 px y solo Resolver, la búsqueda y la ficha de equipo; tableta y escritorio no cambian. Base `main` en `4916e01`; no toca las tareas 322 ni 337 ni la rama de la 343. Rama `feat/rediseno-movil-fase1` (worktree `C:\Users\ecardona\dev\sit-rediseno-movil-f1`), **sin integrar en `main` ni desplegar**: ChatGPT revisa los cambios y las capturas antes de autorizar la integración.
-
-### 344. Rediseño móvil, fase 1: Resolver, búsqueda y ficha de equipo
-
-- **Descripción:** implementar el DESPUÉS aprobado en las tres pantallas del teléfono. Resolver con el buscador arriba, ejemplos, "Sigue donde ibas", "Tu trabajo de hoy" y "¿Qué está fallando?"; la búsqueda como pantalla propia con "La guía que mejor coincide" y lo demás por tipo; la ficha con los datos para trabajar primero, el mantenimiento a la vista, las guías en filas cortas y "Clave" con su palabra.
-- **Motivo:** que alguien nuevo entienda qué hacer en Resolver, encuentre una guía al escribir el problema y consulte un equipo sin recorrer pantallas.
-- **Impacto:** presentación del teléfono; sin cambios de datos, rutas, permisos, sincronización ni del motor de búsqueda.
-- **Prioridad:** Alta. **Estado:** En progreso: implementada y verificada en la rama, **pendiente de la revisión de ChatGPT**; no se archiva ni se integra hasta su aprobación.
-- **Área afectada y ubicación:** `src/features/inicio/ResolverPage.tsx` (rama del teléfono del render, `SeguirEnTelefono`, `TrabajoDeHoy`, `QueEstaFallando`), `src/features/inicio/resolver.ts` (`textoSinUrgencias`), `src/features/busqueda/ResultadosBusqueda.tsx` (`GuiaQueMejorCoincide`, `useAbrirResultado`, rama `enTelefono`), `presentacionResultados.ts` (`lecturaParaTelefono`), `EstadosBusquedaMovil.tsx` (nuevo), `BuscadorGlobal.tsx` (campo arriba en el teléfono), `resultados.ts` (marcadores y `EJEMPLOS_BUSCADOR`), `src/features/dispositivos/DispositivoPage.tsx` (carnet, tarjeta de datos, fila de mantenimiento) y `PiezasFicha.tsx` (`ResolverConEsteEquipo` `compacta`, `FilaIndice`, `BarraAccionEquipo` "Clave"), `src/components/CampoBusqueda.tsx` (variante `resolver`, `onEnfocar`), `BarraSuperior.tsx` y `src/app/Chasis.tsx` (`sinCabeceraEnTelefono`, `accionTelefono`).
-- **Dependencias:** ninguna. **Queda fuera de esta fase** (el DESPUÉS lo propone, pero pide decisiones o pantallas que no son de esta fase): la hoja de la clave con el desbloqueo dentro (la "Clave" abre la hoja de credenciales de siempre, que lleva a la Bóveda), el "Al día" con palabra en la sincronización (`PastillaSync` es de todas las pantallas), la presentación única de la guía con el equipo opcional, el historial de intervenciones a la vista en la ficha y la lista de Equipos con el buscador arriba.
-
 **ENCARGO DEL 2026-09-29: CONSOLIDAR, SIMPLIFICAR, FORTALECER Y OPTIMIZAR.** Sin rediseño general ni módulos por agregar. Al principio "Resolver → encontrar → ejecutar → solucionar" se suma otro: **la aplicación sabe mucho, pero muestra solo lo necesario en cada momento**; lo que no aporta algo nuevo o útil se simplifica, se oculta o se retira. Tarea por tarea, cada una con sus pruebas, `npm test`, `npm run lint`, `npm run build`, tablero, commit y push propios. No se reimplementa lo que ya existe, no se descarta trabajo sin commit, no se cambian datos reales para que una pantalla se vea mejor, y una tarea que el código ya resuelve se cierra documentando la conclusión, sin fabricar cambios.
 
 | Fase | Tarea del encargo | Tarea del tablero | Estado |
@@ -108,45 +97,23 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 |---|---|---|---|
 | A, B y C | Ficha de equipo, búsqueda global y estados del sistema (esqueletos, sin conexión, error y línea de sincronización) | 342 | Hecha (archivada) |
 
-**ENCARGO DEL 2026-10-19: REDISEÑO MÓVIL, FASE 2 (GUÍA, MANTENIMIENTO Y FACTURACIÓN).** Fuente: el DESPUÉS aprobado de Claude Design ("Soluciones IT · Rediseño móvil"); la facturación, que no está en ese archivo, sigue el handoff "1b Pulgar" (sección 08). La fase 1 (Resolver, Búsqueda y Ficha) es la tarea 344, en la rama `feat/rediseno-movil-fase1`, aprobada y sin integrar. Solo presentación por debajo de 768 px; desde 768 se conserva lo aprobado. No toca Supabase, Dexie, la sincronización, los permisos, las búsquedas, los datos ni los modelos.
+**ENCARGO DEL 2026-10-19: REDISEÑO MÓVIL, FASE 1 (DESPUÉS de Claude Design "Soluciones IT · Rediseño móvil").** Solo por debajo de 768 px y solo Resolver, la búsqueda y la ficha de equipo; tableta y escritorio no cambian. Base `main` en `4916e01`. Integrada en `main` el 2026-10-20 junto con la fase 2 (`4916e01..461c446`), desplegada y verificada en Production.
 
 | Bloque | Qué | Tarea del tablero | Estado |
 |---|---|---|---|
-| A, B y C | Guía en ejecución, mantenimiento y autorizaciones de facturación en el teléfono | 345 | En proceso (rama `feat/rediseno-movil-fase2`, sin integrar) |
+| A, B y C | Resolver, búsqueda y ficha de equipo en el teléfono | 344 | Hecha (archivada) |
 
-### 345. Rediseño móvil, fase 2: guía, mantenimiento y facturación
+**ENCARGO DEL 2026-10-19: REDISEÑO MÓVIL, FASE 2 (GUÍA, MANTENIMIENTO Y FACTURACIÓN).** Fuente: el DESPUÉS aprobado de Claude Design ("Soluciones IT · Rediseño móvil"); la facturación, que no está en ese archivo, sigue el handoff "1b Pulgar" (sección 08). La fase 1 (Resolver, Búsqueda y Ficha) es la tarea 344; las dos entraron juntas en `main` el 2026-10-20 (`4916e01..461c446`). Solo presentación por debajo de 768 px; desde 768 se conserva lo aprobado. No toca Supabase, Dexie, la sincronización, los permisos, las búsquedas, los datos ni los modelos.
 
-- **Descripción:** **A, guía:** cabecera con "Salir" y "Tu avance se guarda solo"; la guía, el equipo y el paso entero ("Paso 2 de 4 · …") sobre los segmentos; "Pasos" en vez de "2/4" (el mismo índice); el botón relleno dice a dónde lleva ("Hecho, siguiente acción", "Hecho, ir al paso N", "Hecho, comprobar el resultado") sin cambiar lo que hace; la instrucción a 23/650 y "Cómo hacerlo" con números en círculo; la fila "Clave necesaria" y, en su hoja (contexto "Sin salir de la guía"), el aviso "Se abre aquí. Tu paso sigue debajo, como lo dejaste." y "Volver a la guía". **B, mantenimiento:** el estado en `PastillaEstado` con punto (atrasado con el día que tocaba, hoy, pospuesto), en la pantalla y en la lista; la tarjeta de contexto (qué hay que hacer, la última vez confirmada y el antecedente por validar, solo con lo que existe); "¿Cómo terminó?" en tres segmentos; "Se hizo hoy · lo hiciste tú" con "Cambiar"; la evidencia dicha como es; "Guardar en el historial" fijo abajo. **C, facturación:** la pastilla de la fila con su punto, "Rango … · POS" en una línea, los grupos como frase con su conteo y el nombre de cada capa como frase.
-- **Base:** la 343 (`7ef8960`), traída con `cherry-pick` sobre `main` (`4916e01`) tras revisarla: cubría A2, A3, B2 a B4 y C1 a C5. Su entrada sigue más abajo.
-- **Motivo:** encargo del usuario del 2026-10-19.
-- **Impacto:** visual, en el teléfono. Sin datos, estados, rutas ni funciones nuevas. En la pantalla de un mantenimiento se lee además el último realizado y el antecedente del mismo equipo (la misma consulta local de su lista).
-- **Prioridad:** Alta. **Estado:** En proceso.
-- **Área afectada:** `src/app/Chasis.tsx`, `src/components/BarraTarea.tsx`, `src/components/OpcionRadio.tsx`, `src/features/soluciones/AsistentePage.tsx`, `AsistenteVista.tsx`, `ModoFoco.tsx`, `SenalesDePaso.tsx`, `src/features/boveda/CredencialEnHoja.tsx`, `src/features/mantenimientos/MantenimientoPage.tsx`, `MantenimientosDelEquipo.tsx`, `mantenimiento.ts`, `src/features/facturacion/AutorizacionesPage.tsx`, `AutorizacionPage.tsx`, `PresentacionAutorizacion.tsx`, `src/pruebas/montaje.ts`.
-- **Desde 768:** la composición de `main` no cambia (comprobado con capturas a 768 y 1280 contra `main`, mismos datos). Las dos piezas de la 343 que también cambiaban ahí vuelven a ser solo del teléfono: la pastilla de una autorización (desde 768, la propia de antes) y el ejemplo de "Qué se hizo y cómo quedó".
-- **Pruebas:** las que buscaban "Completar y seguir" usan `COMPLETAR_Y_SEGUIR` (`src/pruebas/montaje.ts`), que acepta los rótulos del teléfono; nuevas en `remateGuiaPulgar.test.tsx` (cabecera, rótulos, hoja de la credencial y 768) y `mantenimientoFlujo.test.tsx` (contexto, segmentos, "Cambiar", pie fijo y 768).
-- **Pendiente:** "Agregar foto" antes de guardar (la evidencia cuelga de la intervención que crea el cierre; adjuntarla antes cambiaría el flujo de datos); la explicación "¿Qué significa?" de confirmado y por validar en su hoja; el rótulo "¿No funciona? Ver qué hacer" del diseño (se conserva "Tengo un problema", como pidió el encargo). Integrar con la 344: las dos ramas tocan `src/app/Chasis.tsx` y los documentos.
-- **Modelo/esfuerzo:** Opus 5.5 / Alto.
-- **Verificación (2026-10-19):** suite completa 226 archivos y 3445 pruebas en verde, `tsc -b`, lint y build.
-- **Estado:** implementada en la rama `feat/rediseno-movil-fase2`, con push y **sin integrar en `main` ni desplegar**, a la espera de la revisión de ChatGPT.
+| Bloque | Qué | Tarea del tablero | Estado |
+|---|---|---|---|
+| A, B y C | Guía en ejecución, mantenimiento y autorizaciones de facturación en el teléfono | 345 | Hecha (archivada) |
 
 **ENCARGO DEL 2026-10-16 (SEGUNDA PARTE): FIDELIDAD "1b PULGAR" EN MANTENIMIENTO, FACTURACIÓN Y GUÍA.** Mismo handoff móvil. Siguiente bloque visual que ChatGPT definió sobre `main` (`4916e01`); no reabre las 327 a 342. Solo presentación por debajo de 768 px; desde 768 se conserva lo aprobado. No toca la 322, la 337, Supabase, Dexie, la sincronización, los datos, las rutas ni los modelos de mantenimiento y autorización.
 
 | Bloque | Qué | Tarea del tablero | Estado |
 |---|---|---|---|
-| A, B y C | Mantenimiento, autorizaciones de facturación y remates de la ejecución de guía | 343 | En proceso (rama `feat/fidelidad-pulgar-mantenimiento-facturacion-guia`, sin integrar) |
-
-### 343. Fidelidad Pulgar: mantenimiento, facturación y guía
-
-- **Descripción:** **A, mantenimiento:** lo atrasado en error y lo pospuesto con su pastilla de precaución; lo realizado con su evidencia (si la hay) y "En el historial" en éxito; el antecedente con "Según {fuente}: marca {ESTADO}" y "Ver fuente"; el aviso de "Qué se hizo" en línea con el borde en rojo; las tres respuestas del cierre como tarjetas verticales con lo que hace cada una; el ejemplo "Ej.: limpieza interna, cambio de cable de red". **B, facturación:** el prefijo una sola vez a la vista (sube a la cabecera al desplazarse), la pastilla de siempre (`PastillaEstado`) con su punto, el texto del handoff bajo cada capa, el instrumento vacío del consecutivo, el menú "···" en una hoja con "Marcar como reemplazada" (el formulario de siempre) y Eliminar aparte, y la fila de la lista de 72 con el prefijo en mono. **C, guía:** el contador en su caja de 40, el índice "Pasos" con el número en IBM Plex Mono en filas de 58, "Tengo un problema" en `HojaInferior` con las mismas salidas, y en la hoja de la credencial "Sin salir de la guía" y "Desbloquear" relleno a todo el ancho con "Comprobando…".
-- **Motivo:** encargo del usuario del 2026-10-16, con el detalle de ChatGPT.
-- **Impacto:** visual, en el teléfono. Sin datos, estados, rutas ni funciones nuevas.
-- **Prioridad:** Alta. **Estado:** En proceso.
-- **Área afectada:** `src/features/mantenimientos/MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`, `mantenimiento.ts` y `antecedentes.ts`; `src/features/facturacion/AutorizacionPage.tsx` y `PresentacionAutorizacion.tsx`; `src/features/soluciones/AsistenteVista.tsx`, `HojaPasos.tsx` y `HojaFalla.tsx`; `src/features/boveda/CredencialEnPaso.tsx` y `CredencialEnHoja.tsx`; `src/components/OpcionRadio.tsx`.
-- **Fuera de alcance:** la presentación inicial de la guía (sigue abriéndose en ejecución), "Ir a Resolver" en la pantalla final, el espaciado de "Cómo hacerlo" (regla 27), la 337 (la fila sigue diciendo "Credencial del equipo"), Agenda, Resolver, la ficha de equipo, la búsqueda y los estados del sistema de la 342.
-- **Desde 768:** la composición aprobada no cambia. La única pieza compartida que cambia algo ahí es la pastilla de una autorización, que reutiliza `PastillaEstado` (11 px y su relleno, en vez de 11.5) como pidió el encargo.
-- **Modelo/esfuerzo:** Sonnet 5 / Alto (ejecutada con Opus 5.5).
-- **Verificación (2026-10-16, sobre `4916e01`):** suite completa 226 archivos y 3438 pruebas en verde (en una primera pasada dos pruebas de guías agotaron su espera de 4 s bajo carga; solas pasan 46 de 46 y la suite entera pasó en la segunda), `tsc -b`, lint, build, `verificar-precache` y la prueba sin conexión real (84 de 84, 0 fallos). Sin auditoría visual masiva.
-- **Estado:** implementada en la rama `feat/fidelidad-pulgar-mantenimiento-facturacion-guia`, con push y **sin integrar en `main` ni desplegar**, a la espera de la revisión de ChatGPT. Desde el 2026-10-19 es la base de la 345 (rama `feat/rediseno-movil-fase2`).
+| A, B y C | Mantenimiento, autorizaciones de facturación y remates de la ejecución de guía | 343 | Hecha (archivada) |
 
 ### 279. Desbloqueo rápido de la Bóveda: solo si es igual de seguro
 

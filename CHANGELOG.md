@@ -6,6 +6,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-20
+
+### Integrado y publicado (tareas 343, 344 y 345): rediseño móvil, fases 1 y 2, en `main`
+
+**Área modificada:** `a8dc72f` (fase 1, tarea 344), `351b845` (la 343, base de la fase 2) y `3ace779` (fase 2, tarea 345), traídos con `cherry-pick` en ese orden desde `main` (`4916e01`) como `f7426a7`, `b55eedb` y `2c53c68`, y `461c446` encima: `scripts/prueba-sin-conexion.mjs`, que corre a 390 px y buscaba "Completar y seguir" y "Cerrar y registrar en el equipo", acepta los rótulos del teléfono de la 345 con el mismo criterio que `COMPLETAR_Y_SEGUIR` (`src/pruebas/montaje.ts`). Entran en `main` por avance rápido (`4916e01..461c446`); no se trajo `7ef8960`, el mismo árbol que `351b845`. Las tres tareas pasan a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+**Tipo:** Cambiado.
+**Motivo:** encargo del usuario del 2026-10-20: unificar las dos fases del rediseño móvil, comprobar que funcionan juntas y publicarlas.
+**Conflictos:** solo en este historial (se conservan las dos entradas del 2026-10-19). En `src/app/Chasis.tsx`, lo único de código que tocan las dos fases, conviven `sinCabeceraEnTelefono` y `accionTelefono` (344) con `cabeceraDeGuia` (345).
+**Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización, ni el índice de búsqueda, ni los permisos, ni las rutas).
+**Impacto esperado:** el teléfono enseña a la vez Resolver, la búsqueda y la ficha de la fase 1 y la guía, el mantenimiento y la facturación de la fase 2. Desde 768 nada cambia.
+**Verificación y estado:** 226 archivos y 3470 pruebas, `tsc -b`, lint, build, `verificar-precache`, la prueba sin conexión real (84 de 84) y la de actualización A a B de la PWA, en verde; las seis áreas en el navegador a 390 y 320 px, sin desplazamiento horizontal, con la Bóveda, la navegación y los regresos intactos; desde 768, 39 de 39 capturas idénticas byte a byte a `main`. CI en verde para `461c446`; Vercel Production "success"; `/version.json` de producción en `461c446`. **Completadas y archivadas.** La 337 sigue pendiente y la 322 separada, sin tocar. Detalle en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
+
 ## 2026-10-19
 
 ### Cambiado (tarea 345): rediseño móvil, fase 2: guía, mantenimiento y facturación en el teléfono
@@ -19,7 +31,7 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 - **Facturación:** la pastilla de cada fila con su punto; "Rango … · POS" en una línea, con el vencimiento confirmado debajo; los grupos como frase y con su conteo ("Piden revisión 1"); el nombre de cada capa como frase a 15.
 **Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización, ni los permisos, ni las rutas, ni los modelos). Lo que se guarda al cerrar un mantenimiento y al completar una acción es lo mismo de antes.
 **Impacto esperado:** las tres áreas del teléfono se leen como el DESPUÉS aprobado. Desde 768 la composición de `main` no cambia: la pastilla de una autorización y el ejemplo de "Qué se hizo", que la 343 cambiaba también ahí, vuelven a ser solo del teléfono.
-**Verificación:** ver la tarea 345 en [TAREAS.md](TAREAS.md).
+**Verificación:** ver la tarea 345 en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 ### Cambiado (tarea 344): rediseño móvil, fase 1 (Resolver, búsqueda y ficha de equipo), en la rama `feat/rediseno-movil-fase1`, sin integrar
 
@@ -48,7 +60,7 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 - **Guía:** el contador en su caja de 40; el índice "Pasos" con el número en IBM Plex Mono en filas de 58; "Tengo un problema" en `HojaInferior` con las mismas salidas; en la hoja de la credencial, "Sin salir de la guía" y "Desbloquear" relleno a todo el ancho con "Comprobando…".
 **Estructura de datos:** sin cambios (ni Supabase, ni Dexie, ni la sincronización, ni los datos, ni las rutas, ni los modelos de mantenimiento y autorización).
 **Impacto esperado:** las tres pantallas del teléfono se leen como el prototipo. Desde 768 la composición aprobada no cambia.
-**Verificación:** ver la tarea 343 en [TAREAS.md](TAREAS.md).
+**Verificación:** ver la tarea 343 en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).
 
 ### Integrado y cerrado (tarea 342): fidelidad visual "1b Pulgar" de la ficha, la búsqueda y los estados del sistema, en `main`
 
