@@ -75,6 +75,14 @@ const TIPOS = {
   '.woff2': 'font/woff2',
 }
 const SIN_CACHE = /^\/(sw\.js|registerSW\.js|version\.json|manifest\.webmanifest)$/
+// Desde la tarea 345, en el telefono (esta prueba corre a 390 px) el boton
+// relleno de la ejecucion dice a donde lleva: "Hecho, siguiente accion",
+// "Hecho, ir al paso N" o "Hecho, comprobar el resultado"; desde 768 sigue
+// siendo "Completar y seguir". Hace lo mismo. El mismo criterio que
+// COMPLETAR_Y_SEGUIR de src/pruebas/montaje.ts.
+const COMPLETAR_Y_SEGUIR = /^(Completar y seguir|Hecho, siguiente acción|Hecho, ir al paso \d+|Hecho, comprobar el resultado)$/
+const ES_COMPLETAR_Y_SEGUIR = `((e) => new RegExp(${JSON.stringify(COMPLETAR_Y_SEGUIR.source)}).test(e.textContent.replace(/\\s+/g, ' ').trim()))`
+const HAY_COMPLETAR_Y_SEGUIR = `[...document.querySelectorAll('button')].some(${ES_COMPLETAR_Y_SEGUIR})`
 
 function compilar() {
   paso(`0. Compilando como en produccion en ${SALIDA}, contra ${URL_SUPABASE}`)
@@ -192,6 +200,18 @@ class Sesion {
       b.click()
       await new Promise((r) => setTimeout(r, 600))
       return true
+    `)
+  }
+  // El boton relleno de la ejecucion, diga lo que diga (ver
+  // COMPLETAR_Y_SEGUIR). Devuelve el rotulo que toco, o false.
+  async tocarCompletar() {
+    return this.evaluar(`
+      const b = [...document.querySelectorAll('button')].find(${ES_COMPLETAR_Y_SEGUIR})
+      if (!b) return false
+      const rotulo = b.textContent.replace(/\\s+/g, ' ').trim()
+      b.click()
+      await new Promise((r) => setTimeout(r, 600))
+      return rotulo
     `)
   }
   // Los campos de secreto son texto enmascarado por CSS (CampoContrasena),
@@ -643,7 +663,7 @@ async function main() {
     // "Terminar" (antes "Faltan N comprobaciones" y "Finalizar").
     const COMPROBACION_FINAL = '¿Quedó resuelto?'
     paso('4b2. La comprobación final sin red: "Anterior" vuelve a la última acción y solo "Terminar" termina (tarea 308)')
-    await s.tocar('Completar y seguir')
+    await s.tocarCompletar()
     comprobar(
       Boolean(await s.hasta(`document.body.innerText.includes('Selecciona Guardar')`, 'el paso 2')),
       'lo reutilizado se completa y sigue en el paso 2',
@@ -660,20 +680,20 @@ async function main() {
       'la acción de riesgo llega por su advertencia previa, sin red (tarea 311)',
     )
     comprobar(
-      !(await s.evaluar(`return [...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Completar y seguir')`)),
+      !(await s.evaluar(`return ${HAY_COMPLETAR_Y_SEGUIR}`)),
       'la advertencia no se completa: solo lleva a la acción',
     )
     await s.tocar('Entiendo, continuar')
     comprobar(
       Boolean(
         await s.hasta(
-          `[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === 'Completar y seguir') && !document.body.innerText.includes('Guardar reemplaza el registro de prueba anterior.')`,
+          `${HAY_COMPLETAR_Y_SEGUIR} && !document.body.innerText.includes('Guardar reemplaza el registro de prueba anterior.')`,
           'la acción',
         ),
       ),
       'y "Entiendo, continuar" lleva a la acción, que no repite el riesgo',
     )
-    await s.tocar('Completar y seguir')
+    await s.tocarCompletar()
     comprobar(
       Boolean(await s.hasta(`document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)})`, 'la comprobación final')),
       'la última acción lleva a la comprobación final',
@@ -828,7 +848,10 @@ async function main() {
       ),
       'se escribe qué se hizo',
     )
-    await s.tocar('Cerrar y registrar en el equipo')
+    // Desde la tarea 345, en el telefono el registro dice donde queda
+    // ("Guardar en el historial"); desde 768 sigue siendo "Cerrar y
+    // registrar en el equipo". Guarda lo mismo.
+    await s.tocar('Guardar en el historial')
     const cerrado = Boolean(
       await s.hasta(`document.body.innerText.includes('Realizado y registrado en el historial del equipo.')`, 'el cierre'),
     )
