@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Fragment, useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
-import { CaretDown, CaretRight, CaretUp, Check, Crosshair } from '../../components/iconos'
+import { CaretDown, CaretRight, CaretUp, Check, Crosshair, Lightbulb, Question } from '../../components/iconos'
 import { BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
 import { useEsAncho } from '../../components/useEsAncho'
 import { db } from '../../lib/db'
@@ -243,6 +243,17 @@ export function FilaResultado({
             {post}
           </span>
         )}
+        {/* POSIBLE COINCIDENCIA (tarea 346): coincide con una errata de lo
+            escrito, no tal cual. Se dice con su icono y su palabra. */}
+        {resultado.aproximado && (
+          <span
+            data-posible-coincidencia
+            className="inline-flex items-center gap-1 text-[12.5px] font-medium leading-[1.4] text-noct-precaucion max-md:text-[13px]"
+          >
+            <Question size={12} className="shrink-0" aria-hidden />
+            Posible coincidencia
+          </span>
+        )}
         {conSuTipo ? (
           // LISTA MIXTA: el tipo, más claro, y el resto del contexto.
           <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-500 max-md:text-[13px]">
@@ -388,8 +399,11 @@ function GuiaQueMejorCoincide({ resultado, cercana }: { resultado: ResultadoBusq
   const continuar = accion?.estado === 'continuar' && accion.pendiente.tipo === 'paso'
   return (
     <section aria-labelledby="guia-mejor-coincide" className="flex flex-col gap-2">
+      {/* Una guía que solo coincide con una errata no "mejor coincide":
+          se destaca igual (es lo primero del orden), pero dicha como una
+          posible coincidencia (tarea 346). */}
       <h2 id="guia-mejor-coincide" className={ROTULO_TELEFONO}>
-        La guía que mejor coincide
+        {resultado.aproximado ? 'Posible coincidencia' : 'La guía que mejor coincide'}
       </h2>
       <div className="flex flex-col gap-3.5 rounded-[18px] border-[1.5px] border-noct-accent bg-noct-surface p-4">
         <div className="flex min-w-0 flex-col gap-1">
@@ -428,6 +442,31 @@ function GuiaQueMejorCoincide({ resultado, cercana }: { resultado: ResultadoBusq
   )
 }
 
+// "QUIZÁS BUSCABAS…" (tarea 346). Cuando una palabra no existe tal como se
+// escribió, la consulta con la palabra más cercana que sí existe. Es una
+// propuesta: el campo conserva lo escrito y nada se abre solo; tocarla
+// busca eso, y es el técnico quien decide tocarla.
+function QuizasBuscabas({ sugerencia, onUsar }: { sugerencia: string; onUsar?: (texto: string) => void }) {
+  return (
+    <p data-quizas-buscabas className="flex flex-wrap items-center gap-x-1.5 px-0.5 text-[14px] leading-snug text-noct-neutral-300">
+      <Lightbulb size={15} className="shrink-0 text-noct-precaucion" aria-hidden />
+      <span>Quizás buscabas</span>
+      {onUsar ? (
+        <button
+          type="button"
+          onClick={() => onUsar(sugerencia)}
+          aria-label={`Buscar «${sugerencia}»`}
+          className="inline-flex min-h-11 items-center font-semibold text-noct-accent-300 hover:underline"
+        >
+          «{sugerencia}»
+        </button>
+      ) : (
+        <span className="font-semibold text-noct-text">«{sugerencia}»</span>
+      )}
+    </p>
+  )
+}
+
 // El rótulo de una sección de resultados en el teléfono (tarea 344): 15 px
 // en texto 2, sin mayúsculas, como el DESPUÉS de Claude Design.
 const ROTULO_TELEFONO = 'text-[15px] font-[650] leading-snug text-noct-neutral-300'
@@ -446,6 +485,8 @@ export function ResultadosBusqueda({
   huboDesbloqueo = false,
   modo = 'normal',
   enCapa = false,
+  sugerencia = null,
+  onUsarSugerencia,
 }: {
   /** Lo que devolvio `buscar`, en su orden. */
   resultados: ResultadoBusqueda[]
@@ -470,6 +511,10 @@ export function ResultadosBusqueda({
    * saber para reponer la búsqueda donde estaba (sección 13).
    */
   enCapa?: boolean
+  /** "Quizás buscabas…" (`sugerirConsulta`), o null si no hay nada que proponer. */
+  sugerencia?: string | null
+  /** Buscar la sugerencia. Sin esto, se dice pero no se toca. */
+  onUsarSugerencia?: (texto: string) => void
 }) {
   const accionesGuia = useAccionesDeGuia()
   const equipos = useDatosDeEquipos()
@@ -563,8 +608,14 @@ export function ResultadosBusqueda({
     return (
       <ContextoResultados.Provider value={contexto}>
         <div className="flex flex-col gap-5">
+          {sugerencia && <QuizasBuscabas sugerencia={sugerencia} onUsar={onUsarSugerencia} />}
           {telefono.destacada && (
-            <GuiaQueMejorCoincide resultado={telefono.destacada} cercana={lectura.confianza !== 'alta'} />
+            <GuiaQueMejorCoincide
+              resultado={telefono.destacada}
+              // "Hay otras guías parecidas debajo" solo si las hay (tarea 346):
+              // una posible coincidencia nunca es "alta" y puede ser la única.
+              cercana={lectura.confianza !== 'alta' && telefono.grupos.some((grupo) => grupo.id === 'soluciones' && grupo.items.length > 0)}
+            />
           )}
           {telefono.grupos.map((grupo, indice) => {
             const conPrefijo = filasConPrefijoComun(grupo.items, consulta)
@@ -685,6 +736,7 @@ export function ResultadosBusqueda({
   return (
     <ContextoResultados.Provider value={contexto}>
       <div className="@container flex flex-col gap-5">
+        {sugerencia && <QuizasBuscabas sugerencia={sugerencia} onUsar={onUsarSugerencia} />}
         {secciones.map((seccion, indice) => {
           // LISTA HOMOGÉNEA, sección por sección: 3 o más filas que
           // empiezan por lo buscado llevan ese comienzo atenuado.

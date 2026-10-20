@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import type { TipoArticulo } from '../../lib/db'
 import { iconoPorPalabraClave } from '../../lib/iconoPorPalabraClave'
+import { normalizarTexto } from '../../lib/texto'
 import {
   BookOpen,
   Code,
@@ -19,12 +20,9 @@ import {
 
 // Minusculas sin acentos para comparar nombres de categoria escritos
 // por el equipo ("Cámaras", "Cómputo") con las palabras clave del mapa.
-export function normalizarTexto(texto: string): string {
-  return texto
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-}
+// Desde la tarea 346 vive en `lib/texto.ts`; se sigue exportando desde
+// aqui para quien ya la importaba.
+export { normalizarTexto } from '../../lib/texto'
 
 // Icono por tipo de articulo (los 6 fijos de TipoArticulo). Traslada a
 // Nocturne los iconos que el handoff de Soluciones daba por tipo: el

@@ -364,6 +364,15 @@ Las eliminaciones son **borrados suaves** (`eliminado_en`), no borrado físico.
 <a id="51-resolver"></a>
 ### 5.1 Resolver
 
+**RESOLVER MÁS SIMPLE EN EL TELÉFONO (desde el 2026-10-20, tarea 346, rama `feat/busqueda-aproximada-resolver-simple`, sin integrar).** Solo por debajo de 768 px; manda sobre el bloque de la fase 1 de abajo donde choque. Desde 768 todo sigue igual. Responde primero "¿Qué necesitas resolver?":
+- **Cabecera:** "Resolver" pequeño (14 px) en la barra, con el escáner QR, la sincronización y la cuenta; sin la frase "Encuentra qué hacer ante un problema técnico.".
+- **La pregunta y el campo:** "¿Qué necesitas resolver?" a 24 px y, debajo, el mismo campo de 60 px y "Prueba con:" con los ejemplos.
+- **Sigue donde ibas:** solo si hay una guía a medias, una fila: "Sigue donde ibas · paso 2 de 3" (o dónde va una guía con preguntas), el título entero y "Continuar". Toda la fila se toca y su nombre accesible dice a dónde lleva ("Continuar en el paso 2: …"). Es la única acción rellena.
+- **Guías por categoría:** las categorías con guías publicadas para ejecutar, en accesos de una línea (icono, nombre y cuántas guías), cada uno al catálogo filtrado; al final, siempre, "Todas las guías (N)".
+- **Tu trabajo de hoy:** detrás, sin tarjeta: lo vencido y lo de hoy, hasta tres, en la fila de la Agenda con su color, "Y N más..." si hay más, o "Nada atrasado ni para hoy..." en una línea; "Agenda (N)" a la derecha.
+- **Recientes** y la bienvenida del primer día, como estaban.
+- **Buscar con errores (todos los anchos):** un resultado que solo coincide con una errata lleva "Posible coincidencia"; en el teléfono, la guía destacada que solo coincide así se rotula "Posible coincidencia" en vez de "La guía que mejor coincide". Si una palabra no existe como se escribió, arriba sale "Quizás buscabas «…»": tocarlo busca eso; el campo conserva lo escrito y nada se abre solo. Ver [BUSCADOR.md](BUSCADOR.md), sección 7.14.
+
 **REDISEÑO MÓVIL, FASE 1 (desde el 2026-10-19, tarea 344, DESPUÉS de Claude Design).** Solo por debajo de 768 px; manda sobre el bloque "1b Pulgar" de abajo donde choque. Desde 768 todo sigue como se describe más abajo.
 - **Cabecera:** "Resolver" con el escáner QR, la sincronización y la cuenta; debajo, "Encuentra qué hacer ante un problema técnico.".
 - **El buscador, arriba** (no en el dock): el mismo campo ("Buscar en Soluciones IT"), de 60 px con borde de acento, marcador "Describe el problema o un equipo" ("El problema o un equipo" por debajo de 360 px). Debajo, "Prueba con:" y los ejemplos (no imprime, usuario bloqueado, impresora mercadeo) como botones que escriben la consulta.
@@ -608,6 +617,8 @@ Hallazgos **M-004**, **M-005** y **M-009**, regla **M-R8**. Había **nueve copia
 
 <a id="53-equipos"></a>
 ### 5.3 Equipos
+
+**BUSCAR CON ERRORES (desde el 2026-10-20, tarea 346, en todos los anchos).** El buscador de Equipos encuentra sin distinguir tildes ni mayúsculas ("jose" encuentra a José) y tolera los errores habituales ("impresra", "daniel garcia" por Daniel Gracia). Lo exacto va arriba, con primero el equipo cuya IP, serial o placa es exactamente lo escrito; lo que solo se parece va debajo, en **"Posibles coincidencias"** (si no hay nada exacto: "Nada coincide tal cual con «…». Estos se parecen:"). Se enseñan todas; nada se elige ni se abre solo. La IP, el serial y la placa solo coinciden tal cual. Se busca por el nombre vigente de la persona que tiene el equipo; un nombre escrito sin ficha de persona también se encuentra y la fila lo sigue diciendo "Anotado: «…» · por validar". Los chips de categoría, los equipos de red y el regreso con la búsqueda escrita funcionan como siempre; los chips cuentan también las posibles coincidencias.
 
 **REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 330, [DECISIONES.md](DECISIONES.md) AD-080).** Cabecera de raíz de una fila ("Equipos" a 25 px, sincronización y cuenta). Manda sobre lo que sigue donde choque.
 - **El buscador de equipos y "Escanear QR" bajan al dock**, sobre la barra de pestañas: el mismo campo ("Buscar en Equipos", "Nombre, persona, IP, lugar o serial") a 52 px y el escáner a 52 px. Arriba quedan "Qué se sabe de cada equipo", "Crear equipo" y los chips de categoría. **Desde 768 px (tarea 339)** el campo va en la barra superior, con el escáner dentro.

@@ -1,3 +1,4 @@
+import { distanciaLevenshtein, FRACCION_DIFUSA, toleranciaDe } from '../../lib/coincidenciaAproximada'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
 
 // LA CONSULTA COMO LA ESCRIBE UNA PERSONA (tarea 288, encargo del
@@ -88,33 +89,11 @@ export function usaPrefijo(termino: string, terminos: readonly string[]): boolea
 }
 
 /** Tolerancia a erratas del índice: una fracción de la longitud del término. */
-export const FRACCION_DIFUSA = 0.2
-// El tope por defecto de MiniSearch (`maxFuzzy`).
-const MAXIMA_DISTANCIA_DIFUSA = 6
+export { FRACCION_DIFUSA }
 
 /** Cuántas letras distintas tolera el índice en un término de esta longitud. */
 export function distanciaMaxima(termino: string): number {
-  return Math.min(MAXIMA_DISTANCIA_DIFUSA, Math.round(termino.length * FRACCION_DIFUSA))
-}
-
-// Distancia de edición (Levenshtein) con corte: en cuanto la fila entera
-// supera el tope, ya no puede bajar y se abandona.
-function distanciaEdicion(a: string, b: string, tope: number): number {
-  if (Math.abs(a.length - b.length) > tope) return tope + 1
-  let anterior = Array.from({ length: b.length + 1 }, (_, j) => j)
-  for (let i = 1; i <= a.length; i++) {
-    const actual = [i]
-    let minimo = i
-    for (let j = 1; j <= b.length; j++) {
-      const costo = a[i - 1] === b[j - 1] ? 0 : 1
-      const valor = Math.min(anterior[j] + 1, actual[j - 1] + 1, anterior[j - 1] + costo)
-      actual.push(valor)
-      if (valor < minimo) minimo = valor
-    }
-    if (minimo > tope) return tope + 1
-    anterior = actual
-  }
-  return anterior[b.length]
+  return toleranciaDe(termino)
 }
 
 /**
@@ -128,5 +107,5 @@ export function derivaDe(terminoIndice: string, palabra: string, prefijo: boolea
   if (terminoIndice === palabra) return true
   if (prefijo && terminoIndice.startsWith(palabra)) return true
   const tope = distanciaMaxima(palabra)
-  return tope > 0 && distanciaEdicion(terminoIndice, palabra, tope) <= tope
+  return tope > 0 && distanciaLevenshtein(terminoIndice, palabra, tope) <= tope
 }

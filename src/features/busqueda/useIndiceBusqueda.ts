@@ -20,7 +20,17 @@ import { etiquetaDeTipo } from '../soluciones/tiposArticulo'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { useBovedaDesbloqueada } from '../boveda/useSesionBoveda'
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
-import { derivaDe, FRACCION_DIFUSA, palabrasDeContenido, usaPrefijo } from './consultaNatural'
+import { textoVivo } from '../../lib/referencia'
+import {
+  distanciaDamerau,
+  distanciaLevenshtein,
+  esAproximable,
+  esSoloLetras,
+  palabrasLiterales,
+  terminosDe,
+  toleranciaDe,
+} from '../../lib/coincidenciaAproximada'
+import { FRACCION_DIFUSA, palabrasDeContenido, usaPrefijo } from './consultaNatural'
 import { sinonimosDe, sinonimosPorPalabra } from './sinonimos'
 import { cadenaNombres, mapaPorId } from '../ubicaciones/arbol'
 import { lineasDeContexto, ubicacionDeEquipo } from '../../lib/contextoEquipo'
@@ -144,6 +154,18 @@ export interface ResultadoBusqueda {
   camposPorSinonimo?: CampoIndice[][]
   /** Puntaje de MiniSearch: BM25 con el peso de cada campo. */
   puntajeIndice?: number
+  /**
+   * COINCIDENCIA APROXIMADA (tarea 346). Para cada palabra de
+   * `camposPorPalabra`, true si este resultado la explica SOLO con una
+   * errata ("impresra" por "impresora", "gracia" por "garcia"), nunca tal
+   * como se escribió. Falta en un resultado armado a mano.
+   */
+  aproximadoPorPalabra?: boolean[]
+  /**
+   * Alguna palabra solo coincide de forma aproximada: el resultado se
+   * presenta como "Posible coincidencia" y nunca como la mejor.
+   */
+  aproximado?: boolean
 }
 
 /** Todo lo que alimenta el índice, tal como sale de la base local. */
@@ -269,7 +291,7 @@ export function documentoDeReferencia(referencia: Referencia): DocumentoBusqueda
  * valor. Los datos protegidos del equipo no entran aquí: viven cifrados en
  * `campos_protegidos`.
  */
-function identidadDeEquipo(dispositivo: Dispositivo, lugarVivo: string): string | undefined {
+function identidadDeEquipo(dispositivo: Dispositivo, lugarVivo: string, responsableVivo: string): string | undefined {
   return unidos([
     dispositivo.marca,
     dispositivo.modelo,
@@ -279,7 +301,10 @@ function identidadDeEquipo(dispositivo: Dispositivo, lugarVivo: string): string 
     // El lugar vivo de su ficha de Ubicación y el texto heredado, sin
     // repetirlo cuando coinciden (tarea 277).
     ...new Set([dispositivo.ubicacion, lugarVivo]),
-    dispositivo.responsable,
+    // Quién lo tiene: el nombre VIGENTE de la persona vinculada (tarea 346),
+    // no la copia legible que guardó el equipo; sin persona vinculada, lo
+    // escrito (por validar), como siempre.
+    responsableVivo,
   ])
 }
 
@@ -449,6 +474,9 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
   const subtitulosDeEquipo = lineasDeContexto(
     dispositivos.map((d, i) => ({ nombre: d.nombre, partes: [d.marca, d.modelo, lugarDeEquipo[i]] })),
   )
+  const nombrePersona = new Map(personas.map((p) => [p.id, p.nombre]))
+  const responsableVivo = (d: Dispositivo) =>
+    d.responsableId ? textoVivo(nombrePersona.get(d.responsableId), d.responsable) : d.responsable
   for (const [indice, dispositivo] of dispositivos.entries()) {
     documentos.push({
       id: `dispositivo:${dispositivo.id}`,
@@ -456,7 +484,7 @@ export function documentosDeBusqueda(datos: DatosIndice): DocumentoBusqueda[] {
       titulo: dispositivo.nombre,
       subtitulo: subtitulosDeEquipo[indice],
       ruta: `/dispositivos/${dispositivo.id}`,
-      identidad: identidadDeEquipo(dispositivo, lugarDeEquipo[indice]),
+      identidad: identidadDeEquipo(dispositivo, lugarDeEquipo[indice], responsableVivo(dispositivo)),
       texto: [
         dispositivo.estado,
         dispositivo.observaciones,
@@ -601,6 +629,89 @@ export const PESO_EN_INDICE: Record<CampoIndice, number> = {
   texto: 1,
 }
 
+// EL VOCABULARIO DEL ÍNDICE (tarea 346): los términos hechos de letras que
+// hay en los datos y en cuántos documentos aparece cada uno. De aquí salen
+// las palabras que solo se alcanzan con dos letras cambiadas de sitio
+// ("impirme" por "imprime") y el "Quizás buscabas…". NADA DE LA BÓVEDA
+// entra: una credencial o un dato protegido nunca aparecen como corrección
+// ni como sugerencia. Se arma una vez con el índice y vive lo que él.
+interface Vocabulario {
+  /** En cuántos documentos aparece cada término. */
+  frecuencia: Map<string, number>
+  /** Los términos por longitud: solo se comparan los que pueden estar cerca. */
+  porLongitud: Map<number, string[]>
+  /** Ordenados, para saber deprisa si una palabra empieza algún término. */
+  ordenados: string[]
+}
+
+const vocabularios = new WeakMap<MiniSearch<DocumentoBusqueda>, Vocabulario>()
+
+/** ¿Es de la Bóveda? Una credencial o un dato protegido solo responden a lo escrito tal cual. */
+function esDeBoveda(id: string): boolean {
+  return id.startsWith('credencial:') || id.startsWith('campo:')
+}
+
+function crearVocabulario(documentos: DocumentoBusqueda[]): Vocabulario {
+  const frecuencia = new Map<string, number>()
+  for (const documento of documentos) {
+    if (esDeBoveda(documento.id)) continue
+    const propios = new Set<string>()
+    for (const campo of CAMPOS_INDICE) {
+      for (const termino of terminosDe(documento[campo])) {
+        if (termino.length >= 3 && esSoloLetras(termino)) propios.add(termino)
+      }
+    }
+    for (const termino of propios) frecuencia.set(termino, (frecuencia.get(termino) ?? 0) + 1)
+  }
+  const porLongitud = new Map<number, string[]>()
+  for (const termino of frecuencia.keys()) {
+    const lista = porLongitud.get(termino.length)
+    if (lista) lista.push(termino)
+    else porLongitud.set(termino.length, [termino])
+  }
+  return { frecuencia, porLongitud, ordenados: [...frecuencia.keys()].sort() }
+}
+
+// ¿Hay en el vocabulario un término que sea la palabra o empiece por ella?
+function existeEnVocabulario(vocabulario: Vocabulario, palabra: string): boolean {
+  if (vocabulario.frecuencia.has(palabra)) return true
+  const { ordenados } = vocabulario
+  let bajo = 0
+  let alto = ordenados.length
+  while (bajo < alto) {
+    const medio = (bajo + alto) >> 1
+    if (ordenados[medio] < palabra) bajo = medio + 1
+    else alto = medio
+  }
+  return bajo < ordenados.length && ordenados[bajo].startsWith(palabra)
+}
+
+interface Errata {
+  termino: string
+  distancia: number
+  /** Solo se llega con dos letras cambiadas de sitio: MiniSearch no lo encuentra. */
+  soloTransposicion: boolean
+}
+
+/**
+ * Los términos del vocabulario a los que la palabra llega con una errata
+ * dentro de la tolerancia de siempre, contada con Damerau-Levenshtein. No
+ * cuenta los que la palabra ya alcanza tal cual o por prefijo.
+ */
+function erratasDe(vocabulario: Vocabulario, palabra: string): Errata[] {
+  const tope = toleranciaDe(palabra)
+  const erratas: Errata[] = []
+  for (let longitud = palabra.length - tope; longitud <= palabra.length + tope; longitud++) {
+    for (const termino of vocabulario.porLongitud.get(longitud) ?? []) {
+      if (termino === palabra || termino.startsWith(palabra)) continue
+      const distancia = distanciaDamerau(termino, palabra, tope)
+      if (distancia > tope) continue
+      erratas.push({ termino, distancia, soloTransposicion: distanciaLevenshtein(termino, palabra, tope) > tope })
+    }
+  }
+  return erratas
+}
+
 // Separado del hook para poder probarlo sin depender de React ni de
 // la base local.
 export function crearIndiceDesdeDocumentos(documentos: DocumentoBusqueda[]): MiniSearch<DocumentoBusqueda> {
@@ -615,7 +726,10 @@ export function crearIndiceDesdeDocumentos(documentos: DocumentoBusqueda[]): Min
     processTerm: (termino: string) => normalizarTexto(termino),
     searchOptions: {
       boost: PESO_EN_INDICE,
-      fuzzy: FRACCION_DIFUSA,
+      // La tolerancia de siempre, pero solo para una palabra de letras
+      // (tarea 346): un número, un serial o una IP se buscan tal cual. Cada
+      // búsqueda la afina además con lo que se escribió (`buscarConSinonimos`).
+      fuzzy: (termino: string) => (esAproximable(termino) ? FRACCION_DIFUSA : false),
       // Por prefijo mientras se escribe ("impre" encuentra "impresora"),
       // salvo una letra suelta que ACOMPAÑA a otras palabras (2026-09-14).
       // En "windows r" la "r" es la tecla, no el comienzo de "router",
@@ -629,23 +743,24 @@ export function crearIndiceDesdeDocumentos(documentos: DocumentoBusqueda[]): Min
   // entera ("No se pudo cargar la aplicación"). Los ids se arman para ser
   // unicos; esto es la red: se queda el primero y el resto se ignora.
   const vistos = new Set<string>()
-  indice.addAll(
-    documentos.filter((documento) => {
-      if (vistos.has(documento.id)) return false
-      vistos.add(documento.id)
-      return true
-    }),
-  )
+  const unicos = documentos.filter((documento) => {
+    if (vistos.has(documento.id)) return false
+    vistos.add(documento.id)
+    return true
+  })
+  indice.addAll(unicos)
+  vocabularios.set(indice, crearVocabulario(unicos))
   return indice
 }
 
 type ResultadoIndice = ReturnType<MiniSearch<DocumentoBusqueda>['search']>[number]
 
-/** Un resultado del índice con lo que la tarea 288 anota de su coincidencia. */
+/** Un resultado del índice con lo que las tareas 288 y 346 anotan de su coincidencia. */
 type ResultadoAnotado = ResultadoIndice & {
   soloSinonimo?: boolean
   camposPorPalabra: CampoIndice[][]
   camposPorSinonimo: CampoIndice[][]
+  aproximadoPorPalabra: boolean[]
 }
 
 // Cuánto suma un sinónimo a un resultado que YA coincide con lo escrito:
@@ -654,20 +769,37 @@ type ResultadoAnotado = ResultadoIndice & {
 const PESO_SINONIMO = 0.5
 
 /**
+ * Cuánto pesa en el índice una palabra que solo se alcanza con dos letras
+ * cambiadas de sitio (tarea 346): lo mismo que una errata de MiniSearch
+ * (su peso difuso por defecto, 0,45, por la longitud del término entre la
+ * longitud más la distancia), nunca como lo escrito tal cual.
+ */
+const PESO_TRANSPOSICION = 0.4
+const BOOST_TRANSPOSICION: Record<CampoIndice, number> = Object.fromEntries(
+  CAMPOS_INDICE.map((campo) => [campo, PESO_EN_INDICE[campo] * PESO_TRANSPOSICION]),
+) as Record<CampoIndice, number>
+
+/**
  * En qué campos del documento coincidió alguna de las palabras `buscadas`
  * (tarea 288). MiniSearch dice qué términos DEL DOCUMENTO coincidieron y
  * en qué campos, no de qué palabra salió cada uno; se reconstruye con su
- * misma regla (`derivaDe`): idéntico, por prefijo o con errata.
+ * misma regla: idéntico, por prefijo o (si se admite) con errata.
  */
 function camposDe(
   coincidencias: ResultadoIndice['match'],
   buscadas: readonly string[],
   terminosDeLaBusqueda: readonly string[],
+  conErratas: boolean,
 ): CampoIndice[] {
   if (buscadas.length === 0) return []
   const campos = new Set<string>()
   for (const [termino, enCampos] of Object.entries(coincidencias)) {
-    const salio = buscadas.some((buscada) => derivaDe(termino, buscada, usaPrefijo(buscada, terminosDeLaBusqueda)))
+    const salio = buscadas.some((buscada) => {
+      if (termino === buscada) return true
+      if (usaPrefijo(buscada, terminosDeLaBusqueda) && termino.startsWith(buscada)) return true
+      const tope = toleranciaDe(buscada)
+      return conErratas && esAproximable(buscada) && distanciaLevenshtein(termino, buscada, tope) <= tope
+    })
     if (salio) for (const campo of enCampos) campos.add(campo)
   }
   return CAMPOS_INDICE.filter((campo) => campos.has(campo))
@@ -689,26 +821,93 @@ function camposDe(
  * ("la", "de", "una", "me") no se buscan; con prefijo y OR traían medio
  * índice. Y cada resultado lleva anotado en qué campos coincidió cada
  * palabra, por sí misma o por un sinónimo suyo.
+ *
+ * LA ERRATA, DICHA Y CON SU REGLA (tarea 346):
+ * - Una palabra escrita como un valor (con dígitos o símbolos: una IP, un
+ *   serial, una placa, "/flushdns") se busca tal cual, sin erratas.
+ * - Una palabra de letras tolera lo de siempre y, además, las dos letras
+ *   cambiadas de sitio que MiniSearch cuenta doble ("impirme", "gracia"):
+ *   esas variantes, sacadas del vocabulario del índice, se buscan aparte y
+ *   pesan como una errata.
+ * - Cada palabra queda anotada como exacta o aproximada
+ *   (`aproximadoPorPalabra`): el ranking pone lo exacto delante y la
+ *   pantalla dice "Posible coincidencia".
+ * - La Bóveda solo responde a lo escrito tal cual: una credencial o un dato
+ *   protegido que solo coincide por una errata no sale.
  */
 export function buscarConSinonimos(indice: MiniSearch<DocumentoBusqueda>, consulta: string): ResultadoAnotado[] {
   const palabras = palabrasDeContenido(consulta)
   if (palabras.length === 0) return []
-  const directos = indice.search(palabras.join(' '))
+  const literales = palabrasLiterales(consulta)
+  const aproximable = (palabra: string) => !literales.has(palabra) && esAproximable(palabra)
+  const vocabulario = vocabularios.get(indice)
+  const transposiciones = new Map<string, Set<string>>()
+  if (vocabulario) {
+    for (const palabra of palabras) {
+      if (!aproximable(palabra)) continue
+      const propias = erratasDe(vocabulario, palabra).filter((errata) => errata.soloTransposicion)
+      if (propias.length > 0) transposiciones.set(palabra, new Set(propias.map((errata) => errata.termino)))
+    }
+  }
+  const terminosTranspuestos = [...new Set([...transposiciones.values()].flatMap((terminos) => [...terminos]))]
+  const difuso = (termino: string) => (aproximable(termino) ? FRACCION_DIFUSA : false)
+  const directos = indice.search(
+    terminosTranspuestos.length === 0
+      ? palabras.join(' ')
+      : {
+          combineWith: 'OR',
+          queries: [
+            palabras.join(' '),
+            { queries: [terminosTranspuestos.join(' ')], fuzzy: false, prefix: false, boost: BOOST_TRANSPOSICION },
+          ],
+        },
+    { fuzzy: difuso },
+  )
   const agregadas = sinonimosDe(consulta)
   const porSinonimo = agregadas.length > 0 ? indice.search(agregadas.join(' ')) : []
   const sinonimosDePalabra = sinonimosPorPalabra(consulta)
   const deSinonimo = new Map(porSinonimo.map((resultado) => [resultado.id, resultado]))
   const porSinonimoDe = (resultado: ResultadoIndice | undefined): CampoIndice[][] =>
     palabras.map((palabra) =>
-      resultado ? camposDe(resultado.match, sinonimosDePalabra.get(palabra) ?? [], agregadas) : [],
+      resultado
+        ? camposDe(resultado.match, sinonimosDePalabra.get(palabra) ?? [], agregadas, !esDeBoveda(String(resultado.id)))
+        : [],
     )
+
+  // Para cada palabra, dónde coincidió tal cual (o por prefijo) y dónde solo
+  // con una errata. Lo de la Bóveda solo cuenta lo escrito tal cual.
+  const anotarPalabras = (resultado: ResultadoIndice) => {
+    const deBoveda = esDeBoveda(String(resultado.id))
+    const camposPorPalabra: CampoIndice[][] = []
+    const aproximadoPorPalabra: boolean[] = []
+    for (const palabra of palabras) {
+      const exactos = new Set<string>()
+      const aproximados = new Set<string>()
+      const prefijo = usaPrefijo(palabra, palabras)
+      const tope = toleranciaDe(palabra)
+      for (const [termino, enCampos] of Object.entries(resultado.match)) {
+        if (termino === palabra || (prefijo && termino.startsWith(palabra))) {
+          for (const campo of enCampos) exactos.add(campo)
+        } else if (
+          !deBoveda &&
+          aproximable(palabra) &&
+          (transposiciones.get(palabra)?.has(termino) || distanciaLevenshtein(termino, palabra, tope) <= tope)
+        ) {
+          for (const campo of enCampos) aproximados.add(campo)
+        }
+      }
+      camposPorPalabra.push(CAMPOS_INDICE.filter((campo) => exactos.has(campo) || aproximados.has(campo)))
+      aproximadoPorPalabra.push(exactos.size === 0 && aproximados.size > 0)
+    }
+    return { camposPorPalabra, aproximadoPorPalabra }
+  }
 
   const primeros: ResultadoAnotado[] = directos
     .map((resultado) => {
       const extra = deSinonimo.get(resultado.id)
       const anotado = {
         ...resultado,
-        camposPorPalabra: palabras.map((palabra) => camposDe(resultado.match, [palabra], palabras)),
+        ...anotarPalabras(resultado),
         camposPorSinonimo: porSinonimoDe(extra),
       }
       if (!extra) return anotado
@@ -720,20 +919,27 @@ export function buscarConSinonimos(indice: MiniSearch<DocumentoBusqueda>, consul
         match: { ...extra.match, ...resultado.match },
       }
     })
+    // Lo de la Bóveda que solo trajo una errata no sale.
+    .filter((resultado) => !esDeBoveda(String(resultado.id)) || resultado.camposPorPalabra.some((campos) => campos.length > 0))
     .sort((a, b) => b.score - a.score)
-  const idsDirectos = new Set(directos.map((resultado) => resultado.id))
+  const idsPrimeros = new Set(primeros.map((resultado) => resultado.id))
   return [
     ...primeros,
     // Marcados para que quien reordene despues (`mejoresResultados`) no
     // pueda colocarlos por delante de una coincidencia directa.
     ...porSinonimo
-      .filter((resultado) => !idsDirectos.has(resultado.id))
+      .filter((resultado) => !idsPrimeros.has(resultado.id))
       .map((resultado) => ({
         ...resultado,
         soloSinonimo: true,
         camposPorPalabra: palabras.map((): CampoIndice[] => []),
         camposPorSinonimo: porSinonimoDe(resultado),
-      })),
+        aproximadoPorPalabra: palabras.map(() => false),
+      }))
+      .filter(
+        (resultado) =>
+          !esDeBoveda(String(resultado.id)) || resultado.camposPorSinonimo.some((campos) => campos.length > 0),
+      ),
   ]
 }
 
@@ -751,7 +957,55 @@ function aResultado(resultado: ResultadoAnotado): ResultadoBusqueda {
     camposPorPalabra: resultado.camposPorPalabra,
     camposPorSinonimo: resultado.camposPorSinonimo,
     puntajeIndice: resultado.score,
+    aproximadoPorPalabra: resultado.aproximadoPorPalabra,
+    aproximado: resultado.aproximadoPorPalabra.some(Boolean),
   }
+}
+
+/**
+ * "QUIZÁS BUSCABAS…" (tarea 346). La consulta con cada palabra que no
+ * existe tal como se escribió (ni como comienzo de una) cambiada por el
+ * término más cercano que sí existe: el de menos errores y, a igualdad, el
+ * que más aparece. Lo demás queda como se tecleó, incluida la mayúscula
+ * inicial. Es una PROPUESTA: nunca cambia el campo ni abre nada; el técnico
+ * decide tocarla. Una palabra que ya coincide tal cual con algún resultado
+ * no se toca, y lo escrito como un valor (una IP, un serial) tampoco. null
+ * si no hay nada que proponer.
+ */
+export function sugerirConsulta(
+  indice: MiniSearch<DocumentoBusqueda>,
+  consulta: string,
+  resultados: readonly ResultadoBusqueda[] = [],
+): string | null {
+  const vocabulario = vocabularios.get(indice)
+  if (!vocabulario || consulta.trim() === '') return null
+  const literales = palabrasLiterales(consulta)
+  const palabras = palabrasDeContenido(consulta)
+  const reemplazos = new Map<string, string>()
+  palabras.forEach((palabra, indicePalabra) => {
+    if (literales.has(palabra) || !esAproximable(palabra)) return
+    if (existeEnVocabulario(vocabulario, palabra)) return
+    const tal = resultados.some(
+      (resultado) =>
+        (resultado.camposPorPalabra?.[indicePalabra]?.length ?? 0) > 0 &&
+        resultado.aproximadoPorPalabra?.[indicePalabra] !== true,
+    )
+    if (tal) return
+    const [mejor] = erratasDe(vocabulario, palabra).sort(
+      (a, b) =>
+        a.distancia - b.distancia ||
+        (vocabulario.frecuencia.get(b.termino) ?? 0) - (vocabulario.frecuencia.get(a.termino) ?? 0) ||
+        a.termino.localeCompare(b.termino),
+    )
+    if (mejor) reemplazos.set(palabra, mejor.termino)
+  })
+  if (reemplazos.size === 0) return null
+  return consulta.trim().replace(/[\p{L}\p{M}]+/gu, (escrita) => {
+    const reemplazo = reemplazos.get(normalizarTexto(escrita))
+    if (!reemplazo) return escrita
+    const mayuscula = escrita[0] !== escrita[0].toLowerCase()
+    return mayuscula ? reemplazo[0].toUpperCase() + reemplazo.slice(1) : reemplazo
+  })
 }
 
 export function buscar(indice: MiniSearch<DocumentoBusqueda>, consulta: string): ResultadoBusqueda[] {

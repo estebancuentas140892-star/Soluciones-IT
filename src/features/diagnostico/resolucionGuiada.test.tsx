@@ -391,9 +391,10 @@ describe('el procedimiento dentro del recorrido no se pierde', () => {
     // Salir guarda: Resolver lo ofrece en Recientes, diciendo dónde va.
     await tocar(await esperarControl('Guardar el avance y salir'))
     await esperar(() => ubicacionActual().pathname === '/', 'sale a Resolver')
-    // En el teléfono, "Sigue donde ibas" (tarea 344): dice dónde va y su botón lo retoma.
+    // En el teléfono, "Sigue donde ibas" (tarea 344; una sola fila desde la
+    // 346): dice dónde va y la fila entera lo retoma.
     const fila = await esperar(() => enlaceDe(TITULO_IMPRESORA), 'el recorrido en Recientes')
-    expect(fila.closest('section')?.textContent).toContain(`Haciendo «${TITULO_CONECTAR}»`)
+    expect(fila.textContent).toContain(`Haciendo «${TITULO_CONECTAR}»`)
     expect(fila.getAttribute('aria-label')).toBe(`Continuar: ${TITULO_IMPRESORA}`)
     // Y la guía suelta no aparece como empezada: no es una tarea pendiente global.
     expect(document.body.querySelector('a[href="/soluciones/cat-pruebas/guia-conectar"]')).toBeNull()

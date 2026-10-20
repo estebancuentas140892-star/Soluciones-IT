@@ -25,7 +25,7 @@ import {
   MARCADOR_BUSCADOR_TELEFONO,
 } from './resultados'
 import { ResultadosBusqueda } from './ResultadosBusqueda'
-import { buscar, useIndiceBusqueda } from './useIndiceBusqueda'
+import { buscar, sugerirConsulta, useIndiceBusqueda } from './useIndiceBusqueda'
 
 // Buscador global en capa (tarea 181, mockup 3d del handoff). Hasta
 // ahora buscar era global pero vivia DENTRO de Inicio: desde cualquier
@@ -84,6 +84,8 @@ export function BuscadorGlobal({
 
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
+  // "Quizás buscabas…" (tarea 346): una propuesta que solo se busca si se toca.
+  const sugerencia = useMemo(() => sugerirConsulta(indice, queryDiferida, resultados), [indice, queryDiferida, resultados])
   // ¿YA SE LEYÓ LA COPIA LOCAL? (tarea 342) El índice nace de listas vacías
   // mientras Dexie lee, y una búsqueda escrita en ese instante diría "Nada
   // coincide" sin haber mirado. Hasta que las dos tablas que más pesan se
@@ -292,6 +294,8 @@ export function BuscadorGlobal({
                 huboDesbloqueo={huboDesbloqueo}
                 modo={modo}
                 enCapa
+                sugerencia={sugerencia}
+                onUsarSugerencia={setQuery}
               />
             ) : (
               <div className="flex flex-col gap-4">

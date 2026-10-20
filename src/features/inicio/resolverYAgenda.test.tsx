@@ -650,7 +650,7 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     })
   }
 
-  it('el campo va arriba, bajo el título, y no en el dock; dice para qué sirve la sección', async () => {
+  it('la pregunta primero y el campo debajo, arriba y no en el dock (tareas 344 y 346)', async () => {
     await montar(RUTAS, '/')
     await esperarResolver()
     const campo = campoBuscador() as HTMLInputElement
@@ -661,9 +661,12 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     expect(campo.placeholder).toBe('Describe el problema o un equipo')
     expect(campo.getAttribute('aria-label')).toBe('Buscar en Soluciones IT')
     const texto = textoPantalla()
-    expect(texto).toContain('Encuentra qué hacer ante un problema técnico.')
+    // Lo primero que se lee es la pregunta (tarea 346), y la frase que
+    // explicaba la sección ya no está: la pregunta ya lo dice.
+    expect(document.body.querySelector('#resolver-pregunta')?.textContent).toBe('¿Qué necesitas resolver?')
+    expect(texto).not.toContain('Encuentra qué hacer ante un problema técnico.')
     expect(texto).toContain('Prueba con:')
-    expect(texto).toContain('¿Qué está fallando?')
+    expect(texto).toContain('Guías por categoría')
     // Ni los contadores ni "Necesita atención" del diseño anterior.
     expect(texto).not.toContain('Necesita atención')
   })
@@ -677,9 +680,9 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     // Es el MISMO campo, con el foco: cambiar de forma no lo desmonta.
     expect(campoBuscador()).toBe(campo)
     expect(document.activeElement).toBe(campo)
-    // La pantalla de búsqueda: sin el título de la sección ni lo de Resolver.
-    expect(textoPantalla()).not.toContain('¿Qué está fallando?')
-    expect(textoPantalla()).not.toContain('Encuentra qué hacer')
+    // La pantalla de búsqueda: sin la pregunta ni lo de Resolver.
+    expect(textoPantalla()).not.toContain('Guías por categoría')
+    expect(textoPantalla()).not.toContain('¿Qué necesitas resolver?')
     expect(buscadorArriba()?.className).toContain('sticky')
     // Un ejemplo escribe la consulta.
     await tocar(await esperar(() => control('no imprime'), 'el ejemplo "no imprime"'))
@@ -687,7 +690,7 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     // El regreso borra lo escrito y vuelve a Resolver.
     await tocar(await esperar(() => control('Volver a Resolver'), 'el regreso'))
     expect(campoBuscador()?.value).toBe('')
-    expect(await esperarTexto('¿Qué está fallando?')).not.toContain('Puedes escribir')
+    expect(await esperarTexto('Guías por categoría')).not.toContain('Puedes escribir')
   })
 
   it('escribir abre lo encontrado y nada que coincida lo dice con sus salidas', async () => {
@@ -728,7 +731,7 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     expect(texto).not.toContain('Cambiar el tóner')
   })
 
-  it('"Sigue donde ibas" dice el paso y "Continuar en el paso N" la retoma', async () => {
+  it('"Sigue donde ibas" es una fila que dice el paso y la retoma (tareas 344 y 346)', async () => {
     await sembrarGuia({
       id: 'guia-1',
       titulo: 'Instalar la impresora de prueba',
@@ -744,20 +747,29 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     await registrarVisita('articulo', 'guia-1')
     await montar(RUTAS, '/')
     const texto = await esperarTexto('Sigue donde ibas')
-    expect(texto).toContain('Vas en el paso 2 de 2')
-    const continuar = await esperar(() => control(/^Continuar en el paso 2: Instalar la impresora/), 'el botón')
-    expect(continuar.textContent).toBe('Continuar en el paso 2')
+    expect(texto).toContain('Sigue donde ibas · paso 2 de 2')
+    // La fila entera se toca y su nombre dice a dónde lleva.
+    const continuar = await esperar(() => control(/^Continuar en el paso 2: Instalar la impresora/), 'la fila')
+    expect(continuar.hasAttribute('data-seguir-donde-ibas')).toBe(true)
+    expect(continuar.textContent).toContain('Instalar la impresora de prueba')
+    expect(continuar.textContent).toContain('Continuar')
     await tocar(continuar)
     expect(ubicacionActual().pathname).toBe('/soluciones/cat-pruebas/guia-1')
   })
 
-  it('"¿Qué está fallando?" lleva a cada categoría real y "Ver todas las guías" al catálogo', async () => {
+  it('"Guías por categoría" lleva a cada categoría real y "Todas las guías" al catálogo', async () => {
     await sembrarGuia({ id: 'g1', titulo: 'Guía de impresoras', categoriaId: 'cat-imp', pasos: [pasoPrueba('a1', 'Paso', ['Hacer'])] })
     await db.categorias.update('cat-imp', { nombre: 'Impresoras' })
     await sembrarGuia({ id: 'g2', titulo: 'Guía de POS', categoriaId: 'cat-pos', pasos: [pasoPrueba('b1', 'Paso', ['Hacer'])] })
     await db.categorias.update('cat-pos', { nombre: 'POS', orden: 0 })
     await montar(RUTAS, '/')
-    expect((await esperar(() => control(/^Ver todas las guías/), 'el catálogo')).textContent).toContain('Ver todas las guías (2)')
+    // El número llega cuando se terminan de contar las guías: se espera a él.
+    const todas = await esperar(() => {
+      const enlace = control(/^Todas las guías/)
+      return enlace?.textContent?.includes('(2)') ? enlace : null
+    }, 'el catálogo con su número')
+    expect(todas.textContent).toContain('Todas las guías (2)')
+    expect(todas.getAttribute('href')).toBe('/soluciones')
     await tocar(await esperar(() => control(/^Impresoras: 1 guía/), 'la categoría Impresoras'))
     expect(ubicacionActual().pathname).toBe('/soluciones')
     expect(ubicacionActual().search).toBe('?categoria=cat-imp')

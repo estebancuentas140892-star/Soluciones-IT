@@ -521,6 +521,14 @@ export const PESO_CAMPO: Record<CampoIndice, number> = {
  */
 export const PESO_SINONIMO_EVIDENCIA = 0.5
 
+/**
+ * Una palabra que solo coincide con una errata ("impresra", "gracia" por
+ * "garcia"; tarea 346) explica algo más que un sinónimo (es lo que se
+ * quiso escribir) y menos que lo escrito tal cual. Nunca cuenta para la
+ * confianza: una posible coincidencia no es la mejor coincidencia.
+ */
+export const PESO_APROXIMADO_EVIDENCIA = 0.75
+
 /** Lo que vale explicar la consulta entera en un campo muy fuerte. */
 export const PUNTOS_EVIDENCIA = 100
 /** El título es exactamente lo buscado (sin las palabras vacías). */
@@ -603,9 +611,11 @@ function explicacion(resultado: ResultadoBusqueda, palabras: string[]): { peso: 
     })
   }
   return palabras.map((_, indice) => {
-    const directa = pesoMaximo(porPalabra[indice])
+    const aproximada = resultado.aproximadoPorPalabra?.[indice] === true
+    const directa = pesoMaximo(porPalabra[indice]) * (aproximada ? PESO_APROXIMADO_EVIDENCIA : 1)
     const porSinonimo = PESO_SINONIMO_EVIDENCIA * pesoMaximo(resultado.camposPorSinonimo?.[indice])
-    return { peso: Math.max(directa, porSinonimo), directa: directa > 0 }
+    // "Directa" es lo escrito TAL CUAL: una errata explica, pero no afirma.
+    return { peso: Math.max(directa, porSinonimo), directa: directa > 0 && !aproximada }
   })
 }
 
@@ -633,6 +643,11 @@ interface Puntuado {
   orden: number
   tramo: number
   puntos: number
+  /**
+   * Los puntos con que se ordena: los mismos, salvo que una posible
+   * coincidencia no sube por encima de lo exacto (`LO_EXACTO_MANDA`).
+   */
+  efectivos: number
   /** Explica todas las palabras de la consulta con lo escrito (en algún campo). */
   explicaTodo: boolean
 }
@@ -711,10 +726,26 @@ export function leerResultados(
       // trajo un sinonimo. Ningun bono cruza de tramo (seccion 14).
       tramo: resultado.soloSinonimo ? 1 : 0,
       puntos,
+      efectivos: puntos,
       explicaTodo: porPalabra.every((p) => p.directa),
     }
   })
-  const ordenados = puntuados.sort((a, b) => a.tramo - b.tramo || b.puntos - a.puntos || a.orden - b.orden)
+  // LO EXACTO MANDA (tarea 346). Una posible coincidencia ("Daniel Gracia"
+  // buscando "daniel garcia") puede adelantar a lo que solo explica una
+  // parte de la consulta ("Daniel Pérez"), pero nunca a lo que la explica
+  // ENTERA tal como se escribió ("Daniel García"): queda justo debajo del
+  // último de esos, por mucho que la empujen el tipo o la intención. Entre
+  // las aproximadas se conserva su propio orden.
+  const exactosCompletos = puntuados.filter((p) => p.tramo === 0 && p.explicaTodo)
+  if (exactosCompletos.length > 0) {
+    const piso = Math.min(...exactosCompletos.map((p) => p.puntos))
+    for (const p of puntuados) {
+      if (p.tramo === 0 && p.resultado.aproximado && p.puntos >= piso) p.efectivos = piso - Number.EPSILON * 1e6
+    }
+  }
+  const ordenados = puntuados.sort(
+    (a, b) => a.tramo - b.tramo || b.efectivos - a.efectivos || b.puntos - a.puntos || a.orden - b.orden,
+  )
 
   return {
     intenciones,

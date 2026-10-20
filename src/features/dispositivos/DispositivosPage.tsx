@@ -94,7 +94,9 @@ export function DispositivosPage() {
 
   // Desde la tarea 317 también se busca por el área de quien tiene el
   // equipo, leída de su ficha de persona.
-  const { generales, deRed } = useMemo(
+  // Desde la tarea 346, con errores de tecleo: lo que solo coincide con una
+  // errata llega aparte (`posibles`) y se dice como "Posibles coincidencias".
+  const { generales, deRed, posibles } = useMemo(
     () => buscarEquipos(dispositivos ?? [], idsRed, { texto, categoriaId }, personaPorId),
     [dispositivos, idsRed, texto, categoriaId, personaPorId],
   )
@@ -124,13 +126,23 @@ export function DispositivosPage() {
         (d) => personaQueLoTiene(d, personaPorId) !== null || anotadoEnLista(d) !== '',
       ],
       [deRed, contexto, () => false],
+      // Las posibles coincidencias se leen como su lista de origen: la de
+      // red con su categoría, la general con quién lo tiene.
+      [
+        posibles,
+        (d) =>
+          idsRed.has(d.categoriaId)
+            ? contexto(d)
+            : partesDelSubtitulo(d, { categoria: nombreCategoria.get(d.categoriaId), ubicacion: ubicacion(d) }, personaPorId),
+        (d) => !idsRed.has(d.categoriaId) && (personaQueLoTiene(d, personaPorId) !== null || anotadoEnLista(d) !== ''),
+      ],
     ]
     for (const [lista, partes, porPartes] of listas) {
       const visibles = partesDeContexto(lista.map((d) => ({ nombre: d.nombre, partes: partes(d) })))
       lista.forEach((d, i) => lineas.set(d.id, porPartes(d) ? visibles[i] : visibles[i].join(' · ')))
     }
     return lineas
-  }, [generales, deRed, nombreCategoria, ubicacionPorId, personaPorId])
+  }, [generales, deRed, posibles, idsRed, nombreCategoria, ubicacionPorId, personaPorId])
   // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022): sobre lo
   // que deja la búsqueda, sin aplicar el propio eje de categoría.
   const conteos = useMemo(
@@ -140,7 +152,8 @@ export function DispositivosPage() {
 
   const consulta = texto.trim()
   const hayFiltrosActivos = Boolean(categoriaId || consulta)
-  const hayResultados = generales.length + deRed.length > 0
+  const hayExactos = generales.length + deRed.length > 0
+  const hayResultados = hayExactos || posibles.length > 0
 
   // El salto a una ficha lleva el origen cuando hay algo que reponer al
   // volver (la búsqueda o el chip) y SIEMPRE para un equipo de red: su
@@ -274,6 +287,37 @@ export function DispositivosPage() {
                       dispositivo={d}
                       categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
                       subtitulo={subtitulos.get(d.id) ?? ''}
+                      estado={estadoDeSalto}
+                      alAbrir={alAbrir}
+                      resaltar={consulta}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* POSIBLES COINCIDENCIAS (tarea 346): lo que solo se parece a lo
+                escrito, detrás de lo exacto y dicho como lo que es. Se
+                enseñan todas: nada se elige ni se abre solo, y el campo
+                conserva lo escrito. */}
+            {posibles.length > 0 && (
+              <section className={hayExactos ? 'mt-5' : ''}>
+                <TituloSeccion className="mb-1 px-0.5">
+                  Posibles coincidencias
+                </TituloSeccion>
+                {!hayExactos && (
+                  <p className="mb-1.5 px-0.5 text-[13px] leading-snug text-noct-neutral-400">
+                    Nada coincide tal cual con «{consulta}». Estos se parecen:
+                  </p>
+                )}
+                <div className="flex flex-col">
+                  {posibles.map((d) => (
+                    <FilaDispositivo
+                      key={d.id}
+                      dispositivo={d}
+                      categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
+                      subtitulo={subtitulos.get(d.id) ?? ''}
+                      conFoto={!idsRed.has(d.categoriaId)}
                       estado={estadoDeSalto}
                       alAbrir={alAbrir}
                       resaltar={consulta}

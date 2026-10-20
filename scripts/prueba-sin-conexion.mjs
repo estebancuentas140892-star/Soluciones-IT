@@ -904,6 +904,54 @@ async function main() {
       `la autorización y su entrada de historial esperan en la cola (${JSON.stringify(autorizacionSinRed)})`,
     )
 
+    // Tarea 346: la coincidencia aproximada es local. Sin red, una palabra con
+    // dos letras cambiadas de sitio ("impresroa") encuentra en Resolver y en
+    // Equipos y se dice como lo que es; el campo conserva lo escrito y nada
+    // se abre solo.
+    paso('4f. Buscar con una errata, sin red: Resolver y Equipos encuentran y lo dicen (tarea 346)')
+    const ESCRIBIR_EN = (etiqueta, texto) => `
+      const c = document.querySelector('input[aria-label=${JSON.stringify(etiqueta)}]')
+      if (!c) return false
+      c.focus()
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(c, ${JSON.stringify(texto)})
+      c.dispatchEvent(new Event('input', { bubbles: true }))
+      await new Promise((r) => setTimeout(r, 600))
+      return true
+    `
+    await s.enviar('Page.navigate', { url: BASE + '/' })
+    await s.hasta(`document.querySelector('input[aria-label="Buscar en Soluciones IT"]') != null`, 'Resolver', 45000)
+    comprobar(Boolean(await s.evaluar(ESCRIBIR_EN('Buscar en Soluciones IT', 'impresroa sin red'))), 'se escribe "impresroa sin red" en Resolver')
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `document.body.innerText.includes('Impresora de prueba sin red A') && document.querySelector('[data-posible-coincidencia]') != null`,
+          'la posible coincidencia',
+        ),
+      ),
+      'Resolver lo encuentra sin red y lo dice como "Posible coincidencia"',
+    )
+    comprobar(
+      Boolean(await s.hasta(`(document.querySelector('[data-quizas-buscabas]')?.innerText ?? '').includes('impresora sin red')`, 'Quizás buscabas')),
+      'y propone «impresora sin red»',
+    )
+    comprobar(
+      Boolean(await s.evaluar(`return document.querySelector('input[aria-label="Buscar en Soluciones IT"]').value === 'impresroa sin red' && location.pathname === '/'`)),
+      'el campo conserva lo escrito y nada se abre solo',
+    )
+    await s.enviar('Page.navigate', { url: BASE + '/dispositivos' })
+    await s.hasta(`document.querySelector('input[aria-label="Buscar en Equipos"]') != null`, 'Equipos', 45000)
+    comprobar(Boolean(await s.evaluar(ESCRIBIR_EN('Buscar en Equipos', 'impresroa sin red'))), 'se escribe lo mismo en Equipos')
+    comprobar(
+      Boolean(
+        await s.hasta(
+          // `innerText` devuelve el rótulo como lo pinta el CSS (en mayúsculas).
+          `/posibles coincidencias/i.test(document.body.innerText) && document.body.innerText.includes('Impresora de prueba sin red A')`,
+          'las posibles de Equipos',
+        ),
+      ),
+      'Equipos también lo encuentra sin red, en "Posibles coincidencias"',
+    )
+
     // Un autenticador de plataforma VIRTUAL de Chromium (DevTools
     // Protocol, dominio WebAuthn): crea credenciales y firma de verdad, con
     // la verificacion del usuario simulada. No es una huella fisica.

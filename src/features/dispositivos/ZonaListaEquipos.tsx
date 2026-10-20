@@ -35,13 +35,14 @@ export function ZonaListaEquipos({ actualId }: { actualId: string }) {
   const idsRed = useMemo(() => idsDeRed(categorias), [categorias])
   const nombreCategoria = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias])
   const personaPorId: PersonasPorId = useMemo(() => new Map(personas.map((p) => [p.id, p])), [personas])
-  const { generales, deRed } = useMemo(
+  const { generales, deRed, posibles } = useMemo(
     () => buscarEquipos(dispositivos, idsRed, { texto, categoriaId: '' }, personaPorId),
     [dispositivos, idsRed, texto, personaPorId],
   )
   // Sin buscar, los de red no se listan (como en Equipos); buscando, sí,
   // después de los generales.
-  const filas = texto.trim() ? [...generales, ...deRed] : generales
+  // Las posibles coincidencias (tarea 346), detrás de lo exacto.
+  const filas = texto.trim() ? [...generales, ...deRed, ...posibles] : generales
 
   return (
     <div className="flex flex-col">

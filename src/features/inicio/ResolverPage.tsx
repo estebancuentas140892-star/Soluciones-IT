@@ -19,10 +19,10 @@ import {
   TreeStructure,
 } from '../../components/iconos'
 import { ROTULO_RECORRIDO } from '../../lib/diagnostico'
-import { BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
+import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { ANCHO_TABLETA, coincide, useEsAncho } from '../../components/useEsAncho'
 import { EjemplosBusqueda, NadaCoincide, PuedesEscribir } from '../busqueda/EstadosBusquedaMovil'
-import { buscar, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
+import { buscar, sugerirConsulta, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
 import { alcanceEfectivo, conteoPorAlcance, filtrarPorAlcance, type Alcance } from '../busqueda/alcanceBusqueda'
@@ -172,6 +172,9 @@ export function ResolverPage() {
 
   const indice = useIndiceBusqueda()
   const resultados = useMemo(() => buscar(indice, queryDiferida), [indice, queryDiferida])
+  // "Quizás buscabas…" (tarea 346): una propuesta que solo se busca si se
+  // toca. Lo escrito no cambia solo.
+  const sugerencia = useMemo(() => sugerirConsulta(indice, queryDiferida, resultados), [indice, queryDiferida, resultados])
   // EL ALCANCE (tarea 330): chips que solo filtran la vista de lo encontrado.
   const [alcanceElegido, setAlcance] = useState<Alcance>('todo')
   const idsDeRed = useIdsDeRed()
@@ -300,6 +303,8 @@ export function ResolverPage() {
           consultaCruda={consultaCruda}
           onDesbloqueada={() => setHuboDesbloqueo(true)}
           huboDesbloqueo={huboDesbloqueo}
+          sugerencia={sugerencia}
+          onUsarSugerencia={setQuery}
         />
       ) : (
         <>
@@ -365,7 +370,10 @@ export function ResolverPage() {
     <Chasis
       titulo="Resolver"
       conLupa={false}
-      tituloContraido={escribiendo}
+      // EN EL TELÉFONO, LA PREGUNTA MANDA (tarea 346): "Resolver" queda
+      // pequeño en la barra (como al escribir) y lo grande es "¿Qué necesitas
+      // resolver?", justo sobre el campo. Desde 768 la barra no cambia.
+      tituloContraido={escribiendo || !ancho}
       sinCabeceraEnTelefono={busquedaEnTelefono}
       // EL ESCÁNER, EN LA FILA DEL TÍTULO DEL TELÉFONO (tarea 344): es otra
       // forma de buscar y se conserva, pero ya no le quita ancho al campo,
@@ -379,15 +387,6 @@ export function ResolverPage() {
         >
           <QrCode size={21} aria-hidden />
         </Link>
-      }
-      // En el teléfono, bajo el título, para qué sirve la sección (DESPUÉS de
-      // Claude Design: "cada sección dice para qué sirve bajo su título").
-      barra={
-        ancho ? undefined : (
-          <p className="px-4 pb-3 text-[15px] leading-snug text-noct-neutral-300">
-            Encuentra qué hacer ante un problema técnico.
-          </p>
-        )
       }
       buscador={
         ancho ? (
@@ -451,12 +450,17 @@ export function ResolverPage() {
         // encontrado. El campo es el MISMO elemento en las dos formas (mismo
         // sitio del árbol): cambiar de forma no le quita el foco.
         <main className="flex-1 px-4 pb-6">
+          {!busquedaEnTelefono && (
+            <h2 id="resolver-pregunta" className="pt-2 text-[24px] font-[650] leading-[1.2] tracking-[-.015em]">
+              ¿Qué necesitas resolver?
+            </h2>
+          )}
           <div
             data-buscador-resolver
             className={
               busquedaEnTelefono
                 ? 'sticky top-0 z-20 -mx-4 flex items-center gap-0.5 bg-noct-bg/[.94] py-2.5 pl-1 pr-4 backdrop-blur-[12px]'
-                : 'pt-3.5'
+                : 'pt-3'
             }
           >
             {busquedaEnTelefono && (
@@ -490,11 +494,18 @@ export function ResolverPage() {
               {buscando ? encontrado : <PuedesEscribir onElegir={setQuery} />}
             </div>
           ) : (
-            <div className="flex flex-col gap-[26px] pt-3">
+            // RESOLVER EN EL TELÉFONO, MÁS SIMPLE (tarea 346). Responde primero
+            // "¿Qué necesitas resolver?": el campo y, pegados a él, los
+            // problemas que se buscan a menudo; la guía a medias solo si la
+            // hay, en una fila; las categorías como accesos de una línea; y
+            // la Agenda y lo reciente detrás, sin tarjetas, pero con lo
+            // atrasado y lo de hoy a la vista. Es lo mismo que había, menos
+            // cajas y menos rótulos: ninguna función se fue.
+            <div className="flex flex-col gap-6 pt-3">
               <EjemplosBusqueda conRotulo onElegir={setQuery} />
               {seguir && <SeguirEnTelefono guia={seguir} />}
+              <CategoriasEnTelefono accesos={accesos} totalGuias={totalGuias} />
               {!agendaCargando && <TrabajoDeHoy agenda={agenda} total={pendientes.length} />}
-              <QueEstaFallando accesos={accesos} totalGuias={totalGuias} />
               <BloqueRecientes recientes={otrasRecientes} />
               {consultasListas && (
                 <div className="empty:hidden">
@@ -625,53 +636,51 @@ function SegmentosAvance({ avance }: { avance: NonNullable<GuiaReciente['avance'
   )
 }
 
-// SIGUE DONDE IBAS, EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design):
-// qué guía es, en qué paso va y un botón que dice a dónde lleva ("Continuar
-// en el paso 2"). Es la única acción rellena de Resolver (regla 30): retomar
-// lo que se dejó a medias es lo que hace avanzar.
+// SIGUE DONDE IBAS, EN EL TELÉFONO (tarea 344; una sola fila desde la tarea
+// 346). Solo existe si hay una guía a medias: qué guía es, en qué paso va y
+// "Continuar", que la retoma. Toda la fila se toca; el botón relleno es la
+// única acción rellena de Resolver (regla 30): retomar lo que se dejó a
+// medias es lo que hace avanzar. El nombre accesible dice a dónde lleva
+// ("Continuar en el paso 2: …").
 function SeguirEnTelefono({ guia }: { guia: GuiaReciente }) {
-  const conPreguntas = guia.tipo === 'diagnostico'
   const avance = guia.avance
   const numero = avance ? Math.min(avance.hechos + 1, avance.total) : null
   const donde =
-    guia.enCurso ??
-    (avance && numero !== null ? `Vas en el ${pasoDeTotal(numero, avance.total, avance.totalAbierto ?? false)}` : '')
+    guia.enCurso ?? (avance && numero !== null ? pasoDeTotal(numero, avance.total, avance.totalAbierto ?? false) : '')
   const verbo = guia.enCurso === null && numero !== null ? `Continuar en el paso ${numero}` : 'Continuar'
   return (
-    <section aria-labelledby="resolver-seguir" className="flex flex-col gap-2.5">
-      <h2 id="resolver-seguir" className="text-[19px] font-[650] tracking-[-.01em]">
-        Sigue donde ibas
-      </h2>
-      <div className="flex flex-col gap-3 rounded-2xl border border-noct-divider bg-noct-surface p-4">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="text-[14px] text-noct-neutral-400">
-            {conPreguntas ? ROTULO_RECORRIDO : ['Guía', guia.categoriaNombre].filter(Boolean).join(' · ')}
-            {guia.borrador ? ' · Borrador' : ''}
-          </span>
-          <span data-nombre-principal className="min-w-0 text-[18px] font-[650] leading-[1.25] text-pretty [overflow-wrap:anywhere]">
-            {guia.titulo}
-          </span>
-          {donde && <span className="text-[15px] leading-snug text-noct-neutral-300">{donde}</span>}
-        </div>
-        {avance && <SegmentosAvance avance={avance} />}
-        <Link
-          to={guia.ruta}
-          state={ORIGEN_RESOLVER}
-          aria-label={`${verbo}: ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
-          className={`${BTN_PRIMARIO_RELLENO} w-full`}
-        >
-          {verbo}
-        </Link>
-      </div>
-    </section>
+    <Link
+      to={guia.ruta}
+      state={ORIGEN_RESOLVER}
+      data-seguir-donde-ibas
+      aria-label={`${verbo}: ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
+      className="flex min-w-0 items-center gap-3 rounded-2xl bg-noct-surface py-3 pl-4 pr-3 text-noct-text hover:bg-noct-text/[.06] max-md:active:bg-noct-presionado"
+    >
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-[13.5px] leading-snug text-noct-neutral-400">
+          Sigue donde ibas{donde ? ` · ${donde}` : ''}
+          {guia.borrador ? ' · Borrador' : ''}
+        </span>
+        <span data-nombre-principal className="min-w-0 text-[16.5px] font-[650] leading-[1.25] text-pretty [overflow-wrap:anywhere]">
+          {guia.titulo}
+        </span>
+      </span>
+      <span
+        aria-hidden
+        className="inline-flex h-11 shrink-0 items-center rounded-xl bg-noct-accent px-4 text-[15px] font-semibold text-noct-on-accent"
+      >
+        Continuar
+      </span>
+    </Link>
   )
 }
 
-// TU TRABAJO DE HOY, EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design).
-// Lo que urge (vencido o para hoy) con la fila de la Agenda, que ya dice el
-// estado con palabra y la acción con su verbo; sin nada urgente, una frase
-// que lo dice y nombra lo que la Agenda guarda. Sin los tres contadores: en
-// cero ocupaban la parte alta sin decir nada. "Agenda (N)" la abre entera.
+// TU TRABAJO DE HOY, EN EL TELÉFONO (tarea 344; en segundo plano desde la
+// tarea 346). Lo que urge (vencido o para hoy) con la fila de la Agenda, que
+// ya dice el estado con palabra y la acción con su verbo, sin caja alrededor;
+// sin nada urgente, una línea que lo dice y nombra lo que la Agenda guarda.
+// Va detrás de buscar, de la guía a medias y de las categorías, pero lo
+// atrasado sigue a la vista y con su color. "Agenda (N)" la abre entera.
 function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
   const urgentes = [
     ...agenda.vencidos.map((item) => ({ item, estado: 'vencido' as const })),
@@ -679,34 +688,32 @@ function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
   ]
   const visibles = urgentes.slice(0, ATENCION_VISIBLES)
   return (
-    <section aria-labelledby="resolver-hoy" className="flex flex-col gap-2.5">
+    <section aria-labelledby="resolver-hoy" className="flex flex-col">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 id="resolver-hoy" className="text-[19px] font-[650] tracking-[-.01em]">
+        <h2 id="resolver-hoy" className="text-[15px] font-[650] leading-snug text-noct-neutral-300">
           Tu trabajo de hoy
         </h2>
         <Link
           to="/agenda"
           // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe).
           aria-label={total > 0 ? `Abrir la Agenda: ${total} ${total === 1 ? 'asunto' : 'asuntos'}` : 'Abrir la Agenda'}
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[15px] font-semibold text-noct-accent-300 hover:underline"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14.5px] font-semibold text-noct-accent-300 hover:underline"
         >
           {total > 0 ? `Agenda (${total})` : 'Agenda'}
           <CaretRight size={13} aria-hidden />
         </Link>
       </div>
       {visibles.length > 0 ? (
-        <div className="flex flex-col rounded-2xl border border-noct-divider bg-noct-surface px-3.5 [&>a:last-child]:border-b-0">
+        <div className="flex flex-col [&>a:last-child]:border-b-0">
           {visibles.map(({ item, estado }) => (
             <FilaAgenda key={item.clave} item={item} estado={estado} />
           ))}
         </div>
       ) : (
-        <p className="rounded-2xl bg-noct-exito/(--tinte-estado) px-4 py-3.5 text-[15.5px] font-semibold leading-snug text-noct-exito">
-          {textoSinUrgencias(agenda)}
-        </p>
+        <p className="text-[14.5px] leading-snug text-noct-neutral-400">{textoSinUrgencias(agenda)}</p>
       )}
       {urgentes.length > visibles.length && (
-        <p className="px-0.5 text-[14px] text-noct-neutral-400">
+        <p className="pt-1 text-[14px] text-noct-neutral-400">
           Y {urgentes.length - visibles.length} más para hoy o atrasados en la Agenda.
         </p>
       )}
@@ -714,54 +721,44 @@ function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
   )
 }
 
-// ¿QUÉ ESTÁ FALLANDO?, EN EL TELÉFONO (tarea 344, DESPUÉS de Claude Design):
-// las categorías reales con guías para ejecutar, en tarjetas de dos en dos
-// con su icono y cuántas guías tienen, para quien no sabe qué escribir.
-// Cada una abre el catálogo filtrado (el mismo enlace de siempre) y "Ver
-// todas las guías" está siempre: es la puerta al catálogo.
-function QueEstaFallando({ accesos, totalGuias }: { accesos: AccesoRapido[]; totalGuias: number }) {
+// LAS GUÍAS POR CATEGORÍA, EN EL TELÉFONO (tarea 344 como "¿Qué está
+// fallando?"; desde la tarea 346, accesos de una línea). Las categorías reales
+// con guías para ejecutar, con su icono y cuántas tienen, para quien no sabe
+// qué escribir: cada una abre el catálogo filtrado (el mismo enlace de
+// siempre) y "Todas las guías" está siempre, porque es la puerta al catálogo.
+// Sin los mosaicos de dos en dos: ocupaban media pantalla para cuatro enlaces.
+function CategoriasEnTelefono({ accesos, totalGuias }: { accesos: AccesoRapido[]; totalGuias: number }) {
   return (
-    <section aria-labelledby="resolver-falla" className="flex flex-col gap-2.5">
-      <h2 id="resolver-falla" className="text-[19px] font-[650] tracking-[-.01em]">
-        ¿Qué está fallando?
+    <section aria-labelledby="resolver-categorias" className="flex flex-col gap-2">
+      <h2 id="resolver-categorias" className="text-[15px] font-[650] leading-snug text-noct-neutral-300">
+        Guías por categoría
       </h2>
-      {accesos.length > 0 && (
-        <div className="grid grid-cols-2 gap-2.5">
-          {accesos.map((acceso) => {
-            const Icono = iconoDeCategoria(acceso.nombre)
-            return (
-              <Link
-                key={acceso.categoriaId}
-                to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
-                state={ORIGEN_RESOLVER}
-                aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
-                className="flex min-h-24 min-w-0 flex-col items-start gap-2.5 rounded-2xl border border-noct-divider bg-noct-surface p-3.5 text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
-              >
-                <span
-                  aria-hidden
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-accent/[.14] text-noct-accent-300"
-                >
-                  <Icono size={20} />
-                </span>
-                <span className="flex min-w-0 max-w-full flex-col">
-                  <span className="text-[16.5px] font-[650] leading-[1.25] [overflow-wrap:anywhere]">{acceso.nombre}</span>
-                  <span className="text-[14px] text-noct-neutral-400">
-                    {acceso.guias} {acceso.guias === 1 ? 'guía' : 'guías'}
-                  </span>
-                </span>
-              </Link>
-            )
-          })}
-        </div>
-      )}
-      <Link
-        to="/soluciones"
-        state={ORIGEN_RESOLVER}
-        className="flex min-h-[52px] items-center justify-between gap-2 rounded-[14px] border-[1.5px] border-noct-text/25 px-4 text-[16px] font-semibold text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado"
-      >
-        <span>Ver todas las guías{totalGuias > 0 ? ` (${totalGuias})` : ''}</span>
-        <CaretRight size={18} className="shrink-0" aria-hidden />
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        {accesos.map((acceso) => {
+          const Icono = iconoDeCategoria(acceso.nombre)
+          return (
+            <Link
+              key={acceso.categoriaId}
+              to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
+              state={ORIGEN_RESOLVER}
+              aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
+              className="inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-full border border-noct-divider px-3.5 text-[15px] font-medium text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado"
+            >
+              <Icono size={16} className="shrink-0 text-noct-accent-300" aria-hidden />
+              <span className="min-w-0 [overflow-wrap:anywhere]">{acceso.nombre}</span>
+              <span className="font-mono text-[12.5px] text-noct-neutral-500">{acceso.guias}</span>
+            </Link>
+          )
+        })}
+        <Link
+          to="/soluciones"
+          state={ORIGEN_RESOLVER}
+          className="inline-flex min-h-11 items-center gap-1 px-1.5 text-[15px] font-semibold text-noct-accent-300 hover:underline"
+        >
+          Todas las guías{totalGuias > 0 ? ` (${totalGuias})` : ''}
+          <CaretRight size={14} aria-hidden />
+        </Link>
+      </div>
     </section>
   )
 }

@@ -10,6 +10,20 @@ export function texto(valor: unknown): string {
   return typeof valor === 'string' ? valor : ''
 }
 
+// Minusculas y sin tildes: "José" y "jose", "Cámara" y "camara" se leen
+// igual. Es la normalizacion del indice global (al indexar y al buscar),
+// de la coincidencia aproximada (`coincidenciaAproximada.ts`) y de los
+// filtros de Soluciones, Resolver y el Centro de consulta. Vivia en
+// `features/soluciones/iconosSoluciones.ts`, que la sigue exportando; se
+// trajo aqui en la tarea 346 para que el buscador de Equipos la use sin
+// depender de Soluciones.
+export function normalizarTexto(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+}
+
 // Busqueda local por subcadena sobre varios campos de una ficha, la
 // regla que repetian calcada los buscadores de Soluciones, Dispositivos
 // y Red (Fase 1 de PROPUESTA_REVISION_ARQUITECTURA.md). Une los campos
