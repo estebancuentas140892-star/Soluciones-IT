@@ -843,8 +843,11 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
       state={ORIGEN_RESOLVER}
       aria-label={`${accion} ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
       // 56 en el teléfono, 52 en la tableta y 48 desde 1280 (filas densas
-      // del escritorio, T3).
-      className="-mx-2 flex min-h-14 items-center gap-3 rounded-lg px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado md:min-h-[52px] xl:min-h-12 xl:py-1.5"
+      // del escritorio, T3). EN EL TELÉFONO, CADA GUÍA CON SU DIVISOR (tarea
+      // 347): sin él, dos recientes de título largo se leían como una sola.
+      // La fila va a todo el ancho del contenido, como las de la búsqueda y
+      // la Agenda, con 12 px arriba y abajo, y la última sin divisor.
+      className="-mx-2 flex min-h-14 items-center gap-3 rounded-lg px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado max-md:mx-0 max-md:rounded-none max-md:border-b max-md:border-noct-divider-fuerte max-md:px-0 max-md:py-3 max-md:last:border-b-0 md:min-h-[52px] xl:min-h-12 xl:py-1.5"
     >
       <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-accent/[.12] text-noct-accent-300">
         <Icono size={17} aria-hidden />
@@ -856,11 +859,12 @@ function FilaReciente({ guia }: { guia: GuiaReciente }) {
             seguía perdiendo el final, que suele ser lo que la distingue. */}
         <span
           data-nombre-principal
-          className="min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] text-pretty xl:text-[14.5px]"
+          // En el teléfono, el título manda como en la búsqueda (tarea 347).
+          className="min-w-0 text-[15px] font-medium leading-[1.3] [overflow-wrap:anywhere] text-pretty max-md:text-[15.5px] max-md:font-semibold xl:text-[14.5px]"
         >
           {guia.titulo}
         </span>
-        <span className="flex min-w-0 items-center gap-1 text-[12.5px] leading-[1.4] text-noct-neutral-400">
+        <span className="flex min-w-0 items-center gap-1 text-[12.5px] leading-[1.4] text-noct-neutral-400 max-md:text-[13px]">
           {guia.borrador && (
             <span className="inline-flex shrink-0 items-center gap-1">
               <PencilSimple size={11} aria-hidden />

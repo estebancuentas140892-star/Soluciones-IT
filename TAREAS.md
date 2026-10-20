@@ -4,6 +4,18 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 ## En proceso
 
+**ENCARGO DEL 2026-10-20 (LEGIBILIDAD): DISTINGUIR CADA GUÍA EN RESOLVER.** Un problema puntual: en el teléfono, las guías de Recientes y de los resultados de la búsqueda aparecían demasiado juntas. Base `main` en `2b51109`. Rama `fix/separadores-guias-resolver`, un solo commit, **sin integrar ni desplegar** hasta la revisión. No toca el buscador de la tarea 346, la navegación, los permisos, los datos ni la lógica de las guías.
+
+### 347. Cada guía, con su divisor, en Recientes y en los resultados de Resolver
+
+- **Descripción:** solo por debajo de 768 px. Cada guía de Recientes (`FilaReciente`), de los resultados de la búsqueda (`FilaResultado`) y de los borradores que coinciden (`FilaBorrador`) lleva un divisor horizontal con el trazo fuerte (`border-noct-divider-fuerte`, que tiene su valor claro), la última de cada lista sin él (`last:border-b-0`), y 12 px arriba y abajo (antes 8 o 9). En Recientes la fila va a todo el ancho del contenido, como las de la búsqueda y la Agenda, y el título pasa a 15,5/600 con el detalle a 13 en gris, como en la búsqueda. Iconos, acciones, enlaces y comportamiento, iguales; sin tarjetas, sombras ni bloques nuevos.
+- **Motivo:** encargo del usuario del 2026-10-20: dos guías de título largo seguidas se leían como una sola; los divisores de la búsqueda eran casi invisibles en el tema claro y quedaba uno sobrante al final de cada grupo; Recientes no tenía ninguno.
+- **Impacto:** presentación del teléfono en Resolver y en la capa del buscador global (que comparte las filas). Desde 768, nada cambia.
+- **Prioridad:** Media. **Estado:** En progreso: implementada y verificada en la rama, pendiente de la revisión.
+- **Área afectada:** `src/features/inicio/ResolverPage.tsx` (`FilaReciente`), `src/features/busqueda/ResultadosBusqueda.tsx` (`FilaResultado` y `CLASE_FILA`), `src/features/busqueda/BorradoresCoincidentes.tsx` (`FilaBorrador`); prueba nueva `src/features/inicio/separadoresGuias.test.tsx`.
+- **Verificación (2026-10-20):** las pruebas afectadas (Resolver, el buscador, los componentes y la resolución guiada: 40 archivos y 633 pruebas) y la nueva, `tsc -b`, lint, build y la suite completa. Capturas a 320, 390 y 768 px en oscuro y claro, en reposo y buscando "impresora": desde 768, idénticas byte a byte a las de `main`; a 390 la búsqueda crece 72 px y Resolver en reposo 15.
+- **Dependencias:** ninguna. **Modelo/esfuerzo:** Sonnet 5 / Medio (ejecutada con Opus 5.5).
+
 **ENCARGO DEL 2026-09-29: CONSOLIDAR, SIMPLIFICAR, FORTALECER Y OPTIMIZAR.** Sin rediseño general ni módulos por agregar. Al principio "Resolver → encontrar → ejecutar → solucionar" se suma otro: **la aplicación sabe mucho, pero muestra solo lo necesario en cada momento**; lo que no aporta algo nuevo o útil se simplifica, se oculta o se retira. Tarea por tarea, cada una con sus pruebas, `npm test`, `npm run lint`, `npm run build`, tablero, commit y push propios. No se reimplementa lo que ya existe, no se descarta trabajo sin commit, no se cambian datos reales para que una pantalla se vea mejor, y una tarea que el código ya resuelve se cierra documentando la conclusión, sin fabricar cambios.
 
 | Fase | Tarea del encargo | Tarea del tablero | Estado |

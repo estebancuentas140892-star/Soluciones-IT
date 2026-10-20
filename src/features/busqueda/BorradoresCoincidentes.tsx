@@ -117,7 +117,10 @@ function FilaBorrador({
       state={salto.estado}
       onClick={salto.alSaltar}
       aria-label={`Abrir borrador ${borrador.titulo}`}
-      className="flex min-h-14 items-center gap-3 rounded-md px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05]"
+      // En el teléfono, cada borrador con su divisor y la última sin él (tarea
+      // 347), como las guías de los resultados: con títulos largos, dos
+      // borradores seguidos se leían como uno.
+      className="flex min-h-14 items-center gap-3 rounded-md px-2 py-[9px] text-noct-text hover:bg-noct-text/[.05] max-md:rounded-none max-md:border-b max-md:border-noct-divider-fuerte max-md:py-3 max-md:last:border-b-0"
     >
       <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md bg-noct-precaucion/[.12] text-noct-precaucion">
         <PencilSimple size={17} aria-hidden />

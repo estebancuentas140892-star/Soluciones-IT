@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-20
 
+### Cambiado (tarea 347): cada guía, con su divisor, en Recientes y en los resultados de Resolver, en la rama `fix/separadores-guias-resolver`, sin integrar
+
+**Área modificada:** `src/features/inicio/ResolverPage.tsx` (`FilaReciente`), `src/features/busqueda/ResultadosBusqueda.tsx` (`FilaResultado`, `CLASE_FILA`) y `BorradoresCoincidentes.tsx` (`FilaBorrador`); prueba nueva `separadoresGuias.test.tsx`; [TAREAS.md](TAREAS.md), [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) y [COMPONENTES_UI.md](COMPONENTES_UI.md).
+**Tipo:** Cambiado.
+**Motivo:** encargo del usuario del 2026-10-20: en el teléfono las guías aparecían demasiado juntas y costaba ver dónde terminaba una y empezaba la siguiente, sobre todo en Recientes.
+**Qué cambia (solo por debajo de 768 px):** un divisor horizontal con el trazo fuerte entre cada guía de Recientes, de los resultados de la búsqueda y de los borradores que coinciden, sin divisor detrás de la última de cada lista; 12 px arriba y abajo en cada fila (antes 8 o 9); en Recientes, la fila a todo el ancho del contenido y el título a 15,5/600 con el detalle a 13 en gris, como en la búsqueda. Iconos, acciones y comportamiento, iguales.
+**Estructura de datos:** sin cambios.
+**Impacto esperado:** cada guía se reconoce como una, también con títulos de varias líneas y en el tema claro. Desde 768 nada cambia (capturas idénticas byte a byte).
+**Verificación:** ver la tarea 347 en [TAREAS.md](TAREAS.md). **Pendiente:** la revisión; no está en `main` ni desplegada.
+
 ### Integrado y publicado (tarea 346): búsquedas que toleran errores en Resolver y Equipos, y Resolver más simple en el teléfono, en `main`
 
 **Área modificada:** `4d1563f` (detallado en la entrada de abajo) entra en `main` por avance rápido desde `8d1206e`; la 346 sale del tablero y pasa a [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md).

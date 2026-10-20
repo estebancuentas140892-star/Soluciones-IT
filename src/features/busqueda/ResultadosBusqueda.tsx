@@ -335,7 +335,13 @@ export function FilaResultado({
     // cuerpo es el enlace; las acciones van debajo, en su propia fila.
     // En el teléfono, cada resultado con su divisor y la fila a todo el ancho
     // del contenido, como en el handoff (tarea 342); desde 768, la de siempre.
-    <div className="flex min-w-0 flex-col max-md:mx-2 max-md:border-b max-md:border-noct-divider" onKeyDown={alTeclado}>
+    // El divisor, con el trazo fuerte (tarea 347): con el normal, dos guías de
+    // título largo se leían como una sola, sobre todo en el tema claro. Y
+    // ninguno detrás de la última fila del grupo: ahí ya separa el espacio.
+    <div
+      className="flex min-w-0 flex-col max-md:mx-2 max-md:border-b max-md:border-noct-divider-fuerte max-md:last:border-b-0"
+      onKeyDown={alTeclado}
+    >
       {cabecera}
 
       {/* Las acciones directas. `empty:hidden` deja la fila exactamente
@@ -472,9 +478,11 @@ function QuizasBuscabas({ sugerencia, onUsar }: { sugerencia: string; onUsar?: (
 const ROTULO_TELEFONO = 'text-[15px] font-[650] leading-snug text-noct-neutral-300'
 
 // En el teléfono, 62 de alto y sin el margen interior: el divisor y la
-// respuesta al tocar van a todo el ancho del contenido (tarea 342).
+// respuesta al tocar van a todo el ancho del contenido (tarea 342). Con 12 px
+// arriba y abajo (tarea 347; antes 8): un título de dos o tres líneas no queda
+// pegado al divisor ni al título de la fila siguiente.
 const CLASE_FILA =
-  'flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 text-noct-text max-md:min-h-[62px] max-md:rounded-none max-md:px-0'
+  'flex min-h-14 items-center gap-3 rounded-lg px-2 py-2 text-noct-text max-md:min-h-[62px] max-md:rounded-none max-md:px-0 max-md:py-3'
 
 export function ResultadosBusqueda({
   resultados,
