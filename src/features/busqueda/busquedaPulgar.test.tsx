@@ -105,6 +105,14 @@ describe('los resultados en el teléfono', () => {
     expect(norte.querySelector('[data-nombre-principal]')?.className).not.toContain('truncate')
     // Sin IP, no hay hueco.
     expect((control(/^Caja de prueba sur/) as HTMLElement).querySelector('[data-ip-resultado]')).toBeNull()
+
+    // EL ICONO DE SU CLASE (tarea 349): en el teléfono cada equipo se dibuja
+    // con el icono de su categoría, el de la lista de Equipos; el genérico
+    // queda para desde 768.
+    const iconoDe = (fila: HTMLElement) => fila.querySelector<HTMLElement>('[data-icono-equipo]')
+    expect(iconoDe(norte)?.dataset.iconoEquipo).toBe('pos')
+    expect(iconoDe(norte)?.className).toContain('max-md:block')
+    expect(iconoDe(control(/^Caja de prueba sur/) as HTMLElement)?.dataset.iconoEquipo).toBe('pc')
   })
 
   // Un POS no es Facturación: sin autorizaciones indexadas no se finge un

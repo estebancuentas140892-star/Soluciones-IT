@@ -179,6 +179,13 @@ describe('la confianza en pantalla, en el teléfono', () => {
     expect(abrir?.textContent).toBe('Abrir la guía')
     expect(abrir?.getAttribute('href')).toMatch(/^\/soluciones\//)
     expect(destacada.textContent).toContain('Publicada')
+    // Compacta (tarea 349): el icono de su tipo junto a lo que es, y la
+    // acción en la misma fila que su medida, sin ocupar todo el ancho.
+    expect(destacada.querySelector('[data-icono-tipo]')).not.toBeNull()
+    const pie = destacada.querySelector<HTMLElement>('[data-pie-mejor-coincide]')
+    expect(pie?.contains(abrir as Node)).toBe(true)
+    expect(pie?.textContent).toContain('Publicada')
+    expect(abrir?.className).not.toContain('w-full')
     // No es un diagnóstico: si hay otras parecidas, lo dice.
     expect(destacada.textContent).toContain('Hay otras guías parecidas debajo.')
     expect(secciones()).toContain('Otras guías')

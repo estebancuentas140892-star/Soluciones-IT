@@ -31,6 +31,8 @@ import type { ResultadoBusqueda } from './useIndiceBusqueda'
 import { VistaRapidaResultado } from './VistaRapida'
 import { useRanuraVistaRapida } from './ranuraVistaRapida'
 import { useDatosDeEquipos } from './useDatosDeEquipos'
+import { IconoNodo } from '../red/IconoNodo'
+import { tipoDeNodoVisual } from '../red/topologiaVisual'
 
 // Presentacion compartida de los resultados del buscador global. El
 // catalogo y el agrupado viven en resultados.ts; el ranking global, en
@@ -175,6 +177,7 @@ export function FilaResultado({
   const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
   // En el teléfono, la IP de un equipo va a la derecha en mono (tarea 342).
   const equipo = resultado.tipo === 'dispositivo' ? equipos.get(idDeEntidad(resultado.id)) : undefined
+  const iconoDeEquipo = equipo?.categoriaNombre ? tipoDeNodoVisual(equipo.categoriaNombre) : null
   const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
   const conPrefijo = prefijoAtenuado ? partirPorPrefijo(resultado.titulo, consulta) : null
   const conSuTipo = conTipo ? partesSubtituloConTipo(resultado) : null
@@ -220,7 +223,19 @@ export function FilaResultado({
       <span
         className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md max-md:h-[38px] max-md:w-[38px] max-md:rounded-[11px] ${tono}`}
       >
-        <Icono size={17} className="max-md:h-[19px] max-md:w-[19px]" aria-hidden />
+        {iconoDeEquipo ? (
+          // EN EL TELÉFONO, EL ICONO DE SU CLASE (tarea 349): una impresora se
+          // reconoce como impresora y una cámara como cámara, con el mismo
+          // icono que en la lista de Equipos. Desde 768, el de siempre.
+          <>
+            <Icono size={17} className="max-md:hidden" aria-hidden />
+            <span data-icono-equipo={iconoDeEquipo} aria-hidden className="hidden max-md:block">
+              <IconoNodo tipo={iconoDeEquipo} className="h-[19px] w-[19px]" />
+            </span>
+          </>
+        ) : (
+          <Icono size={17} className="max-md:h-[19px] max-md:w-[19px]" aria-hidden />
+        )}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {conPrefijo ? (
@@ -403,6 +418,7 @@ function GuiaQueMejorCoincide({ resultado, cercana }: { resultado: ResultadoBusq
     .filter(Boolean)
     .join(' · ')
   const continuar = accion?.estado === 'continuar' && accion.pendiente.tipo === 'paso'
+  const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
   return (
     <section aria-labelledby="guia-mejor-coincide" className="flex flex-col gap-2">
       {/* Una guía que solo coincide con una errata no "mejor coincide":
@@ -411,37 +427,47 @@ function GuiaQueMejorCoincide({ resultado, cercana }: { resultado: ResultadoBusq
       <h2 id="guia-mejor-coincide" className={ROTULO_TELEFONO}>
         {resultado.aproximado ? 'Posible coincidencia' : 'La guía que mejor coincide'}
       </h2>
-      <div className="flex flex-col gap-3.5 rounded-[18px] border-[1.5px] border-noct-accent bg-noct-surface p-4">
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-[14px] leading-snug text-noct-neutral-400">{[tipo, detalle].filter(Boolean).join(' · ')}</span>
-          <span data-nombre-principal className="min-w-0 text-[21px] font-[650] leading-[1.2] text-pretty [overflow-wrap:anywhere]">
+      {/* MÁS COMPACTA (tarea 349, «Mejor coincidencia» del recorrido de
+          Ventana): el icono de su tipo junto a lo que es, el título entero y,
+          en una sola fila, cuánto toma y la acción a la derecha, al alcance
+          del pulgar. La misma acción y el mismo destino; la tarjeta deja de
+          ocupar media pantalla y lo que sigue sube a la vista. */}
+      <div className="flex flex-col gap-3 rounded-[18px] border-[1.5px] border-noct-accent bg-noct-surface p-4">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <span className="flex min-w-0 items-center gap-2 text-[14px] leading-snug text-noct-neutral-400">
+            <span data-icono-tipo className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${tono}`}>
+              <Icono size={16} aria-hidden />
+            </span>
+            <span className="min-w-0">{[tipo, detalle].filter(Boolean).join(' · ')}</span>
+          </span>
+          <span data-nombre-principal className="min-w-0 text-[20px] font-[650] leading-[1.22] text-pretty [overflow-wrap:anywhere]">
             {resultado.titulo}
           </span>
-          {(medida || esGuia) && (
-            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[15px] text-noct-neutral-300">
-              {medida && <span>{medida}</span>}
-              {continuar && accion.pendiente.tipo === 'paso' ? (
-                <span className="font-semibold text-noct-accent-300">Vas en el paso {accion.pendiente.numero}</span>
-              ) : (
-                esGuia && (
-                  <span className="inline-flex items-center gap-1 font-semibold text-noct-exito">
-                    <Check size={15} aria-hidden />
-                    Publicada
-                  </span>
-                )
-              )}
-            </span>
-          )}
         </div>
-        <Link
-          to={abrir.to}
-          state={abrir.state}
-          onClick={abrir.onClick}
-          aria-label={`${continuar ? 'Continuar la guía' : 'Abrir la guía'}: ${resultado.titulo}`}
-          className={`${BTN_PRIMARIO_RELLENO} w-full`}
-        >
-          {continuar ? 'Continuar la guía' : 'Abrir la guía'}
-        </Link>
+        <div data-pie-mejor-coincide className="flex items-center justify-between gap-3">
+          <span className="flex min-w-0 flex-col gap-0.5 text-[14.5px] leading-snug text-noct-neutral-300">
+            {medida && <span>{medida}</span>}
+            {continuar && accion.pendiente.tipo === 'paso' ? (
+              <span className="font-semibold text-noct-accent-300">Vas en el paso {accion.pendiente.numero}</span>
+            ) : (
+              esGuia && (
+                <span className="inline-flex items-center gap-1 font-semibold text-noct-exito">
+                  <Check size={15} aria-hidden />
+                  Publicada
+                </span>
+              )
+            )}
+          </span>
+          <Link
+            to={abrir.to}
+            state={abrir.state}
+            onClick={abrir.onClick}
+            aria-label={`${continuar ? 'Continuar la guía' : 'Abrir la guía'}: ${resultado.titulo}`}
+            className={`${BTN_PRIMARIO_RELLENO} shrink-0`}
+          >
+            {continuar ? 'Continuar la guía' : 'Abrir la guía'}
+          </Link>
+        </div>
       </div>
       {cercana && <p className="px-0.5 text-[14px] leading-snug text-noct-neutral-400">Hay otras guías parecidas debajo.</p>}
     </section>
