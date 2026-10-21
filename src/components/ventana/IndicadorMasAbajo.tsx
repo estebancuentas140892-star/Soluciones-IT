@@ -19,7 +19,7 @@ export function IndicadorMasAbajo({ texto, critico = false }: Props) {
       aria-hidden
       data-mas-abajo
       className={`pointer-events-none flex h-[34px] w-full select-none items-center justify-center gap-1.5 border-b border-noct-divider text-[13.5px] font-extrabold ${
-        critico ? 'bg-noct-error/[.14] text-noct-error' : 'bg-noct-tinte text-noct-text'
+        critico ? 'bg-noct-error/(--tinte-estado) text-noct-error' : 'bg-noct-tinte text-noct-text'
       }`}
     >
       <ArrowDown size={16} className="shrink-0" aria-hidden />

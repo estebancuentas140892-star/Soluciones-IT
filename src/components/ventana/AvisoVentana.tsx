@@ -31,14 +31,20 @@ interface Props {
 
 const ESTILOS = {
   precaucion: {
-    caja: 'border border-noct-precaucion/55 bg-noct-precaucion/[.12]',
+    caja: 'border border-noct-precaucion/55 bg-noct-precaucion/(--tinte-estado)',
     color: 'text-noct-precaucion',
+    colorPalabra: 'text-noct-precaucion',
     palabra: 'Precaución',
     Icono: Warning,
   },
   critica: {
-    caja: 'border-2 border-noct-error bg-noct-error/[.12]',
+    caja: 'border-2 border-noct-error bg-noct-error/(--tinte-estado)',
     color: 'text-noct-error',
+    // La palabra es texto de 13 px sobre el tinte rojo: en el tema claro el
+    // rojo puro queda en 4.5 justos, sin margen. Se mezcla con el color del
+    // texto del tema (más oscuro en el claro, más claro en el oscuro) para
+    // que llegue a 4.5:1 con holgura sin dejar de ser rojo.
+    colorPalabra: 'text-[color-mix(in_oklab,var(--color-noct-error)_82%,var(--color-noct-text))]',
     palabra: 'Advertencia crítica',
     Icono: WarningOctagon,
   },
@@ -58,7 +64,7 @@ export function AvisoVentana({ nivel, texto, confirmada = false, onConfirmar }: 
       <div className="flex items-start gap-2.5">
         <estilo.Icono size={nivel === 'critica' ? 22 : 20} className={`mt-px shrink-0 ${estilo.color}`} aria-hidden />
         <div className="flex min-w-0 flex-col gap-0.5">
-          <p className={`text-[13px] font-extrabold uppercase leading-snug tracking-[.05em] ${estilo.color}`}>
+          <p className={`text-[13px] font-extrabold uppercase leading-snug tracking-[.05em] ${estilo.colorPalabra}`}>
             {estilo.palabra}
           </p>
           <p className="text-[16px] font-medium leading-[1.4] text-noct-text text-pretty [overflow-wrap:anywhere]">
