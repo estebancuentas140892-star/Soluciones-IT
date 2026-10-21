@@ -34,6 +34,7 @@ import {
   type Elecciones,
 } from '../../lib/rutaProcedimiento'
 import { guiaTerminada } from './cierrePaso'
+import { siNoPendientes } from './ventana'
 import { useClaveProgreso } from './contextoEjecucion'
 import {
   guiasObligatoriasDeTarea,
@@ -64,6 +65,16 @@ interface Opciones {
   // Sin esto (lo de dentro de otra guía, la vista de lista de "Probar")
   // marcar la última casilla termina, como siempre.
   cierreConFinalizar?: boolean
+  // LA VENTANA (tarea 348). En el teléfono el paso se cierra con un solo
+  // "Listo" (`completarVentana`) y no marcando cada acción. Con esto activo,
+  // responder la decisión con opciones del paso también cierra la ventana en
+  // el mismo gesto, en vez de exigir las acciones marcadas una a una.
+  //
+  // `puedeCerrar` es la última palabra de la pantalla sobre una ventana: hoy,
+  // que no quede una advertencia crítica sin confirmar. Es un control de
+  // seguridad, así que vive donde se cierra la ventana y no solo en el botón:
+  // responder una pregunta guardada por otro camino tampoco la cierra.
+  ventana?: { puedeCerrar: (paso: PasoProcedimiento) => boolean }
 }
 
 // Logica de ejecucion de un procedimiento, compartida entre la vista
@@ -86,6 +97,7 @@ export function useProcedimientoEjecucion({
   onCompletado,
   onAvanzar,
   cierreConFinalizar = false,
+  ventana,
 }: Opciones) {
   // DONDE VIVE ESTE AVANCE (tarea 2 del encargo). En el nivel 0 es la
   // fila del articulo; en un nivel anidado, la entrada de ESTA
@@ -393,6 +405,8 @@ export function useProcedimientoEjecucion({
     const progActual = await leerAvance(clave)
     const hechosActuales = progActual?.pasosHechos ?? []
     if (hechosActuales.includes(paso.id)) return
+    // En la ventana, ningún camino la cierra con una crítica sin confirmar.
+    if (ventana && !ventana.puedeCerrar(paso)) return
 
     const decision = decisionDeRuta(paso)
     if (decision && opcionElegida(decision, progActual?.elecciones) === null) return
@@ -407,6 +421,51 @@ export function useProcedimientoEjecucion({
     // pasarlas seria conservar la unica via que completaba trabajo sin
     // hacerlo (tarea 3 del encargo).
     await establecerPasoHecho(clave, paso.id, true)
+    await avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]), progActual?.elecciones)
+  }
+
+  // "LISTO" DE UNA VENTANA (tarea 348, rediseño móvil por ventanas). Da por
+  // hechas de una vez las tareas del paso y lo cierra, con TODA la validación
+  // de siempre: la decisión con opciones respondida, las guías que exige cada
+  // tarea cumplidas y lo reutilizado del paso (su guía y la de la respuesta)
+  // terminado. Si falta algo no hace nada: quien pinta ya dijo por qué no se
+  // podía (`pieDeLaVentana`), y esta función es la última línea de defensa.
+  //
+  // Esto REEMPLAZA, solo en la ventana, el principio de la tarea 3 del
+  // encargo del 2026-09-09 ("cerrar un paso no arrastra tareas que nadie
+  // hizo"): aquí el técnico afirma la ventana entera con un gesto deliberado
+  // sobre el paso que acaba de leer (decisión del usuario, 2026-10-21, ver
+  // DECISIONES.md). El avance guardado es el mismo de siempre: todas las
+  // tareas del paso quedan en `instruccionesHechas` y el paso en
+  // `pasosHechos`, así que el índice, el cierre de la guía y el historial
+  // leen exactamente lo que leían.
+  async function completarVentana(indice: number, paso: PasoProcedimiento) {
+    const progActual = await leerAvance(clave)
+    const hechosActuales = progActual?.pasosHechos ?? []
+    if (hechosActuales.includes(paso.id)) return
+    if (ventana && !ventana.puedeCerrar(paso)) return
+
+    const decision = decisionDeRuta(paso)
+    if (decision && opcionElegida(decision, progActual?.elecciones) === null) return
+
+    const tareas = tareasDe(paso.bloques)
+    const marcadas = new Set(progActual?.instruccionesHechas ?? [])
+    // Una pregunta de Sí/No se responde, no se da por hecha: elegir "No" puede
+    // abrir otra guía, así que "Listo" nunca contesta por el técnico.
+    if (siNoPendientes(paso, marcadas).length > 0) return
+    for (const tarea of tareas) {
+      if (!marcadas.has(tarea.id) && !(await tareaMarcable(paso, tarea.id))) return
+    }
+    const reutilizadoHecho =
+      (await subSatisfechoFresco(paso)) && (await respuestaSatisfechaFresca(paso, progActual?.elecciones))
+    if (!reutilizadoHecho) return
+
+    await establecerPasoHecho(
+      clave,
+      paso.id,
+      true,
+      tareas.map((tarea) => tarea.id),
+    )
     await avanzarDespuesDe(indice, new Set([...hechosActuales, paso.id]), progActual?.elecciones)
   }
 
@@ -438,7 +497,9 @@ export function useProcedimientoEjecucion({
   async function seguirTrasResponder(indice: number, paso: PasoProcedimiento) {
     const prog = await leerAvance(clave)
     if (!(prog?.pasosHechos ?? []).includes(paso.id)) {
-      await intentarCompletarPaso(indice, paso)
+      // En la ventana, responder la pregunta es el "Listo" del paso.
+      if (ventana) await completarVentana(indice, paso)
+      else await intentarCompletarPaso(indice, paso)
       return
     }
     await avanzarDespuesDe(indice, new Set(prog?.pasosHechos), prog?.elecciones)
@@ -524,6 +585,7 @@ export function useProcedimientoEjecucion({
     alternarVerificacion,
     finalizar,
     intentarCompletarPaso,
+    completarVentana,
     completarPasoYAvanzar,
     elegirOpcion,
   }

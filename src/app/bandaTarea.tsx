@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { RanuraBajoContexto } from './ranuraBajoContexto'
 
 // Ranura pegajosa del nivel tarea del chasis (auditoría móvil del
 // 2026-08-03, hallazgo M-010, regla M-R1).
@@ -43,9 +44,8 @@ export function BandaTarea({ children }: { children: ReactNode }) {
 //
 // Tres estados: `undefined` cuando no hay cabecera compacta (la pantalla no
 // la publica), `null` mientras su hueco todavía no se montó y el elemento
-// cuando ya está.
-const RanuraBajoContexto = createContext<HTMLElement | null | undefined>(undefined)
-
+// cuando ya está. El contexto vive en `ranuraBajoContexto.ts`, con el gancho
+// que pregunta si hay cabecera.
 export const ProveedorBandaBajoTarea = RanuraBajoContexto.Provider
 
 /**
