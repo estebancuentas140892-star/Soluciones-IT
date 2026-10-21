@@ -31,6 +31,18 @@ VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 ```
 
+Son las dos únicas que el cliente necesita (`src/lib/supabase.ts`). La versión que muestra la app (`VITE_VERSION_APP`) sale sola de `VERCEL_GIT_COMMIT_SHA` al compilar en Vercel. `VITE_MODO_PRUEBA_LOCAL=1` (banco de pruebas con datos inventados, en `.env.local`) y `VITE_ASISTENCIA_SIMULADA_URL` solo funcionan con `npm run dev`: el build de producción las descarta. Nunca se pone en el cliente una clave `service_role`.
+
+### Vista previa de Vercel (Preview)
+
+Vite **incrusta** las variables `VITE_*` en el JavaScript al compilar. Por eso cada entorno de Vercel necesita las suyas en el momento del build: si `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` solo están marcadas para Production, el despliegue Preview de una rama compila sin ellas, la app queda sin cliente de Supabase y el inicio de sesión dice «La aplicación aún no está conectada al servidor». Cambiar una variable no arregla un despliegue ya hecho: hay que volver a desplegar la rama.
+
+Diagnóstico del 2026-10-21 (tarea 349): el despliegue Preview de `feat/rediseno-movil-ventanas` existe y terminó bien (está protegido por Vercel Authentication), pero sin esas variables. Supabase solo tiene el proyecto de producción («Soluciones TI»); no hay un proyecto de pruebas. Las opciones, que decide el usuario:
+
+1. **Un proyecto Supabase de pruebas** (recomendada): crear el proyecto, ejecutar `supabase/schema.sql`, cargar datos inventados y usuarios de prueba, y poner su URL y su clave anónima en Vercel **solo para Preview**. Las vistas previas nunca tocan datos reales.
+2. **Preview contra producción**, solo con autorización expresa: marcar las dos variables también para Preview. La clave anónima es pública por diseño y las políticas RLS y el inicio de sesión siguen protegiendo, pero quien pruebe la vista previa trabaja sobre los datos reales del equipo.
+3. **Sin Supabase en Preview**: revisar la interfaz en local con el banco de pruebas (`.env.local` con `VITE_MODO_PRUEBA_LOCAL=1` y `npm run dev`) o con `node scripts/capturas-moviles.mjs`.
+
 ## Scripts
 
 - `npm run dev`: servidor de desarrollo

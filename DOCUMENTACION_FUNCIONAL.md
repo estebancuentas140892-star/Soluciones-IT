@@ -221,7 +221,18 @@ Conviven además tres sistemas de color sobre superficies distintas (no se mezcl
 
 - **Estado de un equipo** (`src/features/dispositivos/estados.ts` + `topologiaVisual.ts`): 🟢 operativo (verde/éxito), 🟡 en mantenimiento (ámbar/precaución), 🔴 fuera de servicio (rojo/error), ⚫ de baja (neutro), gris para cualquier texto libre.
 - **Tipo de documento** (`iconosSoluciones.ts`): tiñe el recuadro del icono de cada artículo según su tipo.
-- **Identidad de categoría** (`coloresCategoria.ts`): tiñe los chips de filtro, cabeceras de grupo, rejillas de selección y la ficha de categoría. Se deriva del `orden` de la categoría o de un override manual (`categorias.color`).
+- **Identidad de categoría** (`coloresCategoria.ts`): tiñe los chips de filtro, cabeceras de grupo, rejillas de selección y la ficha de categoría. Se deriva del `orden` de la categoría o de un override manual (`categorias.color`). Desde la tarea 349, también el recuadro del icono de cada acceso de «Guías por categoría» en Resolver del teléfono.
+
+**El teléfono con el sistema visual «Ventana» (desde el 2026-10-21, tarea 349, [DECISIONES.md](DECISIONES.md) AD-092; solo por debajo de 768 px, en la rama `feat/rediseno-movil-ventanas`, sin integrar).** Los mismos colores con los valores de la pizarra «Sistema visual Ventana» de Claude Design, en el tema oscuro y en el claro: un fondo pizarra más frío, la superficie de las tarjetas y la «superficie 2» de los controles, dos grises de texto secundario, **cian** para lo que avanza o se toca, **verde** para lo que comprueba o está bien, **ámbar** para lo que pide atención y **rojo** para lo que detiene. Todo texto llega a 4.5:1 sobre su fondo en los dos temas. La barra del navegador del teléfono toma el mismo fondo. Lo que cambia a la vista, sin un toque más:
+
+- **Resolver:** cada acceso de «Guías por categoría» lleva su icono en un recuadro redondo con el color de la categoría (el acceso sigue midiendo 44 px; no vuelven los mosaicos), y «Sigue donde ibas» enseña bajo el título el avance de la guía en segmentos (hecho en cian, el actual en claro, lo que falta en gris).
+- **Resultados de búsqueda:** cada equipo con el icono de su clase (impresora, cámara, POS, computador...), el mismo de la lista de Equipos. «La guía que mejor coincide» va más compacta: el icono de su tipo junto a lo que es, el título entero y, en una fila, cuánto toma, «Publicada» y **«Abrir la guía»** a la derecha.
+- **Barra de pestañas:** la pestaña donde se está lleva una pastilla cian detrás del icono relleno, y su rótulo en cian y negrita (antes, una barra de 2 px encima).
+- **Ficha del equipo:** junto a su categoría y su modelo, el icono de su clase; bajo la IP, el **número de serie** con su «Copiar» (antes, dentro de «Más datos», que sigue guardando el registro completo y la placa).
+- **Lista de Equipos:** un equipo en mantenimiento o de baja atenúa su nombre y su icono, pero ya no su línea de contexto, que se lee entera.
+- **Zonas de toque:** «‹ Volver» de las subpantallas y la estrella de favorito de las guías con preguntas responden en 44 x 44 px sin cambiar su tamaño.
+
+El tema por defecto sigue siendo el oscuro (regla 12); Ajustes ofrece oscuro, claro y automático. Tableta y escritorio no cambian.
 
 ### 2.4 Navegación "Volver" / "Cancelar"
 
