@@ -512,7 +512,7 @@ export function BovedaPage() {
                 >
                   {chip.nombre}
                   <span
-                    className={`text-[11px] max-md:text-[12px] ${activa ? 'text-noct-accent-400' : 'text-noct-neutral-600'}`}
+                    className={`text-[11px] max-md:text-[12px] ${activa ? 'text-noct-accent-400 max-md:text-noct-accent-300' : 'text-noct-neutral-600'}`}
                   >
                     {chip.count}
                   </span>

@@ -83,8 +83,11 @@ export function FilaDispositivo({
   const estadoVisible = estadoEnLista(dispositivo.estado)
   const atenuada = estadoVisible?.excepcion ?? false
   // Al 66 % y no al 60: en el tema claro el nombre atenuado quedaba en
-  // 4.4:1 (tarea 333).
-  const atenuacion = atenuada ? 'opacity-[.66]' : ''
+  // 4.4:1 (tarea 333). La línea de contexto ya va en el gris más tenue que
+  // se lee (texto 4): atenuada además, quedaba en 2.5:1 (claro) y 3.5:1
+  // (oscuro). En el teléfono no se atenúa (tarea 349); el nombre y el icono
+  // atenuados y el estado con su palabra siguen diciendo que es una excepción.
+  const atenuacionContexto = atenuada ? 'opacity-[.66] max-md:opacity-100' : ''
   const { pre, match, post } = partirTitulo(dispositivo.nombre, normalizarTexto(resaltar.trim()))
   const enPartes = typeof subtitulo !== 'string'
   const conSubtitulo = enPartes ? subtitulo.length > 0 : subtitulo !== ''
@@ -144,11 +147,13 @@ export function FilaDispositivo({
         {/* El nombre parte línea, hasta dos, como los títulos de Resolver y
             de los procedimientos: recortado a una ("Impresora de ejemplo
             Adm…" junto a su IP) escondía justo el dato principal. Sin nada
-            a su derecha, usa también ese ancho. */}
+            a su derecha, usa también ese ancho. En el teléfono, atenuado al
+            80 % (tarea 349): al 66, lo buscado resaltado dentro del nombre
+            quedaba en 3.6:1 en el claro. */}
         <p
           className={`line-clamp-2 break-words text-[15px] font-medium leading-[1.3] text-pretty ${
             derecha ? '' : 'col-span-2'
-          } ${atenuada ? 'opacity-[.66]' : ''}`}
+          } ${atenuada ? 'opacity-[.66] max-md:opacity-[.8]' : ''}`}
         >
           {pre}
           {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
@@ -163,7 +168,7 @@ export function FilaDispositivo({
                 la IP detrás. La línea de contexto no se recorta a una:
                 solo dice lo que el nombre no dice. */}
             {typeof subtitulo === 'string'
-              ? conSubtitulo && <p className={`min-w-0 flex-1 line-clamp-2 break-words ${TEXTO_CONTEXTO} ${atenuacion}`}>{subtitulo}</p>
+              ? conSubtitulo && <p className={`min-w-0 flex-1 line-clamp-2 break-words ${TEXTO_CONTEXTO} ${atenuacionContexto}`}>{subtitulo}</p>
               : conSubtitulo && (
                   <p className={`contents ${TEXTO_CONTEXTO}`}>
                     {subtitulo.map((parte, i) => (
@@ -171,7 +176,7 @@ export function FilaDispositivo({
                         {/* El espacio no se dibuja (lo pone el hueco), pero
                             deja el texto leíble entero: "A · B". */}
                         {i > 0 && ' '}
-                        <span className={`line-clamp-2 min-w-0 break-words ${atenuacion}`}>
+                        <span className={`line-clamp-2 min-w-0 break-words ${atenuacionContexto}`}>
                           {i < subtitulo.length - 1 ? `${parte} ·` : parte}
                         </span>
                       </Fragment>

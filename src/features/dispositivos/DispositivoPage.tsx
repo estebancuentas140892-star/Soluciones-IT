@@ -860,9 +860,25 @@ export function DispositivoPage() {
           {!ancho ? (
             <div className="flex items-start gap-3 px-0.5">
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                {lineaTipo && (
-                  <span data-linea-identidad className="text-[14.5px] leading-snug text-noct-neutral-400 [overflow-wrap:anywhere]">
-                    {lineaTipo}
+                {/* QUÉ CLASE DE EQUIPO ES, DE UN VISTAZO (tarea 349, panel del
+                    equipo de Ventana): el icono de su tipo, el de la lista y
+                    los resultados, en un recuadro junto a su categoría y su
+                    modelo. Va en esta línea y no junto al nombre, que conserva
+                    todo el ancho. */}
+                {(lineaTipo || categoria) && (
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span
+                      data-icono-tipo-equipo={tipoDeNodoVisual(categoria?.nombre ?? '')}
+                      aria-hidden
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-noct-text/[.06] text-noct-neutral-300"
+                    >
+                      <IconoNodo tipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="h-[17px] w-[17px]" />
+                    </span>
+                    {lineaTipo && (
+                      <span data-linea-identidad className="min-w-0 text-[14.5px] leading-snug text-noct-neutral-400 [overflow-wrap:anywhere]">
+                        {lineaTipo}
+                      </span>
+                    )}
                   </span>
                 )}
                 <span
@@ -948,7 +964,12 @@ export function DispositivoPage() {
             tarjeta: filas con su divisor. Su IP en IBM Plex Mono a 20 px
             con copiar, dónde está, quién responde de él y a qué está
             conectado. Sin ninguno, no hay bloque. */}
-        {(dispositivo.ip || ubicacionNombre || personaVivaACargo || anotadoPorValidar || subida || (!ancho && sinResponsable)) && (
+        {(dispositivo.ip ||
+          ubicacionNombre ||
+          personaVivaACargo ||
+          anotadoPorValidar ||
+          subida ||
+          (!ancho && (sinResponsable || dispositivo.serial))) && (
         <section
           aria-label="Datos para trabajar"
           // En el teléfono, una tarjeta (tarea 344): los datos que se usan con
@@ -973,6 +994,21 @@ export function DispositivoPage() {
                 conTexto={!ancho}
                 aviso={`IP copiada: ${dispositivo.ip}`}
               />
+            </div>
+          )}
+
+          {/* EL SERIAL, A LA VISTA EN EL TELÉFONO (tarea 349): es lo que pide
+              el proveedor o la mesa de ayuda con el equipo delante, y estaba
+              a un toque, dentro de «Más datos». Aquí, compacto y con su
+              «Copiar», bajo la IP. «Más datos» sigue guardando el registro
+              completo. Desde 768, como siempre. */}
+          {!ancho && dispositivo.serial && (
+            <div data-serial-equipo className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5">
+              <div className="min-w-0 flex-1">
+                <p className="text-[12.5px] leading-snug text-noct-neutral-500">Número de serie</p>
+                <p className="font-mono text-[16px] font-medium leading-[1.3] [overflow-wrap:anywhere]">{dispositivo.serial}</p>
+              </div>
+              <BotonCopiar etiqueta="Número de serie" texto={dispositivo.serial} conTexto aviso={`Serial copiado: ${dispositivo.serial}`} />
             </div>
           )}
 

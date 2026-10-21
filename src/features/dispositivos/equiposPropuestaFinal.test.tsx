@@ -74,6 +74,13 @@ describe('la lista de Equipos', () => {
     expect(atenuada('caja-4')).toBe(true)
     expect(atenuada('caja-1')).toBe(false)
     expect(atenuada('caja-2')).toBe(false)
+    // En el teléfono su línea de contexto no se atenúa (tarea 349): ya va en
+    // el gris más tenue que se lee y, atenuada, no llegaba a 4.5:1.
+    for (const contexto of filaDe('caja-4')?.querySelectorAll<HTMLElement>('[class*="opacity-[.66]"]') ?? []) {
+      if (contexto.className.includes('text-noct-neutral-500') || contexto.closest('[class*="text-noct-neutral-500"]')) {
+        expect(contexto.className).toContain('max-md:opacity-100')
+      }
+    }
   })
 
   it('el buscador dice qué busca y lo buscado se resalta dentro del nombre', async () => {

@@ -236,11 +236,25 @@ describe('la ficha del equipo', () => {
     }
     expect(masDatos.getAttribute('aria-haspopup')).toBe('dialog')
 
-    expect(textoPantalla()).not.toContain('SERIE-PRUEBA-1')
+    // Qué clase de equipo es, con el icono de su tipo junto a su categoría
+    // (tarea 349): un computador.
+    // La categoría llega en su propia lectura, después del equipo.
+    await esperar(
+      () => document.body.querySelector('[data-icono-tipo-equipo]')?.getAttribute('data-icono-tipo-equipo') === 'pc',
+      'el icono de computador',
+    )
+    // En el teléfono el serial va a la vista, bajo la IP y con su «Copiar»
+    // (tarea 349); la placa y lo demás siguen en «Más datos», que guarda el
+    // registro completo, serial incluido.
+    const serial = document.body.querySelector<HTMLElement>('[data-serial-equipo]')
+    expect(serial?.textContent).toContain('SERIE-PRUEBA-1')
+    expect(serial?.querySelector('button[aria-label="Copiar número de serie"]')).not.toBeNull()
+    expect(textoPantalla()).not.toContain('INV-PRUEBA-1')
     await tocar(masDatos)
-    await esperar(() => textoPantalla().includes('SERIE-PRUEBA-1'), 'el serial, en su hoja')
-    expect(textoPantalla()).toContain('INV-PRUEBA-1')
-    expect(document.body.querySelector('[role="dialog"]')?.textContent).toContain('Más datos del equipo')
+    const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja')
+    await esperar(() => hoja.textContent?.includes('INV-PRUEBA-1'), 'la placa, en su hoja')
+    expect(hoja.textContent).toContain('SERIE-PRUEBA-1')
+    expect(hoja.textContent).toContain('Más datos del equipo')
   })
 
   // En el teléfono (tarea 344, DESPUÉS de Claude Design): los datos, el
