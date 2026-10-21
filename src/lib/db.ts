@@ -944,9 +944,12 @@ export interface DesbloqueoDispositivo extends CredencialRegistrada {
 export interface PreferenciasTecnico {
   id: string
   // 'foco': una tarea a la vez, la ejecucion por defecto desde la
-  // tarea 217. 'pasoEntero': la vista de paso completo, que pasa a ser
-  // la excepcion.
-  modoEjecucion: 'foco' | 'pasoEntero'
+  // tarea 217 (y todavia la de tableta y escritorio). 'pasoEntero': la
+  // vista de paso completo, que pasa a ser la excepcion.
+  // 'ventana' (tarea 348): el paso entero con un solo "Listo" al pie, la
+  // ejecucion por defecto del telefono. En tableta y escritorio una
+  // preferencia 'ventana' se ve como 'pasoEntero' (ver `modoEfectivo`).
+  modoEjecucion: 'foco' | 'pasoEntero' | 'ventana'
   actualizadoEn: string
 }
 

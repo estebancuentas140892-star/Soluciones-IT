@@ -5,6 +5,9 @@ import {
   ID_PREFERENCIAS_TECNICO,
   leerModoEjecucion,
   MODO_EJECUCION_POR_DEFECTO,
+  MODO_EJECUCION_POR_DEFECTO_MOVIL,
+  modoEfectivo,
+  modoPorDefecto,
   normalizarModoEjecucion,
 } from './preferenciasEjecucion'
 
@@ -43,11 +46,47 @@ describe('preferencias de ejecucion', () => {
     expect(await leerModoEjecucion()).toBe('foco')
   })
 
-  it('normalizarModoEjecucion acepta los dos modos y rechaza el resto', () => {
+  it('normalizarModoEjecucion acepta los tres modos y rechaza el resto', () => {
     expect(normalizarModoEjecucion('foco')).toBe('foco')
     expect(normalizarModoEjecucion('pasoEntero')).toBe('pasoEntero')
+    expect(normalizarModoEjecucion('ventana')).toBe('ventana')
     expect(normalizarModoEjecucion(undefined)).toBe('foco')
     expect(normalizarModoEjecucion(null)).toBe('foco')
     expect(normalizarModoEjecucion(3)).toBe('foco')
+  })
+
+  // LA VENTANA (tarea 348).
+  it('en el teléfono el defecto es la ventana, y en pantalla ancha el foco', () => {
+    expect(MODO_EJECUCION_POR_DEFECTO_MOVIL).toBe('ventana')
+    expect(modoPorDefecto(false)).toBe('ventana')
+    expect(modoPorDefecto(true)).toBe('foco')
+  })
+
+  it('sin fila, el defecto que se pide; con fila, siempre lo que el técnico eligió', async () => {
+    expect(await leerModoEjecucion('ventana')).toBe('ventana')
+    await guardarModoEjecucion('foco')
+    expect(await leerModoEjecucion('ventana')).toBe('foco')
+    await guardarModoEjecucion('pasoEntero')
+    expect(await leerModoEjecucion('ventana')).toBe('pasoEntero')
+    await guardarModoEjecucion('ventana')
+    expect(await leerModoEjecucion()).toBe('ventana')
+  })
+
+  it('una fila ilegible cae en el defecto que se pide, no en el foco a la fuerza', async () => {
+    await db.preferenciasTecnico.put({
+      id: ID_PREFERENCIAS_TECNICO,
+      modoEjecucion: 'loQueSea' as never,
+      actualizadoEn: new Date().toISOString(),
+    })
+    expect(await leerModoEjecucion('ventana')).toBe('ventana')
+  })
+
+  it('la ventana solo se pinta como ventana por debajo de 768 px', () => {
+    expect(modoEfectivo('ventana', false)).toBe('ventana')
+    expect(modoEfectivo('ventana', true)).toBe('pasoEntero')
+    expect(modoEfectivo('foco', true)).toBe('foco')
+    expect(modoEfectivo('foco', false)).toBe('foco')
+    expect(modoEfectivo('pasoEntero', false)).toBe('pasoEntero')
+    expect(modoEfectivo('pasoEntero', true)).toBe('pasoEntero')
   })
 })

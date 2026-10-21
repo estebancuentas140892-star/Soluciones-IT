@@ -24,22 +24,48 @@ export type ModoEjecucion = PreferenciasTecnico['modoEjecucion']
 // Fila unica de la tabla. Mismo criterio que `ID_BLOQUEO_APP`.
 export const ID_PREFERENCIAS_TECNICO = 'tecnico'
 
-// La ejecucion por defecto es el foco. Un tecnico que nunca toque nada
-// trabaja con una tarea a la vez, que es justo lo que el informe pide:
-// el sistema lleva el buen comportamiento por defecto en vez de
-// pedirle una decision de pie frente a un rack.
+// La ejecucion por defecto de tableta y escritorio es el foco. Un tecnico
+// que nunca toque nada trabaja con una tarea a la vez, que es justo lo que
+// el informe pide: el sistema lleva el buen comportamiento por defecto en
+// vez de pedirle una decision de pie frente a un rack.
 export const MODO_EJECUCION_POR_DEFECTO: ModoEjecucion = 'foco'
+
+// EN EL TELEFONO, LA VENTANA (tarea 348, rediseño movil por ventanas). Quien
+// no ha elegido nada y trabaja desde el telefono recibe el paso entero con
+// un solo "Listo" por ventana: en el prototipo aprobado las mismas guias se
+// resolvian con 35 toques en vez de 77. Es solo el DEFECTO: la eleccion del
+// tecnico, una vez guardada, manda siempre (una fila con 'foco' o con
+// 'pasoEntero' no se toca).
+export const MODO_EJECUCION_POR_DEFECTO_MOVIL: ModoEjecucion = 'ventana'
+
+/** El modo con el que arranca quien no ha elegido ninguno, segun el ancho. */
+export function modoPorDefecto(esAncho: boolean): ModoEjecucion {
+  return esAncho ? MODO_EJECUCION_POR_DEFECTO : MODO_EJECUCION_POR_DEFECTO_MOVIL
+}
+
+/**
+ * El modo que se PINTA. La ventana existe solo por debajo de 768 px: una
+ * preferencia 'ventana' en una pantalla ancha (la tableta que gira, la
+ * ventana que se ensancha) se ve como el paso entero de siempre, que es su
+ * equivalente alli. Los otros dos modos se pintan tal cual.
+ */
+export function modoEfectivo(modo: ModoEjecucion, esAncho: boolean): ModoEjecucion {
+  return modo === 'ventana' && esAncho ? 'pasoEntero' : modo
+}
 
 // Tolera una fila ausente o con un valor que no reconocemos (una
 // version anterior, un dato a medio migrar): en los dos casos vale el
 // defecto, y la ejecucion nunca se queda sin modo.
-export function normalizarModoEjecucion(valor: unknown): ModoEjecucion {
-  return valor === 'pasoEntero' || valor === 'foco' ? valor : MODO_EJECUCION_POR_DEFECTO
+export function normalizarModoEjecucion(
+  valor: unknown,
+  porDefecto: ModoEjecucion = MODO_EJECUCION_POR_DEFECTO,
+): ModoEjecucion {
+  return valor === 'pasoEntero' || valor === 'foco' || valor === 'ventana' ? valor : porDefecto
 }
 
-export async function leerModoEjecucion(): Promise<ModoEjecucion> {
+export async function leerModoEjecucion(porDefecto: ModoEjecucion = MODO_EJECUCION_POR_DEFECTO): Promise<ModoEjecucion> {
   const fila = await db.preferenciasTecnico.get(ID_PREFERENCIAS_TECNICO)
-  return normalizarModoEjecucion(fila?.modoEjecucion)
+  return normalizarModoEjecucion(fila?.modoEjecucion, porDefecto)
 }
 
 export async function guardarModoEjecucion(modo: ModoEjecucion): Promise<void> {
