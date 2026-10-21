@@ -396,3 +396,30 @@ describe('la tarea no monta navegación en ningún tamaño', () => {
     })
   }
 })
+
+// LA PESTAÑA ACTIVA DEL TELÉFONO (tarea 349, navegación de Ventana): la
+// pastilla tintada detrás de su icono, el icono relleno y el rótulo en acento
+// y en negrita. Las otras tres, sin tinte y con la pastilla del mismo tamaño
+// (cambiar de pestaña no mueve nada).
+describe('la pestaña activa del teléfono', () => {
+  it('lleva la pastilla tintada y la marca de página actual; las demás no', async () => {
+    verA(TELEFONO)
+    await montar([{ ruta: '/', elemento: <ResolverPage /> }], '/')
+    const barra = await esperar(
+      // El rail de tableta y escritorio lleva el mismo nombre; la barra del
+      // teléfono es la fija de abajo.
+      () => document.body.querySelector<HTMLElement>('nav[aria-label="Navegación principal"].fixed'),
+      'la barra de pestañas',
+    )
+    const pestanas = Array.from(barra.querySelectorAll<HTMLAnchorElement>('a'))
+    expect(pestanas.map((p) => p.textContent?.replace(/\(.*\)/, '').trim())).toEqual(['Resolver', 'Equipos', 'Bóveda', 'Más'])
+    const activa = pestanas.find((p) => p.getAttribute('aria-current') === 'page')
+    expect(activa?.textContent).toContain('Resolver')
+    expect(activa?.className).toContain('font-semibold')
+    expect(activa?.querySelector('[data-pastilla-pestana="activa"]')?.className).toContain('bg-noct-accent/[.16]')
+    for (const otra of pestanas.filter((p) => p !== activa)) {
+      expect(otra.querySelector('[data-pastilla-pestana="activa"]')).toBeNull()
+      expect(otra.querySelector('span')?.className).toContain('h-7 w-14')
+    }
+  })
+})

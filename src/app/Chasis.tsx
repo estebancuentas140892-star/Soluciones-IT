@@ -833,8 +833,10 @@ export function Chasis(props: Props) {
       {/* Pestañas inferiores: solo móvil. Siempre las mismas cuatro (R17):
           Resolver, Equipos, Bóveda y Más (encargo del 2026-09-22). Rótulo
           a 12px en celdas de 52. Estado en tres canales (R16 pide al
-          menos dos): barra de 2px sobre la pestaña activa, icono relleno
-          y color de acento; más presionado y foco de teclado.
+          menos dos): la pastilla tintada detrás del icono (tarea 349,
+          navegación de Ventana; antes una barra de 2px sobre la pestaña,
+          que en el teléfono se leía poco), icono relleno y rótulo en acento
+          y en negrita; más presionado y foco de teclado.
 
           La pestaña activa la decide `destinoPrincipalDe`, no la ruta del
           enlace: una guía ilumina Resolver y Red ilumina Más. */}
@@ -857,19 +859,21 @@ export function Chasis(props: Props) {
               to={destinoDePestana(to, location.pathname, RAICES_DE_PESTANA)}
               onClick={() => alTocarPestana(to)}
               aria-current={activa ? 'page' : undefined}
-              className={`relative flex min-h-[52px] flex-col items-center gap-1 pb-[10px] pt-[9px] text-[12px] font-medium outline-none active:bg-noct-accent/10 focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
-                activa ? 'text-noct-accent-300' : 'text-noct-neutral-300'
+              className={`relative flex min-h-[52px] flex-col items-center gap-0.5 pb-[9px] pt-[7px] text-[12px] outline-none active:bg-noct-accent/10 focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
+                activa ? 'font-semibold text-noct-accent-300' : 'font-medium text-noct-neutral-300'
               }`}
             >
-              {activa && (
-                <span
-                  className="absolute left-1/2 top-0 h-[2px] w-[26px] -translate-x-1/2 rounded-b-[2px] bg-noct-accent"
-                  aria-hidden
-                />
-              )}
-              <span className="relative">
-                {activa ? <IconoActivo size={22} /> : <Icono size={22} />}
-                {numeroPendientes > 0 && <AvisoPestana variante="numero" valor={numeroPendientes} />}
+              {/* La pastilla mide lo mismo activa o no (sin salto al cambiar
+                  de pestaña); solo la activa lleva el tinte del acento. */}
+              <span
+                data-pastilla-pestana={activa ? 'activa' : undefined}
+                className={`flex h-7 w-14 items-center justify-center rounded-full ${activa ? 'bg-noct-accent/[.16]' : ''}`}
+              >
+                {/* El número va sobre el icono, no sobre la pastilla. */}
+                <span className="relative">
+                  {activa ? <IconoActivo size={22} /> : <Icono size={22} />}
+                  {numeroPendientes > 0 && <AvisoPestana variante="numero" valor={numeroPendientes} />}
+                </span>
               </span>
               {label}
               {numeroPendientes > 0 && (
