@@ -43,6 +43,8 @@ Diagnóstico del 2026-10-21 (tarea 349): el despliegue Preview de `feat/rediseno
 2. **Preview contra producción**, solo con autorización expresa: marcar las dos variables también para Preview. La clave anónima es pública por diseño y las políticas RLS y el inicio de sesión siguen protegiendo, pero quien pruebe la vista previa trabaja sobre los datos reales del equipo.
 3. **Sin Supabase en Preview**: revisar la interfaz en local con el banco de pruebas (`.env.local` con `VITE_MODO_PRUEBA_LOCAL=1` y `npm run dev`) o con `node scripts/capturas-moviles.mjs`.
 
+**Decisión del usuario (2026-10-21): la opción 2.** El usuario autorizó de forma expresa que Preview use el proyecto de producción con su clave anónima. Se hizo sin leer ni copiar ningún valor: a las dos variables existentes (tipo «sensitive») solo se les agregó el destino **Preview** junto a Production, y se volvió a desplegar la rama. Las vistas previas trabajan sobre los datos reales del equipo, protegidas por RLS, por el inicio de sesión y por Vercel Authentication. Para volver atrás basta con quitar Preview de las dos variables y redesplegar.
+
 ## Scripts
 
 - `npm run dev`: servidor de desarrollo
