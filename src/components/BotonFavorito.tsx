@@ -68,7 +68,9 @@ export function BotonFavorito({
       className={
         variante === 'cabecera'
           ? BTN_ICONO_SECUNDARIO
-          : 'flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded text-noct-neutral-500 hover:bg-noct-text/[.07] active:bg-noct-text/15'
+          : // `toque-amplio` (tarea 349): 44 px de toque en el teléfono, sin
+            // cambiar los 34 que se ven ni el hueco de la fila.
+            'toque-amplio relative flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded text-noct-neutral-500 hover:bg-noct-text/[.07] active:bg-noct-text/15'
       }
     >
       <Icono size={17} className={marcado ? 'text-noct-accent' : undefined} aria-hidden />

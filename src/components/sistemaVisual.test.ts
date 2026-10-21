@@ -294,3 +294,16 @@ describe('el remate móvil "1b Pulgar" (tarea 341)', () => {
     expect(sinTelefono(dominante)).toEqual(sinTelefono(BTN_PRIMARIO.split(/\s+/)))
   })
 })
+
+// LOS 44 PX DE TOQUE QUE FALTABAN (tarea 349; pendiente (f) de la tarea 348):
+// el «‹ Volver» de las subpantallas medía 36 de alto y la estrella de favorito
+// de una fila, 34 x 34. Los dos amplían su zona de toque en el teléfono con
+// `toque-amplio`, sin cambiar lo que se ve.
+describe('las zonas de toque del teléfono (tarea 349)', () => {
+  it('el volver con texto y la estrella de una fila llevan toque-amplio y van posicionados', () => {
+    const volver = readFileSync('src/components/BotonVolver.tsx', 'utf8')
+    const favorito = readFileSync('src/components/BotonFavorito.tsx', 'utf8')
+    expect(volver).toContain('"toque-amplio relative inline-flex min-w-0 items-center gap-1 rounded-lg py-2')
+    expect(favorito).toContain("'toque-amplio relative flex h-[34px] w-[34px]")
+  })
+})

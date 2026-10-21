@@ -572,7 +572,14 @@ const AUDITORIA = `JSON.stringify((() => {
       // Un campo dentro de su label se toca por el label entero (tarea
       // 260): el input de CampoBusqueda mide 23 px, pero su label, 46.
       const objetivo = (c.tagName === 'INPUT' && c.closest('label')) || c
-      const r = objetivo.getBoundingClientRect()
+      const caja = objetivo.getBoundingClientRect()
+      // "toque-amplio" (src/index.css) amplía la zona de toque con un
+      // ::after de 44 x 44 sin cambiar lo que se ve (tarea 349): se mide esa.
+      const despues = objetivo.classList.contains('toque-amplio') ? getComputedStyle(objetivo, '::after') : null
+      const r = {
+        width: Math.max(caja.width, despues ? parseFloat(despues.width) || 0 : 0),
+        height: Math.max(caja.height, despues ? parseFloat(despues.height) || 0 : 0),
+      }
       if (r.height < 43.5 || r.width < 24) {
         hallazgos.push('area tactil ' + Math.round(r.width) + 'x' + Math.round(r.height) + ': ' + nombre(c))
       }

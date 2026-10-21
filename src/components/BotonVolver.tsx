@@ -53,11 +53,13 @@ export function BotonVolver({ to, children, soloIcono = false, estado }: Props) 
     )
   }
 
+  // `toque-amplio` (tarea 349): en el teléfono su zona de toque llega a 44 px
+  // sin cambiar lo que se ve; medía 36 de alto. Desde 768, como siempre.
   return (
     <Link
       to={destino}
       state={estado}
-      className="inline-flex min-w-0 items-center gap-1 rounded-lg py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 transition-colors hover:bg-noct-text/5 hover:text-noct-text"
+      className="toque-amplio relative inline-flex min-w-0 items-center gap-1 rounded-lg py-2 pl-1.5 pr-2.5 text-[13px] text-noct-neutral-400 transition-colors hover:bg-noct-text/5 hover:text-noct-text"
     >
       <CaretLeft size={16} className="shrink-0" aria-hidden />
       <span className="truncate">{etiqueta}</span>
