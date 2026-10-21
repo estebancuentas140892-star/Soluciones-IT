@@ -576,6 +576,51 @@ describe('una guía necesaria dentro de la ventana', () => {
   })
 })
 
+describe('un paso que reutiliza otra guía, dentro de la ventana', () => {
+  it('la guía reutilizada se hace dentro de la ventana, "Listo" lo explica mientras falte y al terminarla sigue la ventana 2', async () => {
+    await sembrarGuia({
+      id: 'guia-acceso',
+      titulo: 'Entrar al programa de prueba',
+      pasos: [pasoPrueba('acc-p1', 'Abrir el programa', ['Abre el programa de prueba'])],
+    })
+    const entrar = { ...pasoPrueba('v9-p1', 'Entrar al programa', []), subArticuloId: 'guia-acceso', subArticuloTitulo: 'Entrar al programa de prueba' }
+    const guardar = ventana(
+      'v9-p2',
+      'Guardar',
+      ['Selecciona Guardar'],
+      [aviso('v9-r', 'precaucion', 'Guardar reemplaza el registro de prueba anterior.', 'v9-p2-t1')],
+    )
+    await sembrarGuia({
+      id: 'guia-v9r',
+      titulo: 'Guía de prueba que reutiliza otra',
+      pasos: [entrar, guardar],
+      procedimiento: { verificacionFinal: ['El registro de prueba aparece guardado.'] },
+    })
+    await montar(RUTAS, ruta('guia-v9r'), { ventanaPorDefecto: true })
+    // La guía reutilizada carga desde la base local; sus acciones salen en la ventana.
+    await esperar(() => textoPantalla().includes('Abre el programa de prueba'), 'la acción de la guía reutilizada', 10000)
+
+    // Mientras falte, "Listo" está apagado y dice qué completar: no es un callejón sin salida.
+    expect(piePrincipal()?.getAttribute('aria-disabled')).toBe('true')
+    expect(document.body.querySelector('[data-pie-ventana] [data-no-disponible]')?.textContent).toContain(
+      'Completa «Entrar al programa» para poder cerrar la ventana.',
+    )
+    await tocar(await esperarControl(COMPLETAR_Y_SEGUIR))
+
+    // Terminada, sigue la ventana 2, con su precaución en su sitio y "Listo" a mano.
+    await enLaVentana('Selecciona Guardar')
+    expect(document.body.querySelector('[data-aviso-ventana="precaucion"]')?.textContent).toContain('Guardar reemplaza el registro de prueba anterior.')
+    expect(control('Entiendo, continuar')).toBeNull()
+    expect(piePrincipal()?.getAttribute('aria-disabled')).toBe('false')
+    expect((await progreso('guia-v9r'))?.pasosHechos).toEqual(['v9-p1'])
+
+    // "Listo" de la última ventana lleva a la comprobación final de siempre.
+    expect(etiquetaPrincipal()).toBe('Listo · Comprobar el resultado')
+    await tocarPrincipal()
+    await esperar(() => textoPantalla().includes('¿Quedó resuelto?'), 'la comprobación final')
+  })
+})
+
 describe('cada quien con su forma de trabajar', () => {
   async function sembrar(): Promise<void> {
     await sembrarGuia({

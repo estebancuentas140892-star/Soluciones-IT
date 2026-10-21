@@ -271,6 +271,26 @@ const FILA_BLOQUEO = `
   return fila
 `
 const HAY_APP = `document.querySelector('nav[aria-label="Navegación principal"]') != null`
+// Tarea 348: el modo de ejecucion guardado como lo guarda la app, y el avance
+// de las guias de prueba borrado para recorrerlas desde el principio.
+const PONER_MODO_Y_LIMPIAR_AVANCE = (modo) => `
+  const base = await new Promise((ok, mal) => {
+    const r = indexedDB.open('soluciones-it')
+    r.onsuccess = () => ok(r.result)
+    r.onerror = () => mal(r.error)
+  })
+  await new Promise((ok, mal) => {
+    const t = base.transaction(['preferenciasTecnico', 'progresoPasos'], 'readwrite')
+    t.objectStore('preferenciasTecnico').put({ id: 'tecnico', modoEjecucion: ${JSON.stringify(modo)}, actualizadoEn: new Date().toISOString() })
+    for (const id of ['guia-sin-conexion', 'acceso-sin-conexion']) t.objectStore('progresoPasos').delete(id)
+    t.oncomplete = () => ok()
+    t.onerror = () => mal(t.error)
+  })
+  base.close()
+  return true
+`
+// El boton principal del pie de la ventana, o null.
+const PIE_PRINCIPAL = `document.querySelector('[data-pie-ventana] [data-accion-pie]')`
 // Tarea 289: una guía que reutiliza otra en su paso 1, inventada y escrita
 // directo en la base local (IndexedDB) con la red ya cortada.
 const AHORA = new Date(0).toISOString()
@@ -338,9 +358,13 @@ const SEMBRAR_GUIAS_PRUEBA = `
     r.onerror = () => mal(r.error)
   })
   await new Promise((ok, mal) => {
-    const t = base.transaction(['articulos', 'categorias'], 'readwrite')
+    const t = base.transaction(['articulos', 'categorias', 'preferenciasTecnico'], 'readwrite')
     t.objectStore('categorias').put(${JSON.stringify(CATEGORIA_PRUEBA)})
     for (const guia of ${JSON.stringify(GUIAS_PRUEBA)}) t.objectStore('articulos').put(guia)
+    // Desde la tarea 348 el telefono (esta prueba corre a 390 px) abre cada
+    // guia en ventana. Las secciones 4b a 4c describen la ejecucion de una
+    // accion a la vez, asi que la piden; la 4b3 prueba la ventana.
+    t.objectStore('preferenciasTecnico').put({ id: 'tecnico', modoEjecucion: 'foco', actualizadoEn: new Date().toISOString() })
     t.oncomplete = () => ok()
     t.onerror = () => mal(t.error)
   })
@@ -750,6 +774,58 @@ async function main() {
       Boolean(await s.hasta(GUIA_COMPLETADA, '"Guía completada"')),
       'solo "Terminar" la termina, sin red: "Guía completada" en el teléfono',
     )
+
+    // Tarea 348: la ventana del teléfono, sin red. Un paso que reutiliza otra
+    // guía se hace dentro de la ventana (la guía anidada sigue una acción a la
+    // vez) y "Listo" está apagado, con su motivo escrito, hasta terminarla;
+    // el paso con riesgo muestra su precaución en su sitio, sin pantalla
+    // aparte; y "Listo" lleva a la comprobación final. Todo desde la base local.
+    paso('4b3. La ventana sin red: un paso que reutiliza otra guía, "Listo" y la precaución en su sitio (tarea 348)')
+    comprobar(Boolean(await s.evaluar(PONER_MODO_Y_LIMPIAR_AVANCE('ventana'))), 'el modo ventana guardado y el avance de la guía limpio, con la red cortada')
+    await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-sin-conexion' })
+    await s.hasta(`/qué vas a hacer/i.test(document.body.innerText)`, 'la orientación', 45000)
+    await s.tocar('Ver lo que necesitas')
+    await s.tocar('Todo listo, empezar')
+    comprobar(
+      Boolean(await s.hasta(`${PIE_PRINCIPAL} != null && document.body.innerText.includes('Abre el programa de prueba sin red')`, 'la ventana 1', 45000)),
+      'el teléfono abre la ventana: la acción de la guía reutilizada y el pie fijo, sin red',
+    )
+    comprobar(
+      Boolean(
+        await s.evaluar(
+          `const b = ${PIE_PRINCIPAL}; return b != null && b.getAttribute('aria-disabled') === 'true' && document.querySelector('[data-pie-ventana] [data-no-disponible]')?.textContent.includes('Completa «Entrar al programa»')`,
+        ),
+      ),
+      'mientras falte la guía reutilizada, "Listo" está apagado y el pie dice cuál completar',
+    )
+    await s.tocarCompletar()
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `document.body.innerText.includes('Selecciona Guardar') && ${PIE_PRINCIPAL}?.getAttribute('aria-disabled') === 'false'`,
+          'la ventana 2',
+        ),
+      ),
+      'terminada la guía reutilizada, sigue la ventana 2 y "Listo" está disponible',
+    )
+    comprobar(
+      Boolean(
+        await s.evaluar(
+          `const a = document.querySelector('[data-aviso-ventana="precaucion"]'); return a != null && a.textContent.includes('Guardar reemplaza el registro de prueba anterior.') && !document.body.innerText.includes('Antes de continuar') && ![...document.querySelectorAll('button')].some((e) => e.textContent.trim() === 'Entiendo, continuar')`,
+        ),
+      ),
+      'la precaución está en su sitio, sin pantalla "Antes de continuar" ni "Entiendo, continuar"',
+    )
+    comprobar(
+      Boolean(await s.evaluar(`return /Listo/.test(${PIE_PRINCIPAL}?.textContent ?? '')`)),
+      '"Listo" es el botón del pie',
+    )
+    await s.evaluar(`${PIE_PRINCIPAL}.click(); await new Promise((r) => setTimeout(r, 800)); return true`)
+    comprobar(
+      Boolean(await s.hasta(`document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)})`, 'la comprobación final')),
+      '"Listo" lleva a la comprobación final, sin red',
+    )
+    comprobar(Boolean(await s.evaluar(PONER_MODO_Y_LIMPIAR_AVANCE('foco'))), 'se devuelve la ejecución de una acción a la vez para las secciones que siguen')
 
     // Tarea 290: la relación equipo y credencial se lee del teléfono, sin
     // red; los datos siguen detrás de la contraseña maestra. Desde la tarea

@@ -197,9 +197,56 @@ const TODAS_LAS_PARADAS = [
   },
   { nombre: 'agenda', ruta: '/agenda' },
   { nombre: 'guia-paso-1-con-requisitos', ruta: '/soluciones/cat-pos/art-tonos' },
-  { nombre: 'guia-dato-y-plegado', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente },
-  { nombre: 'guia-mas-informacion', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente + tocar('Más información') },
-  { nombre: 'guia-alerta-importante', ruta: '/soluciones/cat-pos/art-tonos', guion: siguiente + siguiente },
+  // Desde la tarea 348 el telefono abre cada guia en ventana; estas paradas
+  // describen la ejecucion de una accion a la vez ("Completar y seguir"), asi
+  // que la piden. Las de la ventana estan mas abajo (`guia-ventana-*`).
+  { nombre: 'guia-dato-y-plegado', ruta: '/soluciones/cat-pos/art-tonos', antes: modo('foco'), guion: siguiente },
+  { nombre: 'guia-mas-informacion', ruta: '/soluciones/cat-pos/art-tonos', antes: modo('foco'), guion: siguiente + tocar('Más información') },
+  { nombre: 'guia-alerta-importante', ruta: '/soluciones/cat-pos/art-tonos', antes: modo('foco'), guion: siguiente + siguiente },
+  // Tarea 348: la ejecucion por ventanas del telefono. Un paso entero con su
+  // advertencia critica sin confirmar (el pie dice por que "Listo" esta
+  // apagado), la misma ya confirmada, y la ultima ventana ("Terminar guia").
+  // Desde 768 px la preferencia 'ventana' se ve como el paso entero de siempre.
+  {
+    nombre: 'guia-ventana',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: modo('ventana'),
+    guion: tocar('Ver lo que necesitas') + tocar('Todo listo'),
+  },
+  {
+    nombre: 'guia-ventana-critica',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: modo('ventana'),
+    guion: tocar('Ver lo que necesitas') + tocar('Todo listo') + tocar('Listo'),
+  },
+  {
+    nombre: 'guia-ventana-critica-confirmada',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: modo('ventana'),
+    guion: tocar('Ver lo que necesitas') + tocar('Todo listo') + tocar('Listo') + tocar('Confirmo que la leí'),
+  },
+  // Lo que sigue a la ultima ventana son las pantallas de siempre: la
+  // comprobacion final y, marcada y con "Terminar", la guia completada.
+  {
+    nombre: 'guia-ventana-final',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: modo('ventana'),
+    guion: tocar('Ver lo que necesitas') + tocar('Todo listo') + tocar('Listo') + tocar('Confirmo que la leí') + tocar('Listo'),
+  },
+  {
+    nombre: 'guia-ventana-terminada',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: modo('ventana'),
+    guion:
+      tocar('Ver lo que necesitas') +
+      tocar('Todo listo') +
+      tocar('Listo') +
+      tocar('Confirmo que la leí') +
+      tocar('Listo') +
+      `{ document.querySelector('[role="checkbox"]')?.click(); await new Promise(r=>setTimeout(r,500)); }` +
+      tocar('Terminar'),
+    despues: modo('foco'),
+  },
   { nombre: 'guia-retomada', ruta: '/soluciones/cat-impresoras/art-recurso-compartido' },
   // Tarea 255 (encargo del 2026-09-22, secciones 3 a 8): la ruta con
   // "Dónde" y "Credencial necesaria" en la primera accion del paso 2,
@@ -223,7 +270,7 @@ const TODAS_LAS_PARADAS = [
     despues: modo('foco'),
   },
   { nombre: 'guia-apoyos-tarea-1', ruta: '/soluciones/cat-impresoras/art-alcance-tarea' },
-  { nombre: 'guia-apoyos-tarea-2', ruta: '/soluciones/cat-impresoras/art-alcance-tarea', guion: siguiente },
+  { nombre: 'guia-apoyos-tarea-2', ruta: '/soluciones/cat-impresoras/art-alcance-tarea', antes: modo('foco'), guion: siguiente },
   { nombre: 'guia-indice', ruta: '/soluciones/cat-impresoras/art-alcance-tarea', guion: tocar('Paso 1 de 2. Abrir el índice') },
   // Propuesta final de Claude Design (2026-10-01): la Ruta de la guia y un
   // paso de mas adelante consultado desde ella (nada se marca).
