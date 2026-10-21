@@ -86,7 +86,10 @@ describe('preferencias de ejecucion', () => {
     expect(modoEfectivo('ventana', true)).toBe('pasoEntero')
     expect(modoEfectivo('foco', true)).toBe('foco')
     expect(modoEfectivo('foco', false)).toBe('foco')
-    expect(modoEfectivo('pasoEntero', false)).toBe('pasoEntero')
     expect(modoEfectivo('pasoEntero', true)).toBe('pasoEntero')
+  })
+
+  it('quien prefería ver el paso entero lo recibe como ventana en el teléfono', () => {
+    expect(modoEfectivo('pasoEntero', false)).toBe('ventana')
   })
 })

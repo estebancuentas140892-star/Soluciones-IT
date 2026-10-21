@@ -16,6 +16,7 @@ import {
   esperar,
   limpiarBase,
   montar,
+  ponerAncho,
   sembrarGuia,
   sembrarPerfil,
   pasoPrueba,
@@ -275,8 +276,25 @@ describe('con una guía en curso, el aviso no tapa sus controles', () => {
     }
   })
 
-  it('vista del paso entero: igual, antes de Anterior, el índice, Falla y Siguiente', async () => {
+  it('la ventana del teléfono: dentro del pie fijo, antes de volver y de Listo', async () => {
+    await guardarModoEjecucion('ventana')
+    await montar(RUTAS_GUIA, RUTA_GUIA)
+    await montarAviso()
+
+    const pie = await esperar(() => document.querySelector<HTMLElement>('[data-pie-ventana]'), 'el pie de la ventana')
+    const aviso = await esperar(textoAviso, 'el aviso')
+    expect(pie.contains(aviso)).toBe(true)
+    expect(aviso.closest('.fixed')).toBeNull()
+    for (const nombre of [/^No hay ventana anterior|^Ver la ventana anterior/, /^Listo|^Falta|^Responde/]) {
+      const boton = botonDeLaBarra(pie, nombre)
+      expect(boton, String(nombre)).not.toBeNull()
+      expect(vaAntesQue(aviso, boton!)).toBe(true)
+    }
+  })
+
+  it('vista del paso entero (tableta y escritorio): igual, antes de Anterior, el índice, Falla y Siguiente', async () => {
     await guardarModoEjecucion('pasoEntero')
+    ponerAncho('tableta')
     await montar(RUTAS_GUIA, RUTA_GUIA)
     await montarAviso()
 

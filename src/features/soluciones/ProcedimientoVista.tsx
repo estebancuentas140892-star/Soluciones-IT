@@ -36,6 +36,8 @@ import {
 } from '../../components/iconos'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
 import { TagNeutral, TituloSeccion } from '../../components/nocturne'
+import { AvisoVentana } from '../../components/ventana/AvisoVentana'
+import { FilaComprobacion, FilaInstruccion } from '../../components/ventana/FilaInstruccion'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { ChipReferencia } from '../referencia/ChipReferencia'
 import { fichasEnlazadasDelPaso } from '../referencia/comandosEnTexto'
@@ -1029,6 +1031,10 @@ export function BloqueVista({
   fichasEnlazadas,
   respuesta = null,
   onElegirOpcion,
+  variante = 'lista',
+  numero,
+  criticaConfirmada = false,
+  onConfirmarCritica,
 }: {
   bloque: BloquePaso
   marcada: boolean
@@ -1058,7 +1064,22 @@ export function BloqueVista({
   respuesta?: string | null
   /** Responder la decisión con opciones. Sin él, sus respuestas se leen pero no se tocan. */
   onElegirOpcion?: (opcionId: string) => void
+  /**
+   * LA VENTANA (tarea 348): en el teléfono, un paso se lee entero y se cierra
+   * con un solo "Listo". Con `variante="ventana"` las acciones son filas
+   * numeradas sin casilla, la comprobación es una tarjeta con su salida y los
+   * avisos se dibujan como advertencias de la ventana. Todo lo demás (la
+   * lógica de cada bloque, sus vínculos y sus decisiones) es lo de siempre.
+   */
+  variante?: 'lista' | 'ventana'
+  /** Solo en la ventana: el número de la instrucción (ver `numerarInstrucciones`). */
+  numero?: number
+  /** Solo en la ventana, en una advertencia crítica: ya se confirmó. */
+  criticaConfirmada?: boolean
+  /** Solo en la ventana, en una advertencia crítica: confirmar o deshacer. */
+  onConfirmarCritica?: () => void
 }) {
+  const enVentana = variante === 'ventana'
   if (bloque.tipo === 'aviso') {
     const presencia = presenciaDeAviso(bloque.tono)
     const tono = tonoVigente(bloque.tono)
@@ -1075,6 +1096,19 @@ export function BloqueVista({
     // La información y los consejos heredados no se muestran (tarea 307),
     // tampoco aquí: leer y hacer enseñan lo mismo.
     if (presencia !== 'alerta' || !tono) return null
+    // EN LA VENTANA, dos niveles de advertencia con icono, palabra y borde, y
+    // solo la crítica pide "Confirmo que la leí" (tarea 348).
+    if (enVentana) {
+      const critica = bloque.tono === 'importante'
+      return (
+        <AvisoVentana
+          nivel={critica ? 'critica' : 'precaucion'}
+          texto={bloque.texto}
+          confirmada={criticaConfirmada}
+          onConfirmar={critica ? onConfirmarCritica : undefined}
+        />
+      )
+    }
     // Decisión 9 de P2: el aviso dice SU PALABRA además del color. Un
     // ámbar no significa nada por sí solo para quien no conoce el
     // sistema, y a pleno sol puede no distinguirse (R16: estado en dos
@@ -1176,7 +1210,10 @@ export function BloqueVista({
   // y tocar una es responder. La de Sí/No sigue como siempre, abajo.
   if (bloque.tipoTarea === 'decision' && (bloque.opciones?.length ?? 0) > 0) {
     return (
-      <div className="flex flex-col gap-1.5">
+      <div
+        className="flex flex-col gap-1.5"
+        data-decision-ventana={enVentana ? (respuesta ? 'respondida' : 'pendiente') : undefined}
+      >
         <DecisionConOpciones bloque={bloque} respuesta={respuesta} onElegir={onElegirOpcion} />
         {credencialInline}
       </div>
@@ -1192,6 +1229,7 @@ export function BloqueVista({
           onAlternar={onAlternar}
           nivel={nivel}
           ejecutarInline={ejecutarInline}
+          enVentana={enVentana}
         />
         {credencialInline}
       </div>
@@ -1209,6 +1247,46 @@ export function BloqueVista({
   // "Debes ver" (tarea 307): la imagen del resultado de esta acción o
   // comprobación, plegada, la misma que en la acción a la vez.
   const resultadoVisual = resultadoVisualDe(bloque)
+
+  // LA VENTANA (tarea 348): sin casillas. Una acción es una fila numerada y
+  // la comprobación, una tarjeta con su salida a la vista ("No se cumple"),
+  // no escondida. Lo que cuelga de cada una es lo de siempre.
+  if (enVentana) {
+    const credencial = bloque.vinculoProtegido && (
+      <CredencialEnPaso vinculo={bloque.vinculoProtegido} variante="bloque" />
+    )
+    if (esVerificacion) {
+      return (
+        <FilaComprobacion texto={bloque.texto}>
+          <DebesVer resultado={resultadoVisual} variante="fila" />
+          {credencial}
+          {onNoSeCumple && (
+            <button
+              type="button"
+              onClick={() => onNoSeCumple(bloque.texto)}
+              className={`${BTN_RIESGO} self-start`}
+            >
+              No se cumple
+            </button>
+          )}
+        </FilaComprobacion>
+      )
+    }
+    return (
+      <FilaInstruccion numero={numero ?? 1} texto={bloque.texto}>
+        <ComoHacerlo microPasos={comoHacer} variante="fila" />
+        {referencias && (
+          <QueHaceEnTexto
+            texto={[bloque.texto, ...comoHacerQueSeEnsena(comoHacer).map(fraseDeMicroPaso)].join('\n')}
+            referencias={referencias}
+            excluir={fichasEnlazadas}
+          />
+        )}
+        <DebesVer resultado={resultadoVisual} variante="fila" />
+        {credencial}
+      </FilaInstruccion>
+    )
+  }
 
   // UNA COMPROBACIÓN NO SE "MARCA HECHA" (2026-09-09, cambio 2 del
   // encargo). Aquí una verificación era la MISMA casilla que una
@@ -1370,12 +1448,15 @@ function DecisionEnTarea({
   onAlternar,
   nivel,
   ejecutarInline,
+  enVentana = false,
 }: {
   bloque: BloquePaso
   marcada: boolean
   onAlternar: () => void
   nivel: number
   ejecutarInline?: EjecutarArticuloInline
+  /** La ventana del teléfono (tarea 348): respuestas neutras, de 52 px. */
+  enVentana?: boolean
 }) {
   const vinculoId = bloque.decisionArticuloId
   const articulo = useLiveQuery(
@@ -1396,6 +1477,25 @@ function DecisionEnTarea({
   // Ya respondida: se ve como una casilla marcada con la pregunta;
   // tocarla la desmarca para volver a responder.
   if (marcada) {
+    if (enVentana) {
+      return (
+        <div data-decision-ventana="respondida" className="flex flex-col gap-2 rounded-2xl bg-noct-tinte px-3.5 py-3">
+          <p className="flex items-center gap-1.5 text-[13px] font-extrabold uppercase leading-snug tracking-[.05em] text-noct-neutral-300">
+            <Check size={15} className="shrink-0" aria-hidden />
+            Respondida
+          </p>
+          <p className="text-[16px] font-medium leading-[1.4] text-pretty [overflow-wrap:anywhere]">{bloque.texto}</p>
+          <button
+            type="button"
+            onClick={onAlternar}
+            aria-label={`Cambiar la respuesta: ${bloque.texto}`}
+            className={`${BTN_OTRA_VIA} self-start`}
+          >
+            Cambiar respuesta
+          </button>
+        </div>
+      )
+    }
     return (
       <FilaTarea
         marcada
@@ -1411,6 +1511,32 @@ function DecisionEnTarea({
   const { hechos, total } = procedimiento ? avanceDeLaRuta(procedimiento, progreso) : { hechos: 0, total: 0 }
   const aMedias = hechos > 0 && hechos < total
   const abierta = mostrarVinculo ?? aMedias
+
+  if (!abierta && enVentana) {
+    // LAS RESPUESTAS DE LA VENTANA (ajuste 2 del 2026-10-21): las dos pesan
+    // igual y van en el mismo color neutro del sistema, ninguna es "la
+    // buena"; lo que hace falta para contestar (la pregunta y adónde lleva
+    // el "No") está a la vista, en los propios botones.
+    const botonNeutro =
+      'flex min-h-[52px] w-full cursor-pointer items-center rounded-2xl border-2 border-noct-divider-fuerte px-3.5 py-2 text-left text-[16px] font-bold leading-snug text-noct-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent active:bg-noct-presionado'
+    return (
+      <div data-decision-ventana="pendiente" className="flex flex-col gap-2.5 rounded-2xl bg-noct-tinte px-3.5 py-3">
+        <p className="text-[16px] font-bold leading-[1.4] text-pretty [overflow-wrap:anywhere]">{bloque.texto}</p>
+        <div className="flex flex-col gap-2">
+          <button type="button" onClick={onAlternar} className={botonNeutro}>
+            Sí, continuar
+          </button>
+          <button
+            type="button"
+            onClick={() => (vinculoId ? setMostrarVinculo(true) : onAlternar())}
+            className={botonNeutro}
+          >
+            {vinculoId ? `No, seguir con «${bloque.decisionArticuloTitulo || 'lo que sigue'}»` : 'No, continuar'}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (!abierta) {
     return (

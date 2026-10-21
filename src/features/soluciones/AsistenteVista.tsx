@@ -31,11 +31,14 @@ import {
   guardarModoEjecucion,
   leerModoEjecucion,
   MODO_EJECUCION_POR_DEFECTO,
+  modoEfectivo,
+  modoPorDefecto,
   type ModoEjecucion,
 } from '../../lib/preferenciasEjecucion'
 import { registrarIntervencion } from '../../lib/repositorio'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { BandaBajoTarea, BandaTarea } from '../../app/bandaTarea'
+import { useHayCabeceraCompacta } from '../../app/ranuraBajoContexto'
 import { useRanuraIndice } from '../../app/ranuraIndice'
 import { Adjuntos } from '../../components/Adjuntos'
 import {
@@ -55,6 +58,8 @@ import {
 } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
+import { BotonesDelPie, PieVentana, RespuestasDelPie } from '../../components/ventana/PieVentana'
+import { MasAbajoDeLaVentana } from '../../components/ventana/MasAbajoDeLaVentana'
 import { useEsAncho } from '../../components/useEsAncho'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
@@ -98,6 +103,16 @@ import { ROTULO_CONTINGENCIA, type EnFlujo, type IntegracionEnFlujo } from './fl
 import { orientacionDe, pantallasDePreparacion, requisitosEfectivos } from './preparacionGuia'
 import { subirElContenedor } from './subirElContenedor'
 import { destinoAlSaltar } from './salidasFalla'
+import {
+  criticasPendientes,
+  motivoDeLasRespuestas,
+  motivoGuiasDeLaVentana,
+  numerarInstrucciones,
+  pieDeLaVentana,
+  preguntaDelPie,
+  siNoDelPie,
+  siNoPendientes,
+} from './ventana'
 import { accionesEnEspera, advertenciasDeLista, esApoyoEnEspera } from './advertenciaPrevia'
 import { TarjetaAdvertencia } from './PantallaAdvertencia'
 import { LineaDeEstado, SegmentosDePasos, type EstadoLinea } from './EstadoEjecucion'
@@ -231,7 +246,11 @@ export function AsistenteVista({
   // corrige en cuanto la preferencia guardada llega, dentro del mismo
   // efecto que resuelve la posición inicial, así que no hay parpadeo.
   const [modoEjecucion, setModoEjecucion] = useState<ModoEjecucion>(MODO_EJECUCION_POR_DEFECTO)
-  async function cambiarModoEjecucion(modo: ModoEjecucion) {
+  async function cambiarModoEjecucion(pedido: ModoEjecucion) {
+    // En el teléfono "Ver el paso entero" es la ventana (tarea 348): el mismo
+    // paso entero, con un solo "Listo". La lista con una casilla por acción
+    // es la de tableta y escritorio.
+    const modo = pedido === 'pasoEntero' && !esAncho ? 'ventana' : pedido
     setModoEjecucion(modo)
     setPasoEnteroPorFalla(null)
     await guardarModoEjecucion(modo)
@@ -305,6 +324,26 @@ export function AsistenteVista({
   // por el id de su tarea. Solo en memoria: al recargar, una acción de riesgo
   // pendiente vuelve a llegar por su advertencia.
   const [advertenciasLeidas, setAdvertenciasLeidas] = useState<ReadonlySet<string>>(() => new Set())
+  // LAS ADVERTENCIAS CRÍTICAS CONFIRMADAS EN LA VENTANA (tarea 348), por su id:
+  // "Confirmo que la leí" es de la sesión, no del avance guardado. Al recargar,
+  // una crítica de una ventana pendiente vuelve a pedirse.
+  const [criticasLeidas, setCriticasLeidas] = useState<ReadonlySet<string>>(() => new Set())
+  function alternarCritica(id: string) {
+    setCriticasLeidas((leidas) => {
+      const nuevas = new Set(leidas)
+      if (!nuevas.delete(id)) nuevas.add(id)
+      return nuevas
+    })
+  }
+  // El paso en la cabecera compacta (teléfono): si no hay cabecera, el cuerpo
+  // dice en qué ventana se está.
+  const hayCabeceraCompacta = useHayCabeceraCompacta()
+  const refVentana = useRef<HTMLDivElement>(null)
+  // Lo que el hook consulta al cerrar una ventana: siempre lo último confirmado.
+  const criticasRef = useRef(criticasLeidas)
+  useEffect(() => {
+    criticasRef.current = criticasLeidas
+  }, [criticasLeidas])
   // FALLA DEL PASO (tablero 3d). Tres estados distintos a propósito:
   //
   // - `falla`: qué paso falló y qué se pidió al declararlo. Va ATADO AL
@@ -346,7 +385,7 @@ export function AsistenteVista({
     // La preferencia de modo se lee JUNTO con el avance y antes de
     // marcar `listo`: si se leyera aparte, el técnico que trabaja con
     // el paso entero vería medio segundo de foco al entrar.
-    void Promise.all([leerAvance(clave), leerModoEjecucion()]).then(async ([leido, modo]) => {
+    void Promise.all([leerAvance(clave), leerModoEjecucion(modoPorDefecto(esAncho))]).then(async ([leido, modo]) => {
       let prog = leido
       // ABRIR UNA GUÍA YA TERMINADA ES EMPEZAR UN CASO NUEVO (encargo del
       // 2026-09-17, sección 3). Antes se abría en la pantalla de
@@ -421,6 +460,7 @@ export function AsistenteVista({
     alternarVerificacion,
     finalizar,
     intentarCompletarPaso,
+    completarVentana,
     completarPasoYAvanzar,
     elegirOpcion,
   } = useProcedimientoEjecucion({
@@ -433,6 +473,11 @@ export function AsistenteVista({
     // dentro de ella sigue al marcar su última comprobación: es parte de un
     // flujo que continúa, no el cierre de la ejecución.
     cierreConFinalizar: nivel === 0,
+    // En el teléfono, responder la pregunta de la ventana es su "Listo".
+    ventana:
+      nivel === 0 && modoEfectivo(modoEjecucion, esAncho) === 'ventana'
+        ? { puedeCerrar: (pasoACerrar) => criticasPendientes(pasoACerrar, criticasRef.current).length === 0 }
+        : undefined,
   })
   // LOS PASOS QUE SE RECORREN SON LOS DE LA RUTA (tarea 302): con
   // decisiones con opciones, los del camino elegido. Todos los índices de
@@ -966,7 +1011,15 @@ export function AsistenteVista({
   // y la vinculada, justo debajo, el checklist completo del paso. Dos
   // formas de trabajar en la misma pantalla. La preferencia del tecnico
   // es una sola, asi que vale tambien dentro del vinculo.
-  const enFoco = modoEjecucion === 'foco' && pasoEnteroPorFalla !== paso.id
+  // QUÉ MODO SE PINTA (tarea 348). La ventana es del teléfono y solo de la
+  // guía que se abrió: una pantalla ancha la ve como el paso entero de
+  // siempre, y lo de dentro de otra guía (nivel 1 o más) sigue en una acción
+  // a la vez, como en el teléfono antes de la ventana, porque su avance lo
+  // decide el paso que lo contiene y no tiene "Listo" propio.
+  const modoVista = modoEfectivo(modoEjecucion, esAncho)
+  const enVentana = modoVista === 'ventana' && nivel === 0
+  const enFoco =
+    (modoVista === 'foco' || (modoVista === 'ventana' && nivel >= 1)) && pasoEnteroPorFalla !== paso.id
 
   // "ANTES DE EMPEZAR" SOLO DONDE SIRVE (encargo del 2026-09-17, sección
   // 4): en el primer paso de una ejecución que todavía no tiene nada
@@ -995,11 +1048,73 @@ export function AsistenteVista({
   // redibuja; la vista de paso entero conserva su paginación de siempre.
   const consultando =
     nivel === 0 &&
-    enFoco &&
+    (enFoco || enVentana) &&
     trabajo !== null &&
     indiceActual > trabajo &&
     !pasoActualHecho &&
     !saltados.has(paso.id)
+
+  // LA VENTANA, DERIVADOS (tarea 348). Lo que decide qué pinta el cuerpo y el
+  // pie; la lógica pura vive en `ventana.ts`.
+  //
+  // Consultando una ventana de más adelante nada la cierra ni se contesta
+  // desde el pie: el único botón devuelve al trabajo.
+  const ventanaAbierta = enVentana && !pasoActualHecho && !consultando
+  const numerosVentana = enVentana ? numerarInstrucciones(paso) : null
+  const criticaPendiente = ventanaAbierta ? (criticasPendientes(paso, criticasLeidas)[0] ?? null) : null
+  const siNoSinResponder = ventanaAbierta && siNoPendientes(paso, instruccionesHechas).length > 0
+  // La pregunta que va fija al pie: la de opciones (pocas) o la de Sí/No que
+  // cierra la ventana, y solo mientras espera respuesta. Contestada, o con la
+  // ventana hecha, se queda dentro, con su respuesta a la vista.
+  const decisionSiNoDelPie = ventanaAbierta ? siNoDelPie(paso) : null
+  const preguntaFija: { id: string; texto: string; opciones: boolean } | null = !ventanaAbierta
+    ? null
+    : respuestaPendiente && preguntaDelPie(paso)
+      ? { id: preguntaDelPie(paso)!.id, texto: preguntaDelPie(paso)!.texto, opciones: true }
+      : decisionSiNoDelPie && !instruccionesHechas.has(decisionSiNoDelPie.id)
+        ? { id: decisionSiNoDelPie.id, texto: decisionSiNoDelPie.texto, opciones: false }
+        : null
+  // Las guías necesarias que faltan: la del paso y las que exigen sus tareas.
+  const titulosGuiasPendientes: string[] = []
+  if (ventanaAbierta) {
+    if (cierre.guiaPendiente !== null) titulosGuiasPendientes.push(cierre.guiaPendiente)
+    const vistas = new Set<string>()
+    for (const tarea of tareasDe(paso.bloques)) {
+      for (const pendiente of guiasPendientesDeTarea(paso, tarea.id)) {
+        const id = pendiente.guiaArticuloId ?? pendiente.id
+        if (vistas.has(id)) continue
+        vistas.add(id)
+        titulosGuiasPendientes.push(pendiente.guiaArticuloTitulo)
+      }
+    }
+  }
+  const motivoGuiaVentana = motivoGuiasDeLaVentana(titulosGuiasPendientes)
+  const pieVentana = pieDeLaVentana({
+    hecha: pasoActualHecho,
+    numeroDelTrabajo: consultando && trabajo !== null ? trabajo + 1 : null,
+    destino:
+      destinoTrasEste !== null ? 'siguiente' : verificacionFinal.length > 0 ? 'comprobar' : terminaDeVerdad ? 'fin' : 'siguiente',
+    numeroSiguiente: destinoTrasEste !== null ? destinoTrasEste + 1 : null,
+    criticaPendiente,
+    guiaPendiente: motivoGuiaVentana,
+    preguntaPendiente: respuestaPendiente || siNoSinResponder,
+    preguntaEnElPie: preguntaFija !== null,
+  })
+  const etiquetaVolverVentana =
+    indiceActual > 0 ? `Ver la ventana anterior, la ${indiceActual}. Solo mueve la vista` : 'No hay ventana anterior: estás en la primera'
+  // «Más abajo»: lo que todavía no se ve de la ventana. Se observa de nuevo
+  // cuando cambian las partes: otra ventana, una pregunta o crítica resueltas.
+  const claveMasAbajo = `${paso.id}|${preguntaFija?.id ?? ''}|${criticaPendiente?.id ?? ''}|${paso.bloques.length}|${marcadas}`
+  // El botón apagado o una respuesta bloqueada llevan a lo que falta, en vez
+  // de no hacer nada: tocar lo que no está disponible enseña por qué.
+  function irALoQueFalta() {
+    const raiz = refVentana.current
+    if (!raiz) return
+    const destino =
+      raiz.querySelector('[data-aviso-ventana="critica"][data-confirmada="false"]') ??
+      raiz.querySelector('[data-decision-ventana="pendiente"]')
+    destino?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   // LA LÍNEA DE ESTADO, una sola cosa a la vez: la consulta manda, luego
   // la ejecución retomada (mientras el técnico siga en el paso en que se
@@ -1106,7 +1221,7 @@ export function AsistenteVista({
           tituloGuia: articulo?.titulo,
           borrador: esBorrador,
           onIrAPaso: (indice: number) => verPaso(indice),
-          modoEjecucion,
+          modoEjecucion: modoVista,
           onCambiarModo: (modo: ModoEjecucion) => void cambiarModoEjecucion(modo),
           verificacionFinal,
           pasoDeLaPregunta,
@@ -1145,7 +1260,7 @@ export function AsistenteVista({
           // Abrir un paso desde el índice solo lo MUESTRA: si es uno
           // pendiente de más adelante, se consulta sin marcar nada.
           onIrAPaso={(indice: number) => verPaso(indice)}
-          modoEjecucion={modoEjecucion}
+          modoEjecucion={modoVista}
           onCambiarModo={(modo) => void cambiarModoEjecucion(modo)}
           // H11 / A15: se leen desde el primer paso, sin tener que
           // marcar tareas que nadie hizo para llegar a ellas.
@@ -1305,13 +1420,17 @@ export function AsistenteVista({
   // acción aparece sola y el riesgo no se repite. Desmarcarla la vuelve
   // pendiente, y su advertencia vuelve.
   const advertenciasDelPaso = advertenciasDeLista(paso)
-  const enEspera = accionesEnEspera(advertenciasDelPaso, instruccionesHechas, advertenciasLeidas)
+  // En la ventana no hay pantalla previa: la advertencia va dentro, antes de
+  // su acción, así que ninguna acción espera.
+  const enEspera = enVentana
+    ? new Set<string>()
+    : accionesEnEspera(advertenciasDelPaso, instruccionesHechas, advertenciasLeidas)
 
   return (
     <div className={`flex flex-col ${nivel === 0 ? 'flex-1' : ''}`}>
     {indiceUI}
     {estadoUI}
-    <div className={`flex flex-col gap-4 ${nivel === 0 ? 'flex-1 pt-3' : ''}`}>
+    <div ref={refVentana} className={`flex flex-col gap-4 ${nivel === 0 ? 'flex-1 pt-3' : ''}`}>
       {/* El documento anidado ya NO repite su avance aquí (regla R57 del
           turno 12). Traía una barra de acento con "Paso 1 de 2", justo
           debajo de la fila que lo abre, que dice lo mismo con el anillo
@@ -1338,7 +1457,11 @@ export function AsistenteVista({
         {nivel === 0 ? (
           <EncabezadoConFoco
             key={paso.id}
-            className={`text-lg font-semibold text-noct-text ${rutaUI ? 'md:sr-only' : ''}`}
+            // En la ventana del teléfono la cabecera ya dice "Paso 2 de 4 ·
+            // título": aquí queda para el lector de pantalla y el foco.
+            className={`text-lg font-semibold text-noct-text ${
+              enVentana && !esAncho && hayCabeceraCompacta ? 'sr-only' : rutaUI ? 'md:sr-only' : ''
+            }`}
           >
             {tituloPaso}
           </EncabezadoConFoco>
@@ -1386,7 +1509,7 @@ export function AsistenteVista({
       {paso.adjuntos.length > 0 && <AdjuntosPaso adjuntos={paso.adjuntos} titulo={paso.titulo} />}
 
       {paso.bloques.length > 0 && (
-        <ul className="flex flex-col gap-2">
+        <ul className={`flex flex-col ${enVentana ? 'gap-4' : 'gap-2'}`}>
           {paso.bloques.map((bloque, posicion) => {
             // La información y los consejos heredados no se muestran (tarea
             // 307): ni su fila, para no dejar un hueco en la lista.
@@ -1395,6 +1518,8 @@ export function AsistenteVista({
             if (advertenciasDelPaso.reubicados.has(bloque.id)) return null
             // Ni los apoyos de una acción que espera tras su advertencia.
             if (esApoyoEnEspera(bloque, enEspera)) return null
+            // La pregunta que va fija al pie no se repite en el cuerpo.
+            if (preguntaFija && bloque.id === preguntaFija.id) return null
             const previas = bloque.tipo === 'tarea' ? advertenciasDelPaso.antesDe.get(bloque.id) : undefined
             if (previas && enEspera.has(bloque.id)) {
               return (
@@ -1428,7 +1553,22 @@ export function AsistenteVista({
                   .some((b) => b.tipo === 'guia' && b.intencionGuia === 'necesario' && b.guiaArticuloId === guiaNecesaria))
             if (yaEnElPaso) return null
             return (
-              <li key={bloque.id}>
+              <li key={bloque.id} className={enVentana && previas ? 'flex flex-col gap-3' : undefined}>
+                {/* EN LA VENTANA, CADA RIESGO VA ANTES DE SU ACCIÓN, DENTRO DE
+                    LA MISMA PANTALLA (tarea 348): sin "Entiendo, continuar" de
+                    por medio; solo la crítica pide su confirmación. */}
+                {enVentana &&
+                  previas?.map((aviso) => (
+                    <BloqueVista
+                      key={aviso.id}
+                      bloque={aviso}
+                      marcada={false}
+                      onAlternar={() => {}}
+                      variante="ventana"
+                      criticaConfirmada={criticasLeidas.has(aviso.id)}
+                      onConfirmarCritica={() => alternarCritica(aviso.id)}
+                    />
+                  ))}
                 {guiaNecesaria !== null ? (
                   <SubProcedimientoEnAsistente
                     guiaId={guiaNecesaria}
@@ -1464,6 +1604,10 @@ export function AsistenteVista({
                     // esta vista para tratar una verificación distinto de
                     // una instrucción (cambio 2 del encargo).
                     onNoSeCumple={(texto) => setHojaFalla({ tarea: texto })}
+                    variante={enVentana ? 'ventana' : 'lista'}
+                    numero={numerosVentana?.get(bloque.id)}
+                    criticaConfirmada={criticasLeidas.has(bloque.id)}
+                    onConfirmarCritica={() => alternarCritica(bloque.id)}
                     // LA MISMA REGLA EN LA VISTA DE PASO ENTERO (encargo del
                     // 2026-09-09, tarea 1). Sin esto la validación existía
                     // solo en el modo de una tarea a la vez, y cambiar de
@@ -1611,7 +1755,7 @@ export function AsistenteVista({
           Los pasos anidados conservan su fila en línea (más abajo): su
           avance lo decide el paso que los contiene, y dos acciones
           dominantes en la misma pantalla dejarían de ser dominantes. */}
-      {nivel === 0 && (
+      {nivel === 0 && !enVentana && (
         <div className="sticky bottom-0 z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.96] px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px] [&>*]:mx-auto [&>*]:w-full [&>*]:max-w-xl">
           {/* El aviso de versión nueva va aquí, encima de los botones, y
               no flotando sobre ellos (tarea 273). Vacío no ocupa nada. */}
@@ -1692,6 +1836,112 @@ export function AsistenteVista({
             </button>
           </div>
         </div>
+      )}
+
+      {/* LA VENTANA TERMINA CON DOS SALIDAS A LA MANO Y EL PIE (tarea 348):
+          "Tengo un problema" abre las mismas salidas de siempre y "Detalles de
+          la guía" lleva a su ficha. El pie fijo, debajo, es lo único que no se
+          desplaza: el botón de cerrar la ventana o sus respuestas. */}
+      {enVentana && (
+        <>
+          <div className="flex flex-wrap gap-2 pb-1">
+            <button
+              type="button"
+              onClick={() => setHojaFalla({ tarea: null })}
+              aria-haspopup="dialog"
+              aria-label={`Tengo un problema en la ventana ${numeroPasoVisible}`}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-noct-divider-fuerte px-3.5 text-[14.5px] font-semibold text-noct-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent active:bg-noct-presionado"
+            >
+              <Warning size={17} className="shrink-0" aria-hidden />
+              Tengo un problema
+            </button>
+            {articulo && (
+              <Link
+                to={`/soluciones/${articulo.categoriaId}/${articulo.id}/detalles`}
+                state={conOrigen(rutaOrigen, articulo.titulo)}
+                className="inline-flex min-h-11 items-center rounded-xl border border-noct-divider-fuerte px-3.5 text-[14.5px] font-semibold text-noct-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent active:bg-noct-presionado"
+              >
+                Detalles de la guía
+              </Link>
+            )}
+          </div>
+          <PieVentana indicador={ventanaAbierta ? <MasAbajoDeLaVentana contenedor={refVentana} clave={claveMasAbajo} /> : null}>
+            {/* El aviso de versión nueva va aquí, encima de los botones, y no
+                flotando sobre ellos (tarea 273). Vacío no ocupa nada. */}
+            <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
+            {equipoConectado && (
+              <div className="mb-2">
+                <FranjaEquipoConectado
+                  paso={paso}
+                  numeroPaso={indiceActual + 1}
+                  tituloGuia={articulo?.titulo ?? ''}
+                  referencias={referenciasVivas}
+                  tareaId={null}
+                />
+              </div>
+            )}
+            {preguntaFija ? (
+              <RespuestasDelPie
+                pregunta={preguntaFija.texto}
+                respuestas={
+                  preguntaFija.opciones
+                    ? (decisionDelPaso?.opciones ?? []).map((opcion) => ({
+                        id: opcion.id,
+                        titulo: opcion.titulo,
+                        descripcion: opcion.descripcion,
+                      }))
+                    : [
+                        { id: 'si', titulo: 'Sí', descripcion: '' },
+                        { id: 'no', titulo: 'No', descripcion: '' },
+                      ]
+                }
+                elegida={null}
+                motivoBloqueo={motivoDeLasRespuestas({ criticaPendiente, guiaPendiente: motivoGuiaVentana })}
+                onElegir={(respuestaId) => {
+                  setRetomadaEn(null)
+                  setIndiceTrabajo(indiceActual)
+                  if (preguntaFija.opciones) {
+                    void elegirOpcion(paso, preguntaFija.id, respuestaId)
+                  } else {
+                    // Sí y No de una pregunta sin camino propio hacen lo mismo
+                    // que siempre: la responden y el flujo sigue.
+                    void (async () => {
+                      await alternarTarea(indiceActual, paso, preguntaFija.id)
+                      await completarVentana(indiceActual, paso)
+                    })()
+                  }
+                }}
+                etiquetaVolver={etiquetaVolverVentana}
+                puedeVolver={indiceActual > 0}
+                onVolver={() => verPaso(Math.max(0, indiceActual - 1))}
+              />
+            ) : (
+              <BotonesDelPie
+                etiquetaVolver={etiquetaVolverVentana}
+                puedeVolver={indiceActual > 0}
+                onVolver={() => verPaso(Math.max(0, indiceActual - 1))}
+                accion={pieVentana.accion}
+                etiqueta={pieVentana.etiqueta}
+                etiquetaCompleta={pieVentana.etiquetaCompleta}
+                motivo={pieVentana.motivo}
+                onPrincipal={() => {
+                  if (pieVentana.accion === 'volver' && trabajo !== null) {
+                    irAPaso(trabajo)
+                    return
+                  }
+                  if (pieVentana.accion === 'seguir') {
+                    avanzar()
+                    return
+                  }
+                  setRetomadaEn(null)
+                  setIndiceTrabajo(indiceActual)
+                  void completarVentana(indiceActual, paso)
+                }}
+                onNoDisponible={irALoQueFalta}
+              />
+            )}
+          </PieVentana>
+        </>
       )}
 
       {/* El paso anidado también puede fallar, así que también tiene su

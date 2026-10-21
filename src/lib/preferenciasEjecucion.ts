@@ -44,13 +44,20 @@ export function modoPorDefecto(esAncho: boolean): ModoEjecucion {
 }
 
 /**
- * El modo que se PINTA. La ventana existe solo por debajo de 768 px: una
- * preferencia 'ventana' en una pantalla ancha (la tableta que gira, la
- * ventana que se ensancha) se ve como el paso entero de siempre, que es su
- * equivalente alli. Los otros dos modos se pintan tal cual.
+ * El modo que se PINTA. La ventana existe solo por debajo de 768 px, y es ahi
+ * el equivalente del paso entero:
+ *
+ *   - 'ventana' en una pantalla ancha (la tableta que gira, la ventana que se
+ *     ensancha) se ve como el paso entero de siempre.
+ *   - 'pasoEntero' en el telefono (lo que eligio quien ya prefería ver el paso
+ *     completo) se ve como la ventana: es el mismo paso entero, con un solo
+ *     "Listo" en vez de una casilla por accion.
+ *
+ * 'foco' (una accion a la vez) se pinta tal cual en los dos.
  */
 export function modoEfectivo(modo: ModoEjecucion, esAncho: boolean): ModoEjecucion {
-  return modo === 'ventana' && esAncho ? 'pasoEntero' : modo
+  if (esAncho) return modo === 'ventana' ? 'pasoEntero' : modo
+  return modo === 'pasoEntero' ? 'ventana' : modo
 }
 
 // Tolera una fila ausente o con un valor que no reconocemos (una
