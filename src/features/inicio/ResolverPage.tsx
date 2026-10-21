@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { db } from '../../lib/db'
+import { db, type Categoria } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
 import { Chasis } from '../../app/Chasis'
@@ -44,6 +44,7 @@ import {
   sinLosYaOficiales,
 } from '../busqueda/borradoresEnBusqueda'
 import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
+import { claseTonoDeCategoria } from '../soluciones/coloresCategoria'
 import { articulosSinTerminar, pasoDeTotal } from '../soluciones/sinTerminar'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { obtenerActividadReciente } from '../historial/actividadEquipo'
@@ -504,7 +505,7 @@ export function ResolverPage() {
             <div className="flex flex-col gap-6 pt-3">
               <EjemplosBusqueda conRotulo onElegir={setQuery} />
               {seguir && <SeguirEnTelefono guia={seguir} />}
-              <CategoriasEnTelefono accesos={accesos} totalGuias={totalGuias} />
+              <CategoriasEnTelefono accesos={accesos} totalGuias={totalGuias} categorias={categorias} />
               {!agendaCargando && <TrabajoDeHoy agenda={agenda} total={pendientes.length} />}
               <BloqueRecientes recientes={otrasRecientes} />
               {consultasListas && (
@@ -664,6 +665,14 @@ function SeguirEnTelefono({ guia }: { guia: GuiaReciente }) {
         <span data-nombre-principal className="min-w-0 text-[16.5px] font-[650] leading-[1.25] text-pretty [overflow-wrap:anywhere]">
           {guia.titulo}
         </span>
+        {/* EL AVANCE A LA VISTA (tarea 349, «Sistema visual Ventana»): un
+            segmento por paso, como en la tarjeta de tableta y escritorio, para
+            saber de un vistazo cuánto falta sin abrir la guía. */}
+        {avance && (
+          <span data-avance-seguir className="block pt-1.5">
+            <SegmentosAvance avance={avance} />
+          </span>
+        )}
       </span>
       <span
         aria-hidden
@@ -727,7 +736,16 @@ function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
 // qué escribir: cada una abre el catálogo filtrado (el mismo enlace de
 // siempre) y "Todas las guías" está siempre, porque es la puerta al catálogo.
 // Sin los mosaicos de dos en dos: ocupaban media pantalla para cuatro enlaces.
-function CategoriasEnTelefono({ accesos, totalGuias }: { accesos: AccesoRapido[]; totalGuias: number }) {
+function CategoriasEnTelefono({
+  accesos,
+  totalGuias,
+  categorias,
+}: {
+  accesos: AccesoRapido[]
+  totalGuias: number
+  categorias: Categoria[]
+}) {
+  const porId = new Map(categorias.map((c) => [c.id, c]))
   return (
     <section aria-labelledby="resolver-categorias" className="flex flex-col gap-2">
       <h2 id="resolver-categorias" className="text-[15px] font-[650] leading-snug text-noct-neutral-300">
@@ -736,15 +754,28 @@ function CategoriasEnTelefono({ accesos, totalGuias }: { accesos: AccesoRapido[]
       <div className="flex flex-wrap gap-2">
         {accesos.map((acceso) => {
           const Icono = iconoDeCategoria(acceso.nombre)
+          const categoria = porId.get(acceso.categoriaId)
           return (
             <Link
               key={acceso.categoriaId}
               to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
               state={ORIGEN_RESOLVER}
               aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
-              className="inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-full border border-noct-divider px-3.5 text-[15px] font-medium text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado"
+              className="inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-full border border-noct-divider bg-noct-surface py-1 pl-1.5 pr-3.5 text-[15px] font-medium text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado"
             >
-              <Icono size={16} className="shrink-0 text-noct-accent-300" aria-hidden />
+              {/* EL COLOR DE LA CATEGORÍA (tarea 349, «Icono de categoría» de
+                  Ventana): el icono en su recuadro tintado con el color de
+                  identidad de la categoría, el mismo de su chip y de su ficha,
+                  para reconocerla de un vistazo. El acceso no crece: sigue
+                  midiendo 44 px de alto. */}
+              <span
+                data-color-categoria
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                  categoria ? claseTonoDeCategoria(categoria) : 'bg-noct-accent/[.12] text-noct-accent-300'
+                }`}
+              >
+                <Icono size={16} aria-hidden />
+              </span>
               <span className="min-w-0 [overflow-wrap:anywhere]">{acceso.nombre}</span>
               <span className="font-mono text-[12.5px] text-noct-neutral-500">{acceso.guias}</span>
             </Link>

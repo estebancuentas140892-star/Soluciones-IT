@@ -753,6 +753,12 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     expect(continuar.hasAttribute('data-seguir-donde-ibas')).toBe(true)
     expect(continuar.textContent).toContain('Instalar la impresora de prueba')
     expect(continuar.textContent).toContain('Continuar')
+    // El avance a la vista (tarea 349): un segmento por paso, el hecho en
+    // acento y el actual en claro.
+    const segmentos = continuar.querySelectorAll('[data-avance-seguir] span > span')
+    expect(segmentos).toHaveLength(2)
+    expect(segmentos[0].className).toContain('bg-noct-accent')
+    expect(segmentos[1].className).toContain('bg-noct-text')
     await tocar(continuar)
     expect(ubicacionActual().pathname).toBe('/soluciones/cat-pruebas/guia-1')
   })
@@ -770,7 +776,15 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     }, 'el catálogo con su número')
     expect(todas.textContent).toContain('Todas las guías (2)')
     expect(todas.getAttribute('href')).toBe('/soluciones')
-    await tocar(await esperar(() => control(/^Impresoras: 1 guía/), 'la categoría Impresoras'))
+    // Cada acceso lleva el icono en el color de identidad de su categoría
+    // (tarea 349), el mismo que su chip: dos categorías, dos colores.
+    const impresoras = await esperar(() => control(/^Impresoras: 1 guía/), 'la categoría Impresoras')
+    const pos = await esperar(() => control(/^POS: 1 guía/), 'la categoría POS')
+    const colorDe = (enlace: HTMLElement) => enlace.querySelector('[data-color-categoria]')?.className.match(/text-noct-cat-\d+/)?.[0]
+    expect(colorDe(impresoras)).toBeTruthy()
+    expect(colorDe(pos)).toBeTruthy()
+    expect(colorDe(impresoras)).not.toBe(colorDe(pos))
+    await tocar(impresoras)
     expect(ubicacionActual().pathname).toBe('/soluciones')
     expect(ubicacionActual().search).toBe('?categoria=cat-imp')
   })
