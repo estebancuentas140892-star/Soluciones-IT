@@ -56,6 +56,25 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* Figtree variable (rediseño móvil por ventanas, tarea 348): la letra del
+   teléfono. Inter sigue siendo la de tableta y escritorio y el respaldo de
+   Figtree en el teléfono: si el archivo no carga (o el navegador no lo
+   admite) el texto se pinta con Inter sin que nada se rompa. Mismo criterio
+   que las otras dos: subconjunto latino (cubre el español completo), servida
+   desde el bundle, nunca desde Google Fonts, y al precache por el patrón
+   woff2 de vite.config.ts. Licencia SIL OFL 1.1 en
+   assets/LICENSE-Figtree.txt (@fontsource-variable/figtree 5.3.0). */
+@font-face {
+  font-family: 'Figtree Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 900;
+  src: url('./assets/figtree-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 /* Tokens del sistema de diseño Nocturne (rediseño IT Brain, handoff
    "Herramienta IT para técnicos", 08_ESTILO.md). Declarados en @theme
    para que Tailwind genere las utilidades (bg-noct-bg, text-noct-accent,
@@ -205,6 +224,18 @@
   --color-noct-cat-8: oklch(0.75 0.11 270);
   --color-noct-cat-9: oklch(0.75 0.11 300);
   --color-noct-cat-10: oklch(0.75 0.11 335);
+}
+
+/* LA LETRA DEL TELÉFONO (tarea 348): por debajo de 768 px, `font-inter` pasa a
+   ser Figtree con Inter de respaldo. Es el mismo token, así que ninguna
+   pantalla cambia de clase; tableta y escritorio siguen con Inter, sin
+   tocar. Va fuera de @theme a propósito (es una redefinición por ancho) y sobre
+   `html`, no sobre `:root`: lo sin capa gana a la capa del tema igual, y así
+   no se confunde con el bloque `:root` de las sombras y los tintes. */
+@media (max-width: 47.999rem) {
+  html {
+    --font-inter: 'Figtree Variable', 'Inter Variable', system-ui, -apple-system, sans-serif;
+  }
 }
 
 /* SOMBRAS DEL SISTEMA (tarea 339, handoff de tableta y escritorio). Las

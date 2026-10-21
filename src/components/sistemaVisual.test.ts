@@ -59,6 +59,25 @@ describe('IBM Plex Mono local (tarea 327)', () => {
   })
 })
 
+describe('Figtree en el teléfono (tarea 348)', () => {
+  it('se sirve desde el bundle, con licencia y sin pedir nada a la red', () => {
+    expect(css).toContain("url('./assets/figtree-latin-wght-normal.woff2')")
+    expect(existsSync(join('src/assets', 'figtree-latin-wght-normal.woff2'))).toBe(true)
+    expect(existsSync(join('src/assets', 'LICENSE-Figtree.txt'))).toBe(true)
+    expect(css).not.toMatch(/fonts\.(googleapis|gstatic)\.com/)
+  })
+
+  it('font-inter sigue siendo Inter en tableta y escritorio', () => {
+    expect(css).toMatch(/--font-inter:\s*'Inter Variable', system-ui, -apple-system, sans-serif;/)
+  })
+
+  it('por debajo de 768 px font-inter es Figtree con Inter de respaldo', () => {
+    const bloque = css.match(/@media \(max-width: 47\.999rem\) \{\s*html \{([^}]*)\}/)
+    expect(bloque).not.toBeNull()
+    expect(bloque![1]).toMatch(/--font-inter:\s*'Figtree Variable', 'Inter Variable', system-ui, -apple-system, sans-serif;/)
+  })
+})
+
 describe('BTN_PRIMARIO_RELLENO (regla 30)', () => {
   it('es un relleno de acento con su texto propio y el alto del pulgar', () => {
     const clases = BTN_PRIMARIO_RELLENO.split(/\s+/)
