@@ -11,6 +11,7 @@ import {
   esperarQue,
   limpiarBase,
   montar,
+  ponerAncho,
   pasoPrueba,
   pausa,
   sembrarGuia,
@@ -535,6 +536,7 @@ describe('en las listas: el paso entero y "Probar"', () => {
   }
 
   it('en el paso entero, el riesgo ocupa el sitio de su acción (y de sus apoyos) hasta leerlo', async () => {
+    ponerAncho('tableta')
     await sembrar()
     await montar(RUTAS, RUTA)
     await enLaAccion(ACCION_1)

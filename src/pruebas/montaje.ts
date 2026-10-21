@@ -13,6 +13,7 @@ import {
 import { AuthContext, type AuthContextValue } from '../features/autenticacion/authContext'
 import { bloquear, cifrarCredencial, desbloquear, TEXTO_VERIFICADOR } from '../features/boveda/sesionBoveda'
 import { cifrarTexto, derivarClave, nuevaSal } from '../lib/crypto'
+import { guardarModoEjecucion, ID_PREFERENCIAS_TECNICO } from '../lib/preferenciasEjecucion'
 import {
   db,
   ID_VERIFICADOR,
@@ -110,6 +111,11 @@ export interface Montaje {
   desmontar: () => Promise<void>
 }
 
+export interface OpcionesMontaje {
+  /** No sembrar el modo: la guia abre como abre en un telefono real (en ventana). */
+  ventanaPorDefecto?: boolean
+}
+
 const raices = new Set<Root>()
 
 /**
@@ -119,7 +125,17 @@ const raices = new Set<Root>()
 export async function montar(
   rutas: RutaPrueba[],
   entrada: string | { pathname: string; state?: unknown },
+  opciones: OpcionesMontaje = {},
 ): Promise<Montaje> {
+  // EL MODO DE EJECUCION DE LAS PRUEBAS (tarea 348). En el telefono, y las
+  // pruebas viven a 375 px, quien no ha elegido nada abre cada guia en
+  // ventana. Los recorridos escritos antes de esa tarea describen la
+  // ejecucion de una accion a la vez, que sigue siendo la del escritorio y la
+  // de quien la elige, asi que se siembra 'foco' salvo que la prueba ya haya
+  // guardado un modo o pida el defecto real con `ventanaPorDefecto`.
+  if (!opciones.ventanaPorDefecto && !(await db.preferenciasTecnico.get(ID_PREFERENCIAS_TECNICO))) {
+    await guardarModoEjecucion('foco')
+  }
   const contenedor = document.createElement('div')
   document.body.appendChild(contenedor)
   const raiz = createRoot(contenedor)
@@ -499,4 +515,18 @@ export async function sembrarEquipo(datos: Partial<Dispositivo> & { id: string; 
   }
   await db.dispositivos.put(equipo)
   return equipo
+}
+
+type VentanaDePrueba = { happyDOM?: { setViewport: (vista: { width: number; height: number }) => void } }
+
+/**
+ * El ancho de la ventana de prueba. Por defecto las pruebas miran un telefono
+ * (375 px, ver `setup.ts`), que desde la tarea 348 ejecuta cada guia en
+ * ventana. La vista del paso entero con una casilla por accion es la de
+ * tableta y escritorio: sus pruebas piden `'tableta'`. `setup.ts` devuelve el
+ * telefono despues de cada prueba.
+ */
+export function ponerAncho(ancho: 'telefono' | 'tableta'): void {
+  const ventana = globalThis as VentanaDePrueba
+  ventana.happyDOM?.setViewport(ancho === 'tableta' ? { width: 768, height: 1024 } : { width: 375, height: 812 })
 }

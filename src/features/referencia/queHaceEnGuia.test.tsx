@@ -9,6 +9,7 @@ import {
   esperarControl,
   limpiarBase,
   montar,
+  ponerAncho,
   pasoPrueba,
   sembrarGuia,
   sembrarPerfil,
@@ -86,6 +87,7 @@ describe('¿Qué hace? en la vista de una acción a la vez', () => {
 describe('¿Qué hace? en la vista del paso entero', () => {
   it('se ofrece para el comando escrito y no para el que el autor ya enlazó', async () => {
     await guardarModoEjecucion('pasoEntero')
+    ponerAncho('tableta')
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes(TAREA_PING), 'el paso entero')
 

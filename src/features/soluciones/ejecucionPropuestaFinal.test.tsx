@@ -10,6 +10,7 @@ import {
   esperarControl,
   limpiarBase,
   montar,
+  ponerAncho,
   pasoPrueba,
   sembrarGuia,
   sembrarPerfil,
@@ -191,6 +192,7 @@ describe('el botón dice la consecuencia', () => {
       pasos: [conGuia, pasoPrueba('pf-p2', 'Terminar la prueba', ['Cerrar el navegador'])],
     })
     await guardarModoEjecucion('pasoEntero')
+    ponerAncho('tableta')
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes('Pulsar el icono del navegador'), 'lo reutilizado dentro del paso')
 

@@ -15,6 +15,7 @@ import {
   limpiarBase,
   MAESTRA_PRUEBA,
   montar,
+  ponerAncho,
   pasoPrueba,
   pausa,
   sembrarCredencial,
@@ -393,6 +394,7 @@ describe('la credencial del equipo con el que se trabaja', () => {
 
 describe('en todas las vistas que la enseñan', () => {
   it('en el paso entero', async () => {
+    ponerAncho('tableta')
     await sembrarBoveda()
     await sembrarGuiaConCredencial()
     await montar(RUTAS, RUTA)

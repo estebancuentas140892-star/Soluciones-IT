@@ -10,6 +10,7 @@ import {
   esperarControl,
   limpiarBase,
   montar,
+  ponerAncho,
   pasoPrueba,
   sembrarGuia,
   sembrarPerfil,
@@ -357,6 +358,7 @@ describe('lo heredado carga sin romper nada y no se muestra', () => {
   })
 
   it('en el paso entero tampoco, y sin dejar huecos donde estaban', async () => {
+    ponerAncho('tableta')
     await abrir()
     await verElPasoEntero()
     const texto = textoPantalla()
@@ -498,6 +500,7 @@ describe('"Debes ver" es la imagen del resultado', () => {
   })
 
   it('en el paso entero, bajo su tarea', async () => {
+    ponerAncho('tableta')
     await abrir()
     await verElPasoEntero()
     const boton = await esperar(() => botonDebesVer(), 'el "Debes ver" de la tarea')

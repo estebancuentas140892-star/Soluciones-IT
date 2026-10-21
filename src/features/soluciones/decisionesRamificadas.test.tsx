@@ -12,6 +12,7 @@ import {
   esperarQue,
   limpiarBase,
   montar,
+  ponerAncho,
   pasoPrueba,
   sembrarGuia,
   sembrarPerfil,
@@ -346,6 +347,7 @@ describe('la decisión con opciones en la vista del paso entero', () => {
   it('se responde tocando la opción y lleva a su paso', async () => {
     await sembrarCopia()
     await guardarModoEjecucion('pasoEntero')
+    ponerAncho('tableta')
     await montar(RUTAS, RUTA_COPIA)
     await esperar(() => textoPantalla().includes('¿Qué versión del programa de prueba usas?'), 'la pregunta en el paso')
     await tocar(await esperar(() => control(/^Tarea: Confirmar el buzón de la persona$/), 'la tarea del paso'))

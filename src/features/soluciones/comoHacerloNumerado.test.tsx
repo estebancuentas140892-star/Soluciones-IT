@@ -10,6 +10,7 @@ import {
   esperarControl,
   limpiarBase,
   montar,
+  ponerAncho,
   pasoPrueba,
   pausa,
   sembrarGuia,
@@ -306,6 +307,7 @@ describe('las demás vistas, con el caso del respaldo', () => {
   })
 
   it('la vista de paso entero: la variante "fila"', async () => {
+    ponerAncho('tableta')
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-rr')
     await esperar(() => textoPantalla().includes(ACCION), 'la instrucción')
     await tocar(await esperarControl(/^Paso 1 de 1\. Abrir el índice de pasos$/))

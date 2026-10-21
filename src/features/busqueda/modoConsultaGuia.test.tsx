@@ -17,6 +17,7 @@ import {
   limpiarBase,
   MAESTRA_PRUEBA,
   montar,
+  ponerAncho,
   pasoPrueba,
   sembrarCredencial,
   sembrarEquipo,
@@ -84,6 +85,7 @@ beforeEach(async () => {
   })
   // El paso entero, para mover el paso con sus flechas de consulta.
   await guardarModoEjecucion('pasoEntero')
+  ponerAncho('tableta')
 })
 
 afterEach(async () => {

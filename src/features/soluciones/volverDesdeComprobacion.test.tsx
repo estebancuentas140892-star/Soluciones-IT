@@ -19,6 +19,7 @@ import {
   esperarQue,
   limpiarBase,
   montar,
+  ponerAncho,
   pasoPrueba,
   sembrarGuia,
   sembrarPerfil,
@@ -477,6 +478,7 @@ describe('el último contexto visitado, no el último de la lista', () => {
 describe('regresiones', () => {
   it('en la vista de paso entero, "Anterior" también vuelve al último paso y su control vuelve a la comprobación', async () => {
     await guardarModoEjecucion('pasoEntero')
+    ponerAncho('tableta')
     await sembrarLineal()
     await db.progresoPasos.put({
       articuloId: 'guia-lineal',

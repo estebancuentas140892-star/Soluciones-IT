@@ -13,6 +13,7 @@ import {
   esperarQue,
   limpiarBase,
   montar,
+  ponerAncho,
   pasoPrueba,
   pausa,
   sembrarGuia,
@@ -382,6 +383,7 @@ describe('las demás vistas enseñan lo mismo', () => {
   })
 
   it('el paso entero, bajo la tarea y antes del dato, en el tamaño de su fila', async () => {
+    ponerAncho('tableta')
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-como')
     await esperar(() => textoPantalla().includes(ACCION), 'la acción')
     await tocar(await esperarControl(/^Paso 1 de 1\. Abrir el índice de pasos$/))

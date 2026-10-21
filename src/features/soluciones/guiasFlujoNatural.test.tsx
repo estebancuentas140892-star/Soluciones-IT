@@ -11,6 +11,7 @@ import {
   esperarControl,
   limpiarBase,
   montar,
+  ponerAncho,
   pasoPrueba,
   sembrarCredencial,
   sembrarGuia,
@@ -828,6 +829,7 @@ describe('el paso entero también es un solo flujo (fase 3)', () => {
   it('lo reutilizado se ve como parte del paso, sin fila propia ni sus requisitos', async () => {
     await sembrarCasoAlimentacion()
     await guardarModoEjecucion('pasoEntero')
+    ponerAncho('tableta')
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-alimentacion')
     await empezarGuia()
     await esperar(
@@ -867,6 +869,7 @@ describe('el paso entero también es un solo flujo (fase 3)', () => {
     })
     await sembrarGuia({ id: 'guia-imprimir', titulo: 'Imprimir la primera página de prueba', pasos: [paso] })
     await guardarModoEjecucion('pasoEntero')
+    ponerAncho('tableta')
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-imprimir')
     await esperar(
       () => textoPantalla().includes('Ejecuta el instalador del controlador de prueba'),
@@ -881,6 +884,7 @@ describe('el paso entero también es un solo flujo (fase 3)', () => {
   it('el "No" de una decisión sigue con su camino, sin presentarlo como una falla', async () => {
     await sembrarDecisionConDestino()
     await guardarModoEjecucion('pasoEntero')
+    ponerAncho('tableta')
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-envio')
     await tocar(await esperarControl('No, seguir con «Crear un vínculo de prueba con permiso de edición»'))
     await esperar(() => textoPantalla().includes('Selecciona Puede editar'), 'el camino del no, en el sitio')

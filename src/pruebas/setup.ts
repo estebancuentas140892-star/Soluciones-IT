@@ -1,6 +1,7 @@
 // Hace que IndexedDB (y por lo tanto Dexie) funcione en Node
 // durante las pruebas, sin necesidad de un navegador.
 import 'fake-indexeddb/auto'
+import { afterEach } from 'vitest'
 
 // LAS PRUEBAS DE INTERFAZ MIRAN UN TELÉFONO (tarea 339). happy-dom abre una
 // ventana de 1024 x 768, y desde la tarea 339 el chasis decide en JavaScript
@@ -11,3 +12,8 @@ import 'fake-indexeddb/auto'
 // `window.happyDOM.setViewport({ width: 1280, height: 832 })`.
 const ventana = globalThis as { happyDOM?: { setViewport: (vista: { width: number; height: number }) => void } }
 ventana.happyDOM?.setViewport({ width: 375, height: 812 })
+
+// Una prueba que pidio otro ancho no se lo deja a la siguiente (tarea 348).
+afterEach(() => {
+  ventana.happyDOM?.setViewport({ width: 375, height: 812 })
+})
