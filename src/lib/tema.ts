@@ -28,7 +28,24 @@ export const COLOR_BARRA: Record<TemaEfectivo, string> = {
   claro: '#f4f5f8',
 }
 
+/**
+ * En el teléfono el fondo es el de «Ventana» (tarea 349, src/index.css), así
+ * que la barra del navegador toma ese: si no, se vería una franja de otro
+ * color sobre la cabecera. Tableta y escritorio siguen con COLOR_BARRA.
+ */
+export const COLOR_BARRA_TELEFONO: Record<TemaEfectivo, string> = {
+  oscuro: '#0e131b',
+  claro: '#f2f5f9',
+}
+
 const CONSULTA_CLARO = '(prefers-color-scheme: light)'
+/** El mismo corte que el teléfono de src/index.css (`max-width: 47.999rem`). */
+export const CONSULTA_TELEFONO = '(max-width: 47.999rem)'
+
+/** El color de la barra para un tema, según si se ve en un teléfono. */
+export function colorBarra(tema: TemaEfectivo, esTelefono: boolean): string {
+  return (esTelefono ? COLOR_BARRA_TELEFONO : COLOR_BARRA)[tema]
+}
 
 export function esPreferenciaTema(valor: unknown): valor is PreferenciaTema {
   return valor === 'oscuro' || valor === 'claro' || valor === 'automatico'
@@ -54,11 +71,15 @@ function telefonoPideClaro(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(CONSULTA_CLARO).matches
 }
 
+function esTelefono(): boolean {
+  return typeof window.matchMedia === 'function' && window.matchMedia(CONSULTA_TELEFONO).matches
+}
+
 /** Pinta el tema efectivo de una preferencia: el atributo de <html> y la barra del navegador. */
 export function aplicarTema(preferencia: PreferenciaTema): TemaEfectivo {
   const tema = temaEfectivo(preferencia, telefonoPideClaro())
   document.documentElement.setAttribute('data-tema', tema)
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', COLOR_BARRA[tema])
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colorBarra(tema, esTelefono()))
   return tema
 }
 

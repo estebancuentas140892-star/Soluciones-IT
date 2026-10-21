@@ -14,11 +14,14 @@ import {
 // EL TEMA (tarea 333): oscuro por defecto, claro opcional y automático
 // según el teléfono, guardado solo en este teléfono.
 
-function simularTelefono(pideClaro: boolean): { cambiar: (claro: boolean) => void } {
+// `anchoDeTelefono`: si la pantalla mide menos de 768 px (la barra del
+// navegador toma entonces el fondo de «Ventana», tarea 349).
+function simularTelefono(pideClaro: boolean, anchoDeTelefono = false): { cambiar: (claro: boolean) => void } {
   let oyente: (() => void) | null = null
   let claro = pideClaro
   vi.stubGlobal('matchMedia', (consulta: string) => ({
     get matches() {
+      if (consulta.includes('max-width')) return anchoDeTelefono
       return consulta.includes('light') ? claro : !claro
     },
     addEventListener: (_: string, f: () => void) => {
@@ -70,6 +73,14 @@ describe('la preferencia de este teléfono', () => {
     expect(preferenciaTemaActual()).toBe('claro')
     expect(avisos).toHaveBeenCalledTimes(1)
     dejar()
+  })
+
+  it('en el ancho de un teléfono la barra del navegador toma el fondo de Ventana', () => {
+    simularTelefono(false, true)
+    guardarPreferenciaTema('claro')
+    expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#f2f5f9')
+    guardarPreferenciaTema('oscuro')
+    expect(document.querySelector('meta[name="theme-color"]')?.getAttribute('content')).toBe('#0e131b')
   })
 
   it('volver a oscuro borra la clave: es el de por defecto', () => {

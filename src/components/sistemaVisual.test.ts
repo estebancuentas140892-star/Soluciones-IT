@@ -198,6 +198,56 @@ describe('el tema claro (tarea 333)', () => {
   })
 })
 
+describe('el sistema visual «Ventana» en el teléfono (tarea 349)', () => {
+  const inicio = css.indexOf('@media (max-width: 47.999rem) {\n  :root {')
+  const bloque = css.slice(inicio, css.indexOf('\n}', inicio))
+  const oscuro = bloque.slice(bloque.indexOf(':root {'), bloque.indexOf('\n  }'))
+  const claro = bloque.slice(bloque.indexOf(":root[data-tema='claro'] {"))
+  const valor = (de: string, token: string) => new RegExp(`${token}:\\s*([^;]+);`).exec(de)?.[1]
+  const tokens = (de: string) => [...de.matchAll(/(--color-noct-[a-z0-9-]+)\s*:/g)].map((m) => m[1]).sort()
+
+  it('solo vive por debajo de 768 px y va después del tema claro general', () => {
+    expect(inicio).toBeGreaterThan(css.indexOf(":root[data-tema='claro'] {"))
+  })
+
+  it('el oscuro y el claro del teléfono definen los mismos tokens, todos del sistema', () => {
+    const delTema = css.slice(css.indexOf('@theme {'), css.indexOf('\n}', css.indexOf('@theme {')))
+    expect(tokens(oscuro).length).toBeGreaterThan(25)
+    expect(tokens(claro)).toEqual(tokens(oscuro))
+    for (const token of tokens(oscuro)) expect(delTema).toContain(`${token}:`)
+  })
+
+  it('tiene los valores de la tabla de la pizarra', () => {
+    const tabla: Record<string, [string, string]> = {
+      '--color-noct-bg': ['#0e131b', '#f2f5f9'],
+      '--color-noct-surface': ['#171e29', '#ffffff'],
+      '--color-noct-neutral-900': ['#212a37', '#e9eef4'],
+      '--color-noct-neutral-300': ['#b4bfce', '#475467'],
+      '--color-noct-neutral-400': ['#98a4b6', '#5d6b80'],
+      '--color-noct-accent': ['#38bdd0', '#0a7a8c'],
+      '--color-noct-accent-900': ['#12343c', '#ddf3f6'],
+      '--color-noct-exito': ['#6fd9a0', '#11743f'],
+      '--color-noct-precaucion': ['#f3c46a', '#8a5300'],
+      '--color-noct-error': ['#ff9b92', '#b42318'],
+    }
+    for (const [token, [enOscuro, enClaro]] of Object.entries(tabla)) {
+      expect(valor(oscuro, token)).toBe(enOscuro)
+      expect(valor(claro, token)).toBe(enClaro)
+    }
+  })
+
+  it('la barra del navegador del teléfono es el fondo de Ventana, en el script y en el módulo', async () => {
+    const script = readFileSync('public/tema.js', 'utf8')
+    const { COLOR_BARRA_TELEFONO, CONSULTA_TELEFONO, colorBarra } = await import('../lib/tema')
+    expect(COLOR_BARRA_TELEFONO).toEqual({ oscuro: '#0e131b', claro: '#f2f5f9' })
+    expect(script).toContain(`'${CONSULTA_TELEFONO}'`)
+    expect(script).toContain(`'${COLOR_BARRA_TELEFONO.claro}'`)
+    expect(script).toContain(`'${COLOR_BARRA_TELEFONO.oscuro}'`)
+    expect(colorBarra('oscuro', true)).toBe('#0e131b')
+    expect(colorBarra('oscuro', false)).toBe('#161826')
+  })
+})
+
 describe('el remate móvil "1b Pulgar" (tarea 341)', () => {
   const inicioTema = css.indexOf('@theme {')
   const tema = css.slice(inicioTema, css.indexOf('\n}', inicioTema))

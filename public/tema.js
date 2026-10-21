@@ -19,6 +19,12 @@
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-color-scheme: light)').matches)
   document.documentElement.setAttribute('data-tema', claro ? 'claro' : 'oscuro')
+  // En el teléfono, el fondo de «Ventana» (tarea 349); desde 768 px, el de siempre.
+  var telefono =
+    typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 47.999rem)').matches
   var barra = document.querySelector('meta[name="theme-color"]')
-  if (barra) barra.setAttribute('content', claro ? '#f4f5f8' : '#161826')
+  if (barra) {
+    if (telefono) barra.setAttribute('content', claro ? '#f2f5f9' : '#0e131b')
+    else barra.setAttribute('content', claro ? '#f4f5f8' : '#161826')
+  }
 })()

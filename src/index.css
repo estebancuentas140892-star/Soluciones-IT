@@ -375,6 +375,92 @@
   color-scheme: light;
 }
 
+/* EL SISTEMA VISUAL «VENTANA» EN EL TELÉFONO (tarea 349; pizarra «Sistema
+   visual Ventana» de Claude Design, revisión 2). Por debajo de 768 px los
+   mismos tokens toman la paleta de Ventana: un fondo pizarra más frío y
+   hondo, la superficie y la "superficie 2" de los controles, tinta 2 y 3
+   para lo secundario, el cian de la acción, el verde que comprueba, el
+   ámbar que pide atención y el rojo que detiene. Ninguna pantalla cambia de
+   clase: solo cambian los valores, como en el tema claro (regla 12), y
+   tableta y escritorio conservan los de arriba. Un color, un significado:
+   el contraste de cada texto sobre su fondo es de 4.5:1 o más en los dos
+   temas (tabla de la pizarra; el menor, 4.6:1).
+
+   Los papeles de la escala neutra no cambian (texto 2 = 300, texto 3 =
+   400, texto 4 = 500, iconos y marcas = 600, bordes y barras = 700 a 900).
+   El oscuro va sobre `:root` y el claro sobre `:root[data-tema='claro']`,
+   los dos después de sus bloques generales: a igual especificidad gana el
+   que va después, y el claro sigue ganándole al oscuro. La prueba
+   sistemaVisual.test.ts exige que los dos definan los mismos tokens. */
+@media (max-width: 47.999rem) {
+  :root {
+    --color-noct-bg: #0e131b;
+    --color-noct-surface: #171e29;
+    --color-noct-text: #e8edf4;
+    --color-noct-divider: #2b3544;
+    --color-noct-divider-fuerte: #3a4657;
+    --color-noct-tinte: rgb(232 237 244 / 0.06);
+    --color-noct-presionado: rgb(232 237 244 / 0.1);
+    --color-noct-velo: rgb(0 0 0 / 0.62);
+    --color-noct-neutral-100: #eef2f7;
+    --color-noct-neutral-200: #d5dce6;
+    --color-noct-neutral-300: #b4bfce;
+    --color-noct-neutral-400: #98a4b6;
+    --color-noct-neutral-500: #8c99ad;
+    --color-noct-neutral-600: #76839a;
+    --color-noct-neutral-700: #3a4657;
+    --color-noct-neutral-800: #2b3544;
+    --color-noct-neutral-900: #212a37;
+    --color-noct-accent: #38bdd0;
+    --color-noct-accent-100: #e6f9fb;
+    --color-noct-accent-200: #bff0f6;
+    --color-noct-accent-300: #8ee3ef;
+    --color-noct-accent-400: #38bdd0;
+    --color-noct-accent-500: #2aa3b5;
+    --color-noct-accent-600: #1f8597;
+    --color-noct-accent-700: #1f5c66;
+    --color-noct-accent-800: #174650;
+    --color-noct-accent-900: #12343c;
+    --color-noct-on-accent: #03222a;
+    --color-noct-exito: #6fd9a0;
+    --color-noct-precaucion: #f3c46a;
+    --color-noct-error: #ff9b92;
+  }
+  :root[data-tema='claro'] {
+    --color-noct-bg: #f2f5f9;
+    --color-noct-surface: #ffffff;
+    --color-noct-text: #0e1726;
+    --color-noct-divider: #d9e0e8;
+    --color-noct-divider-fuerte: #c3ccd7;
+    --color-noct-tinte: rgb(14 23 38 / 0.05);
+    --color-noct-presionado: rgb(14 23 38 / 0.09);
+    --color-noct-velo: rgb(14 23 38 / 0.48);
+    --color-noct-neutral-100: #101b2b;
+    --color-noct-neutral-200: #1d2939;
+    --color-noct-neutral-300: #475467;
+    --color-noct-neutral-400: #5d6b80;
+    --color-noct-neutral-500: #667085;
+    --color-noct-neutral-600: #77839a;
+    --color-noct-neutral-700: #c3ccd7;
+    --color-noct-neutral-800: #d9e0e8;
+    --color-noct-neutral-900: #e9eef4;
+    --color-noct-accent: #0a7a8c;
+    --color-noct-accent-100: #04323a;
+    --color-noct-accent-200: #05424c;
+    --color-noct-accent-300: #075666;
+    --color-noct-accent-400: #0a7a8c;
+    --color-noct-accent-500: #065a68;
+    --color-noct-accent-600: #4fa3b1;
+    --color-noct-accent-700: #b8e2e9;
+    --color-noct-accent-800: #cdebf0;
+    --color-noct-accent-900: #ddf3f6;
+    --color-noct-on-accent: #ffffff;
+    --color-noct-exito: #11743f;
+    --color-noct-precaucion: #8a5300;
+    --color-noct-error: #b42318;
+  }
+}
+
 html,
 body,
 #root {
