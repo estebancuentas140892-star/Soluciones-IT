@@ -106,9 +106,10 @@ describe('las sombras del sistema (tarea 339)', () => {
     return css.slice(desde, css.indexOf('\n}', desde))
   }
 
-  it('el oscuro y el claro definen las mismas dos, y @theme ninguna', () => {
+  // La tercera, la del pie fijo del teléfono (tarea 350).
+  it('el oscuro y el claro definen las mismas tres, y @theme ninguna', () => {
     const oscuro = sombrasDe(bloqueDe(':root {'))
-    expect(oscuro).toEqual(['--shadow-noct-elevacion', '--shadow-noct-panel'])
+    expect(oscuro).toEqual(['--shadow-noct-elevacion', '--shadow-noct-panel', '--shadow-noct-pie'])
     expect(sombrasDe(bloqueDe(":root[data-tema='claro'] {"))).toEqual(oscuro)
     expect(sombrasDe(bloqueDe('@theme {'))).toEqual([])
   })

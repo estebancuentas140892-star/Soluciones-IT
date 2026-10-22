@@ -224,6 +224,60 @@
   --color-noct-cat-8: oklch(0.75 0.11 270);
   --color-noct-cat-9: oklch(0.75 0.11 300);
   --color-noct-cat-10: oklch(0.75 0.11 335);
+
+  /* LAS PIEZAS DE «VENTANA» QUE NO TENÍAN TOKEN (tarea 350, implementación
+     fiel del prototipo de Claude Design; valores de su `paleta()`). Solo las
+     usan utilidades del teléfono (`max-md:` o ramas de `useEsAncho`), así que
+     no hace falta redefinirlas en el bloque del teléfono: el oscuro va aquí y
+     el claro en `:root[data-tema='claro']`.
+       - El relieve: el borde inferior de 3 o 4 px que da cuerpo a un botón
+         relleno (`accent-borde`, `exito-borde`) y a una tarjeta
+         (`sombra-tarjeta`); `linea-media` es el borde de una tecla y el
+         trazo de un segmento condicional del progreso.
+       - Cada estado con su tinte (el fondo del aviso) y su línea (su borde),
+         y el verde sólido de «Sí, quedó resuelto» con su texto.
+       - «Antes de empezar» en azul, la tecla y el valor que se escribe, y la
+         Bóveda invertida (tinta sobre el fondo de la tinta).
+       - El color de cada CLASE (Software, Impresoras, POS...): el «Icono de
+         categoría» del prototipo, el mismo para una categoría de guías y
+         para la clase de un equipo (`IconoCategoria`). */
+  --color-noct-accent-borde: #1f8597;
+  --color-noct-linea-media: #4a576b;
+  --color-noct-sombra-tarjeta: #0a0e14;
+  --color-noct-exito-tinte: #12301f;
+  --color-noct-exito-linea: #2e6b48;
+  --color-noct-exito-solido: #5fd394;
+  --color-noct-exito-borde: #2e8a57;
+  --color-noct-on-exito: #04210f;
+  --color-noct-precaucion-tinte: #33270f;
+  --color-noct-precaucion-linea: #7a5e22;
+  --color-noct-error-tinte: #3a1714;
+  --color-noct-error-linea: #9a4238;
+  --color-noct-antes: #9db8ff;
+  --color-noct-antes-tinte: #172449;
+  --color-noct-tecla: #212a37;
+  --color-noct-valor: #263142;
+  --color-noct-boveda: #e8edf4;
+  --color-noct-boveda-borde: #8c99ad;
+  --color-noct-on-boveda: #0e131b;
+  --color-noct-clase-software: #a5b4fc;
+  --color-noct-clase-software-tinte: #232a4d;
+  --color-noct-clase-impresora: #f0a8ee;
+  --color-noct-clase-impresora-tinte: #3a1f3a;
+  --color-noct-clase-pos: #fdba8c;
+  --color-noct-clase-pos-tinte: #3a2416;
+  --color-noct-clase-servidor: #93c5fd;
+  --color-noct-clase-servidor-tinte: #1a2b4a;
+  --color-noct-clase-red: #6ee7d2;
+  --color-noct-clase-red-tinte: #123532;
+  --color-noct-clase-computador: #7dd3fc;
+  --color-noct-clase-computador-tinte: #13314a;
+  --color-noct-clase-camara: #f9a8c9;
+  --color-noct-clase-camara-tinte: #3b1a2a;
+  --color-noct-clase-switch: #bef264;
+  --color-noct-clase-switch-tinte: #253312;
+  --color-noct-clase-datafono: #fcd34d;
+  --color-noct-clase-datafono-tinte: #3a2e10;
 }
 
 /* LA LETRA DEL TELÉFONO (tarea 348): por debajo de 768 px, `font-inter` pasa a
@@ -250,6 +304,9 @@
 :root {
   --shadow-noct-elevacion: 0 0 #0000;
   --shadow-noct-panel: 0 24px 64px rgb(0 0 0 / 0.5);
+  /* La sombra que separa del contenido lo que va fijo abajo en el teléfono:
+     el pie de la ventana y el de la guía completada (tarea 350). */
+  --shadow-noct-pie: 0 -6px 18px rgb(0 0 0 / 0.35);
   /* EL TINTE DE UN ESTADO (tarea 339, T11; "el claro, diseñado"): el
      fondo de un aviso, de un contador o de "Todo al día" es su color al
      13 % en el oscuro y al 11 % en el claro, donde ensuciaba. Las
@@ -366,9 +423,49 @@
   --color-noct-cat-9: oklch(0.52 0.11 300);
   --color-noct-cat-10: oklch(0.52 0.11 335);
 
+  /* Las piezas de «Ventana» en el claro (tarea 350). */
+  --color-noct-accent-borde: #065a68;
+  --color-noct-linea-media: #c3ccd7;
+  --color-noct-sombra-tarjeta: #e3e8ef;
+  --color-noct-exito-tinte: #e2f5ea;
+  --color-noct-exito-linea: #9ed7b5;
+  --color-noct-exito-solido: #11743f;
+  --color-noct-exito-borde: #0b5a30;
+  --color-noct-on-exito: #ffffff;
+  --color-noct-precaucion-tinte: #fff3d9;
+  --color-noct-precaucion-linea: #e9c878;
+  --color-noct-error-tinte: #feecea;
+  --color-noct-error-linea: #e5897f;
+  --color-noct-antes: #1d4ed8;
+  --color-noct-antes-tinte: #e4ecfe;
+  --color-noct-tecla: #ffffff;
+  --color-noct-valor: #e9eef4;
+  --color-noct-boveda: #0e1726;
+  --color-noct-boveda-borde: #000000;
+  --color-noct-on-boveda: #ffffff;
+  --color-noct-clase-software: #4338ca;
+  --color-noct-clase-software-tinte: #ebeafd;
+  --color-noct-clase-impresora: #a33ea1;
+  --color-noct-clase-impresora-tinte: #f8e9f7;
+  --color-noct-clase-pos: #c2410c;
+  --color-noct-clase-pos-tinte: #ffede2;
+  --color-noct-clase-servidor: #1d4ed8;
+  --color-noct-clase-servidor-tinte: #e4ecfe;
+  --color-noct-clase-red: #0f766e;
+  --color-noct-clase-red-tinte: #ddf4f0;
+  --color-noct-clase-computador: #0369a1;
+  --color-noct-clase-computador-tinte: #e0f0fa;
+  --color-noct-clase-camara: #be185d;
+  --color-noct-clase-camara-tinte: #fce7f0;
+  --color-noct-clase-switch: #436e0c;
+  --color-noct-clase-switch-tinte: #ecf5dc;
+  --color-noct-clase-datafono: #8f5609;
+  --color-noct-clase-datafono-tinte: #fdf3d7;
+
   /* Las sombras (tarea 339): en claro la profundidad es sombra. */
   --shadow-noct-elevacion: 0 1px 2px rgb(25 27 40 / 0.06), 0 0 0 1px rgb(25 27 40 / 0.07);
   --shadow-noct-panel: 0 24px 64px rgb(25 27 40 / 0.18);
+  --shadow-noct-pie: 0 -6px 18px rgb(14 23 38 / 0.06);
   --tinte-estado: 11%;
 
   /* Los controles nativos (fecha, desplazamiento) en claro. */
