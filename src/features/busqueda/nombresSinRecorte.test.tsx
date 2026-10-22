@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db } from '../../lib/db'
 import { registrarVisita } from '../../lib/recientes'
@@ -284,6 +285,12 @@ describe('Resolver sin escribir: Recientes y Atención', () => {
     await sembrarGuiaLarga()
     await registrarVisita('articulo', 'guia-ip')
     await montar(RUTAS, '/')
+    // En el teléfono lo reciente se ve al tocar el campo, antes de escribir
+    // («Abiertas hace poco», tarea 350).
+    const campo = await esperar(campoBuscador, 'el buscador')
+    await act(async () => {
+      campo.focus()
+    })
 
     const guia = await esperar(() => nombre(LARGO), 'la guía reciente')
     esperarEntero(guia)

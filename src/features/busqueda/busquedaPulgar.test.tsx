@@ -132,7 +132,7 @@ describe('nada coincide', () => {
     const campo = await abrir()
     await escribir(campo, 'zzqxw')
     await esperar(() => textoPantalla().includes('Nada coincide con «zzqxw»'), 'el estado sin resultados')
-    expect(textoPantalla()).toContain('Prueba con el código del equipo, parte de la IP o una palabra del problema.')
+    expect(textoPantalla()).toContain('Prueba con otra palabra, el nombre del equipo o su IP.')
     expect(textoPantalla()).not.toContain('Sin coincidencias')
     expect(document.body.querySelector('.border-dashed')).toBeNull()
     expect(control('Crear equipo')?.getAttribute('href')).toBe('/dispositivos/nuevo?nombre=zzqxw')

@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode, type Ref } from 'react'
 import { MagnifyingGlass, XCircleFill } from './iconos'
+import { IconoVentana } from './ventana/IconoVentana'
 
 // EL CAMPO EN LA BARRA SUPERIOR (tarea 339, handoff de tableta y escritorio).
 // Desde 768 px el buscador de una raíz (Resolver, Equipos, Bóveda) deja el
@@ -47,6 +48,8 @@ export function CampoBusqueda({
   refCampo,
   variante = 'normal',
   onEnfocar,
+  abierta = false,
+  accesorio,
   className = '',
 }: {
   valor: string
@@ -66,6 +69,14 @@ export function CampoBusqueda({
   variante?: 'normal' | 'destacada' | 'dock' | 'paleta' | 'resolver'
   /** El campo recibe el foco (Resolver abre su búsqueda en el teléfono). */
   onEnfocar?: () => void
+  /**
+   * Solo con `variante="resolver"` (tarea 350, el campo del prototipo de
+   * Claude Design): en Inicio, una caja de 58 con borde fuerte y relieve;
+   * abierta la búsqueda, de 52 con el borde y el anillo del acento.
+   */
+  abierta?: boolean
+  /** Solo con `variante="resolver"`: al final del campo mientras no hay nada escrito (el escáner). */
+  accesorio?: ReactNode
   className?: string
 }) {
   const enBarra = useContext(CampoEnBarraContexto)
@@ -85,7 +96,9 @@ export function CampoBusqueda({
     : paleta
       ? 'h-16 min-w-0 flex-1 gap-3'
     : resolver
-      ? 'gap-3 border-2 pl-4 pr-1.5'
+      ? abierta
+        ? 'h-[52px] gap-2 rounded-2xl border-2 pl-3.5 pr-2 shadow-[0_0_0_4px_var(--color-noct-accent-900)]'
+        : 'h-[58px] gap-3 rounded-[18px] border-2 pl-4 pr-1 shadow-[0_3px_0_var(--color-noct-divider)]'
     : dock
       ? 'h-[52px] gap-2.5 rounded-2xl pl-4 pr-3.5 shadow-[0_6px_20px_rgba(0,0,0,.16)]'
       : destacada
@@ -93,7 +106,11 @@ export function CampoBusqueda({
         : 'h-[46px] gap-2.5 rounded-lg px-3.5'
   const borde = paleta
     ? ''
-    : buscando || resolver
+    : resolver
+    ? abierta
+      ? 'border-noct-accent'
+      : 'border-noct-divider-fuerte'
+    : buscando
     ? 'border-noct-accent'
     : dock || enBarra
       ? 'border-noct-text/25'
@@ -115,14 +132,20 @@ export function CampoBusqueda({
       className={`flex items-center ${
         paleta
           ? ''
-          : `${resolver ? '' : 'border '}bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent`
+          : resolver
+            ? 'bg-noct-surface'
+            : 'border bg-noct-surface transition-colors focus-within:border-noct-accent focus-within:ring-1 focus-within:ring-noct-accent'
       } ${forma} ${borde} ${className}`}
     >
-      <MagnifyingGlass
-        size={resolver ? 22 : destacada || paleta ? 20 : 18}
-        className={`shrink-0 ${buscando || dock || enBarra || paleta || resolver ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
-        aria-hidden
-      />
+      {resolver ? (
+        <IconoVentana nombre="buscar" tam={abierta ? 20 : 22} grosor={2.4} className="shrink-0 text-noct-accent" />
+      ) : (
+        <MagnifyingGlass
+          size={destacada || paleta ? 20 : 18}
+          className={`shrink-0 ${buscando || dock || enBarra || paleta ? 'text-noct-accent-300' : destacada ? 'text-noct-neutral-300' : 'text-noct-neutral-400'}`}
+          aria-hidden
+        />
+      )}
       <input
         ref={refCampo}
         type="search"
@@ -140,25 +163,38 @@ export function CampoBusqueda({
             : paleta
               ? 'text-[18px] font-medium'
               : resolver
-                ? 'text-[17px]'
+                ? 'text-[17px] font-medium'
               : destacada
                 ? 'text-[16px]'
                 : // En el teléfono, 16 para que iOS no amplíe al enfocar (tarea 341).
                   'text-[15px] max-md:text-[16px]'
         }`}
       />
-      {buscando && (
+      {buscando && resolver && (
+        // El «borrar» del prototipo: un círculo de 36 en la superficie 2, con
+        // 44 de toque (`toque-amplio`).
+        <button
+          type="button"
+          onClick={() => onCambiar('')}
+          aria-label="Borrar la búsqueda"
+          className="toque-amplio relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-noct-neutral-900 text-noct-neutral-300 hover:text-noct-text"
+        >
+          <IconoVentana nombre="cerrar" tam={16} grosor={2.6} />
+        </button>
+      )}
+      {buscando && !resolver && (
         <button
           type="button"
           onClick={() => onCambiar('')}
           aria-label="Borrar la búsqueda"
           className={`flex shrink-0 items-center justify-center text-noct-neutral-300 hover:text-noct-text ${
-            enBarra || paleta ? 'h-9 w-9 rounded-[9px] hover:bg-noct-text/[.05]' : resolver ? 'h-11 w-11' : '-mr-3 h-11 w-11'
+            enBarra || paleta ? 'h-9 w-9 rounded-[9px] hover:bg-noct-text/[.05]' : '-mr-3 h-11 w-11'
           }`}
         >
-          <XCircleFill size={resolver ? 22 : destacada ? 19 : 18} aria-hidden />
+          <XCircleFill size={destacada ? 19 : 18} aria-hidden />
         </button>
       )}
+      {resolver && !buscando && accesorio}
       {enBarra?.accesorio && (
         <>
           <span className="h-[22px] w-px shrink-0 bg-noct-divider" aria-hidden />

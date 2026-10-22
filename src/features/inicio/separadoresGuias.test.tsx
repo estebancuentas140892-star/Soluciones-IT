@@ -1,4 +1,5 @@
 // @vitest-environment happy-dom
+import { act } from 'react'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { registrarVisita } from '../../lib/recientes'
 import {
@@ -57,23 +58,32 @@ function conDivisorDelTelefono(fila: Element, conRelleno: Element = fila): void 
 }
 
 describe('las guías se distinguen una de otra en el teléfono (tarea 347)', () => {
-  it('Recientes: cada guía con su divisor y la última sin él', async () => {
+  it('Abiertas hace poco: cada guía en su propia tarjeta (tareas 347 y 350)', async () => {
     await montar(RUTAS, '/')
+    // En el teléfono lo reciente se ve al tocar el campo (tarea 350).
+    const campo = await esperar(campoBuscador, 'el buscador')
+    await act(async () => {
+      campo.focus()
+    })
     const seccion = await esperar(
-      () => document.body.querySelector('section[aria-labelledby="resolver-recientes"]'),
-      'Recientes',
+      () => document.body.querySelector('section[aria-labelledby="busqueda-abiertas"]'),
+      'Abiertas hace poco',
     )
     const filas = await esperar(() => {
       const enlaces = Array.from(seccion.querySelectorAll('a'))
       return enlaces.length === TITULOS.length ? enlaces : null
     }, 'las tres recientes')
-    for (const fila of filas) conDivisorDelTelefono(fila)
-    // Son hermanas en la misma lista: `last:` deja sin divisor solo la última.
-    expect(new Set(filas.map((fila) => fila.parentElement)).size).toBe(1)
-    expect(filas.at(-1)?.nextElementSibling).toBeNull()
-    // El título manda; el detalle va detrás.
+    // Cada una con su borde y su fondo, separadas por aire: dos títulos largos
+    // ya no se leen como uno.
+    for (const fila of filas) {
+      expect(fila.className).toContain('border-[1.5px]')
+      expect(fila.className).toContain('bg-noct-surface')
+      expect(fila.hasAttribute('data-abierta-hace-poco')).toBe(true)
+    }
+    expect(seccion.className).toContain('gap-2.5')
+    // El título manda.
     const titulo = filas[0].querySelector('[data-nombre-principal]')
-    expect(titulo?.className).toContain('max-md:font-semibold')
+    expect(titulo?.className).toContain('font-bold')
   })
 
   it('los resultados de la búsqueda: cada guía con su divisor y la última del grupo sin él', async () => {

@@ -80,6 +80,11 @@ export const MARCADOR_BUSCADOR_TELEFONO = 'Describe el problema o un equipo'
 export const MARCADOR_BUSCADOR_ESTRECHO = 'El problema o un equipo'
 /** Por debajo de este ancho va `MARCADOR_BUSCADOR_ESTRECHO`. */
 export const ANCHO_MARCADOR_COMPLETO = '(min-width: 22.5rem)'
+/**
+ * Inicio del teléfono lleva el escáner al final del campo (tarea 350), que le
+ * quita 45 px: ahí el marcador completo solo cabe desde 420.
+ */
+export const ANCHO_MARCADOR_CON_ESCANER = '(min-width: 26.25rem)'
 
 /**
  * Los mismos ejemplos, uno por uno, para tocarlos (rediseño móvil, fase 1,

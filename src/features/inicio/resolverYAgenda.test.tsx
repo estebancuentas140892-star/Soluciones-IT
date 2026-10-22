@@ -657,16 +657,23 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     expect(campo.closest('[data-buscador-resolver]')).not.toBeNull()
     expect(campo.closest('[data-dock-busqueda]')).toBeNull()
     expect(document.body.querySelectorAll('input[aria-label="Buscar en Soluciones IT"]')).toHaveLength(1)
-    // El marcador dice que también se busca un equipo; el nombre accesible, el alcance.
-    expect(campo.placeholder).toBe('Describe el problema o un equipo')
+    // El marcador dice que también se busca un equipo; el nombre accesible, el
+    // alcance. A 375 px, con el escáner al final del campo (tarea 350), la
+    // forma corta: la larga solo cabe desde 420.
+    expect(campo.placeholder).toBe('El problema o un equipo')
+    expect(campo.closest('label')?.querySelector('a[aria-label="Escanear QR"]')?.getAttribute('href')).toBe('/escaner')
     expect(campo.getAttribute('aria-label')).toBe('Buscar en Soluciones IT')
     const texto = textoPantalla()
     // Lo primero que se lee es la pregunta (tarea 346), y la frase que
     // explicaba la sección ya no está: la pregunta ya lo dice.
     expect(document.body.querySelector('#resolver-pregunta')?.textContent).toBe('¿Qué necesitas resolver?')
     expect(texto).not.toContain('Encuentra qué hacer ante un problema técnico.')
-    expect(texto).toContain('Prueba con:')
+    expect(texto).toContain('Prueba con')
     expect(texto).toContain('Guías por categoría')
+    // La cabecera del prototipo (tarea 350): la marca y el estado con su
+    // palabra; el nombre de la sección sigue siendo el encabezado.
+    expect(document.body.querySelector('[data-marca-telefono]')?.textContent).toContain('Soluciones IT')
+    expect(document.body.querySelector('[data-pastilla-sync="rotulada"]')?.textContent).toContain('Al día')
     // Ni los contadores ni "Necesita atención" del diseño anterior.
     expect(texto).not.toContain('Necesita atención')
   })
@@ -731,7 +738,7 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     expect(texto).not.toContain('Cambiar el tóner')
   })
 
-  it('"Sigue donde ibas" es una fila que dice el paso y la retoma (tareas 344 y 346)', async () => {
+  it('"Sigue donde ibas" es una tarjeta que dice la ventana y la retoma (tareas 344, 346 y 350)', async () => {
     await sembrarGuia({
       id: 'guia-1',
       titulo: 'Instalar la impresora de prueba',
@@ -746,19 +753,21 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     })
     await registrarVisita('articulo', 'guia-1')
     await montar(RUTAS, '/')
-    const texto = await esperarTexto('Sigue donde ibas')
-    expect(texto).toContain('Sigue donde ibas · paso 2 de 2')
-    // La fila entera se toca y su nombre dice a dónde lleva.
-    const continuar = await esperar(() => control(/^Continuar en el paso 2: Instalar la impresora/), 'la fila')
+    await esperarTexto('Sigue donde ibas')
+    // La tarjeta entera se toca y su nombre dice a dónde lleva; en el teléfono
+    // un paso es una ventana (tarea 350).
+    const continuar = await esperar(() => control(/^Continuar en la ventana 2: Instalar la impresora/), 'la tarjeta')
     expect(continuar.hasAttribute('data-seguir-donde-ibas')).toBe(true)
     expect(continuar.textContent).toContain('Instalar la impresora de prueba')
-    expect(continuar.textContent).toContain('Continuar')
-    // El avance a la vista (tarea 349): un segmento por paso, el hecho en
-    // acento y el actual en claro.
+    expect(continuar.textContent).toContain('Ventana 2 de 2')
+    // El icono de su categoría, a 44 px.
+    expect(continuar.querySelector('[data-icono-categoria]')).not.toBeNull()
+    // El avance a la vista (tarea 349) con los colores del prototipo (tarea
+    // 350): lo hecho en verde y la ventana actual en el acento.
     const segmentos = continuar.querySelectorAll('[data-avance-seguir] span > span')
     expect(segmentos).toHaveLength(2)
-    expect(segmentos[0].className).toContain('bg-noct-accent')
-    expect(segmentos[1].className).toContain('bg-noct-text')
+    expect(segmentos[0].className).toContain('bg-noct-exito')
+    expect(segmentos[1].className).toContain('bg-noct-accent')
     await tocar(continuar)
     expect(ubicacionActual().pathname).toBe('/soluciones/cat-pruebas/guia-1')
   })
@@ -772,18 +781,19 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     // El número llega cuando se terminan de contar las guías: se espera a él.
     const todas = await esperar(() => {
       const enlace = control(/^Todas las guías/)
-      return enlace?.textContent?.includes('(2)') ? enlace : null
+      return enlace?.getAttribute('aria-label')?.includes('(2)') ? enlace : null
     }, 'el catálogo con su número')
-    expect(todas.textContent).toContain('Todas las guías (2)')
+    expect(todas.getAttribute('aria-label')).toBe('Todas las guías (2)')
+    expect(todas.textContent).toContain('2 guías')
     expect(todas.getAttribute('href')).toBe('/soluciones')
-    // Cada acceso lleva el icono en el color de identidad de su categoría
-    // (tarea 349), el mismo que su chip: dos categorías, dos colores.
+    // El mosaico del prototipo (tarea 350): cada categoría en su tarjeta, con
+    // el icono de su CLASE (Impresoras, POS): dos clases, dos iconos.
     const impresoras = await esperar(() => control(/^Impresoras: 1 guía/), 'la categoría Impresoras')
     const pos = await esperar(() => control(/^POS: 1 guía/), 'la categoría POS')
-    const colorDe = (enlace: HTMLElement) => enlace.querySelector('[data-color-categoria]')?.className.match(/text-noct-cat-\d+/)?.[0]
-    expect(colorDe(impresoras)).toBeTruthy()
-    expect(colorDe(pos)).toBeTruthy()
-    expect(colorDe(impresoras)).not.toBe(colorDe(pos))
+    const claseDe = (enlace: HTMLElement) => enlace.querySelector('[data-icono-categoria]')?.getAttribute('data-icono-categoria')
+    expect(claseDe(impresoras)).toBe('impresora')
+    expect(claseDe(pos)).toBe('pos')
+    expect(impresoras.hasAttribute('data-categoria-telefono')).toBe(true)
     await tocar(impresoras)
     expect(ubicacionActual().pathname).toBe('/soluciones')
     expect(ubicacionActual().search).toBe('?categoria=cat-imp')

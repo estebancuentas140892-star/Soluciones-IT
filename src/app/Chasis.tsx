@@ -184,6 +184,11 @@ interface PropsSeccion extends PropsComunes {
   sinCabeceraEnTelefono?: boolean
   /** Una acción en la fila del título, solo en el teléfono (ver `BarraSuperior`). */
   accionTelefono?: ReactNode
+  /**
+   * La marca «Soluciones IT» y el estado rotulado en la fila del título, solo
+   * por debajo de 768 px (tarea 350, la cabecera de Inicio del prototipo).
+   */
+  marcaEnTelefono?: boolean
 }
 
 interface PropsDocumento extends PropsComunes {
@@ -657,6 +662,7 @@ export function Chasis(props: Props) {
         volver={volverDeSeccion}
         buscador={ancho ? props.buscador : undefined}
         accionTelefono={props.accionTelefono}
+        marca={props.marcaEnTelefono}
       >
         {props.barra}
       </BarraSuperior>

@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Fragment, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { db, type Categoria } from '../../lib/db'
+import { db } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { tiempoRelativo } from '../../lib/tiempoRelativo'
 import { Chasis } from '../../app/Chasis'
@@ -9,13 +9,11 @@ import { CampoBusqueda } from '../../components/CampoBusqueda'
 import {
   ArrowRight,
   BookOpen,
-  CaretLeft,
   CaretRight,
   ClockCountdown,
   MagnifyingGlass,
   PencilSimple,
   Plus,
-  QrCode,
   TreeStructure,
 } from '../../components/iconos'
 import { ROTULO_RECORRIDO } from '../../lib/diagnostico'
@@ -32,6 +30,7 @@ import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { BorradoresCoincidentes, GuiasEnBorrador } from '../busqueda/BorradoresCoincidentes'
 import {
   ANCHO_MARCADOR_COMPLETO,
+  ANCHO_MARCADOR_CON_ESCANER,
   MARCADOR_BUSCADOR,
   MARCADOR_BUSCADOR_ESTRECHO,
   MARCADOR_BUSCADOR_TELEFONO,
@@ -43,9 +42,11 @@ import {
   repartirBorradores,
   sinLosYaOficiales,
 } from '../busqueda/borradoresEnBusqueda'
-import { iconoDeCategoria, normalizarTexto } from '../soluciones/iconosSoluciones'
-import { claseTonoDeCategoria } from '../soluciones/coloresCategoria'
-import { articulosSinTerminar, pasoDeTotal } from '../soluciones/sinTerminar'
+import { normalizarTexto } from '../soluciones/iconosSoluciones'
+import { articulosSinTerminar, pasoDeTotal, ventanaDeTotal } from '../soluciones/sinTerminar'
+import { IconoCategoria } from '../../components/IconoCategoria'
+import { IconoVentana } from '../../components/ventana/IconoVentana'
+import { RELIEVE_BORDE, TARJETA_TOCABLE, TITULO_GRUPO, TITULO_SECCION } from '../../components/ventana/estilos'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { obtenerActividadReciente } from '../historial/actividadEquipo'
 import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
@@ -132,6 +133,7 @@ export function ResolverPage() {
   // teclado no se pierden al cambiar. Desde 768, todo como estaba.
   const ancho = useEsAncho()
   const marcadorCompleto = useEsAncho(ANCHO_MARCADOR_COMPLETO)
+  const marcadorCompletoConEscaner = useEsAncho(ANCHO_MARCADOR_CON_ESCANER)
   const [abiertaEnTelefono, setAbiertaEnTelefono] = useState(false)
   // La bóveda se abrió desde el puente de la propia búsqueda, sin salir
   // de aquí: cuenta una interacción más en la medición del recorrido.
@@ -376,19 +378,11 @@ export function ResolverPage() {
       // resolver?", justo sobre el campo. Desde 768 la barra no cambia.
       tituloContraido={escribiendo || !ancho}
       sinCabeceraEnTelefono={busquedaEnTelefono}
-      // EL ESCÁNER, EN LA FILA DEL TÍTULO DEL TELÉFONO (tarea 344): es otra
-      // forma de buscar y se conserva, pero ya no le quita ancho al campo,
-      // que ahora va arriba y entero. Desde 768 sigue dentro del campo.
-      accionTelefono={
-        <Link
-          to="/escaner"
-          aria-label="Escanear QR"
-          title="Escanear QR"
-          className="flex h-11 w-11 items-center justify-center rounded-lg text-noct-neutral-200 hover:bg-noct-text/[.05]"
-        >
-          <QrCode size={21} aria-hidden />
-        </Link>
-      }
+      // LA CABECERA DE INICIO DEL PROTOTIPO (tarea 350): en el teléfono, la
+      // marca «Soluciones IT», el estado rotulado («Al día») y la cuenta. El
+      // escáner, que la tarea 344 dejó en esta fila, pasa al final del campo
+      // (como desde 768): sigue a un toque y la fila cabe a 360 px.
+      marcaEnTelefono
       buscador={
         ancho ? (
           <CampoBusqueda
@@ -452,7 +446,11 @@ export function ResolverPage() {
         // sitio del árbol): cambiar de forma no le quita el foco.
         <main className="flex-1 px-4 pb-6">
           {!busquedaEnTelefono && (
-            <h2 id="resolver-pregunta" className="pt-2 text-[24px] font-[650] leading-[1.2] tracking-[-.015em]">
+            // 28 · 800 del prototipo (tarea 350): la pregunta es lo que manda.
+            <h2
+              id="resolver-pregunta"
+              className="pt-5 text-[28px] font-extrabold leading-[34px] tracking-[-.02em] text-pretty"
+            >
               ¿Qué necesitas resolver?
             </h2>
           )}
@@ -460,7 +458,7 @@ export function ResolverPage() {
             data-buscador-resolver
             className={
               busquedaEnTelefono
-                ? 'sticky top-0 z-20 -mx-4 flex items-center gap-0.5 bg-noct-bg/[.94] py-2.5 pl-1 pr-4 backdrop-blur-[12px]'
+                ? 'sticky top-0 z-20 -mx-4 flex items-center gap-1.5 bg-noct-bg py-2.5 pl-3 pr-3'
                 : 'pt-3'
             }
           >
@@ -470,9 +468,9 @@ export function ResolverPage() {
                 onClick={salirDeLaBusqueda}
                 aria-label="Volver a Resolver"
                 title="Volver a Resolver"
-                className="flex h-[52px] w-11 shrink-0 items-center justify-center rounded-lg text-noct-accent-300 hover:bg-noct-text/[.05]"
+                className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl text-noct-text active:bg-noct-presionado"
               >
-                <CaretLeft size={22} aria-hidden />
+                <IconoVentana nombre="atras" tam={24} grosor={2.4} />
               </button>
             )}
             <div className="min-w-0 flex-1">
@@ -480,11 +478,18 @@ export function ResolverPage() {
                 valor={query}
                 onCambiar={setQuery}
                 alcance="Soluciones IT"
-                textoAlternativo={marcadorCompleto ? MARCADOR_BUSCADOR_TELEFONO : MARCADOR_BUSCADOR_ESTRECHO}
+                textoAlternativo={
+                  (busquedaEnTelefono ? marcadorCompleto : marcadorCompletoConEscaner)
+                    ? MARCADOR_BUSCADOR_TELEFONO
+                    : MARCADOR_BUSCADOR_ESTRECHO
+                }
                 refCampo={refCampo}
                 variante="resolver"
+                abierta={busquedaEnTelefono}
                 onEnfocar={() => setAbiertaEnTelefono(true)}
-                className={busquedaEnTelefono ? 'h-[52px] rounded-[14px]' : 'h-[60px] rounded-2xl'}
+                // El escáner solo en Inicio: abierta la búsqueda, el campo es
+                // para escribir y el prototipo no lo lleva.
+                accesorio={busquedaEnTelefono ? undefined : <EscanerEnCampoTelefono />}
               />
             </div>
           </div>
@@ -492,28 +497,39 @@ export function ResolverPage() {
             <div className="pt-1.5">
               {/* Sin la barra superior, el nombre de la pantalla para el lector. */}
               <h1 className="sr-only">Buscar en Soluciones IT</h1>
-              {buscando ? encontrado : <PuedesEscribir onElegir={setQuery} />}
-            </div>
-          ) : (
-            // RESOLVER EN EL TELÉFONO, MÁS SIMPLE (tarea 346). Responde primero
-            // "¿Qué necesitas resolver?": el campo y, pegados a él, los
-            // problemas que se buscan a menudo; la guía a medias solo si la
-            // hay, en una fila; las categorías como accesos de una línea; y
-            // la Agenda y lo reciente detrás, sin tarjetas, pero con lo
-            // atrasado y lo de hoy a la vista. Es lo mismo que había, menos
-            // cajas y menos rótulos: ninguna función se fue.
-            <div className="flex flex-col gap-6 pt-3">
-              <EjemplosBusqueda conRotulo onElegir={setQuery} />
-              {seguir && <SeguirEnTelefono guia={seguir} />}
-              <CategoriasEnTelefono accesos={accesos} totalGuias={totalGuias} categorias={categorias} />
-              {!agendaCargando && <TrabajoDeHoy agenda={agenda} total={pendientes.length} />}
-              <BloqueRecientes recientes={otrasRecientes} />
-              {consultasListas && (
-                <div className="empty:hidden">
-                  <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
+              {buscando ? (
+                encontrado
+              ) : (
+                // SIN NADA ESCRITO (prototipo, tarea 350): primero lo que este
+                // técnico abrió hace poco, a un toque, y debajo qué se puede
+                // escribir.
+                <div className="flex flex-col gap-[18px] pt-1">
+                  <AbiertasHacePoco recientes={recientes} />
+                  <PuedesEscribir onElegir={setQuery} />
                 </div>
               )}
             </div>
+          ) : (
+            // INICIO EN EL TELÉFONO, COMO EL PROTOTIPO (tarea 350). Bajo la
+            // pregunta y el campo, a 12 px, los ejemplos «Prueba con»; y a 22,
+            // la guía a medias en su tarjeta, las categorías en mosaico y el
+            // trabajo de hoy. Lo reciente se abre desde el campo («Abiertas hace
+            // poco»), donde el prototipo lo pone: tocarlo ya es buscar.
+            <>
+              <div className="pt-3">
+                <EjemplosBusqueda conRotulo onElegir={setQuery} />
+              </div>
+              <div className="flex flex-col gap-[22px] pt-[22px]">
+                {seguir && <SeguirEnTelefono guia={seguir} />}
+                <CategoriasEnTelefono accesos={accesos} totalGuias={totalGuias} />
+                {!agendaCargando && <TrabajoDeHoy agenda={agenda} total={pendientes.length} />}
+                {consultasListas && (
+                  <div className="empty:hidden">
+                    <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </main>
       )}
@@ -615,114 +631,209 @@ function BloqueSeguir({ guia }: { guia: GuiaReciente }) {
 // El avance de una guía a medias: un segmento por paso (hechos en acento,
 // el actual en claro) y, con muchos pasos, una barra. Lo comparten la
 // tarjeta de tableta y escritorio y la del teléfono.
-function SegmentosAvance({ avance }: { avance: NonNullable<GuiaReciente['avance']> }) {
+//
+// En el teléfono (tarea 350), con los colores del prototipo: lo hecho en el
+// verde que comprueba, la ventana actual en el acento y lo que falta en el
+// color del borde, con 3 px entre segmentos.
+function SegmentosAvance({
+  avance,
+  telefono = false,
+}: {
+  avance: NonNullable<GuiaReciente['avance']>
+  telefono?: boolean
+}) {
   if (avance.total <= 0) return null
+  const hecho = telefono ? 'bg-noct-exito' : 'bg-noct-accent'
+  const actual = telefono ? 'bg-noct-accent' : 'bg-noct-text'
+  const falta = telefono ? 'bg-noct-divider' : 'bg-noct-neutral-700'
   return (
-    <span aria-hidden className="flex gap-1">
+    <span aria-hidden className={`flex ${telefono ? 'gap-[3px]' : 'gap-1'}`}>
       {avance.total <= 12 ? (
         Array.from({ length: avance.total }, (_, i) => (
           <span
             key={i}
             className={`h-[5px] min-w-0 flex-1 rounded-[3px] ${
-              i < avance.hechos ? 'bg-noct-accent' : i === avance.hechos ? 'bg-noct-text' : 'bg-noct-neutral-700'
+              i < avance.hechos ? hecho : i === avance.hechos ? actual : falta
             }`}
           />
         ))
       ) : (
-        <span className="h-[5px] flex-1 overflow-hidden rounded-[3px] bg-noct-neutral-700">
-          <span className="block h-full bg-noct-accent" style={{ width: `${Math.round((avance.hechos / avance.total) * 100)}%` }} />
+        <span className={`h-[5px] flex-1 overflow-hidden rounded-[3px] ${falta}`}>
+          <span className={`block h-full ${hecho}`} style={{ width: `${Math.round((avance.hechos / avance.total) * 100)}%` }} />
         </span>
       )}
     </span>
   )
 }
 
-// SIGUE DONDE IBAS, EN EL TELÉFONO (tarea 344; una sola fila desde la tarea
-// 346). Solo existe si hay una guía a medias: qué guía es, en qué paso va y
-// "Continuar", que la retoma. Toda la fila se toca; el botón relleno es la
-// única acción rellena de Resolver (regla 30): retomar lo que se dejó a
-// medias es lo que hace avanzar. El nombre accesible dice a dónde lleva
-// ("Continuar en el paso 2: …").
+// SIGUE DONDE IBAS, EN EL TELÉFONO (tarea 344; tarjeta del prototipo de
+// Claude Design desde la tarea 350). Solo existe si hay una guía a medias: el
+// icono de su categoría, su título entero, en qué ventana va, el avance en
+// segmentos y el botón redondo que la retoma. Toda la tarjeta se toca; el
+// botón relleno es la única acción rellena de Inicio (regla 30): retomar lo
+// que se dejó a medias es lo que hace avanzar. El nombre accesible dice a
+// dónde lleva ("Continuar en la ventana 2: …").
 function SeguirEnTelefono({ guia }: { guia: GuiaReciente }) {
   const avance = guia.avance
   const numero = avance ? Math.min(avance.hechos + 1, avance.total) : null
   const donde =
-    guia.enCurso ?? (avance && numero !== null ? pasoDeTotal(numero, avance.total, avance.totalAbierto ?? false) : '')
-  const verbo = guia.enCurso === null && numero !== null ? `Continuar en el paso ${numero}` : 'Continuar'
+    guia.enCurso ?? (avance && numero !== null ? ventanaDeTotal(numero, avance.total, avance.totalAbierto ?? false) : '')
+  const verbo = guia.enCurso === null && numero !== null ? `Continuar en la ventana ${numero}` : 'Continuar'
   return (
-    <Link
-      to={guia.ruta}
-      state={ORIGEN_RESOLVER}
-      data-seguir-donde-ibas
-      aria-label={`${verbo}: ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
-      className="flex min-w-0 items-center gap-3 rounded-2xl bg-noct-surface py-3 pl-4 pr-3 text-noct-text hover:bg-noct-text/[.06] max-md:active:bg-noct-presionado"
-    >
-      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-[13.5px] leading-snug text-noct-neutral-400">
-          Sigue donde ibas{donde ? ` · ${donde}` : ''}
-          {guia.borrador ? ' · Borrador' : ''}
-        </span>
-        <span data-nombre-principal className="min-w-0 text-[16.5px] font-[650] leading-[1.25] text-pretty [overflow-wrap:anywhere]">
-          {guia.titulo}
-        </span>
-        {/* EL AVANCE A LA VISTA (tarea 349, «Sistema visual Ventana»): un
-            segmento por paso, como en la tarjeta de tableta y escritorio, para
-            saber de un vistazo cuánto falta sin abrir la guía. */}
-        {avance && (
-          <span data-avance-seguir className="block pt-1.5">
-            <SegmentosAvance avance={avance} />
-          </span>
-        )}
-      </span>
-      <span
-        aria-hidden
-        className="inline-flex h-11 shrink-0 items-center rounded-xl bg-noct-accent px-4 text-[15px] font-semibold text-noct-on-accent"
+    <section aria-labelledby="resolver-seguir-telefono" className="flex flex-col gap-2.5">
+      <h2 id="resolver-seguir-telefono" className={TITULO_SECCION}>
+        Sigue donde ibas
+      </h2>
+      <Link
+        to={guia.ruta}
+        state={ORIGEN_RESOLVER}
+        data-seguir-donde-ibas
+        aria-label={`${verbo}: ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
+        className={`${TARJETA_TOCABLE} ${RELIEVE_BORDE} flex min-w-0 items-center gap-3 rounded-[20px] p-3.5`}
       >
-        Continuar
-      </span>
-    </Link>
+        <IconoCategoria nombre={guia.categoriaNombre} tam={44} />
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span
+            data-nombre-principal
+            className="min-w-0 text-[16px] font-bold leading-[21px] text-pretty [overflow-wrap:anywhere]"
+          >
+            {guia.titulo}
+          </span>
+          {(donde || guia.borrador) && (
+            <span className="text-[14px] font-medium leading-snug text-noct-neutral-300">
+              {[donde, guia.borrador ? 'Borrador' : ''].filter(Boolean).join(' · ')}
+            </span>
+          )}
+          {/* EL AVANCE A LA VISTA (tarea 349): un segmento por ventana, para
+              saber de un vistazo cuánto falta sin abrir la guía. */}
+          {avance && (
+            <span data-avance-seguir className="block pt-1">
+              <SegmentosAvance avance={avance} telefono />
+            </span>
+          )}
+        </span>
+        <span
+          aria-hidden
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-noct-accent text-noct-on-accent shadow-[0_3px_0_var(--color-noct-accent-borde)]"
+        >
+          <IconoVentana nombre="flecha" grosor={2.6} />
+        </span>
+      </Link>
+    </section>
+  )
+}
+
+// ABIERTAS HACE POCO, EN LA BÚSQUEDA DEL TELÉFONO (tarea 350, prototipo de
+// Claude Design). Lo que antes era «Recientes» al final de Inicio: las guías
+// que este técnico usó en los últimos días, cada una en su tarjeta con el
+// icono de su categoría. Se ven al tocar el campo, antes de escribir, que es
+// donde se busca lo que ya se abrió una vez. La que está a medias dice en qué
+// ventana va.
+function AbiertasHacePoco({ recientes }: { recientes: GuiaReciente[] }) {
+  if (recientes.length === 0) return null
+  return (
+    <section aria-labelledby="busqueda-abiertas" className="flex flex-col gap-2.5">
+      <h2 id="busqueda-abiertas" className={TITULO_GRUPO}>
+        Abiertas hace poco
+      </h2>
+      {recientes.map((guia) => {
+        const avance = guia.avance
+        const aMedias = avance !== null || guia.enCurso !== null
+        const donde =
+          guia.enCurso ??
+          (avance
+            ? ventanaDeTotal(Math.min(avance.hechos + 1, avance.total), avance.total, avance.totalAbierto ?? false)
+            : null)
+        return (
+          <Link
+            key={`${guia.tipo}:${guia.id}`}
+            to={guia.ruta}
+            state={ORIGEN_RESOLVER}
+            data-abierta-hace-poco
+            aria-label={`${aMedias ? 'Continuar' : 'Abrir'} ${guia.titulo}${guia.borrador ? ' (borrador)' : ''}`}
+            className={`${TARJETA_TOCABLE} flex items-center gap-3 p-3`}
+          >
+            <IconoCategoria nombre={guia.categoriaNombre} tam={40} />
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span
+                data-nombre-principal
+                className="min-w-0 text-[16px] font-bold leading-[21px] text-pretty [overflow-wrap:anywhere]"
+              >
+                {guia.titulo}
+              </span>
+              {(donde || guia.borrador) && (
+                <span className={`text-[14px] font-semibold ${donde ? 'text-noct-accent-300' : 'text-noct-neutral-300'}`}>
+                  {[guia.borrador ? 'Borrador' : '', donde ?? ''].filter(Boolean).join(' · ')}
+                </span>
+              )}
+            </span>
+          </Link>
+        )
+      })}
+    </section>
   )
 }
 
 // TU TRABAJO DE HOY, EN EL TELÉFONO (tarea 344; en segundo plano desde la
-// tarea 346). Lo que urge (vencido o para hoy) con la fila de la Agenda, que
-// ya dice el estado con palabra y la acción con su verbo, sin caja alrededor;
-// sin nada urgente, una línea que lo dice y nombra lo que la Agenda guarda.
-// Va detrás de buscar, de la guía a medias y de las categorías, pero lo
-// atrasado sigue a la vista y con su color. "Agenda (N)" la abre entera.
+// tarea 346; la tarjeta punteada del prototipo desde la tarea 350). Una puerta
+// a la Agenda que dice, con palabras y su color, lo que urge: «2 atrasados ·
+// 1 para hoy», o que no hay nada atrasado. Si hay algo atrasado o para hoy,
+// sus filas siguen a la vista dentro de la misma tarjeta (con la fila de la
+// Agenda, que dice el estado con palabra y la acción con su verbo): atender
+// lo urgente no cuesta un toque más que antes.
 function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
   const urgentes = [
     ...agenda.vencidos.map((item) => ({ item, estado: 'vencido' as const })),
     ...agenda.hoy.map((item) => ({ item, estado: 'hoy' as const })),
   ]
   const visibles = urgentes.slice(0, ATENCION_VISIBLES)
+  const atrasados = agenda.vencidos.length
+  const paraHoy = agenda.hoy.length
   return (
-    <section aria-labelledby="resolver-hoy" className="flex flex-col">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 id="resolver-hoy" className="text-[15px] font-[650] leading-snug text-noct-neutral-300">
-          Tu trabajo de hoy
-        </h2>
-        <Link
-          to="/agenda"
-          // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe).
-          aria-label={total > 0 ? `Abrir la Agenda: ${total} ${total === 1 ? 'asunto' : 'asuntos'}` : 'Abrir la Agenda'}
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14.5px] font-semibold text-noct-accent-300 hover:underline"
-        >
-          {total > 0 ? `Agenda (${total})` : 'Agenda'}
-          <CaretRight size={13} aria-hidden />
-        </Link>
-      </div>
-      {visibles.length > 0 ? (
-        <div className="flex flex-col [&>a:last-child]:border-b-0">
+    <section
+      aria-labelledby="resolver-hoy"
+      data-trabajo-de-hoy
+      className="flex flex-col rounded-2xl border-[1.5px] border-dashed border-noct-divider-fuerte"
+    >
+      <Link
+        to="/agenda"
+        // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe).
+        aria-label={total > 0 ? `Abrir la Agenda: ${total} ${total === 1 ? 'asunto' : 'asuntos'}` : 'Abrir la Agenda'}
+        className="flex min-h-14 items-center gap-3 rounded-2xl px-3 py-2 text-noct-text active:bg-noct-presionado"
+      >
+        <IconoVentana nombre="calendario" tam={22} grosor={2} className="shrink-0 text-noct-neutral-300" />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <h2 id="resolver-hoy" className="text-[15px] font-bold leading-snug">
+            Tu trabajo de hoy
+          </h2>
+          <span className="text-[14px] leading-snug text-noct-neutral-300">
+            {atrasados === 0 && paraHoy === 0 ? (
+              textoSinUrgencias(agenda)
+            ) : (
+              <>
+                {atrasados > 0 && (
+                  <span className="font-semibold text-noct-error">
+                    {atrasados} {atrasados === 1 ? 'atrasado' : 'atrasados'}
+                  </span>
+                )}
+                {atrasados > 0 && paraHoy > 0 && ' · '}
+                {paraHoy > 0 && <span className="font-semibold text-noct-precaucion">{paraHoy} para hoy</span>}
+                {total > atrasados + paraHoy && ` · Agenda (${total})`}
+              </>
+            )}
+          </span>
+        </span>
+        <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
+      </Link>
+      {visibles.length > 0 && (
+        <div className="flex flex-col border-t border-dashed border-noct-divider-fuerte px-3 [&>a:last-child]:border-b-0">
           {visibles.map(({ item, estado }) => (
             <FilaAgenda key={item.clave} item={item} estado={estado} />
           ))}
         </div>
-      ) : (
-        <p className="text-[14.5px] leading-snug text-noct-neutral-400">{textoSinUrgencias(agenda)}</p>
       )}
       {urgentes.length > visibles.length && (
-        <p className="pt-1 text-[14px] text-noct-neutral-400">
+        <p className="px-3 pb-2.5 text-[14px] text-noct-neutral-400">
           Y {urgentes.length - visibles.length} más para hoy o atrasados en la Agenda.
         </p>
       )}
@@ -731,66 +842,74 @@ function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
 }
 
 // LAS GUÍAS POR CATEGORÍA, EN EL TELÉFONO (tarea 344 como "¿Qué está
-// fallando?"; desde la tarea 346, accesos de una línea). Las categorías reales
-// con guías para ejecutar, con su icono y cuántas tienen, para quien no sabe
-// qué escribir: cada una abre el catálogo filtrado (el mismo enlace de
-// siempre) y "Todas las guías" está siempre, porque es la puerta al catálogo.
-// Sin los mosaicos de dos en dos: ocupaban media pantalla para cuatro enlaces.
-function CategoriasEnTelefono({
-  accesos,
-  totalGuias,
-  categorias,
-}: {
-  accesos: AccesoRapido[]
-  totalGuias: number
-  categorias: Categoria[]
-}) {
-  const porId = new Map(categorias.map((c) => [c.id, c]))
+// fallando?"; accesos de una línea desde la tarea 346; el mosaico del
+// prototipo de Claude Design desde la tarea 350). Las categorías reales con
+// guías para ejecutar, de dos en dos: el icono de su clase, su nombre y
+// cuántas guías tiene. Cada una abre el catálogo filtrado (el mismo enlace de
+// siempre) y el total, a la derecha del título, abre el catálogo entero
+// («Todas las guías»). La tarea 346 retiró unos mosaicos que ocupaban media
+// pantalla para cuatro enlaces; estos miden 64 de alto, con el icono que
+// reconoce la categoría antes de leerla, y caben seis en lo que ocupaban tres
+// filas de chips.
+function CategoriasEnTelefono({ accesos, totalGuias }: { accesos: AccesoRapido[]; totalGuias: number }) {
   return (
-    <section aria-labelledby="resolver-categorias" className="flex flex-col gap-2">
-      <h2 id="resolver-categorias" className="text-[15px] font-[650] leading-snug text-noct-neutral-300">
-        Guías por categoría
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        {accesos.map((acceso) => {
-          const Icono = iconoDeCategoria(acceso.nombre)
-          const categoria = porId.get(acceso.categoriaId)
-          return (
+    <section aria-labelledby="resolver-categorias" className="flex flex-col gap-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="resolver-categorias" className={TITULO_SECCION}>
+          Guías por categoría
+        </h2>
+        <Link
+          to="/soluciones"
+          state={ORIGEN_RESOLVER}
+          aria-label={totalGuias > 0 ? `Todas las guías (${totalGuias})` : 'Todas las guías'}
+          className="inline-flex min-h-11 shrink-0 items-center gap-0.5 text-[14px] font-bold text-noct-accent-300"
+        >
+          {totalGuias > 0 ? `${totalGuias} ${totalGuias === 1 ? 'guía' : 'guías'}` : 'Todas'}
+          <IconoVentana nombre="adelante" tam={15} grosor={2.4} />
+        </Link>
+      </div>
+      {accesos.length > 0 && (
+        <div className="grid grid-cols-2 gap-2.5">
+          {accesos.map((acceso) => (
             <Link
               key={acceso.categoriaId}
               to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
               state={ORIGEN_RESOLVER}
+              data-categoria-telefono
               aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
-              className="inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-full border border-noct-divider bg-noct-surface py-1 pl-1.5 pr-3.5 text-[15px] font-medium text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado"
+              className={`${TARJETA_TOCABLE} flex min-h-16 min-w-0 items-center gap-2.5 p-2.5`}
             >
-              {/* EL COLOR DE LA CATEGORÍA (tarea 349, «Icono de categoría» de
-                  Ventana): el icono en su recuadro tintado con el color de
-                  identidad de la categoría, el mismo de su chip y de su ficha,
-                  para reconocerla de un vistazo. El acceso no crece: sigue
-                  midiendo 44 px de alto. */}
-              <span
-                data-color-categoria
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                  categoria ? claseTonoDeCategoria(categoria) : 'bg-noct-accent/[.12] text-noct-accent-300'
-                }`}
-              >
-                <Icono size={16} aria-hidden />
+              <IconoCategoria nombre={acceso.nombre} tam={40} />
+              <span className="flex min-w-0 flex-col">
+                <span className="text-[15px] font-bold leading-5 [overflow-wrap:anywhere]">{acceso.nombre}</span>
+                <span className="text-[13.5px] font-semibold text-noct-neutral-300">
+                  {acceso.guias} {acceso.guias === 1 ? 'guía' : 'guías'}
+                </span>
               </span>
-              <span className="min-w-0 [overflow-wrap:anywhere]">{acceso.nombre}</span>
-              <span className="font-mono text-[12.5px] text-noct-neutral-500">{acceso.guias}</span>
             </Link>
-          )
-        })}
-        <Link
-          to="/soluciones"
-          state={ORIGEN_RESOLVER}
-          className="inline-flex min-h-11 items-center gap-1 px-1.5 text-[15px] font-semibold text-noct-accent-300 hover:underline"
-        >
-          Todas las guías{totalGuias > 0 ? ` (${totalGuias})` : ''}
-          <CaretRight size={14} aria-hidden />
-        </Link>
-      </div>
+          ))}
+        </div>
+      )}
     </section>
+  )
+}
+
+// EL ESCÁNER AL FINAL DEL CAMPO DE INICIO, EN EL TELÉFONO (tarea 350): otra
+// forma de buscar, a un toque, separada por una línea como desde 768 px. Con
+// algo escrito deja su sitio al «borrar».
+function EscanerEnCampoTelefono() {
+  return (
+    <>
+      <span aria-hidden className="h-6 w-px shrink-0 bg-noct-divider" />
+      <Link
+        to="/escaner"
+        aria-label="Escanear QR"
+        title="Escanear QR"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-noct-neutral-300 active:bg-noct-presionado"
+      >
+        <IconoVentana nombre="qr" tam={21} />
+      </Link>
+    </>
   )
 }
 

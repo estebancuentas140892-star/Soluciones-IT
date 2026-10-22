@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { MagnifyingGlass } from '../../components/iconos'
+import { CHIP, CHIP_REPOSO, TITULO_GRUPO } from '../../components/ventana/estilos'
 import { EJEMPLOS_BUSCADOR } from './resultados'
 
 // LOS ESTADOS DE LA BÚSQUEDA EN EL TELÉFONO (rediseño móvil, fase 1, tarea
@@ -20,15 +20,17 @@ export function EjemplosBusqueda({
   conRotulo?: boolean
 }) {
   return (
+    // Chips de 36 del prototipo de Claude Design (tarea 350), con 44 de toque:
+    // 8 px entre filas para que dos toques amplios no se pisen.
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Ejemplos de búsqueda">
-      {conRotulo && <span className="text-[14px] text-noct-neutral-400">Prueba con:</span>}
+      {conRotulo && <span className="text-[14px] font-semibold text-noct-neutral-300">Prueba con</span>}
       {EJEMPLOS_BUSCADOR.map((ejemplo) => (
         <button
           key={ejemplo}
           type="button"
           onMouseDown={(evento) => evento.preventDefault()}
           onClick={() => onElegir(ejemplo)}
-          className="inline-flex min-h-11 items-center rounded-full border border-noct-divider bg-noct-surface px-3.5 text-[15px] font-medium text-noct-text hover:bg-noct-text/[.05] max-md:active:bg-noct-presionado"
+          className={`${CHIP} ${CHIP_REPOSO} font-semibold`}
         >
           {ejemplo}
         </button>
@@ -40,8 +42,8 @@ export function EjemplosBusqueda({
 // SIN NADA ESCRITO: qué se puede escribir y ejemplos para empezar.
 export function PuedesEscribir({ onElegir }: { onElegir: (ejemplo: string) => void }) {
   return (
-    <section aria-labelledby="busqueda-puedes-escribir" className="flex flex-col gap-2.5 px-0.5">
-      <h2 id="busqueda-puedes-escribir" className="text-[17px] font-[650] leading-snug">
+    <section aria-labelledby="busqueda-puedes-escribir" className="flex flex-col gap-2.5">
+      <h2 id="busqueda-puedes-escribir" className={TITULO_GRUPO}>
         Puedes escribir
       </h2>
       <p className="text-[15px] leading-[1.45] text-noct-neutral-300">
@@ -57,13 +59,13 @@ export function PuedesEscribir({ onElegir }: { onElegir: (ejemplo: string) => vo
 // (crear el equipo, borrar y empezar de nuevo).
 export function NadaCoincide({ consulta, children }: { consulta: string; children?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-2.5 px-3 pb-3 pt-6 text-center">
-      <span className="flex h-[52px] w-[52px] items-center justify-center rounded-2xl bg-noct-tinte text-noct-neutral-400">
-        <MagnifyingGlass size={24} aria-hidden />
-      </span>
-      <p className="text-[16px] font-[650] leading-snug [overflow-wrap:anywhere]">Nada coincide con «{consulta}»</p>
-      <p className="max-w-[280px] text-[13.5px] leading-[1.45] text-noct-neutral-400">
-        Prueba con el código del equipo, parte de la IP o una palabra del problema.
+    // «Sin coincidencias» del prototipo (tarea 350): el título a 18 y la ayuda
+    // a 15 en tinta 2, sin icono; lo buscado, entre comillas, sigue diciendo
+    // qué no se encontró.
+    <div className="flex flex-col items-center gap-2 px-3 pb-3 pt-8 text-center">
+      <p className="text-[18px] font-extrabold leading-snug [overflow-wrap:anywhere]">Nada coincide con «{consulta}»</p>
+      <p className="max-w-[300px] text-[15px] leading-[1.45] text-noct-neutral-300">
+        Prueba con otra palabra, el nombre del equipo o su IP.
       </p>
       {children && <div className="mt-1.5 flex flex-wrap justify-center gap-2">{children}</div>}
     </div>

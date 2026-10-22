@@ -8,6 +8,7 @@ import { ProveedorCampoEnBarra } from './CampoBusqueda'
 import { CaretLeft, MagnifyingGlass, QrCode } from './iconos'
 import { PastillaSync } from './PastillaSync'
 import { useEsAncho } from './useEsAncho'
+import { MarcaVentana } from './ventana/MarcaVentana'
 
 const BuscadorGlobal = lazy(() =>
   import('../features/busqueda/BuscadorGlobal').then((m) => ({ default: m.BuscadorGlobal })),
@@ -52,9 +53,18 @@ export function BarraSuperior({
   volver,
   buscador,
   accionTelefono,
+  marca = false,
   children,
 }: {
   titulo: string
+  /**
+   * LA MARCA EN EL TELÉFONO (tarea 350, cabecera de Inicio del prototipo de
+   * Claude Design): por debajo de 768 px la fila del título enseña la marca
+   * «Soluciones IT» y el estado rotulado («Al día»), sin borde inferior. El
+   * nombre de la sección sigue siendo el `h1`, para el lector. Desde 768 no
+   * cambia nada.
+   */
+  marca?: boolean
   // El título a 14 px aunque no haya desplazamiento (Resolver mientras se
   // escribe, propuesta final de Claude Design).
   tituloContraido?: boolean
@@ -88,9 +98,14 @@ export function BarraSuperior({
   const ancho = useEsAncho()
 
   const usuario = perfilVivo ?? perfil
+  const conMarca = marca && !ancho
 
   return (
-    <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-bg/[.92] backdrop-blur-[12px]">
+    <div
+      className={`sticky top-0 z-20 border-b bg-noct-bg/[.92] backdrop-blur-[12px] ${
+        conMarca ? 'border-transparent' : 'border-noct-divider'
+      }`}
+    >
       <div
         // El margen de la banda (T1): 24, 32 desde 1024 y 40 desde 1280, el
         // mismo del contenido; con regreso, 10 px antes para que su icono
@@ -111,7 +126,17 @@ export function BarraSuperior({
               <CaretLeft size={18} aria-hidden />
             </Link>
           )}
-          <CabeceraColapsable titulo={titulo} forzarContraida={tituloContraido} />
+          {conMarca ? (
+            <div data-marca-telefono className="flex min-h-12 min-w-0 items-center gap-2.5">
+              <MarcaVentana />
+              <span aria-hidden className="truncate text-[18px] font-extrabold tracking-[-.01em]">
+                Soluciones IT
+              </span>
+              <h1 className="sr-only">{titulo}</h1>
+            </div>
+          ) : (
+            <CabeceraColapsable titulo={titulo} forzarContraida={tituloContraido} />
+          )}
         </div>
         {buscador && (
           <div className="min-w-0 flex-1 md:max-w-[560px]">
@@ -139,7 +164,7 @@ export function BarraSuperior({
         )}
         <div className="flex shrink-0 items-center gap-0.5 md:ml-auto">
           {!ancho && accionTelefono}
-          <PastillaSync />
+          <PastillaSync rotulada={conMarca} />
           {conLupa && !ancho && (
             <button
               type="button"
@@ -161,7 +186,11 @@ export function BarraSuperior({
             title={usuario?.nombre || 'Ajustes'}
             className="flex h-11 w-11 items-center justify-center md:hidden"
           >
-            <Avatar nombre={usuario?.nombre} correo={usuario?.correo} />
+            <Avatar
+              nombre={usuario?.nombre}
+              correo={usuario?.correo}
+              className={conMarca ? 'h-9 w-9 text-[14px]' : undefined}
+            />
           </Link>
         </div>
       </div>

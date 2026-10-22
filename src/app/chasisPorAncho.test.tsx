@@ -116,13 +116,14 @@ describe('el buscador de una raíz se monta una sola vez', () => {
         const campo = await esperar(() => campos(raiz.alcance)[0], `aparece el buscador de ${raiz.nombre}`)
         expect(campos(raiz.alcance)).toHaveLength(1)
         // El escáner va con el campo: al lado en el dock, dentro en la barra;
-        // en Resolver del teléfono, en la fila del título (tarea 344).
+        // en Resolver del teléfono, al final del propio campo (tarea 350; en la
+        // fila del título desde la 344).
         expect(controles('Escanear QR')).toHaveLength(1)
         if (vista.width < 768 && raiz.enTelefono === 'arriba') {
           expect(arribaEnResolver(campo)).not.toBeNull()
           expect(enDock(campo)).toBeNull()
           expect(document.body.querySelector('[data-dock-busqueda]')).toBeNull()
-          expect(enCabecera(controles('Escanear QR')[0])).not.toBeNull()
+          expect(campo.closest('label')?.querySelector('a[aria-label="Escanear QR"]')).not.toBeNull()
         } else if (vista.width < 768) {
           expect(enDock(campo)).not.toBeNull()
           expect(enCabecera(campo)).toBeNull()

@@ -87,6 +87,15 @@ export function pasoDeTotal(numero: number, total: number, totalAbierto: boolean
 }
 
 /**
+ * Lo mismo con el vocabulario del teléfono (tarea 350): allí un paso se
+ * ejecuta entero, como una ventana del programa que se está configurando, y
+ * el técnico la reconoce por ese nombre: "Ventana 3 de 5", o "Ventana 3".
+ */
+export function ventanaDeTotal(numero: number, total: number, totalAbierto: boolean): string {
+  return totalAbierto ? `Ventana ${numero}` : `Ventana ${numero} de ${total}`
+}
+
+/**
  * EL AVISO AL SALIR DE UNA GUÍA CON LA X (tarea 341, handoff móvil "1b
  * Pulgar": "Salir con la X guarda el avance y avisa"). El avance ya se
  * guardaba solo (vive en Dexie); lo nuevo es decirlo, para que salir no

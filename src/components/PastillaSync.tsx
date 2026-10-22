@@ -25,7 +25,18 @@ const PanelSync = lazy(() => import('./PanelSync').then((m) => ({ default: m.Pan
 // tarea 342 esa franja existe en el teléfono (`FranjaEstadoSistema`, que
 // monta el chasis) y comparte con esta pastilla la escucha de la red.
 
-export function PastillaSync() {
+// LA PASTILLA ROTULADA DE INICIO EN EL TELÉFONO (tarea 350, cabecera del
+// prototipo de Claude Design): en la cabecera de la marca, el estado se dice
+// con su palabra dentro de una pastilla tintada de su color, también «Al día».
+// Es la única pantalla que la pide (`rotulada`); las demás barras conservan el
+// icono solo de la tarea 187. El toque sigue midiendo 44 de alto.
+const TINTE_POR_TEXTO: Record<string, string> = {
+  'text-noct-neutral-300': 'bg-noct-exito-tinte text-noct-exito',
+  'text-noct-precaucion': 'bg-noct-precaucion-tinte text-noct-precaucion',
+  'text-noct-error': 'bg-noct-error-tinte text-noct-error',
+}
+
+export function PastillaSync({ rotulada = false }: { rotulada?: boolean }) {
   const estado = useSyncExternalStore(suscribirSync, obtenerEstadoSync)
   const enLinea = useEnLinea()
   const [panelAbierto, setPanelAbierto] = useState(false)
@@ -61,14 +72,44 @@ export function PastillaSync() {
     claseIcono = 'text-noct-precaucion'
   }
 
+  const panel = panelAbierto && (
+    <Suspense fallback={null}>
+      <PanelSync abierto={panelAbierto} onCerrar={() => setPanelAbierto(false)} />
+    </Suspense>
+  )
+  const alTocar = () => {
+    void sincronizar()
+    setPanelAbierto(true)
+  }
+
+  if (rotulada) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={alTocar}
+          title={`${titulo}. Tocar para ver el detalle y sincronizar ahora.`}
+          aria-label={titulo}
+          data-pastilla-sync="rotulada"
+          className="flex min-h-11 shrink-0 cursor-pointer items-center"
+        >
+          <span
+            className={`inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[13.5px] font-bold ${TINTE_POR_TEXTO[claseTexto]}`}
+          >
+            <Icono size={16} className={estado.enCurso ? 'animate-pulse' : ''} aria-hidden />
+            {etiqueta ?? 'Al día'}
+          </span>
+        </button>
+        {panel}
+      </>
+    )
+  }
+
   return (
     <>
       <button
         type="button"
-        onClick={() => {
-          void sincronizar()
-          setPanelAbierto(true)
-        }}
+        onClick={alTocar}
         title={`${titulo}. Tocar para ver el detalle y sincronizar ahora.`}
         aria-label={titulo}
         className={
@@ -80,11 +121,7 @@ export function PastillaSync() {
         <Icono size={etiqueta === null ? 18 : 14} className={`${claseIcono} ${estado.enCurso ? 'animate-pulse' : ''}`} aria-hidden />
         {etiqueta}
       </button>
-      {panelAbierto && (
-        <Suspense fallback={null}>
-          <PanelSync abierto={panelAbierto} onCerrar={() => setPanelAbierto(false)} />
-        </Suspense>
-      )}
+      {panel}
     </>
   )
 }
