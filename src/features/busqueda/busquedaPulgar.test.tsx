@@ -2,7 +2,7 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { Monitor, Storefront, type IconoProps } from '../../components/iconos'
+import { Storefront, type IconoProps } from '../../components/iconos'
 import { db } from '../../lib/db'
 import {
   campoBuscador,
@@ -73,57 +73,56 @@ describe('el estado vacío', () => {
 })
 
 describe('los resultados en el teléfono', () => {
-  it('rótulos de grupo a 15/650 sin mayúsculas, chip activo relleno y la IP en mono a la derecha', async () => {
+  it('rótulos de grupo a 15/800, chip activo relleno, cada resultado en su tarjeta y la IP que se copia (tarea 350)', async () => {
     await escribir(await abrir(), 'caja de prueba')
     await esperar(() => textoPantalla().includes('Caja de prueba norte'), 'los resultados')
 
-    // EL CHIP ACTIVO, relleno de alto contraste en los dos temas.
-    const todo = await esperar(() => control(/^Todo\d/), 'el chip "Todo"')
+    // EL CHIP ACTIVO, relleno de tinta en los dos temas, con su número en la
+    // misma palabra («Todo 4»).
+    const todo = await esperar(() => control(/^Todo \d/), 'el chip "Todo"')
     expect(todo.getAttribute('aria-pressed')).toBe('true')
-    for (const clase of ['max-md:bg-noct-text', 'max-md:text-noct-bg', 'max-md:border-noct-text']) expect(todo.className).toContain(clase)
-    const equipos = control(/^Equipos\d/) as HTMLElement
-    expect(equipos.className).not.toContain('max-md:bg-noct-text')
+    for (const clase of ['bg-noct-text', 'text-noct-bg', 'border-noct-text', 'h-9', 'toque-amplio']) expect(todo.className).toContain(clase)
+    const equipos = control(/^Equipos \d/) as HTMLElement
+    expect(equipos.className).not.toContain('bg-noct-text')
 
-    // LOS RÓTULOS DE GRUPO: 15/650, sin mayúsculas, con su número en mono
-    // (tarea 344): uno por tipo, para distinguir guías y equipos.
-    const rotulos = Array.from(document.body.querySelectorAll<HTMLElement>('section > div > h2'))
+    // LOS RÓTULOS DE GRUPO: 15/800 en tinta 2, sin mayúsculas, uno por tipo.
+    const rotulos = Array.from(document.body.querySelectorAll<HTMLElement>('section[data-grupo-resultados] > h2'))
     expect(rotulos.map((rotulo) => rotulo.textContent)).toContain('Equipos')
     for (const rotulo of rotulos) {
-      for (const clase of ['text-[15px]', 'font-[650]']) expect(rotulo.className).toContain(clase)
+      for (const clase of ['text-[15px]', 'font-extrabold', 'text-noct-neutral-300']) expect(rotulo.className).toContain(clase)
       expect(rotulo.className).not.toContain('uppercase')
     }
 
-    // LA FILA: 62 de alto, su divisor y la IP técnica en mono a la derecha.
+    // LA TARJETA: su borde, la IP en mono bajo el nombre y copiar en la fila.
     const norte = control(/^Caja de prueba norte/) as HTMLElement
-    expect(norte.className).toContain('max-md:min-h-[62px]')
-    expect(norte.parentElement?.className).toContain('max-md:border-b')
+    expect(norte.closest('[data-tarjeta-resultado="dispositivo"]')?.className).toContain('border-[1.5px]')
     const ip = norte.querySelector<HTMLElement>('[data-ip-resultado]')
     expect(ip?.textContent).toBe('10.9.9.40')
     expect(ip?.className).toContain('font-mono')
-    expect(ip?.className).toContain('md:hidden')
+    expect(control('Copiar IP de Caja de prueba norte')?.className).toContain('h-11 w-11')
     // El nombre no se recorta.
     expect(norte.querySelector('[data-nombre-principal]')?.className).not.toContain('truncate')
-    // Sin IP, no hay hueco.
+    // Sin IP, no hay hueco ni copiar.
     expect((control(/^Caja de prueba sur/) as HTMLElement).querySelector('[data-ip-resultado]')).toBeNull()
+    expect(control('Copiar IP de Caja de prueba sur')).toBeNull()
 
-    // EL ICONO DE SU CLASE (tarea 349): en el teléfono cada equipo se dibuja
-    // con el icono de su categoría, el de la lista de Equipos; el genérico
-    // queda para desde 768.
-    const iconoDe = (fila: HTMLElement) => fila.querySelector<HTMLElement>('[data-icono-equipo]')
-    expect(iconoDe(norte)?.dataset.iconoEquipo).toBe('pos')
-    expect(iconoDe(norte)?.className).toContain('max-md:block')
-    expect(iconoDe(control(/^Caja de prueba sur/) as HTMLElement)?.dataset.iconoEquipo).toBe('pc')
+    // EL ICONO DE SU CLASE (tareas 349 y 350): cada equipo con el «Icono de
+    // categoría» de su clase, el de la lista de Equipos.
+    const claseDe = (fila: HTMLElement) => fila.querySelector<HTMLElement>('[data-icono-categoria]')?.dataset.iconoCategoria
+    expect(claseDe(norte)).toBe('pos')
+    expect(claseDe(control(/^Caja de prueba sur/) as HTMLElement)).toBe('computador')
   })
 
   // Un POS no es Facturación: sin autorizaciones indexadas no se finge un
-  // resultado de Facturación con su icono.
-  it('un POS sigue siendo un equipo, con el icono de equipo', async () => {
+  // resultado de Facturación. Es un equipo, en el grupo de los equipos.
+  it('un POS sigue siendo un equipo, en el grupo Equipos', async () => {
     await escribir(await abrir(), 'caja de prueba')
     const norte = await esperar(() => control(/^Caja de prueba norte/), 'el POS')
-    expect(norte.querySelector('svg path')?.getAttribute('d')).toBe(trazoDe(Monitor))
+    expect(norte.closest('[data-tarjeta-resultado]')?.getAttribute('data-tarjeta-resultado')).toBe('dispositivo')
+    expect(norte.closest('[data-grupo-resultados]')?.querySelector('h2')?.textContent).toBe('Equipos')
     expect(norte.querySelector('svg path')?.getAttribute('d')).not.toBe(trazoDe(Storefront))
     const sur = control(/^Caja de prueba sur/) as HTMLElement
-    expect(sur.querySelector('svg path')?.getAttribute('d')).toBe(trazoDe(Monitor))
+    expect(sur.closest('[data-tarjeta-resultado]')?.getAttribute('data-tarjeta-resultado')).toBe('dispositivo')
   })
 })
 

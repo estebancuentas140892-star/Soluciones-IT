@@ -265,7 +265,7 @@ describe('Resolver en el teléfono: la guía destacada y los grupos se leen ente
     await buscar('agregar una impresora al computador mediante su direccion ip')
 
     const guia = await esperar(() => nombre(LARGO), 'la guía con su título completo')
-    expect(seccionDe(guia)).toBe('La guía que mejor coincide')
+    expect(seccionDe(guia)).toBe('Mejor coincidencia')
     esperarEntero(guia)
     for (const titulo of nombres()) esperarEntero(titulo)
   })

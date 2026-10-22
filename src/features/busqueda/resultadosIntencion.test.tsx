@@ -174,17 +174,17 @@ describe('la confianza en pantalla, en el teléfono', () => {
     await montar(RUTAS, '/')
     await buscar('conectar una impresora')
 
-    const destacada = await esperar(() => seccion('La guía que mejor coincide'), 'la guía destacada')
-    const abrir = destacada.querySelector<HTMLAnchorElement>('a[aria-label^="Abrir la guía: "]')
-    expect(abrir?.textContent).toBe('Abrir la guía')
+    // «Mejor coincidencia» del prototipo (tarea 350): el icono de su
+    // categoría, lo que es y, en el pie, cuántas ventanas con «Empezar» a la
+    // derecha, sin ocupar todo el ancho.
+    const destacada = await esperar(() => seccion('Mejor coincidencia'), 'la guía destacada')
+    const abrir = destacada.querySelector<HTMLAnchorElement>('a[aria-label^="Empezar la guía: "]')
+    expect(abrir?.textContent).toBe('Empezar')
     expect(abrir?.getAttribute('href')).toMatch(/^\/soluciones\//)
-    expect(destacada.textContent).toContain('Publicada')
-    // Compacta (tarea 349): el icono de su tipo junto a lo que es, y la
-    // acción en la misma fila que su medida, sin ocupar todo el ancho.
-    expect(destacada.querySelector('[data-icono-tipo]')).not.toBeNull()
+    expect(destacada.querySelector('[data-icono-categoria]')).not.toBeNull()
     const pie = destacada.querySelector<HTMLElement>('[data-pie-mejor-coincide]')
     expect(pie?.contains(abrir as Node)).toBe(true)
-    expect(pie?.textContent).toContain('Publicada')
+    expect(pie?.textContent).toContain('ventana')
     expect(abrir?.className).not.toContain('w-full')
     // No es un diagnóstico: si hay otras parecidas, lo dice.
     expect(destacada.textContent).toContain('Hay otras guías parecidas debajo.')

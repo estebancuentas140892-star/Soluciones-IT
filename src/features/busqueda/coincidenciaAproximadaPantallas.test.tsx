@@ -91,7 +91,7 @@ describe('Resolver: "Quizás buscabas…" y "Posible coincidencia"', () => {
     expect(textoPantalla()).not.toContain('La guía que mejor coincide')
     // Es la única guía: no se promete que haya otras parecidas debajo.
     expect(textoPantalla()).not.toContain('Hay otras guías parecidas debajo')
-    expect(control('Abrir la guía: La impresora no imprime')).not.toBeNull()
+    expect(control('Empezar la guía: La impresora no imprime')).not.toBeNull()
     // Nada cambió solo: el campo dice lo escrito y seguimos en Resolver.
     expect(campo.value).toBe('no impirme')
     expect(ubicacionActual().pathname).toBe('/')
@@ -99,7 +99,7 @@ describe('Resolver: "Quizás buscabas…" y "Posible coincidencia"', () => {
     // Tocar la propuesta es decidir: busca "no imprime", que ya es exacto.
     await tocar(propuesta)
     expect(campo.value).toBe('no imprime')
-    await esperar(() => textoPantalla().includes('La guía que mejor coincide'), 'la coincidencia exacta')
+    await esperar(() => textoPantalla().includes('Mejor coincidencia'), 'la coincidencia exacta')
     expect(document.body.querySelector('[data-quizas-buscabas]')).toBeNull()
     expect(ubicacionActual().pathname).toBe('/')
   })

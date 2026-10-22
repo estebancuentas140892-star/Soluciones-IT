@@ -2,9 +2,13 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { Fragment, useCallback, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
-import { CaretDown, CaretRight, CaretUp, Check, Crosshair, Lightbulb, Question } from '../../components/iconos'
-import { BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
+import { CaretDown, CaretRight, CaretUp, Crosshair, Lightbulb, Question } from '../../components/iconos'
+import { avisar } from '../../components/avisosFlotantes'
+import { IconoCategoria } from '../../components/IconoCategoria'
 import { useEsAncho } from '../../components/useEsAncho'
+import { IconoVentana } from '../../components/ventana/IconoVentana'
+import { BOTON_COPIAR, RELLENO_ACCION, TARJETA, TITULO_GRUPO } from '../../components/ventana/estilos'
+import { copiarAlPortapapeles } from '../../lib/portapapeles'
 import { db } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
@@ -14,6 +18,7 @@ import { useAnotarBusqueda } from './busquedaEnHistorial'
 import { ContextoResultados, idDeEntidad, useContextoResultados } from './contextoResultados'
 import { equipoDeLaConsulta, hayQueSepararMejores, leerResultados, sinLosMejores } from './mejores'
 import { rutaGuiaConEquipo } from '../soluciones/contextoEjecucion'
+import { cuandoUsarParaMostrar } from '../soluciones/preparacionGuia'
 import { eventoDeResolucion, registrarResolucion } from './medicion'
 import { filaNavega, vistaRapidaDe, type ModoBuscador } from './modoConsulta'
 import { PuenteBoveda } from './PuenteBoveda'
@@ -31,8 +36,7 @@ import type { ResultadoBusqueda } from './useIndiceBusqueda'
 import { VistaRapidaResultado } from './VistaRapida'
 import { useRanuraVistaRapida } from './ranuraVistaRapida'
 import { useDatosDeEquipos } from './useDatosDeEquipos'
-import { IconoNodo } from '../red/IconoNodo'
-import { tipoDeNodoVisual } from '../red/topologiaVisual'
+import { useCategoriasDeGuias } from './useCategoriasDeGuias'
 
 // Presentacion compartida de los resultados del buscador global. El
 // catalogo y el agrupado viven en resultados.ts; el ranking global, en
@@ -177,7 +181,6 @@ export function FilaResultado({
   const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
   // En el teléfono, la IP de un equipo va a la derecha en mono (tarea 342).
   const equipo = resultado.tipo === 'dispositivo' ? equipos.get(idDeEntidad(resultado.id)) : undefined
-  const iconoDeEquipo = equipo?.categoriaNombre ? tipoDeNodoVisual(equipo.categoriaNombre) : null
   const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
   const conPrefijo = prefijoAtenuado ? partirPorPrefijo(resultado.titulo, consulta) : null
   const conSuTipo = conTipo ? partesSubtituloConTipo(resultado) : null
@@ -223,19 +226,7 @@ export function FilaResultado({
       <span
         className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-md max-md:h-[38px] max-md:w-[38px] max-md:rounded-[11px] ${tono}`}
       >
-        {iconoDeEquipo ? (
-          // EN EL TELÉFONO, EL ICONO DE SU CLASE (tarea 349): una impresora se
-          // reconoce como impresora y una cámara como cámara, con el mismo
-          // icono que en la lista de Equipos. Desde 768, el de siempre.
-          <>
-            <Icono size={17} className="max-md:hidden" aria-hidden />
-            <span data-icono-equipo={iconoDeEquipo} aria-hidden className="hidden max-md:block">
-              <IconoNodo tipo={iconoDeEquipo} className="h-[19px] w-[19px]" />
-            </span>
-          </>
-        ) : (
-          <Icono size={17} className="max-md:h-[19px] max-md:w-[19px]" aria-hidden />
-        )}
+        <Icono size={17} className="max-md:h-[19px] max-md:w-[19px]" aria-hidden />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {conPrefijo ? (
@@ -394,83 +385,247 @@ export function FilaResultado({
 
 // LA GUÍA QUE MEJOR COINCIDE, EN EL TELÉFONO (rediseño móvil, fase 1, tarea
 // 344; DESPUÉS de Claude Design). Cuando lo primero del orden global (el de
-// `mejores.ts`, que no cambia) es una guía, se destaca sola: qué es, su
-// título entero, cuántos pasos y cuánto toma, y "Abrir la guía", que dice
-// lo que pasa al tocarla. Es una COINCIDENCIA, no un diagnóstico: si otras
-// están cerca (confianza "cercana") se dice que hay otras parecidas debajo.
-// Abre exactamente lo que abriría su fila (`useAbrirResultado`).
-function GuiaQueMejorCoincide({ resultado, cercana }: { resultado: ResultadoBusqueda; cercana: boolean }) {
+// `mejores.ts`, que no cambia) es una guía, se destaca sola. Es una
+// COINCIDENCIA, no un diagnóstico: si otras están cerca (confianza
+// "cercana") se dice que hay otras parecidas debajo. Abre exactamente lo que
+// abriría su fila (`useAbrirResultado`).
+//
+// LA TARJETA DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350): borde de 2 px y
+// relieve en el acento; el icono de su categoría con qué es («Problema
+// frecuente») y de qué («Impresoras»); el título a 20; cuándo usarla, si la
+// guía lo dice; y al pie cuántas ventanas y cuánto toma, con «Empezar» (o
+// «Continuar») relleno a la derecha, al alcance del pulgar. Toda la tarjeta
+// abre la guía; el botón es su nombre para el lector y el teclado.
+function GuiaQueMejorCoincide({
+  resultado,
+  cercana,
+  categoriaNombre,
+}: {
+  resultado: ResultadoBusqueda
+  cercana: boolean
+  categoriaNombre: string
+}) {
   const { accionesGuia } = useContextoResultados()
   const abrir = useAbrirResultado(resultado, true)
   const esGuia = resultado.tipo === 'articulo'
   const id = idDeEntidad(resultado.id)
   const accion = esGuia ? accionesGuia.get(id) : undefined
-  const minutos = useLiveQuery(
-    async () => (esGuia ? (normalizarProcedimiento((await db.articulos.get(id))?.procedimiento)?.tiempoEstimadoMin ?? null) : null),
+  const guia = useLiveQuery(
+    async () => {
+      if (!esGuia) return null
+      const procedimiento = normalizarProcedimiento((await db.articulos.get(id))?.procedimiento)
+      return {
+        minutos: procedimiento?.tiempoEstimadoMin ?? null,
+        cuando: procedimiento ? cuandoUsarParaMostrar(procedimiento.descripcion) : '',
+      }
+    },
     [esGuia, id],
     null,
   )
   const { tipo, detalle } = partesSubtituloConTipo(resultado)
   const medida = [
-    accion && accion.total > 0 ? `${accion.total} ${accion.total === 1 ? 'paso' : 'pasos'}${accion.totalAbierto ? ' o más' : ''}` : null,
-    minutos ? `unos ${minutos} min` : null,
+    accion && accion.total > 0
+      ? `${accion.total} ${accion.total === 1 ? 'ventana' : 'ventanas'}${accion.totalAbierto ? ' o más' : ''}`
+      : null,
+    guia?.minutos ? `unos ${guia.minutos} min` : null,
   ]
     .filter(Boolean)
     .join(' · ')
   const continuar = accion?.estado === 'continuar' && accion.pendiente.tipo === 'paso'
-  const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
+  const verbo = continuar ? 'Continuar' : 'Empezar'
   return (
-    <section aria-labelledby="guia-mejor-coincide" className="flex flex-col gap-2">
+    <section aria-labelledby="guia-mejor-coincide" className="flex flex-col gap-2.5">
       {/* Una guía que solo coincide con una errata no "mejor coincide":
           se destaca igual (es lo primero del orden), pero dicha como una
           posible coincidencia (tarea 346). */}
-      <h2 id="guia-mejor-coincide" className={ROTULO_TELEFONO}>
-        {resultado.aproximado ? 'Posible coincidencia' : 'La guía que mejor coincide'}
+      <h2 id="guia-mejor-coincide" className={TITULO_GRUPO}>
+        {resultado.aproximado ? 'Posible coincidencia' : 'Mejor coincidencia'}
       </h2>
-      {/* MÁS COMPACTA (tarea 349, «Mejor coincidencia» del recorrido de
-          Ventana): el icono de su tipo junto a lo que es, el título entero y,
-          en una sola fila, cuánto toma y la acción a la derecha, al alcance
-          del pulgar. La misma acción y el mismo destino; la tarjeta deja de
-          ocupar media pantalla y lo que sigue sube a la vista. */}
-      <div className="flex flex-col gap-3 rounded-[18px] border-[1.5px] border-noct-accent bg-noct-surface p-4">
-        <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="flex min-w-0 items-center gap-2 text-[14px] leading-snug text-noct-neutral-400">
-            <span data-icono-tipo className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${tono}`}>
-              <Icono size={16} aria-hidden />
+      <div
+        data-mejor-coincidencia
+        className="flex flex-col gap-3 rounded-[22px] border-2 border-noct-accent bg-noct-surface p-4 shadow-[0_4px_0_var(--color-noct-accent-700)]"
+      >
+        <Link
+          to={abrir.to}
+          state={abrir.state}
+          onClick={abrir.onClick}
+          tabIndex={-1}
+          aria-hidden
+          className="flex min-w-0 flex-col gap-2.5 text-noct-text"
+        >
+          <span className="flex min-w-0 items-center gap-2.5">
+            <IconoCategoria nombre={categoriaNombre} tam={40} />
+            <span className="flex min-w-0 flex-col">
+              <span className="text-[13.5px] font-extrabold leading-snug text-noct-accent-300">{tipo || 'Guía'}</span>
+              {(categoriaNombre || detalle) && (
+                <span className="text-[13.5px] font-semibold leading-snug text-noct-neutral-300">{categoriaNombre || detalle}</span>
+              )}
             </span>
-            <span className="min-w-0">{[tipo, detalle].filter(Boolean).join(' · ')}</span>
           </span>
-          <span data-nombre-principal className="min-w-0 text-[20px] font-[650] leading-[1.22] text-pretty [overflow-wrap:anywhere]">
+          <span
+            data-nombre-principal
+            className="min-w-0 text-[20px] font-extrabold leading-[26px] tracking-[-.01em] text-pretty [overflow-wrap:anywhere]"
+          >
             {resultado.titulo}
           </span>
-        </div>
+          {guia?.cuando && <span className="text-[15px] leading-[21px] text-noct-neutral-300 text-pretty">{guia.cuando}</span>}
+        </Link>
         <div data-pie-mejor-coincide className="flex items-center justify-between gap-3">
-          <span className="flex min-w-0 flex-col gap-0.5 text-[14.5px] leading-snug text-noct-neutral-300">
+          <span className="flex min-w-0 flex-col gap-0.5 text-[14px] font-semibold leading-snug text-noct-neutral-300">
             {medida && <span>{medida}</span>}
-            {continuar && accion.pendiente.tipo === 'paso' ? (
-              <span className="font-semibold text-noct-accent-300">Vas en el paso {accion.pendiente.numero}</span>
-            ) : (
-              esGuia && (
-                <span className="inline-flex items-center gap-1 font-semibold text-noct-exito">
-                  <Check size={15} aria-hidden />
-                  Publicada
-                </span>
-              )
+            {continuar && accion.pendiente.tipo === 'paso' && (
+              <span className="text-noct-accent-300">Vas en la ventana {accion.pendiente.numero}</span>
             )}
           </span>
           <Link
             to={abrir.to}
             state={abrir.state}
             onClick={abrir.onClick}
-            aria-label={`${continuar ? 'Continuar la guía' : 'Abrir la guía'}: ${resultado.titulo}`}
-            className={`${BTN_PRIMARIO_RELLENO} shrink-0`}
+            aria-label={`${verbo} la guía: ${resultado.titulo}`}
+            className={`${RELLENO_ACCION} inline-flex h-[46px] shrink-0 items-center gap-2 rounded-[14px] px-[18px] text-[16px]`}
           >
-            {continuar ? 'Continuar la guía' : 'Abrir la guía'}
+            {verbo}
+            <IconoVentana nombre="flecha" tam={18} grosor={2.6} />
           </Link>
         </div>
       </div>
-      {cercana && <p className="px-0.5 text-[14px] leading-snug text-noct-neutral-400">Hay otras guías parecidas debajo.</p>}
+      {cercana && <p className="text-[14px] leading-snug text-noct-neutral-300">Hay otras guías parecidas debajo.</p>}
     </section>
+  )
+}
+
+// UN RESULTADO EN EL TELÉFONO (tarea 350, prototipo de Claude Design): su
+// propia tarjeta, con el icono de su categoría (una guía) o de su clase (un
+// equipo), el título entero a 16 y lo que lo sitúa debajo. Un equipo dice su
+// IP en mono y la copia desde la fila, sin abrir la ficha: es lo que más se
+// busca de pie frente a un puesto. Abre lo mismo que la fila de siempre
+// (`useAbrirResultado`), con las mismas acciones directas debajo y la misma
+// vista rápida (una credencial se ve, se copia y se tapa sin salir de aquí).
+function TarjetaResultado({
+  resultado,
+  consulta,
+  prefijoAtenuado,
+  conAcciones,
+  desdeMejores,
+  categoriaNombre,
+}: {
+  resultado: ResultadoBusqueda
+  consulta: string
+  prefijoAtenuado: boolean
+  conAcciones: boolean
+  desdeMejores: boolean
+  categoriaNombre: string
+}) {
+  const { equipos, modo, vistaAbierta, alternarVista } = useContextoResultados()
+  const abrir = useAbrirResultado(resultado, desdeMejores)
+  const equipo = resultado.tipo === 'dispositivo' ? equipos.get(idDeEntidad(resultado.id)) : undefined
+  const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
+  const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
+  const conPrefijo = prefijoAtenuado ? partirPorPrefijo(resultado.titulo, consulta) : null
+  const conClase = resultado.tipo === 'articulo' || resultado.tipo === 'diagnostico' || resultado.tipo === 'dispositivo'
+  const ip = equipo?.ip ?? ''
+  const idPanel = useId()
+  const vista = vistaRapidaDe(resultado, modo)
+  const abierta = vista !== null && vistaAbierta === resultado.id
+  return (
+    <div
+      data-tarjeta-resultado={resultado.tipo}
+      className={`${TARJETA} flex min-w-0 flex-col`}
+      // Esc recoge la vista abierta y nada más (como en la fila de siempre).
+      onKeyDown={(evento) => {
+        if (!abierta || evento.key !== 'Escape') return
+        evento.stopPropagation()
+        alternarVista(resultado.id)
+      }}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <Link
+          to={abrir.to}
+          state={abrir.state}
+          onClick={abrir.onClick}
+          className={`flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-2xl py-3 text-noct-text active:bg-noct-presionado ${
+            ip ? 'pl-3' : 'px-3'
+          }`}
+        >
+          {conClase ? (
+            <IconoCategoria nombre={resultado.tipo === 'dispositivo' ? equipo?.categoriaNombre : categoriaNombre} tam={40} />
+          ) : (
+            <span aria-hidden className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tono}`}>
+              <Icono size={21} />
+            </span>
+          )}
+          <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
+            {/* EL TÍTULO NUNCA SE RECORTA (regla 23): ocupa las líneas que
+                necesite y la tarjeta crece. */}
+            {conPrefijo ? (
+              <span data-nombre-principal className="min-w-0 text-[16px] leading-[21px] [overflow-wrap:anywhere] [text-wrap:pretty]">
+                <span className="text-noct-neutral-300 underline decoration-noct-accent-600 decoration-dotted underline-offset-4">
+                  {conPrefijo.prefijo}
+                </span>
+                <span className="font-bold text-noct-text">{conPrefijo.resto}</span>
+              </span>
+            ) : (
+              <span
+                data-nombre-principal
+                className="min-w-0 text-[16px] font-bold leading-[21px] [overflow-wrap:anywhere] [text-wrap:pretty]"
+              >
+                {pre}
+                {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
+                {post}
+              </span>
+            )}
+            {resultado.aproximado && (
+              <span data-posible-coincidencia className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-noct-precaucion">
+                <Question size={13} className="shrink-0" aria-hidden />
+                Posible coincidencia
+              </span>
+            )}
+            {ip && (
+              <span data-ip-resultado className="font-mono text-[15px] font-semibold leading-snug text-noct-text">
+                {ip}
+              </span>
+            )}
+            {resultado.subtitulo && (
+              // Lo que sitúa al resultado parte línea si no cabe: en el
+              // teléfono un subtítulo cortado escondía justo el lugar.
+              <span
+                className={`font-semibold leading-snug text-noct-neutral-300 [overflow-wrap:anywhere] ${ip ? 'text-[13.5px]' : 'text-[14px]'}`}
+              >
+                {resultado.subtitulo}
+              </span>
+            )}
+          </span>
+          {!ip && <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />}
+        </Link>
+        {ip && (
+          <button
+            type="button"
+            aria-label={`Copiar IP de ${resultado.titulo}`}
+            onClick={() => {
+              void copiarAlPortapapeles(ip).then((ok) => avisar(ok ? `IP copiada: ${ip}` : 'No se pudo copiar la IP', 'copiado'))
+            }}
+            className={`${BOTON_COPIAR} mr-2`}
+          >
+            <IconoVentana nombre="copiar" tam={20} />
+          </button>
+        )}
+      </div>
+      {conAcciones && !abierta && (
+        <div className="flex flex-wrap items-center gap-2 px-3 pb-3 empty:hidden">
+          <AccionesDeResultado resultado={resultado} desdeMejores={desdeMejores} />
+        </div>
+      )}
+      {abierta && (
+        <div className="px-3 pb-3">
+          <VistaRapidaResultado
+            resultado={resultado}
+            idPanel={idPanel}
+            desdeMejores={desdeMejores}
+            onCerrar={() => alternarVista(resultado.id)}
+          />
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -498,10 +653,6 @@ function QuizasBuscabas({ sugerencia, onUsar }: { sugerencia: string; onUsar?: (
     </p>
   )
 }
-
-// El rótulo de una sección de resultados en el teléfono (tarea 344): 15 px
-// en texto 2, sin mayúsculas, como el DESPUÉS de Claude Design.
-const ROTULO_TELEFONO = 'text-[15px] font-[650] leading-snug text-noct-neutral-300'
 
 // En el teléfono, 62 de alto y sin el margen interior: el divisor y la
 // respuesta al tocar van a todo el ancho del contenido (tarea 342). Con 12 px
@@ -570,6 +721,7 @@ export function ResultadosBusqueda({
   const ancho = useEsAncho()
   const enTelefono = !ancho && filaNavega(modo)
   const telefono = useMemo(() => lecturaParaTelefono(resultados, mejores), [resultados, mejores])
+  const categoriasDeGuias = useCategoriasDeGuias()
 
   // UNA VISTA RÁPIDA A LA VEZ, y atada a la consulta que la abrió: si el
   // técnico cambia lo escrito, la vista se recoge sola (su fila puede ni
@@ -641,7 +793,10 @@ export function ResultadosBusqueda({
     )
     return (
       <ContextoResultados.Provider value={contexto}>
-        <div className="flex flex-col gap-5">
+        {/* LOS RESULTADOS DEL PROTOTIPO (tarea 350): 18 px entre grupos, cada
+            grupo con su título a 15 · 800 en tinta 2 y sus resultados en
+            tarjetas a 8 px. Cuántos hay de cada clase ya lo dicen los chips. */}
+        <div className="flex flex-col gap-[18px]">
           {sugerencia && <QuizasBuscabas sugerencia={sugerencia} onUsar={onUsarSugerencia} />}
           {telefono.destacada && (
             <GuiaQueMejorCoincide
@@ -649,32 +804,28 @@ export function ResultadosBusqueda({
               // "Hay otras guías parecidas debajo" solo si las hay (tarea 346):
               // una posible coincidencia nunca es "alta" y puede ser la única.
               cercana={lectura.confianza !== 'alta' && telefono.grupos.some((grupo) => grupo.id === 'soluciones' && grupo.items.length > 0)}
+              categoriaNombre={categoriasDeGuias.get(idDeEntidad(telefono.destacada.id)) ?? ''}
             />
           )}
           {telefono.grupos.map((grupo, indice) => {
             const conPrefijo = filasConPrefijoComun(grupo.items, consulta)
             return (
               <Fragment key={grupo.id}>
-                <section>
-                  <div className="mb-0.5 flex items-center gap-1.5 px-0.5">
-                    <grupo.Icono size={15} className="shrink-0 text-noct-neutral-400" aria-hidden />
-                    <h2 className={ROTULO_TELEFONO}>
-                      {grupo.id === 'soluciones' && telefono.destacada ? 'Otras guías' : grupo.nombre}
-                    </h2>
-                    <span className="font-mono text-[12.5px] text-noct-neutral-500">{grupo.items.length}</span>
-                  </div>
-                  <div className="-mx-2 grid grid-cols-1">
-                    {grupo.items.map((item) => (
-                      <FilaResultado
-                        key={item.id}
-                        resultado={item}
-                        consulta={consulta}
-                        prefijoAtenuado={conPrefijo.has(item.id)}
-                        conAcciones={!separar || entreLosMejores.has(item.id)}
-                        desdeMejores={separar && entreLosMejores.has(item.id)}
-                      />
-                    ))}
-                  </div>
+                <section className="flex flex-col gap-2" data-grupo-resultados={grupo.id}>
+                  <h2 className={TITULO_GRUPO}>
+                    {grupo.id === 'soluciones' && telefono.destacada ? 'Otras guías' : grupo.nombre}
+                  </h2>
+                  {grupo.items.map((item) => (
+                    <TarjetaResultado
+                      key={item.id}
+                      resultado={item}
+                      consulta={consulta}
+                      prefijoAtenuado={conPrefijo.has(item.id)}
+                      conAcciones={!separar || entreLosMejores.has(item.id)}
+                      desdeMejores={separar && entreLosMejores.has(item.id)}
+                      categoriaNombre={categoriasDeGuias.get(idDeEntidad(item.id)) ?? ''}
+                    />
+                  ))}
                 </section>
                 {/* El puente, detrás del primer bloque de lo encontrado: ni
                     encima de lo que ya responde ni enterrado al final. */}

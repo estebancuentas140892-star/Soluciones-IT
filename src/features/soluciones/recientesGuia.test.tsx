@@ -60,10 +60,14 @@ describe('caso H: recientes de una guía que se empieza desde la búsqueda', () 
     const campo = await esperar(campoBuscador, 'el buscador de Inicio')
     await escribir(campo, 'impresora')
 
-    // La fila del resultado es la única puerta: ya no hay botón "Empezar".
-    expect(control(/^Empezar/)).toBeNull()
-    // En el teléfono, la guía que mejor coincide se abre con "Abrir la guía" (tarea 344).
-    await tocar(await esperarControl(/^(Abrir la guía: )?Configurar la impresora de prueba/))
+    // La fila del resultado es la única puerta: ninguna tarjeta lleva botón
+    // "Empezar" (encargo del 2026-09-17).
+    await esperar(() => document.body.querySelector('[data-tarjeta-resultado], [data-mejor-coincidencia]'), 'los resultados')
+    expect(document.body.querySelector('[data-tarjeta-resultado] a[aria-label^="Empezar"]')).toBeNull()
+    // En el teléfono, la guía que mejor coincide se abre con "Empezar" (tarea
+    // 350; "Abrir la guía" desde la 344): el mismo enlace, con el verbo del
+    // prototipo, porque abrir una guía es empezarla.
+    await tocar(await esperarControl(/^(Empezar la guía: )?Configurar la impresora de prueba/))
 
     await esperar(
       () => ubicacionActual().pathname === '/soluciones/cat-pruebas/guia-impresora',

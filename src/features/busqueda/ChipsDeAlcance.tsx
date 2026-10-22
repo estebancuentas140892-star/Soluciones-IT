@@ -1,4 +1,6 @@
 import { FilaDeslizable } from '../../components/FilaDeslizable'
+import { useEsAncho } from '../../components/useEsAncho'
+import { CHIP, CHIP_ACTIVO, CHIP_REPOSO } from '../../components/ventana/estilos'
 import { ALCANCES, type Alcance } from './alcanceBusqueda'
 
 // LOS CHIPS DE ALCANCE (tarea 330): "Todo" y cada alcance con resultados,
@@ -18,7 +20,31 @@ export function ChipsDeAlcance({
     ...ALCANCES.filter((a) => conteo[a.valor] > 0),
   ]
   // Con un solo alcance con resultados, "Todo" y ese chip dirían lo mismo.
+  // EN EL TELÉFONO, LOS CHIPS DEL PROTOTIPO (tarea 350): 36 de dibujo (44 de
+  // toque), redondos, el elegido relleno de tinta y su número en la misma
+  // palabra («Guías 7»). Desde 768, los de siempre.
+  const ancho = useEsAncho()
   if (chips.length <= 2) return null
+  if (!ancho) {
+    return (
+      <FilaDeslizable etiqueta="Filtrar los resultados" className="gap-2 py-1">
+        {chips.map((chip) => {
+          const activo = chip.valor === alcance
+          return (
+            <button
+              key={chip.valor}
+              type="button"
+              aria-pressed={activo}
+              onClick={() => onCambiar(chip.valor)}
+              className={`${CHIP} ${activo ? CHIP_ACTIVO : CHIP_REPOSO}`}
+            >
+              {chip.etiqueta} {conteo[chip.valor]}
+            </button>
+          )
+        })}
+      </FilaDeslizable>
+    )
+  }
   return (
     <FilaDeslizable etiqueta="Filtrar los resultados" className="gap-1.5">
       {chips.map((chip) => {

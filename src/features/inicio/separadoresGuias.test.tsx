@@ -21,6 +21,10 @@ import { ResolverPage } from './ResolverPage'
 // algo más de aire arriba y abajo. Todo con variantes `max-md:`: desde 768 la
 // fila es la de siempre. Aquí se fija el reparto de clases; cómo se ve, en
 // las capturas del encargo. Las guías son inventadas.
+//
+// Desde la tarea 350 (prototipo de Claude Design) cada guía es su propia
+// tarjeta, con su borde y aire entre una y otra, en «Abiertas hace poco» y en
+// los resultados: la misma separación, más clara que el divisor.
 
 const RUTAS = [
   { ruta: '/', elemento: <ResolverPage /> },
@@ -45,17 +49,6 @@ beforeEach(async () => {
 afterEach(async () => {
   await desmontarTodo()
 })
-
-/** Las clases del divisor del teléfono, y que la última fila no lo lleve. */
-function conDivisorDelTelefono(fila: Element, conRelleno: Element = fila): void {
-  expect(fila.className).toContain('max-md:border-b')
-  expect(fila.className).toContain('max-md:border-noct-divider-fuerte')
-  expect(fila.className).toContain('max-md:last:border-b-0')
-  // El aire, en el elemento que lleva el relleno (en los resultados, el enlace).
-  expect(conRelleno.className).toContain('max-md:py-3')
-  // Desde 768 no cambia nada: ni divisor ni relleno nuevos sin variante.
-  expect(fila.className.split(/\s+/)).not.toContain('border-b')
-}
 
 describe('las guías se distinguen una de otra en el teléfono (tarea 347)', () => {
   it('Abiertas hace poco: cada guía en su propia tarjeta (tareas 347 y 350)', async () => {
@@ -86,16 +79,18 @@ describe('las guías se distinguen una de otra en el teléfono (tarea 347)', () 
     expect(titulo?.className).toContain('font-bold')
   })
 
-  it('los resultados de la búsqueda: cada guía con su divisor y la última del grupo sin él', async () => {
+  it('los resultados de la búsqueda: cada guía en su propia tarjeta (tareas 347 y 350)', async () => {
     await montar(RUTAS, '/')
     await escribir(await esperar(campoBuscador, 'el buscador'), 'impresora de prueba')
-    const filas = await esperar(() => {
-      const enlaces = Array.from(document.body.querySelectorAll('[data-nombre-principal]'))
-        .map((titulo) => titulo.closest('a')?.parentElement)
-        .filter((fila): fila is HTMLElement => Boolean(fila?.className.includes('max-md:mx-2')))
-      return enlaces.length >= 2 ? enlaces : null
-    }, 'las filas de resultados')
-    for (const fila of filas) conDivisorDelTelefono(fila, fila.querySelector('a') as HTMLElement)
-    expect(filas.at(-1)?.nextElementSibling).toBeNull()
+    const tarjetas = await esperar(() => {
+      const encontradas = Array.from(document.body.querySelectorAll('[data-tarjeta-resultado="articulo"]'))
+      return encontradas.length >= 2 ? encontradas : null
+    }, 'las tarjetas de resultados')
+    for (const tarjeta of tarjetas) {
+      expect(tarjeta.className).toContain('border-[1.5px]')
+      expect(tarjeta.className).toContain('bg-noct-surface')
+    }
+    // Hermanas en su grupo, separadas por aire.
+    expect(tarjetas[0].parentElement?.className).toContain('gap-2')
   })
 })
