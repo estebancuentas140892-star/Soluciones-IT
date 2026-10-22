@@ -19,9 +19,19 @@ import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 // y la fila de índice, a 60 px con el título a 15,5 px y el conteo a
 // 13,5 px en IBM Plex Mono.
 
+//
+// EN EL TELÉFONO, LOS GRUPOS DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350): el
+// rótulo a 14 · 800 en tinta 2 y las filas en su tarjeta (`FILAS_EN_TARJETA`),
+// con el título a 16. El icono y lo que contiene cada fila se quedan: dicen
+// qué hay dentro sin abrirla (tarea 268).
+export const FILAS_EN_TARJETA =
+  'max-md:overflow-hidden max-md:rounded-[18px] max-md:border-[1.5px] max-md:border-noct-divider max-md:bg-noct-surface max-md:px-3.5'
+
 export function TituloGrupo({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <h2 className={`pb-0.5 text-[13.5px] font-semibold leading-[1.3] text-noct-neutral-400 ${className}`}>
+    <h2
+      className={`pb-0.5 text-[13.5px] font-semibold leading-[1.3] text-noct-neutral-400 max-md:px-1 max-md:pb-1.5 max-md:text-[14px] max-md:font-extrabold max-md:text-noct-neutral-300 ${className}`}
+    >
       {children}
     </h2>
   )
@@ -87,14 +97,14 @@ export function FilaMas({
         <Icono size={20} className="w-5 shrink-0 text-noct-neutral-400" aria-hidden />
         <span className={`min-w-0 flex-1 ${unaLinea ? 'xl:flex xl:flex-wrap xl:items-baseline xl:gap-x-3' : ''}`}>
           <span
-            className={`block text-[15.5px] font-[550] leading-[1.3] ${unaLinea ? 'xl:shrink-0 xl:whitespace-nowrap xl:text-[14.5px] xl:font-semibold' : ''}`}
+            className={`block text-[15.5px] font-[550] leading-[1.3] max-md:text-[16px] max-md:font-semibold ${unaLinea ? 'xl:shrink-0 xl:whitespace-nowrap xl:text-[14.5px] xl:font-semibold' : ''}`}
           >
             {titulo}
           </span>
           {/* Sin recortar (tarea 268): en un teléfono estrecho, la línea
               pasa a una segunda antes que esconder lo que hay dentro. */}
           <span
-            className={`block text-[13px] leading-[1.35] text-noct-neutral-400 ${unaLinea ? 'xl:min-w-0 xl:text-[13.5px]' : ''}`}
+            className={`block text-[13px] leading-[1.35] text-noct-neutral-400 max-md:text-[13.5px] max-md:text-noct-neutral-300 ${unaLinea ? 'xl:min-w-0 xl:text-[13.5px]' : ''}`}
           >
             {subtitulo}
           </span>

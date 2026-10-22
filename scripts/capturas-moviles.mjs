@@ -93,6 +93,12 @@ const SIN_ACTIVIDAD = `{ const { db } = await import('/src/lib/db.ts'); await db
 // Tarea 339: una autorizacion de facturacion inventada sobre la impresora de
 // la semilla (que no trae ninguna), para ver su cabecera con "Editar".
 const AUTORIZACION_SEMBRADA = `{ const { db } = await import('/src/lib/db.ts'); await db.autorizaciones_facturacion.put({ id: 'aut-captura-339', dispositivoIds: ['dis-impresora-ejemplo'], prefijo: 'PRB', formulario: '', rangoDesde: 3000, rangoHasta: 8000, fechaFormalizacion: null, vigenciaReportada: '', vencimientoDocumentado: null, vencimientoConfirmado: null, consecutivoActual: null, consecutivoLeidoEn: null, consecutivoFuente: '', estado: 'documentada', fuente: 'Documento de prueba', verificadoEn: null, verificacionFuente: '', observaciones: '', evidenciaAdjuntoId: null, updatedAt: new Date().toISOString(), updatedBy: null, eliminadoEn: null }); }`
+// Tarea 350: la puerta de la Bóveda con su formulario. Un verificador
+// INVENTADO en la base local del navegador (no descifra nada: solo hace que
+// la pantalla pida la contraseña); se borra al terminar la parada. Nunca se
+// escribe una contraseña.
+const VERIFICADOR_DE_PRUEBA = `{ const { db, ID_VERIFICADOR } = await import('/src/lib/db.ts'); await db.bovedaMeta.put({ id: ID_VERIFICADOR, verificador: 'verificador-inventado-de-captura', updatedAt: new Date().toISOString() }); }`
+const SIN_VERIFICADOR = `{ const { db, ID_VERIFICADOR } = await import('/src/lib/db.ts'); await db.bovedaMeta.delete(ID_VERIFICADOR); }`
 const SIN_AUTORIZACION = `{ const { db } = await import('/src/lib/db.ts'); await db.autorizaciones_facturacion.delete('aut-captura-339'); }`
 // Tarea 266: repone las personas y los computadores inventados de la
 // semilla (una parada de retiro o de asignación los cambia).
@@ -138,6 +144,7 @@ const TODAS_LAS_PARADAS = [
   { nombre: 'resolver-homogenea', ruta: '/', guion: buscarEnResolver('impresora de ejemplo') },
   { nombre: 'resolver-mixta', ruta: '/', guion: buscarEnResolver('resolucion') },
   { nombre: 'boveda', ruta: '/boveda' },
+  { nombre: 'boveda-bloqueada', ruta: '/boveda', antes: VERIFICADOR_DE_PRUEBA, despues: SIN_VERIFICADOR },
   { nombre: 'red', ruta: '/red' },
   { nombre: 'catalogo', ruta: '/soluciones' },
   {

@@ -52,8 +52,10 @@ const RUTAS = [
 
 // Los grupos de Más: cada `section` con su título y los títulos de sus
 // filas, en el orden en que se pintan.
+// Los grupos de destinos; «Apariencia» (tarea 350, solo en el teléfono) es un
+// ajuste, no un grupo de destinos.
 function gruposDeMas(): { titulo: string; filas: string[] }[] {
-  return Array.from(document.body.querySelectorAll('main section')).map((seccion) => ({
+  return Array.from(document.body.querySelectorAll('main section:not([data-apariencia-telefono])')).map((seccion) => ({
     titulo: (seccion.querySelector('h2')?.textContent ?? '').trim(),
     filas: Array.from(seccion.querySelectorAll('a, button'))
       .map((fila) => (fila.querySelector('.text-\\[15\\.5px\\]')?.textContent ?? '').trim())
@@ -97,6 +99,12 @@ describe('Más en cinco grupos', () => {
       'Inventario',
       'Cuenta y aplicación',
     ])
+    // En el teléfono, «Apariencia» va primero, con los tres temas (tarea 350).
+    const apariencia = document.body.querySelector('main section[data-apariencia-telefono]')
+    expect(apariencia?.querySelectorAll('[role="radio"]')).toHaveLength(3)
+    expect(apariencia?.compareDocumentPosition(document.body.querySelector('main section:not([data-apariencia-telefono])') as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
     // Los grupos de antes ya no existen.
     const texto = textoPantalla()
     expect(texto).not.toContain('Trabajo técnico')

@@ -19,7 +19,8 @@ import { db } from '../../lib/db'
 import { obtenerFavoritos, type ElementoFavorito } from '../../lib/favoritos'
 import { VISUAL_POR_TIPO } from '../busqueda/resultados'
 import { estaActiva } from '../personas/cicloPersona'
-import { ConteoFila, FilaMas as Fila, TituloGrupo } from './FilasMas'
+import { ConteoFila, FILAS_EN_TARJETA, FilaMas as Fila, TituloGrupo } from './FilasMas'
+import { AparienciaTelefono } from './AparienciaTelefono'
 
 // Pestaña "Más" (tarea 182, mockup 3f del handoff "Auditoría de
 // Soluciones TI"). Puerta de los destinos que no aparecen en la barra
@@ -94,7 +95,10 @@ export function PantallaMas() {
   // su nombre y sus filas con la línea de arriba.
   const grupo = 'xl:grid xl:grid-cols-[180px_minmax(0,1fr)] xl:gap-x-6'
   const tituloGrupo = 'xl:border-t xl:border-noct-divider xl:pb-0 xl:pt-[13px]'
-  const filas = 'flex flex-col divide-y divide-noct-divider xl:divide-y-0 xl:border-t xl:border-noct-divider xl:py-1'
+  const filas = `flex flex-col divide-y divide-noct-divider xl:divide-y-0 xl:border-t xl:border-noct-divider xl:py-1 ${FILAS_EN_TARJETA}`
+  // «Apariencia», arriba de Más, solo en el teléfono (tarea 350, prototipo de
+  // Claude Design): la misma preferencia de Ajustes, a un toque.
+  const ancho = useEsAncho()
 
   const directorio = (
     // Una columna en el teléfono y en la tableta; desde 1024 px, dos. A
@@ -110,6 +114,7 @@ export function PantallaMas() {
     // fuera, recortados sin barra de desplazamiento. Tailwind la define con
     // `minmax(0, 1fr)`, que sí se encoge.
     <div className="grid min-w-0 grid-cols-1 items-start gap-[22px] lg:grid-cols-2 lg:gap-x-8 xl:grid-cols-1 xl:gap-0">
+      {!ancho && <AparienciaTelefono />}
       <section className={grupo}>
         <TituloGrupo className={tituloGrupo}>Consultar</TituloGrupo>
         <div className={filas}>
