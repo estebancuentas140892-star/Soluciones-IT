@@ -802,7 +802,7 @@ function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
         className="flex min-h-14 items-center gap-3 rounded-2xl px-3 py-2 text-noct-text active:bg-noct-presionado"
       >
         <IconoVentana nombre="calendario" tam={22} grosor={2} className="shrink-0 text-noct-neutral-300" />
-        <span className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col">
           <h2 id="resolver-hoy" className="text-[15px] font-bold leading-snug">
             Tu trabajo de hoy
           </h2>
@@ -822,7 +822,7 @@ function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
               </>
             )}
           </span>
-        </span>
+        </div>
         <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
       </Link>
       {visibles.length > 0 && (

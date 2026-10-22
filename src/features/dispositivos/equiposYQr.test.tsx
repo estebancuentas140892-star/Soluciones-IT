@@ -244,12 +244,12 @@ describe('la ficha del equipo', () => {
       'el icono de computador',
     )
     // En el teléfono el serial va a la vista, bajo la IP y con su «Copiar»
-    // (tarea 349); la placa y lo demás siguen en «Más datos», que guarda el
-    // registro completo, serial incluido.
+    // (tarea 349), y la placa también, en la tabla del prototipo (tarea 350);
+    // «Más datos» sigue guardando el registro completo.
     const serial = document.body.querySelector<HTMLElement>('[data-serial-equipo]')
     expect(serial?.textContent).toContain('SERIE-PRUEBA-1')
     expect(serial?.querySelector('button[aria-label="Copiar número de serie"]')).not.toBeNull()
-    expect(textoPantalla()).not.toContain('INV-PRUEBA-1')
+    expect(document.body.querySelector('section[aria-label="Datos para trabajar"]')?.textContent).toContain('INV-PRUEBA-1')
     await tocar(masDatos)
     const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja')
     await esperar(() => hoja.textContent?.includes('INV-PRUEBA-1'), 'la placa, en su hoja')

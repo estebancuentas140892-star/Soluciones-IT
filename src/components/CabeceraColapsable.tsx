@@ -43,7 +43,7 @@ export function CabeceraColapsable({ titulo, forzarContraida = false }: { titulo
       // movería el campo mientras se escribe en él. 25 px en tableta y 22
       // desde 1280, porque ahí comparte la fila con el campo.
       className={`min-w-0 truncate leading-[1.15] transition-[font-size] duration-150 motion-reduce:transition-none md:text-[25px] md:font-[650] md:tracking-[-.02em] xl:text-[22px] ${
-        contraida ? 'text-[14px] font-medium' : 'text-[25px] font-[650] tracking-[-.02em]'
+        contraida ? 'text-[14px] font-medium' : 'text-[26px] font-extrabold tracking-[-.02em]'
       }`}
     >
       {titulo}

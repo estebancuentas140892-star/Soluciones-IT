@@ -11,6 +11,9 @@ import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { FilaDeslizable } from '../../components/FilaDeslizable'
 import { Monitor, Plus } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { useEsAncho } from '../../components/useEsAncho'
+import { IconoVentana } from '../../components/ventana/IconoVentana'
+import { CHIP, CHIP_ACTIVO, CHIP_REPOSO, TITULO_GRUPO } from '../../components/ventana/estilos'
 import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { buscarEquipos, conteosDeChips } from './busquedaEquipos'
 import { anotadoEnLista, partesDelSubtitulo, personaQueLoTiene, type PersonasPorId } from './responsableEnLista'
@@ -178,6 +181,32 @@ export function DispositivosPage() {
     setTexto('')
   }
 
+  // EQUIPOS EN EL TELÉFONO, COMO EL PROTOTIPO DE CLAUDE DESIGN (tarea 350): el
+  // título con cuántos hay en el inventario, el escáner y «Crear equipo» en su
+  // fila; el buscador ARRIBA, bajo el título (antes, en el dock al pulgar de la
+  // tarea 330: el prototipo lo sube, como la 344 subió el de Resolver); los
+  // chips de categoría con su número; y cada equipo en su tarjeta. Desde 768
+  // px, como estaba.
+  const ancho = useEsAncho()
+  const enInventario = useMemo(
+    () => (dispositivos ?? []).filter((d) => !idsRed.has(d.categoriaId)).length,
+    [dispositivos, idsRed],
+  )
+  const campo = (
+    <CampoBusqueda
+      valor={texto}
+      onCambiar={setTexto}
+      alcance="Equipos"
+      textoAlternativo="Nombre, persona, IP, lugar o serial"
+      variante={ancho ? 'dock' : 'ventana'}
+    />
+  )
+  const chips = [
+    { id: '', nombre: 'Todos', count: conteos.todos },
+    ...categoriasGenerales.map((c) => ({ id: c.id, nombre: c.nombre, count: conteos.porCategoria.get(c.id) ?? 0 })),
+  ]
+  const tituloGrupo = ancho ? undefined : TITULO_GRUPO
+
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila. El título, el
     // estado del dato y la cuenta los aporta el chasis (tarea 181); en
@@ -194,15 +223,57 @@ export function DispositivosPage() {
     // `camposDeBusqueda`). El chasis lo monta en el dock de abajo, con el
     // escáner al lado, en el teléfono, y en la barra superior, con el
     // escáner dentro, desde 768 px.
-    <Chasis titulo="Equipos" conLupa={false} buscador={
-      <CampoBusqueda
-        valor={texto}
-        onCambiar={setTexto}
-        alcance="Equipos"
-        textoAlternativo="Nombre, persona, IP, lugar o serial"
-        variante="dock"
-      />
-    } barra={
+    <Chasis
+      titulo="Equipos"
+      conLupa={false}
+      buscador={ancho ? campo : undefined}
+      detalleTituloEnTelefono={`${enInventario} en inventario`}
+      soloTituloEnTelefono
+      accionTelefono={
+        <>
+          <Link
+            to="/dispositivos/nuevo"
+            aria-label="Crear equipo"
+            title="Crear equipo"
+            className="flex h-11 w-11 items-center justify-center rounded-xl text-noct-accent-300 active:bg-noct-presionado"
+          >
+            <Plus size={22} aria-hidden />
+          </Link>
+          <Link
+            to="/escaner"
+            aria-label="Escanear QR"
+            title="Escanear QR"
+            className="flex h-11 w-11 items-center justify-center rounded-xl bg-noct-neutral-900 text-noct-text active:bg-noct-presionado"
+          >
+            <IconoVentana nombre="qr" tam={22} />
+          </Link>
+        </>
+      }
+      barra={
+      !ancho ? (
+        <div className="flex flex-col gap-2.5 px-4 pb-2.5">
+          {campo}
+          {categoriasGenerales.length > 0 && (
+            <FilaDeslizable etiqueta="Filtrar por categoría" className="-mx-4 gap-2 px-4 py-1">
+              {chips.map((chip) => {
+                const activo = chip.id === categoriaId
+                return (
+                  <button
+                    key={chip.id || '__todos'}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() => elegirCategoria(activo ? '' : chip.id)}
+                    className={`${CHIP} gap-1.5 ${activo ? CHIP_ACTIVO : CHIP_REPOSO}`}
+                  >
+                    {chip.nombre}
+                    <span className={activo ? 'font-semibold' : 'font-semibold text-noct-neutral-300'}>{chip.count}</span>
+                  </button>
+                )
+              })}
+            </FilaDeslizable>
+          )}
+        </div>
+      ) : (
       <>
         <header className="flex items-center justify-between gap-2 px-4 pt-0.5">
           <p className="min-w-0 truncate text-[12.5px] text-noct-neutral-400">
@@ -254,12 +325,13 @@ export function DispositivosPage() {
           </FilaDeslizable>
         )}
       </>
+      )
     }>
-      <main className="flex-1 px-4 pb-6 pt-3">
+      <main className="flex-1 px-4 pb-6 pt-3 max-md:pt-1.5">
         {hayResultados ? (
           <>
             {generales.length > 0 && (
-              <div className="flex flex-col">
+              <div className="flex flex-col max-md:gap-2">
                 {generales.map((d) => (
                   <FilaDispositivo
                     key={d.id}
@@ -270,6 +342,7 @@ export function DispositivosPage() {
                     estado={hayFiltrosActivos ? estadoDeSalto : undefined}
                     alAbrir={alAbrir}
                     resaltar={consulta}
+                    enTarjeta={!ancho}
                   />
                 ))}
               </div>
@@ -279,8 +352,12 @@ export function DispositivosPage() {
                 escribir, con su categoría, y su regreso vuelve aquí. */}
             {deRed.length > 0 && (
               <section className={generales.length > 0 ? 'mt-5' : ''}>
-                <TituloSeccion className="mb-1 px-0.5">Equipos de red</TituloSeccion>
-                <div className="flex flex-col">
+                {tituloGrupo ? (
+                  <h2 className={`${tituloGrupo} mb-2`}>Equipos de red</h2>
+                ) : (
+                  <TituloSeccion className="mb-1 px-0.5">Equipos de red</TituloSeccion>
+                )}
+                <div className="flex flex-col max-md:gap-2">
                   {deRed.map((d) => (
                     <FilaDispositivo
                       key={d.id}
@@ -290,6 +367,7 @@ export function DispositivosPage() {
                       estado={estadoDeSalto}
                       alAbrir={alAbrir}
                       resaltar={consulta}
+                      enTarjeta={!ancho}
                     />
                   ))}
                 </div>
@@ -302,15 +380,17 @@ export function DispositivosPage() {
                 conserva lo escrito. */}
             {posibles.length > 0 && (
               <section className={hayExactos ? 'mt-5' : ''}>
-                <TituloSeccion className="mb-1 px-0.5">
-                  Posibles coincidencias
-                </TituloSeccion>
+                {tituloGrupo ? (
+                  <h2 className={`${tituloGrupo} mb-2`}>Posibles coincidencias</h2>
+                ) : (
+                  <TituloSeccion className="mb-1 px-0.5">Posibles coincidencias</TituloSeccion>
+                )}
                 {!hayExactos && (
                   <p className="mb-1.5 px-0.5 text-[13px] leading-snug text-noct-neutral-400">
                     Nada coincide tal cual con «{consulta}». Estos se parecen:
                   </p>
                 )}
-                <div className="flex flex-col">
+                <div className="flex flex-col max-md:gap-2">
                   {posibles.map((d) => (
                     <FilaDispositivo
                       key={d.id}
@@ -321,6 +401,7 @@ export function DispositivosPage() {
                       estado={estadoDeSalto}
                       alAbrir={alAbrir}
                       resaltar={consulta}
+                      enTarjeta={!ancho}
                     />
                   ))}
                 </div>

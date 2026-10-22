@@ -170,9 +170,9 @@ describe('la lista de Equipos con persona y área (tarea 317)', () => {
       expect(parte.classList.contains('line-clamp-2')).toBe(true)
       expect(parte.classList.contains('break-words')).toBe(true)
     }
-    // El párrafo no dibuja caja: sus partes fluyen en la franja de abajo.
-    expect(linea.classList.contains('contents')).toBe(true)
-    expect(linea.parentElement?.classList.contains('flex-wrap')).toBe(true)
+    // Las partes fluyen en su línea: en la tarjeta del teléfono (tarea 350)
+    // el párrafo es la fila que se parte, con todo el ancho de la tarjeta.
+    expect(linea.classList.contains('flex-wrap')).toBe(true)
     // Sin persona, la línea de siempre: un solo texto de hasta dos líneas.
     expect(subtituloDe('metro-libre')?.children).toHaveLength(0)
     expect(subtituloDe('metro-libre')?.classList.contains('line-clamp-2')).toBe(true)
@@ -195,16 +195,14 @@ describe('la lista de Equipos con persona y área (tarea 317)', () => {
     const estado = Array.from(fila.querySelectorAll('span')).find((s) => s.textContent === 'En mantenimiento')!
     const ip = Array.from(fila.querySelectorAll('span')).find((s) => s.textContent === '10.31.7.29')!
 
-    // Arriba: el nombre y el estado, en la misma franja.
-    expect(estado.parentElement).toBe(nombre.parentElement)
-    // Abajo: la persona, el área y la IP, en una franja de todo el ancho.
-    const abajo = linea.parentElement!
-    expect(abajo.classList.contains('col-span-2')).toBe(true)
-    expect(abajo.contains(ip)).toBe(true)
-    expect(abajo.contains(estado)).toBe(false)
-    // La IP va después del texto, empujada a la derecha.
-    expect(abajo.lastElementChild).toBe(ip)
-    expect(ip.classList.contains('ml-auto')).toBe(true)
+    // EN LA TARJETA DEL TELÉFONO (tarea 350) cada cosa tiene su línea, con
+    // todo el ancho: el nombre, la IP bajo él, la persona y su área, y la
+    // pastilla del estado al final. Ninguna le quita ancho a otra.
+    expect(nombre.nextElementSibling).toBe(ip)
+    expect(ip.nextElementSibling).toBe(linea)
+    expect(linea.nextElementSibling).toBe(estado)
+    expect(linea.contains(ip)).toBe(false)
+    expect(linea.contains(estado)).toBe(false)
     expect(linea.textContent).toBe('María Fernanda Restrepo Echeverri · Gestión Administrativa y Financiera')
   })
 

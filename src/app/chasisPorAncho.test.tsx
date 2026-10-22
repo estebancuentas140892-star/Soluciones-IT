@@ -103,13 +103,15 @@ describe('el buscador de una raíz se monta una sola vez', () => {
       rutas: [{ ruta: '/dispositivos', elemento: <DispositivosPage /> }],
       entrada: '/dispositivos',
       alcance: 'Equipos',
-      enTelefono: 'dock' as const,
+      // Desde la tarea 350 (prototipo de Claude Design), arriba, bajo el
+      // título, en la cabecera fija; el escáner, en la fila del título.
+      enTelefono: 'cabecera' as const,
     },
   ]
 
   for (const raiz of RAICES) {
     for (const [etiqueta, vista] of ANCHOS) {
-      const dondeEnTelefono = raiz.enTelefono === 'dock' ? 'en el dock' : 'arriba, bajo el título'
+      const dondeEnTelefono = raiz.enTelefono === 'cabecera' ? 'en la cabecera, bajo el título' : 'arriba, bajo el título'
       it(`${raiz.nombre} a ${etiqueta} px: un campo, ${vista.width < 768 ? dondeEnTelefono : 'en la barra superior'}`, async () => {
         verA(vista)
         await montar(raiz.rutas, raiz.entrada)
@@ -125,8 +127,10 @@ describe('el buscador de una raíz se monta una sola vez', () => {
           expect(document.body.querySelector('[data-dock-busqueda]')).toBeNull()
           expect(campo.closest('label')?.querySelector('a[aria-label="Escanear QR"]')).not.toBeNull()
         } else if (vista.width < 768) {
-          expect(enDock(campo)).not.toBeNull()
-          expect(enCabecera(campo)).toBeNull()
+          expect(enDock(campo)).toBeNull()
+          expect(document.body.querySelector('[data-dock-busqueda]')).toBeNull()
+          expect(enCabecera(campo)).not.toBeNull()
+          expect(enCabecera(controles('Escanear QR')[0])).not.toBeNull()
         } else {
           expect(document.body.querySelector('[data-dock-busqueda]')).toBeNull()
           expect(enCabecera(campo)).not.toBeNull()

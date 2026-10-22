@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { copiarAlPortapapeles } from '../lib/portapapeles'
 import { avisar } from './avisosFlotantes'
+import { IconoVentana } from './ventana/IconoVentana'
+import { BOTON_COPIAR } from './ventana/estilos'
 import { Check, Copy } from './iconos'
 
 // Fila de etiqueta y valor de una ficha, y el piso de legibilidad del
@@ -108,9 +110,16 @@ export function BotonCopiar({
   grande = false,
   conTexto = false,
   aviso,
+  ventana = false,
 }: {
   etiqueta: string
   texto: string
+  /**
+   * El copiar de la tabla de datos del teléfono (tarea 350, ficha del
+   * prototipo de Claude Design): 44 x 44 con el tinte del acento y el glifo de
+   * trazo grueso. Copiado, la marca en verde, como siempre.
+   */
+  ventana?: boolean
   destacado?: boolean
   /**
    * El copiar de la IP del carnet (tarea 342, handoff móvil "1b Pulgar"): en
@@ -133,6 +142,19 @@ export function BotonCopiar({
       setTimeout(() => setCopiado(false), 1400)
       if (aviso) avisar(aviso, 'copiado')
     }
+  }
+
+  if (ventana) {
+    return (
+      <button
+        type="button"
+        onClick={() => void copiar()}
+        aria-label={copiado ? 'Copiado' : `Copiar ${etiqueta.toLowerCase()}`}
+        className={BOTON_COPIAR}
+      >
+        {copiado ? <Check size={20} className="text-noct-exito" aria-hidden /> : <IconoVentana nombre="copiar" tam={20} />}
+      </button>
+    )
   }
 
   // En el teléfono, 44 px de objetivo y el verbo a 14 (tarea 341).

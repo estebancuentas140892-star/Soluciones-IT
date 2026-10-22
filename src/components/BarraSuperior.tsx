@@ -54,6 +54,8 @@ export function BarraSuperior({
   buscador,
   accionTelefono,
   marca = false,
+  detalleTitulo,
+  soloTitulo = false,
   children,
 }: {
   titulo: string
@@ -65,6 +67,18 @@ export function BarraSuperior({
    * cambia nada.
    */
   marca?: boolean
+  /**
+   * Junto al título, solo en el teléfono (tarea 350, Equipos del prototipo):
+   * «210 en inventario», a 14 en tinta 2.
+   */
+  detalleTitulo?: string
+  /**
+   * Sin la sincronización ni la cuenta en la fila, solo en el teléfono (tarea
+   * 350): las raíces del prototipo llevan su título y sus acciones; el estado
+   * se dice en Inicio y en la franja del sistema, y la cuenta está en Inicio
+   * y en Más.
+   */
+  soloTitulo?: boolean
   // El título a 14 px aunque no haya desplazamiento (Resolver mientras se
   // escribe, propuesta final de Claude Design).
   tituloContraido?: boolean
@@ -134,6 +148,13 @@ export function BarraSuperior({
               </span>
               <h1 className="sr-only">{titulo}</h1>
             </div>
+          ) : detalleTitulo && !ancho ? (
+            <div className="flex min-h-12 min-w-0 items-baseline gap-2.5">
+              <CabeceraColapsable titulo={titulo} forzarContraida={tituloContraido} />
+              <span data-detalle-titulo className="shrink-0 text-[14px] font-semibold text-noct-neutral-300">
+                {detalleTitulo}
+              </span>
+            </div>
           ) : (
             <CabeceraColapsable titulo={titulo} forzarContraida={tituloContraido} />
           )}
@@ -164,7 +185,7 @@ export function BarraSuperior({
         )}
         <div className="flex shrink-0 items-center gap-0.5 md:ml-auto">
           {!ancho && accionTelefono}
-          <PastillaSync rotulada={conMarca} />
+          {(ancho || !soloTitulo) && <PastillaSync rotulada={conMarca} />}
           {conLupa && !ancho && (
             <button
               type="button"
@@ -184,7 +205,7 @@ export function BarraSuperior({
             to="/cuenta"
             aria-label="Ajustes"
             title={usuario?.nombre || 'Ajustes'}
-            className="flex h-11 w-11 items-center justify-center md:hidden"
+            className={`h-11 w-11 items-center justify-center md:hidden ${soloTitulo ? 'hidden' : 'flex'}`}
           >
             <Avatar
               nombre={usuario?.nombre}

@@ -66,7 +66,7 @@ export function CampoBusqueda({
   // `paleta` (tarea 339, T6): el campo de la paleta del buscador global
   // desde 1280. Sin caja: es la cabecera de la paleta, que ya es la
   // superficie; la lupa en acento y el texto a 18 px.
-  variante?: 'normal' | 'destacada' | 'dock' | 'paleta' | 'resolver'
+  variante?: 'normal' | 'destacada' | 'dock' | 'paleta' | 'resolver' | 'ventana'
   /** El campo recibe el foco (Resolver abre su búsqueda en el teléfono). */
   onEnfocar?: () => void
   /**
@@ -84,7 +84,10 @@ export function CampoBusqueda({
   // `dock` (tarea 330): el de abajo, al pulgar. Mismo alto que `destacada`
   // (52 px), más redondo, con borde y sombra: flota sobre la lista.
   const dock = variante === 'dock' && !enBarra
-  const resolver = variante === 'resolver' && !enBarra
+  // 'ventana' (tarea 350): el campo de una raíz del teléfono arriba, bajo su
+  // título (Equipos), con el borde, el icono y el «borrar» del prototipo.
+  const ventana = variante === 'ventana' && !enBarra
+  const resolver = (variante === 'resolver' || ventana) && !enBarra
   const destacada = (variante === 'destacada' || variante === 'dock' || resolver) && !enBarra
   const paleta = variante === 'paleta' && !enBarra
 
@@ -95,6 +98,8 @@ export function CampoBusqueda({
     ? 'h-11 gap-2.5 rounded-xl pl-3.5 pr-1.5 shadow-[var(--shadow-noct-elevacion)] xl:h-12 xl:rounded-[13px] xl:pl-4'
     : paleta
       ? 'h-16 min-w-0 flex-1 gap-3'
+    : ventana
+      ? 'h-[52px] gap-2 rounded-2xl border-2 pl-3.5 pr-2 focus-within:border-noct-accent'
     : resolver
       ? abierta
         ? 'h-[52px] gap-2 rounded-2xl border-2 pl-3.5 pr-2 shadow-[0_0_0_4px_var(--color-noct-accent-900)]'
@@ -106,6 +111,10 @@ export function CampoBusqueda({
         : 'h-[46px] gap-2.5 rounded-lg px-3.5'
   const borde = paleta
     ? ''
+    : ventana
+    ? buscando
+      ? 'border-noct-accent'
+      : 'border-noct-divider-fuerte'
     : resolver
     ? abierta
       ? 'border-noct-accent'
@@ -138,7 +147,7 @@ export function CampoBusqueda({
       } ${forma} ${borde} ${className}`}
     >
       {resolver ? (
-        <IconoVentana nombre="buscar" tam={abierta ? 20 : 22} grosor={2.4} className="shrink-0 text-noct-accent" />
+        <IconoVentana nombre="buscar" tam={abierta || ventana ? 20 : 22} grosor={2.4} className="shrink-0 text-noct-accent" />
       ) : (
         <MagnifyingGlass
           size={destacada || paleta ? 20 : 18}
@@ -162,6 +171,8 @@ export function CampoBusqueda({
             ? 'text-[15px] xl:text-[15.5px]'
             : paleta
               ? 'text-[18px] font-medium'
+              : ventana
+                ? 'text-[16px] font-medium'
               : resolver
                 ? 'text-[17px] font-medium'
               : destacada

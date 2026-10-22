@@ -197,6 +197,10 @@ interface PropsSeccion extends PropsComunes {
    * por debajo de 768 px (tarea 350, la cabecera de Inicio del prototipo).
    */
   marcaEnTelefono?: boolean
+  /** Junto al título, solo en el teléfono («210 en inventario», tarea 350). */
+  detalleTituloEnTelefono?: string
+  /** La fila del título sin sincronización ni cuenta, solo en el teléfono (tarea 350). */
+  soloTituloEnTelefono?: boolean
 }
 
 interface PropsDocumento extends PropsComunes {
@@ -671,6 +675,8 @@ export function Chasis(props: Props) {
         buscador={ancho ? props.buscador : undefined}
         accionTelefono={props.accionTelefono}
         marca={props.marcaEnTelefono}
+        detalleTitulo={props.detalleTituloEnTelefono}
+        soloTitulo={props.soloTituloEnTelefono}
       >
         {props.barra}
       </BarraSuperior>

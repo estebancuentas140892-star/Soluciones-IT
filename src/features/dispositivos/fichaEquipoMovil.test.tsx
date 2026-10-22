@@ -34,7 +34,9 @@ function trazoDe(Icono: (props: IconoProps) => React.JSX.Element): string | unde
 // mantenimiento a la vista, "Guías para este equipo" en filas cortas con
 // "Ver N", "Información del equipo" con sus hojas, el menú "···" con
 // Favorito y Compartir y lo destructivo aparte, y "Clave" con su palabra en
-// la barra fija. Lo de antes (la identidad, los datos para
+// la barra fija. Desde la tarea 350 (ficha del prototipo de Claude Design), la
+// tabla de datos con su copiar de 44, las guías en tarjetas y la Bóveda en su
+// tarjeta bajo los datos, en vez de "Clave" en la barra. Lo de antes (la identidad, los datos para
 // trabajar, cada hoja por dentro) lo siguen vigilando equiposYQr,
 // contextoEquipoPantallas, responsableDelEquipo, facturacionFlujo y
 // mantenimientoFlujo.
@@ -124,7 +126,9 @@ describe('los avisos del equipo', () => {
     // Van debajo del carnet y antes de los datos para trabajar.
     const pantalla = textoPantalla()
     expect(pantalla.indexOf('PC de prueba')).toBeLessThan(pantalla.indexOf('Autorización de facturación en conflicto'))
-    expect(pantalla.indexOf('Conflicto IP histórico')).toBeLessThan(pantalla.indexOf('Dirección IP'))
+    const datos = document.body.querySelector('section[aria-label="Datos para trabajar"]')
+    expect(datos).not.toBeNull()
+    expect(lista.compareDocumentPosition(datos as Node) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
     // El conflicto anotado abre los datos del equipo, donde está su valor.
     expect(textoPantalla()).not.toContain('10.9.9.30 o 10.9.9.31 según la fuente')
@@ -160,7 +164,9 @@ describe('resolver con este equipo', () => {
     await esperar(() => seccion.querySelectorAll('a').length === 3, 'tres guías')
     const enlaces = Array.from(seccion.querySelectorAll('a'))
     expect(seccion.querySelector('li.hidden')).toBeNull()
-    expect(enlaces.slice(0, 2).every((a) => (a.textContent ?? '').includes('Problema frecuente · 1 paso'))).toBe(true)
+    // En el teléfono un paso es una ventana (tarea 350), y cada guía va en su tarjeta.
+    expect(enlaces.slice(0, 2).every((a) => (a.textContent ?? '').includes('Problema frecuente · 1 ventana'))).toBe(true)
+    expect(enlaces.every((a) => a.className.includes('border-[1.5px]'))).toBe(true)
     // Sin el síntoma ni el icono: el título y una línea.
     expect(seccion.textContent).not.toContain('Síntoma de')
     expect(enlaces.every((a) => a.getAttribute('href')?.endsWith('?equipo=pc'))).toBe(true)
@@ -263,16 +269,20 @@ describe('la cabecera y el menú', () => {
 })
 
 describe('el carnet y los datos para trabajar en el teléfono (tareas 342 y 344)', () => {
-  it('la pastilla lleva su punto, la IP se copia con "Copiar" y el índice no necesita leyenda', async () => {
+  it('la pastilla lleva su punto, la IP se copia desde su fila y el índice no necesita leyenda', async () => {
     await sembrarEquipo({ id: 'pc', nombre: 'PC de prueba', ip: '10.9.9.30', estado: 'Operativo' })
     await montar(RUTAS, '/dispositivos/pc')
     await esperar(() => textoPantalla().includes('10.9.9.30'), 'la ficha')
     const punto = document.body.querySelector('[data-punto-estado]')
     expect(punto).not.toBeNull()
     expect(punto?.parentElement?.textContent).toContain('Operativo')
-    // "Copiar" con su palabra (tarea 344), dentro de la tarjeta de los datos.
+    // El copiar de la tabla del prototipo (tarea 350; con su palabra desde la
+    // 344): 44 x 44 en el tinte del acento, con su nombre accesible, dentro de
+    // la tarjeta de los datos, en la fila de la IP.
     const copiar = control('Copiar dirección ip') as HTMLElement
-    expect(copiar.textContent).toBe('Copiar')
+    expect(copiar.className).toContain('h-11 w-11')
+    expect(copiar.className).toContain('bg-noct-accent-900')
+    expect(copiar.parentElement?.textContent).toContain('IP')
     expect(copiar.closest('section[aria-label="Datos para trabajar"]')?.className).toContain('max-md:rounded-2xl')
     // "Información del equipo", sin la leyenda de los galones.
     expect(textoPantalla()).toContain('Información del equipo')
@@ -301,7 +311,7 @@ describe('el carnet y los datos para trabajar en el teléfono (tareas 342 y 344)
 })
 
 describe('la barra fija', () => {
-  it('"Resolver un problema" va relleno y "Clave", con su palabra, abre la clave del equipo en su hoja', async () => {
+  it('"Resolver un problema" va relleno y la tarjeta de la Bóveda abre la clave del equipo en su hoja', async () => {
     await sembrarPerfil(true)
     await sembrarEquipo({ id: 'pc', nombre: 'PC de prueba' })
     await sembrarArticulo('prob-1', 'Problema de prueba uno', 'problema_frecuente')
@@ -324,10 +334,14 @@ describe('la barra fija', () => {
     expect(resolver.querySelector('svg path')?.getAttribute('d')).toBe(trazoDe(Wrench))
     // Con la Bóveda bloqueada, la fila dice que las hay pero cerradas.
     await esperar(() => (control(/^Credenciales/)?.textContent ?? '').includes('Bloqueadas'), 'credenciales bloqueadas')
-    // "Clave" con su palabra, delante de "Resolver un problema" (tarea 344).
+    // LA TARJETA DE LA BÓVEDA (tarea 350, ficha del prototipo; «Clave» en la
+    // barra desde la 344): cuántas hay y, bloqueada, «Desbloquear», bajo los
+    // datos y antes de «Resolver un problema». La barra ya no la repite.
     const clave = await esperarControl('Clave del equipo')
-    expect(clave.textContent).toBe('Clave')
+    expect(clave.textContent).toBe('Desbloquear')
+    expect(clave.closest('[data-boveda-del-equipo]')?.textContent).toContain('1 credencial del equipo')
     expect(clave.compareDocumentPosition(resolver) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(resolver.parentElement?.querySelectorAll('button, a')).toHaveLength(1)
     await tocar(clave)
     const hoja = await esperar(() => document.body.querySelector<HTMLElement>('[role="dialog"]'), 'la hoja')
     await esperar(() => (hoja.textContent ?? '').includes('Acceso de prueba al PC'), 'la credencial')

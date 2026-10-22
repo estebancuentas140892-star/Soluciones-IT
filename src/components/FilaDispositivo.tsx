@@ -7,6 +7,11 @@ import { IconoNodo } from '../features/red/IconoNodo'
 import { estadoEnLista, tipoDeNodoVisual, type TonoEstado } from '../features/red/topologiaVisual'
 import { partirTitulo } from '../features/busqueda/resultados'
 import { normalizarTexto } from '../features/soluciones/iconosSoluciones'
+import { avisar } from './avisosFlotantes'
+import { IconoCategoria } from './IconoCategoria'
+import { IconoVentana } from './ventana/IconoVentana'
+import { BOTON_COPIAR, TARJETA } from './ventana/estilos'
+import { copiarAlPortapapeles } from '../lib/portapapeles'
 
 // Fila de un dispositivo en un listado, compartida por Dispositivos y
 // Red (Fase 1 de PROPUESTA_REVISION_ARQUITECTURA.md): avatar (foto del
@@ -39,6 +44,14 @@ const PUNTO_POR_TONO: Record<TonoEstado, string> = {
   error: 'bg-noct-error',
   neutro: 'bg-noct-neutral-400',
 }
+// La pastilla del estado en la tarjeta del teléfono (tarea 350, «En revisión»
+// del prototipo): el tinte de su tono, su punto y su palabra.
+const PASTILLA_POR_TONO: Record<TonoEstado, string> = {
+  exito: 'bg-noct-exito-tinte text-noct-exito',
+  precaucion: 'bg-noct-precaucion-tinte text-noct-precaucion',
+  error: 'bg-noct-error-tinte text-noct-error',
+  neutro: 'bg-noct-neutral-900 text-noct-neutral-300',
+}
 
 export function FilaDispositivo({
   dispositivo,
@@ -48,6 +61,7 @@ export function FilaDispositivo({
   estado,
   alAbrir,
   resaltar = '',
+  enTarjeta = false,
 }: {
   dispositivo: Dispositivo
   // Nombre de la categoria del equipo: decide el icono del avatar.
@@ -79,9 +93,25 @@ export function FilaDispositivo({
   // Lo que se está buscando, tal cual se escribió: si está en el nombre,
   // se resalta ahí. El nombre real no cambia.
   resaltar?: string
+  // LA TARJETA DEL TELÉFONO (tarea 350, Equipos del prototipo de Claude
+  // Design): la pantalla la pide por debajo de 768 px. Ver `TarjetaEquipo`.
+  enTarjeta?: boolean
 }) {
   const estadoVisible = estadoEnLista(dispositivo.estado)
   const atenuada = estadoVisible?.excepcion ?? false
+  if (enTarjeta) {
+    return (
+      <TarjetaEquipo
+        dispositivo={dispositivo}
+        categoriaNombre={categoriaNombre}
+        subtitulo={subtitulo}
+        conFoto={conFoto}
+        estado={estado}
+        alAbrir={alAbrir}
+        resaltar={resaltar}
+      />
+    )
+  }
   // Al 66 % y no al 60: en el tema claro el nombre atenuado quedaba en
   // 4.4:1 (tarea 333). La línea de contexto ya va en el gris más tenue que
   // se lee (texto 4): atenuada además, quedaba en 2.5:1 (claro) y 3.5:1
@@ -188,5 +218,113 @@ export function FilaDispositivo({
         )}
       </div>
     </Link>
+  )
+}
+
+// UN EQUIPO EN EL TELÉFONO (tarea 350, la lista de Equipos del prototipo de
+// Claude Design): su propia tarjeta, con la foto o el «Icono de categoría» de
+// su clase, el nombre a 16, la IP en mono y lo que lo sitúa, y «Copiar» a la
+// derecha: la IP se copia sin abrir la ficha.
+//
+// Una diferencia con el prototipo, a propósito: la IP va bajo el nombre y no
+// en una columna a la derecha. Con datos reales la línea de contexto dice
+// quién tiene el equipo y de qué área (tarea 317), y una columna fija la
+// partía a 360 px ("Esteban / Cardona…"). La excepción del estado va en su
+// pastilla, con su punto y su palabra.
+function TarjetaEquipo({
+  dispositivo,
+  categoriaNombre,
+  subtitulo,
+  conFoto,
+  estado,
+  alAbrir,
+  resaltar,
+}: {
+  dispositivo: Dispositivo
+  categoriaNombre: string
+  subtitulo: string | readonly string[]
+  conFoto: boolean
+  estado?: unknown
+  alAbrir?: () => void
+  resaltar: string
+}) {
+  const estadoVisible = estadoEnLista(dispositivo.estado)
+  const { pre, match, post } = partirTitulo(dispositivo.nombre, normalizarTexto(resaltar.trim()))
+  const enPartes = typeof subtitulo !== 'string'
+  const conSubtitulo = enPartes ? subtitulo.length > 0 : subtitulo !== ''
+  const ip = dispositivo.ip?.trim() ?? ''
+  return (
+    <div data-tarjeta-equipo className={`${TARJETA} flex min-w-0 items-center gap-2 rounded-[18px] py-2 pl-2.5 pr-2`}>
+      <Link
+        to={`/dispositivos/${dispositivo.id}`}
+        state={estado}
+        onClick={alAbrir}
+        className="flex min-h-[52px] min-w-0 flex-1 items-center gap-2.5 rounded-xl text-noct-text active:bg-noct-presionado"
+      >
+        {/* Un equipo en excepción (en mantenimiento, de baja) no está para
+            usarse: su icono se atenúa, como la fila de siempre; el nombre y la
+            pastilla del estado se leen enteros. */}
+        {conFoto && dispositivo.foto ? (
+          <span
+            className={`h-[42px] w-[42px] shrink-0 overflow-hidden rounded-[13px] bg-noct-neutral-900 ${
+              estadoVisible?.excepcion ? 'opacity-[.66]' : ''
+            }`}
+          >
+            <MiniaturaPortada referencia={dispositivo.foto.referencia} alt={dispositivo.nombre} className="h-full w-full object-cover" />
+          </span>
+        ) : (
+          <IconoCategoria nombre={categoriaNombre} tam={42} className={estadoVisible?.excepcion ? 'opacity-[.66]' : ''} />
+        )}
+        <div className="flex min-w-0 flex-1 flex-col gap-px">
+          {/* El nombre parte línea, hasta dos, como en la fila de siempre: con
+              todo el ancho de la tarjeta casi nunca llega a cortarse. */}
+          <p data-nombre-principal className="line-clamp-2 min-w-0 break-words text-[16px] font-bold leading-[21px] text-pretty">
+            {pre}
+            {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
+            {post}
+          </p>
+          {ip && <span className="font-mono text-[14.5px] font-semibold leading-snug text-noct-text">{ip}</span>}
+          {/* La línea de contexto, con las reglas de la tarea 317: un texto de
+              hasta dos líneas o, en partes (quién lo tiene, su área, dónde
+              está), cada parte entera en su línea si cabe y de hasta dos. */}
+          {conSubtitulo &&
+            (typeof subtitulo === 'string' ? (
+              <p className="line-clamp-2 break-words text-[14px] font-semibold leading-snug text-noct-neutral-300">{subtitulo}</p>
+            ) : (
+              <p className="flex flex-wrap gap-x-[0.3em] text-[14px] font-semibold leading-snug text-noct-neutral-300">
+                {subtitulo.map((parte, i) => (
+                  <Fragment key={i}>
+                    {/* El espacio no se dibuja (lo pone el hueco), pero deja el
+                        texto leíble entero: "A · B". */}
+                    {i > 0 && ' '}
+                    <span className="line-clamp-2 min-w-0 break-words">{i < subtitulo.length - 1 ? `${parte} ·` : parte}</span>
+                  </Fragment>
+                ))}
+              </p>
+            ))}
+          {estadoVisible && (
+            <span
+              data-estado-equipo={estadoVisible.tono}
+              className={`mt-[3px] inline-flex h-[22px] items-center gap-[5px] self-start rounded-full px-2 text-[12.5px] font-extrabold ${PASTILLA_POR_TONO[estadoVisible.tono]}`}
+            >
+              <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
+              {estadoVisible.etiqueta}
+            </span>
+          )}
+        </div>
+      </Link>
+      {ip && (
+        <button
+          type="button"
+          aria-label={`Copiar IP de ${dispositivo.nombre}`}
+          onClick={() => {
+            void copiarAlPortapapeles(ip).then((ok) => avisar(ok ? `IP copiada: ${ip}` : 'No se pudo copiar la IP', 'copiado'))
+          }}
+          className={BOTON_COPIAR}
+        >
+          <IconoVentana nombre="copiar" tam={20} />
+        </button>
+      )}
+    </div>
   )
 }

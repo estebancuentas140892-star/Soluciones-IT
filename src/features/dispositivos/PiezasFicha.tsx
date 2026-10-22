@@ -4,6 +4,8 @@ import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 import { CaretRight, CaretUp, Key, Wrench, type IconoProps } from '../../components/iconos'
 import { BAJA_CON_LAS_PESTANAS, BTN_PRIMARIO_RELLENO, PEGADA_SOBRE_PESTANAS } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
+import { IconoVentana } from '../../components/ventana/IconoVentana'
+import { RELLENO_ACCION, TARJETA_TOCABLE, TITULO_SECCION } from '../../components/ventana/estilos'
 
 // PIEZAS DE LA FICHA DE EQUIPO EN EL TELÉFONO (rediseño móvil "1b Pulgar",
 // tarea 329, AD-079). Son presentación: no leen ni escriben datos. Los
@@ -186,7 +188,7 @@ export function ResolverConEsteEquipo({
       <div className="flex items-baseline justify-between gap-2 pb-0.5">
         <h2
           id="resolver-con-este-equipo"
-          className={compacta ? 'text-[18px] font-[650] tracking-[-.01em]' : 'text-[17px] font-semibold tracking-[-.01em]'}
+          className={compacta ? TITULO_SECCION : 'text-[17px] font-semibold tracking-[-.01em]'}
         >
           {titulo}
         </h2>
@@ -206,25 +208,25 @@ export function ResolverConEsteEquipo({
         )}
       </div>
       {compacta ? (
-        <ul className="flex flex-col rounded-2xl border border-noct-divider bg-noct-surface px-3.5 [&>li:last-child>a]:border-b-0">
+        // CADA GUÍA EN SU TARJETA (tarea 350, «Problemas frecuentes de este
+        // equipo» del prototipo de Claude Design), con lo que es y cuántas
+        // ventanas tiene.
+        <ul className="flex flex-col gap-2 pt-1.5">
           {items.slice(0, vistosTelefono).map((item) => (
             <li key={item.id}>
-              <Link
-                to={item.ruta}
-                className="flex min-h-[60px] items-center gap-3 border-b border-noct-divider py-2.5 text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
-              >
+              <Link to={item.ruta} className={`${TARJETA_TOCABLE} flex min-h-[52px] items-center gap-2.5 rounded-[14px] px-3 py-2`}>
                 <span className="min-w-0 flex-1">
                   {/* El título es la identidad de la guía: no se recorta (regla 23). */}
-                  <span data-nombre-principal className="block min-w-0 text-[16px] font-semibold leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+                  <span data-nombre-principal className="block min-w-0 text-[15px] font-bold leading-5 text-pretty [overflow-wrap:anywhere]">
                     {item.titulo}
                   </span>
-                  <span className="mt-0.5 block truncate text-[14px] leading-snug text-noct-neutral-400">
-                    {[item.tipo, item.pasos ? `${item.pasos} ${item.pasos === 1 ? 'paso' : 'pasos'}` : null]
+                  <span className="mt-0.5 block text-[14px] leading-snug text-noct-neutral-300 [overflow-wrap:anywhere]">
+                    {[item.tipo, item.pasos ? `${item.pasos} ${item.pasos === 1 ? 'ventana' : 'ventanas'}` : null]
                       .filter(Boolean)
                       .join(' · ')}
                   </span>
                 </span>
-                <CaretRight size={16} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
               </Link>
             </li>
           ))}
@@ -360,10 +362,12 @@ export function BarraAccionEquipo({
       Resolver un problema
     </>
   )
-  const clase = `${BTN_PRIMARIO_RELLENO} min-w-0 flex-1 max-[359px]:px-3 max-[359px]:text-[15px]`
+  // EL RELLENO DE «VENTANA» (tarea 350): 54 de alto con su relieve, sobre la
+  // superficie del pie con su sombra, como el pie de la ventana de una guía.
+  const clase = `${RELLENO_ACCION} inline-flex min-h-[54px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-4 text-[16px] leading-tight max-[359px]:px-3 max-[359px]:text-[15px]`
   return (
     <div
-      className={`sticky ${PEGADA_SOBRE_PESTANAS} ${BAJA_CON_LAS_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden lg:px-10`}
+      className={`sticky ${PEGADA_SOBRE_PESTANAS} ${BAJA_CON_LAS_PESTANAS} z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-surface px-3 pb-3 pt-2.5 shadow-[var(--shadow-noct-pie)] md:hidden lg:px-10`}
     >
       {/* El aviso de versión nueva va aquí, encima de los botones (tarea
           274): esta barra se pega a la misma altura que la franja del

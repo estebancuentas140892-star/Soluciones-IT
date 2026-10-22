@@ -68,6 +68,9 @@ import { useImpactoEquipo } from '../red/useImpactoEquipo'
 import { ConexionesFicha } from '../red/ConexionesFicha'
 import { IconoNodo } from '../red/IconoNodo'
 import { tipoDeNodoVisual } from '../red/topologiaVisual'
+import { IconoCategoria } from '../../components/IconoCategoria'
+import { IconoVentana } from '../../components/ventana/IconoVentana'
+import { TITULO_SECCION } from '../../components/ventana/estilos'
 import { esDeRed } from '../../lib/categorias'
 import { procedimientosDeCategoria, procedimientosDeDispositivo } from './procedimientosDeDispositivo'
 import { problemasDeCategoria, problemasDeDispositivo } from './problemasDeDispositivo'
@@ -408,6 +411,8 @@ export function DispositivoPage() {
   const reemplazaNombre = reemplazaVinculado?.nombre ?? null
 
   const detalles = Object.entries(dispositivo.detalles).filter(([, valor]) => valor)
+  // La MAC, si el equipo la escribió entre sus detalles (tarea 350).
+  const mac = detalles.find(([clave]) => /^(direcci[oó]n\s+)?mac$/i.test(clave.trim()))?.[1].trim() ?? ''
   const metaLinea = [categoria?.nombre, `actualizado ${fechaCorta(dispositivo.updatedAt)}`]
     .filter(Boolean)
     .join(' · ')
@@ -608,7 +613,7 @@ export function DispositivoPage() {
       <h2
         id="mas-del-equipo"
         className={
-          ancho ? 'pb-1 text-[17px] font-semibold tracking-[-.01em] xl:pb-1.5' : 'pb-2 text-[18px] font-[650] tracking-[-.01em]'
+          ancho ? 'pb-1 text-[17px] font-semibold tracking-[-.01em] xl:pb-1.5' : `pb-2.5 ${TITULO_SECCION}`
         }
       >
         {ancho ? 'Más del equipo' : 'Información del equipo'}
@@ -617,7 +622,7 @@ export function DispositivoPage() {
         className={
           ancho
             ? 'flex flex-col md:grid md:grid-cols-2 md:gap-x-7 xl:flex'
-            : 'flex flex-col rounded-2xl border border-noct-divider bg-noct-surface px-3.5 [&>li:last-child>button]:border-b-0'
+            : 'flex flex-col rounded-2xl border-[1.5px] border-noct-divider bg-noct-surface px-3.5 [&>li:last-child>button]:border-b-0'
         }
       >
         <FilaIndice Icono={Info} titulo="Más datos" valor={`${totalMasDatos}`} abierta={hoja === 'datos'} onAbrir={() => setHoja('datos')} />
@@ -865,17 +870,19 @@ export function DispositivoPage() {
                     los resultados, en un recuadro junto a su categoría y su
                     modelo. Va en esta línea y no junto al nombre, que conserva
                     todo el ancho. */}
+                {/* EL «ICONO DE CATEGORÍA» A 48 (tarea 350, ficha del prototipo
+                    de Claude Design): la clase del equipo con su color, junto a
+                    qué es. */}
                 {(lineaTipo || categoria) && (
-                  <span className="flex min-w-0 items-center gap-2">
-                    <span
-                      data-icono-tipo-equipo={tipoDeNodoVisual(categoria?.nombre ?? '')}
-                      aria-hidden
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-noct-text/[.06] text-noct-neutral-300"
-                    >
-                      <IconoNodo tipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="h-[17px] w-[17px]" />
+                  <span className="flex min-w-0 items-center gap-3">
+                    <span data-icono-tipo-equipo={tipoDeNodoVisual(categoria?.nombre ?? '')} className="contents">
+                      <IconoCategoria nombre={categoria?.nombre} tam={48} />
                     </span>
                     {lineaTipo && (
-                      <span data-linea-identidad className="min-w-0 text-[14.5px] leading-snug text-noct-neutral-400 [overflow-wrap:anywhere]">
+                      <span
+                        data-linea-identidad
+                        className="min-w-0 text-[14.5px] font-bold leading-snug text-noct-neutral-300 [overflow-wrap:anywhere]"
+                      >
                         {lineaTipo}
                       </span>
                     )}
@@ -884,7 +891,7 @@ export function DispositivoPage() {
                 <span
                   ref={setNodoNombre}
                   data-nombre-equipo
-                  className="block text-[28px] font-[650] leading-[1.1] tracking-[-.02em] text-pretty [overflow-wrap:anywhere]"
+                  className="block pt-1 text-[28px] font-extrabold leading-[1.1] tracking-[-.02em] text-pretty [overflow-wrap:anywhere]"
                 >
                   {dispositivo.nombre}
                 </span>
@@ -969,14 +976,22 @@ export function DispositivoPage() {
           personaVivaACargo ||
           anotadoPorValidar ||
           subida ||
-          (!ancho && (sinResponsable || dispositivo.serial))) && (
+          (!ancho && (sinResponsable || dispositivo.serial || mac || dispositivo.placaInventario))) && (
         <section
           aria-label="Datos para trabajar"
           // En el teléfono, una tarjeta (tarea 344): los datos que se usan con
           // el equipo delante, juntos y separados de lo demás.
-          className="flex flex-col md:grid md:grid-cols-2 md:gap-x-8 max-md:rounded-2xl max-md:border max-md:border-noct-divider max-md:bg-noct-surface max-md:px-3.5 max-md:[&>*:last-child]:border-b-0"
+          // LA TABLA DEL PROTOTIPO (tarea 350): el rótulo en su columna de 78 y
+          // el dato a su lado, copiable donde se copia.
+          className="flex flex-col md:grid md:grid-cols-2 md:gap-x-8 max-md:rounded-2xl max-md:border-[1.5px] max-md:border-noct-divider max-md:bg-noct-surface max-md:px-3.5 max-md:[&>*:last-child]:border-b-0"
         >
-          {dispositivo.ip && (
+          {dispositivo.ip && !ancho && (
+            <FilaDatoTelefono etiqueta="IP" mono>
+              {dispositivo.ip}
+              <BotonCopiar etiqueta="Dirección IP" texto={dispositivo.ip} ventana aviso={`IP copiada: ${dispositivo.ip}`} />
+            </FilaDatoTelefono>
+          )}
+          {dispositivo.ip && ancho && (
             <div className="flex min-h-[68px] items-center gap-3 border-b border-noct-divider">
               <div className="min-w-0 flex-1">
                 <p className="text-[12.5px] leading-snug text-noct-neutral-500">Dirección IP</p>
@@ -1003,16 +1018,45 @@ export function DispositivoPage() {
               «Copiar», bajo la IP. «Más datos» sigue guardando el registro
               completo. Desde 768, como siempre. */}
           {!ancho && dispositivo.serial && (
-            <div data-serial-equipo className="flex min-h-14 items-center gap-3 border-b border-noct-divider py-1.5">
-              <div className="min-w-0 flex-1">
-                <p className="text-[12.5px] leading-snug text-noct-neutral-500">Número de serie</p>
-                <p className="font-mono text-[16px] font-medium leading-[1.3] [overflow-wrap:anywhere]">{dispositivo.serial}</p>
-              </div>
-              <BotonCopiar etiqueta="Número de serie" texto={dispositivo.serial} conTexto aviso={`Serial copiado: ${dispositivo.serial}`} />
-            </div>
+            <FilaDatoTelefono etiqueta="Serial" mono marca="data-serial-equipo">
+              {dispositivo.serial}
+              <BotonCopiar etiqueta="Número de serie" texto={dispositivo.serial} ventana aviso={`Serial copiado: ${dispositivo.serial}`} />
+            </FilaDatoTelefono>
+          )}
+          {/* LA MAC Y LA PLACA, A LA VISTA EN EL TELÉFONO (tarea 350): la
+              tabla del prototipo las enseña con la IP y el serial; antes
+              estaban en «Más datos», que las sigue guardando. La MAC es un
+              detalle escrito por el equipo («MAC», «Dirección MAC»). */}
+          {!ancho && mac && (
+            <FilaDatoTelefono etiqueta="MAC" mono>
+              {mac}
+              <BotonCopiar etiqueta="Dirección MAC" texto={mac} ventana aviso={`MAC copiada: ${mac}`} />
+            </FilaDatoTelefono>
+          )}
+          {!ancho && dispositivo.placaInventario && (
+            <FilaDatoTelefono etiqueta="Placa" mono>
+              {dispositivo.placaInventario}
+            </FilaDatoTelefono>
           )}
 
-          {ubicacionNombre &&
+          {/* La ubicación, en la tabla del teléfono (tarea 350): su rótulo y,
+              si tiene ficha, la abre. */}
+          {ubicacionNombre && !ancho && (
+            ubicacionViva ? (
+              <Link
+                to={`/ubicaciones/${ubicacionViva.id}`}
+                state={origenEsteEquipo}
+                className="flex min-h-[52px] items-center gap-2.5 border-b border-noct-divider py-1 text-noct-text active:bg-noct-presionado"
+              >
+                <span className="w-[78px] shrink-0 text-[13.5px] font-bold leading-snug text-noct-neutral-300">Ubicación</span>
+                <span className="min-w-0 flex-1 text-[15px] font-semibold leading-snug [overflow-wrap:anywhere]">{ubicacionNombre}</span>
+                <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
+              </Link>
+            ) : (
+              <FilaDatoTelefono etiqueta="Ubicación">{ubicacionNombre}</FilaDatoTelefono>
+            )
+          )}
+          {ubicacionNombre && ancho &&
             (ubicacionViva ? (
               <Link
                 to={`/ubicaciones/${ubicacionViva.id}`}
@@ -1052,7 +1096,26 @@ export function DispositivoPage() {
               servicio y su puerto, que es lo que se busca en el rack. Desde
               la tarea 342 abre la hoja de Conexiones (se consulta sin dejar
               la ficha), que lleva su "Ver en topología". */}
-          {subida && (
+          {subida && !ancho && (
+            <button
+              type="button"
+              onClick={() => setHoja('conexiones')}
+              aria-haspopup="dialog"
+              aria-expanded={hoja === 'conexiones'}
+              aria-label={`Conectado a ${textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}${
+                subida.otros > 0 ? ` y ${subida.otros} más` : ''
+              }. Ver sus conexiones`}
+              className="flex min-h-[52px] w-full items-center gap-2.5 border-b border-noct-divider py-1 text-left text-noct-text active:bg-noct-presionado"
+            >
+              <span className="w-[78px] shrink-0 text-[13.5px] font-bold leading-snug text-noct-neutral-300">Conectado a</span>
+              <span className="min-w-0 flex-1 font-mono text-[14.5px] font-semibold leading-snug [overflow-wrap:anywhere]">
+                {textoConectadoA(nombreSubida, subida.extremo.puertoRemoto)}
+                {subida.otros > 0 && <span className="font-inter text-noct-neutral-300"> · y {subida.otros} más</span>}
+              </span>
+              <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
+            </button>
+          )}
+          {subida && ancho && (
             <button
               type="button"
               onClick={() => setHoja('conexiones')}
@@ -1080,6 +1143,36 @@ export function DispositivoPage() {
         </section>
         )}
 
+        {/* LAS CREDENCIALES DEL EQUIPO, EN SU TARJETA (tarea 350, ficha del
+            prototipo de Claude Design): la Bóveda invertida, con cuántas
+            hay y «Desbloquear» (o «Ver», abierta), que abre la misma hoja de
+            siempre con su desbloqueo. Sustituye a la «Clave» de la barra
+            fija: un solo sitio para lo mismo. Solo con permiso de Bóveda y
+            si hay alguna; la Bóveda, sus permisos y su registro no cambian. */}
+        {!ancho && conCredenciales && totalCredenciales > 0 && (
+          <div
+            data-boveda-del-equipo
+            className="flex items-center gap-3 rounded-2xl bg-noct-boveda py-3 pl-3.5 pr-3 text-noct-on-boveda"
+          >
+            <IconoVentana nombre="candado" tam={22} className="shrink-0" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[15px] font-bold leading-snug">
+                {totalCredenciales === 1 ? '1 credencial del equipo' : `${totalCredenciales} credenciales del equipo`}
+              </span>
+              <span className="text-[13.5px] font-medium leading-snug opacity-80">Protegidas en la Bóveda</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setHoja('credenciales')}
+              aria-haspopup="dialog"
+              aria-label={totalCredenciales === 1 ? 'Clave del equipo' : 'Claves del equipo'}
+              className="flex h-11 shrink-0 cursor-pointer items-center rounded-xl bg-noct-surface px-3 text-[14px] font-extrabold text-noct-text active:bg-noct-neutral-900"
+            >
+              {bovedaAbierta ? 'Ver' : 'Desbloquear'}
+            </button>
+          </div>
+        )}
+
         {/* EL MANTENIMIENTO, A LA VISTA (tarea 344, DESPUÉS de Claude Design):
             en el teléfono, su fila bajo los datos, con lo que dice y "Ver",
             que abre su pantalla. Desde 768 sigue en el índice. */}
@@ -1087,9 +1180,9 @@ export function DispositivoPage() {
           <button
             type="button"
             onClick={abrirMantenimiento}
-            className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border border-noct-divider bg-noct-surface px-3.5 py-3 text-left text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
+            className="flex min-h-[68px] w-full items-center gap-3 rounded-2xl border-[1.5px] border-noct-divider bg-noct-surface px-3.5 py-3 text-left text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
           >
-            <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-noct-text/[.06] text-noct-neutral-300">
+            <span aria-hidden className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-noct-neutral-900 text-noct-neutral-300">
               <Wrench size={20} />
             </span>
             <span className="min-w-0 flex-1">
@@ -1128,13 +1221,8 @@ export function DispositivoPage() {
 
         {/* La barra fija (M-R3): "Resolver un problema", relleno, y la llave
             de sus credenciales. */}
-        {!ancho && (
-          <BarraAccionEquipo
-            resolver={resolverBarra}
-            onCredenciales={conCredenciales && totalCredenciales > 0 ? () => setHoja('credenciales') : null}
-            totalClaves={totalCredenciales}
-          />
-        )}
+        {/* Las credenciales tienen su tarjeta bajo los datos (tarea 350). */}
+        {!ancho && <BarraAccionEquipo resolver={resolverBarra} onCredenciales={null} />}
       </main>
 
       {/* LAS HOJAS (tarea 329): lo que antes iba plegado, ahora encima de la
@@ -1310,6 +1398,41 @@ export function DispositivoPage() {
         onConfirmar={eliminar}
       />
     </Chasis>
+  )
+}
+
+// UNA FILA DE LA TABLA DE DATOS DEL TELÉFONO (tarea 350, ficha del
+// prototipo de Claude Design): el rótulo en su columna de 78, en tinta 2, y el
+// dato a su lado (en mono si se compara o se copia), con su acción al final.
+// El dato parte línea antes que recortarse. El último hijo, si es un botón,
+// es la acción.
+function FilaDatoTelefono({
+  etiqueta,
+  mono = false,
+  marca,
+  children,
+}: {
+  etiqueta: string
+  mono?: boolean
+  /** Un atributo `data-*` para encontrar la fila (las pruebas, las capturas). */
+  marca?: string
+  children: React.ReactNode
+}) {
+  const hijos = Array.isArray(children) ? children : [children]
+  const valor = hijos[0]
+  const accion = hijos.slice(1)
+  return (
+    <div {...(marca ? { [marca]: '' } : {})} className="flex min-h-[52px] items-center gap-2.5 border-b border-noct-divider py-1">
+      <span className="w-[78px] shrink-0 text-[13.5px] font-bold leading-snug text-noct-neutral-300">{etiqueta}</span>
+      <span
+        className={`min-w-0 flex-1 font-semibold leading-snug [overflow-wrap:anywhere] ${
+          mono ? 'font-mono text-[16px]' : 'text-[15px]'
+        }`}
+      >
+        {valor}
+      </span>
+      {accion}
+    </div>
   )
 }
 
