@@ -347,7 +347,7 @@ export function AutorizacionPage() {
             ficha (regla 13): sin origen, su X vuelve aquí. Solo en el
             teléfono; desde 768 px va en la cabecera (tarea 339). */}
         {!ancho && (
-          <div className="sticky bottom-[calc(65px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden lg:-mx-10">
+          <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden lg:-mx-10">
             <Link
               to={`/facturacion/${autorizacionId}/editar`}
               className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[15px] border-[1.5px] border-noct-text/25 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.05]"

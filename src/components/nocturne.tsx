@@ -39,14 +39,15 @@ export function TagNeutral({ children, className = '' }: { children: ReactNode; 
 // flujo, y por eso la revisión anterior no lo vio: hay que medir a
 // MITAD de un documento largo, no al final.
 //
-// El valor es el mismo `ALTO_PESTANAS` que reserva el chasis (65 px
-// medidos más el área segura, AD-027). Desde `md` no hay barra de
-// pestañas y la barra vuelve a pegarse al borde.
+// El valor es el mismo `ALTO_PESTANAS` que reserva el chasis (72 px desde la
+// tarea 350, la barra del prototipo de Claude Design; 65 medidos antes, más
+// el área segura, AD-027). Desde `md` no hay barra de pestañas y la barra
+// vuelve a pegarse al borde.
 //
 // Es también donde se pega la franja del aviso de versión nueva del
 // chasis (tarea 274): una barra que use esta clase publica su propio
 // hueco del aviso (`huecoAvisoActualizacion`), o una taparía a la otra.
-export const PEGADA_SOBRE_PESTANAS = 'bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0'
+export const PEGADA_SOBRE_PESTANAS = 'bottom-[calc(72px+env(safe-area-inset-bottom))] md:bottom-0'
 // Lo que se suma a PEGADA_SOBRE_PESTANAS en una pantalla cuyas pestañas se
 // esconden al bajar (`pestanasSeOcultanAlBajar` del chasis, tarea 329): la
 // barra baja al borde, con el área segura dentro de su relleno, y sube otra

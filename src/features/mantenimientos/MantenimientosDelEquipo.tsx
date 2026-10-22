@@ -190,7 +190,7 @@ export function MantenimientosDelEquipo({
       {/* PROGRAMAR, ABAJO Y DELINEADO: no hace avanzar nada. Solo en el
           teléfono; desde 768 px va en la cabecera (tarea 339). */}
       {!ancho && (
-        <div className="sticky bottom-[calc(65px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden">
+        <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden">
           <button
             type="button"
             onClick={() => onProgramar(true)}

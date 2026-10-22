@@ -416,11 +416,15 @@ describe('la pestaña activa del teléfono', () => {
     expect(pestanas.map((p) => p.textContent?.replace(/\(.*\)/, '').trim())).toEqual(['Resolver', 'Equipos', 'Bóveda', 'Más'])
     const activa = pestanas.find((p) => p.getAttribute('aria-current') === 'page')
     expect(activa?.textContent).toContain('Resolver')
-    expect(activa?.className).toContain('font-semibold')
-    expect(activa?.querySelector('[data-pastilla-pestana="activa"]')?.className).toContain('bg-noct-accent/[.16]')
+    // La barra del prototipo (tarea 350): sobre la superficie, 800 la activa
+    // y 600 las demás, la pastilla de 56 x 30 con el tinte del acento.
+    expect(barra.className).toContain('bg-noct-surface')
+    expect(activa?.className).toContain('font-extrabold')
+    expect(activa?.querySelector('[data-pastilla-pestana="activa"]')?.className).toContain('bg-noct-accent-900')
     for (const otra of pestanas.filter((p) => p !== activa)) {
+      expect(otra.className).toContain('font-semibold')
       expect(otra.querySelector('[data-pastilla-pestana="activa"]')).toBeNull()
-      expect(otra.querySelector('span')?.className).toContain('h-7 w-14')
+      expect(otra.querySelector('span')?.className).toContain('h-[30px] w-14')
     }
   })
 })

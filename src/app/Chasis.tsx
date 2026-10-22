@@ -7,6 +7,7 @@ import { agruparAgenda, asuntosUrgentes } from '../features/inicio/agenda'
 import { usePendientes } from '../features/inicio/usePendientes'
 import { Avatar } from '../components/Avatar'
 import { AvisoPestana } from '../components/AvisoPestana'
+import { IconoVentana, type NombreIconoVentana } from '../components/ventana/IconoVentana'
 import { BarraSuperior } from '../components/BarraSuperior'
 import { BarraTarea } from '../components/BarraTarea'
 import { BotonVolver } from '../components/BotonVolver'
@@ -71,6 +72,8 @@ interface Destino {
   label: string
   icono: (props: IconoProps) => React.JSX.Element
   iconoActivo: (props: IconoProps) => React.JSX.Element
+  /** El glifo de la barra del teléfono (tarea 350, prototipo de Claude Design). */
+  iconoTelefono: NombreIconoVentana
 }
 
 // CUATRO DESTINOS, LOS MISMOS EN TODOS LOS TAMAÑOS (encargo del
@@ -94,10 +97,10 @@ interface Destino {
 // permiso); sin permiso abre la pantalla de acceso restringido. Más no
 // tiene variante rellena: el mockup usa el mismo glifo activo e inactivo.
 const DESTINOS: Destino[] = [
-  { to: '/', label: 'Resolver', icono: Wrench, iconoActivo: WrenchFill },
-  { to: '/dispositivos', label: 'Equipos', icono: Monitor, iconoActivo: MonitorFill },
-  { to: '/boveda', label: 'Bóveda', icono: Vault, iconoActivo: VaultFill },
-  { to: '/mas', label: 'Más', icono: DotsNine, iconoActivo: DotsNine },
+  { to: '/', label: 'Resolver', icono: Wrench, iconoActivo: WrenchFill, iconoTelefono: 'llave' },
+  { to: '/dispositivos', label: 'Equipos', icono: Monitor, iconoActivo: MonitorFill, iconoTelefono: 'monitor' },
+  { to: '/boveda', label: 'Bóveda', icono: Vault, iconoActivo: VaultFill, iconoTelefono: 'candado' },
+  { to: '/mas', label: 'Más', icono: DotsNine, iconoActivo: DotsNine, iconoTelefono: 'cuadricula' },
 ]
 
 // Alto real de la barra de pestañas, MEDIDO en el navegador: 63.6px de
@@ -109,7 +112,12 @@ const DESTINOS: Destino[] = [
 // La auditoría del handoff hablaba de "una barra que mide 53": ese dato
 // es anterior a la tarea 182, que subió las celdas a 52px de mínimo y el
 // rótulo a 12px. Reservar 53 dejaba 12px de contenido bajo la barra.
-const ALTO_PESTANAS = 'pb-[calc(65px+env(safe-area-inset-bottom))] md:pb-0'
+//
+// DESDE LA TAREA 350, 72 (la barra del prototipo de Claude Design): 6 de
+// relleno arriba, celdas de 57 con la pastilla de 30 y el rótulo de 12.5, 8
+// abajo y 1 de borde. Lo que se pega sobre las pestañas usa el mismo número
+// (`PEGADA_SOBRE_PESTANAS`).
+const ALTO_PESTANAS = 'pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-0'
 
 // Los cuatro puntos de quiebre del chasis (tarea 191, turno 5, regla
 // R30: ningún ancho intermedio queda huérfano). Cada uno entrega una
@@ -831,28 +839,33 @@ export function Chasis(props: Props) {
               si publica su hueco, manda sobre esta franja. */}
           <div
             ref={huecoAvisoActualizacionChasis}
-            className="sticky bottom-[calc(65px+env(safe-area-inset-bottom))] z-20 mt-auto border-t border-noct-divider bg-noct-bg/[.88] px-4 py-2 backdrop-blur-[12px] empty:hidden md:bottom-0 [&>*]:mx-auto [&>*]:max-w-xl"
+            className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-20 mt-auto border-t border-noct-divider bg-noct-bg/[.88] px-4 py-2 backdrop-blur-[12px] empty:hidden md:bottom-0 [&>*]:mx-auto [&>*]:max-w-xl"
           />
         </div>
       </div>
 
       {/* Pestañas inferiores: solo móvil. Siempre las mismas cuatro (R17):
-          Resolver, Equipos, Bóveda y Más (encargo del 2026-09-22). Rótulo
-          a 12px en celdas de 52. Estado en tres canales (R16 pide al
-          menos dos): la pastilla tintada detrás del icono (tarea 349,
-          navegación de Ventana; antes una barra de 2px sobre la pestaña,
-          que en el teléfono se leía poco), icono relleno y rótulo en acento
-          y en negrita; más presionado y foco de teclado.
+          Resolver, Equipos, Bóveda y Más (encargo del 2026-09-22). Estado
+          en tres canales (R16 pide al menos dos): la pastilla tintada detrás
+          del icono (tarea 349), el color del acento y el peso del rótulo;
+          más presionado y foco de teclado.
+
+          LA BARRA DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350): 72 de alto
+          sobre la superficie, sin translucidez; pastilla de 56 x 30, glifos
+          de trazo grueso (llave, monitor, candado y cuadrícula, los mismos
+          activos o no: lo activo lo dicen la pastilla, el color y el peso) y
+          rótulo de 12.5 a 800 la activa y a 600 las demás.
 
           La pestaña activa la decide `destinoPrincipalDe`, no la ruta del
           enlace: una guía ilumina Resolver y Red ilumina Más. */}
       <nav
         aria-label="Navegación principal"
-        className={`fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-noct-divider bg-noct-bg/[.88] pb-[env(safe-area-inset-bottom)] backdrop-blur-[12px] transition-transform duration-200 motion-reduce:transition-none md:hidden ${
+        data-barra-pestanas
+        className={`fixed bottom-0 left-1/2 z-20 grid w-full max-w-md -translate-x-1/2 grid-cols-4 border-t border-noct-divider bg-noct-surface px-1 pb-[calc(8px+env(safe-area-inset-bottom))] pt-1.5 transition-transform duration-200 motion-reduce:transition-none md:hidden ${
           pestanasOcultas ? 'translate-y-full' : ''
         }`}
       >
-        {DESTINOS.map(({ to, label, icono: Icono, iconoActivo: IconoActivo }) => {
+        {DESTINOS.map(({ to, label, iconoTelefono }) => {
           const activa = destinoActivo === to
           // Números de la pestaña (R23: un aviso solo si hay un dato
           // detrás, nunca decorativo). Resolver cuenta los asuntos
@@ -865,19 +878,19 @@ export function Chasis(props: Props) {
               to={destinoDePestana(to, location.pathname, RAICES_DE_PESTANA)}
               onClick={() => alTocarPestana(to)}
               aria-current={activa ? 'page' : undefined}
-              className={`relative flex min-h-[52px] flex-col items-center gap-0.5 pb-[9px] pt-[7px] text-[12px] outline-none active:bg-noct-accent/10 focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
-                activa ? 'font-semibold text-noct-accent-300' : 'font-medium text-noct-neutral-300'
+              className={`relative flex h-[57px] flex-col items-center justify-center gap-[3px] rounded-xl text-[12.5px] leading-[1.2] outline-none active:bg-noct-presionado focus-visible:outline-2 focus-visible:outline-noct-accent focus-visible:-outline-offset-2 ${
+                activa ? 'font-extrabold text-noct-accent-300' : 'font-semibold text-noct-neutral-300'
               }`}
             >
               {/* La pastilla mide lo mismo activa o no (sin salto al cambiar
                   de pestaña); solo la activa lleva el tinte del acento. */}
               <span
                 data-pastilla-pestana={activa ? 'activa' : undefined}
-                className={`flex h-7 w-14 items-center justify-center rounded-full ${activa ? 'bg-noct-accent/[.16]' : ''}`}
+                className={`flex h-[30px] w-14 items-center justify-center rounded-[15px] ${activa ? 'bg-noct-accent-900' : ''}`}
               >
                 {/* El número va sobre el icono, no sobre la pastilla. */}
                 <span className="relative">
-                  {activa ? <IconoActivo size={22} /> : <Icono size={22} />}
+                  <IconoVentana nombre={iconoTelefono} tam={22} />
                   {numeroPendientes > 0 && <AvisoPestana variante="numero" valor={numeroPendientes} />}
                 </span>
               </span>

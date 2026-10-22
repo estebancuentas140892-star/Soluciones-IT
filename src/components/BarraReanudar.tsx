@@ -40,7 +40,7 @@ const UMBRAL_DESCARTE_PX = 90
 const UMBRAL_INICIO_ARRASTRE_PX = 6
 
 // LA BARRA SE ENCOGE AL BAJAR (tarea 207, hallazgo M-033). En un
-// teléfono de 360x640 las pestañas (65 px más área segura) y esta barra
+// teléfono de 360x640 las pestañas (72 px más área segura) y esta barra
 // se sumaban y dejaban unos 430 px de contenido: la pieza que existe
 // para no perder el hilo se comía la pantalla donde se trabaja.
 // Desplazarse hacia abajo es leer, y ahí la barra se reduce a una línea
@@ -231,7 +231,7 @@ export function BarraReanudar({
   }
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(65px+env(safe-area-inset-bottom)+8px)] z-30 flex justify-center px-3 font-inter md:hidden">
+    <div className="pointer-events-none fixed inset-x-0 bottom-[calc(72px+env(safe-area-inset-bottom)+8px)] z-30 flex justify-center px-3 font-inter md:hidden">
       <div
         onPointerDown={alBajarPuntero}
         onPointerMove={alMoverPuntero}
