@@ -38,7 +38,6 @@ import {
 import { registrarIntervencion } from '../../lib/repositorio'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { BandaBajoTarea, BandaTarea } from '../../app/bandaTarea'
-import { useHayCabeceraCompacta } from '../../app/ranuraBajoContexto'
 import { useRanuraIndice } from '../../app/ranuraIndice'
 import { Adjuntos } from '../../components/Adjuntos'
 import {
@@ -50,7 +49,6 @@ import {
   CaretRight,
   Check,
   LinkSimple,
-  ListChecks,
   SealCheck,
   Warning,
   Wrench,
@@ -60,6 +58,18 @@ import { BTN_PRIMARIO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../compon
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
 import { BotonesDelPie, PieVentana, RespuestasDelPie } from '../../components/ventana/PieVentana'
 import { MasAbajoDeLaVentana } from '../../components/ventana/MasAbajoDeLaVentana'
+import { MarcoVentana } from '../../components/ventana/MarcoVentana'
+import { IconoVentana } from '../../components/ventana/IconoVentana'
+import {
+  RELIEVE_BORDE_FUERTE,
+  RELLENO_ACCION,
+  RELLENO_RESUELTO,
+  SALIDA_VENTANA,
+  TARJETA,
+  TARJETA_TOCABLE,
+} from '../../components/ventana/estilos'
+import { GlifoVentana } from '../../components/ventana/MarcaVentana'
+import { HojaInferior } from '../../components/HojaInferior'
 import { useEsAncho } from '../../components/useEsAncho'
 import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { IndicadorAvance } from '../../components/IndicadorAvance'
@@ -86,7 +96,7 @@ import {
   useEjecucion,
   useEnVistaPrevia,
 } from './contextoEjecucion'
-import { fechaHoraDeCierre, resumenDeGuiaCompletada } from './guiaCompletada'
+import { cuentaDeGuiaCompletada, fechaHoraDeCierre, queYDondeDeGuiaCompletada } from './guiaCompletada'
 import { IntervencionAlTerminar } from './IntervencionAlTerminar'
 import { motivoGuiasPendientes } from './guiasObligatorias'
 import { estadoVinculo, kickerVinculo } from './estadoVinculo'
@@ -107,7 +117,7 @@ import {
   criticasPendientes,
   motivoDeLasRespuestas,
   motivoGuiasDeLaVentana,
-  numerarInstrucciones,
+  numerarFilasDeVentana,
   pieDeLaVentana,
   preguntaDelPie,
   siNoDelPie,
@@ -335,9 +345,6 @@ export function AsistenteVista({
       return nuevas
     })
   }
-  // El paso en la cabecera compacta (teléfono): si no hay cabecera, el cuerpo
-  // dice en qué ventana se está.
-  const hayCabeceraCompacta = useHayCabeceraCompacta()
   const refVentana = useRef<HTMLDivElement>(null)
   // Lo que el hook consulta al cerrar una ventana: siempre lo último confirmado.
   const criticasRef = useRef(criticasLeidas)
@@ -583,6 +590,58 @@ export function AsistenteVista({
       const desde = origenComprobacion === null ? -1 : idsPasos.indexOf(origenComprobacion)
       verPaso(desde >= 0 ? desde : pasos.length - 1, true)
     }
+    // EN EL TELÉFONO, EL CIERRE DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350),
+    // con la lógica de siempre: las comprobaciones se marcan y solo
+    // «Terminar» termina la guía (regla 28). El pie pregunta lo que el
+    // prototipo pregunta, «¿El problema quedó resuelto?»; «Terminar» es el
+    // sí, en el verde que resuelve, y «No, sigue igual» abre lo que se puede
+    // hacer entonces. «Anterior» sigue siendo una navegación principal del pie.
+    // Solo tras la ejecución por ventanas, la del teléfono por defecto: quien
+    // eligió una acción a la vez conserva su cierre de siempre.
+    if (nivel === 0 && !esAncho && !integrada && modoEfectivo(modoEjecucion, esAncho) === 'ventana') {
+      return (
+        <ComprobacionFinalTelefono
+          titulo={articulo?.titulo ?? ''}
+          ventanas={pasos.length}
+          comprobaciones={verificacionFinal}
+          marcadas={marcadasComprobacion}
+          onAlternar={(indice) => void alternarVerificacion(indice)}
+          etiqueta={cierreComprobacion.etiqueta}
+          onTerminar={cierreComprobacion.listo ? () => void finalizar() : null}
+          onAnterior={volverALaUltimaAccion}
+          segmentos={
+            <>
+              <BandaTarea>
+                <span className="mr-1 flex h-11 shrink-0 items-center rounded-xl bg-noct-neutral-900 px-3 text-[14px] font-bold text-noct-text">
+                  Final
+                </span>
+              </BandaTarea>
+              <BandaBajoTarea enLineaSinCabecera>
+                {(enCabecera) => (
+                  <>
+                    {enCabecera && (
+                      <p className="-mt-1.5 truncate pb-2 pl-[52px] pr-4 text-[13.5px] font-semibold leading-snug text-noct-neutral-300">
+                        Comprobación final
+                      </p>
+                    )}
+                    <SegmentosDePasos
+                      resumenes={resumirPasos(pasos, hechos, instruccionesHechas, null, new Set(progreso?.pasosSaltados ?? []))}
+                      total={totalPasos}
+                      indiceVisto={null}
+                      indiceTrabajo={null}
+                      consultando={false}
+                      conComprobacion
+                      enComprobacion
+                      enCabecera={enCabecera}
+                    />
+                  </>
+                )}
+              </BandaBajoTarea>
+            </>
+          }
+        />
+      )
+    }
     return (
       <div className={`flex flex-col ${conPie ? 'flex-1' : ''}`}>
         {/* En la guía principal, los segmentos de la cabecera con el último,
@@ -692,37 +751,62 @@ export function AsistenteVista({
     // Desde 768 sigue la pantalla aprobada de siempre, abajo.
     if (nivel === 0 && !esAncho) {
       const fecha = fechaHoraDeCierre(filaRaiz?.actualizadoEn)
+      // «GUÍA COMPLETADA» DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350): la
+      // ventana con su marca de hecho en su recuadro, cuántas ventanas y
+      // comprobaciones, el nombre, qué se hizo y dónde, y lo que se comprobó, a
+      // la vista. Las acciones no cambian: salir (la única rellena), dejarlo en
+      // el historial del equipo y empezar de nuevo.
       return (
         <div className="flex flex-1 flex-col">
-          <div className="flex flex-1 flex-col items-center justify-center gap-3.5 py-6 text-center">
-            <span
-              aria-hidden
-              data-marca-completada
-              className="flex h-[84px] w-[84px] items-center justify-center rounded-full bg-noct-exito/(--tinte-estado) text-noct-exito"
-            >
-              <Check size={40} />
-            </span>
-            <EncabezadoConFoco className="text-[26px] font-[650] leading-tight tracking-[-0.015em] text-noct-text">
-              Guía completada
-            </EncabezadoConFoco>
-            <p className="max-w-[300px] text-[15px] leading-normal text-noct-neutral-300">
-              {resumenDeGuiaCompletada(
+          <div className="flex flex-1 flex-col gap-3.5 pb-6 pt-7">
+            <div className="flex items-center gap-3.5">
+              <span
+                aria-hidden
+                data-marca-completada
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-noct-exito-tinte text-noct-exito"
+              >
+                <GlifoVentana tam={30} />
+              </span>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <p className="text-[13px] font-extrabold uppercase tracking-[.05em] text-noct-neutral-300">
+                  {cuentaDeGuiaCompletada(pasos.length, verificacionFinal.length)}
+                </p>
+                <EncabezadoConFoco className="text-[26px] font-extrabold leading-8 tracking-[-0.02em] text-noct-text">
+                  Guía completada
+                </EncabezadoConFoco>
+              </div>
+            </div>
+            {/* La guía y con qué equipo; cuántas ventanas y comprobaciones ya lo
+                dice la línea de arriba (regla 22). */}
+            <p className="text-[17px] font-semibold leading-6 text-noct-neutral-300 text-pretty [overflow-wrap:anywhere]">
+              {queYDondeDeGuiaCompletada(
                 articulo?.titulo ?? '',
                 equipoDeLaEjecucion && !equipoDeLaEjecucion.eliminadoEn ? equipoDeLaEjecucion.nombre : null,
-                pasos.length,
-                verificacionFinal.length,
               )}
             </p>
-            {fecha && <p className="font-mono text-[13px] text-noct-neutral-500">{fecha}</p>}
+            {verificacionFinal.length > 0 && (
+              <section className={`${TARJETA} flex flex-col gap-2.5 rounded-[20px] p-4`}>
+                <h2 className="text-[16px] font-extrabold">Comprobación final</h2>
+                <ul className="flex flex-col gap-2.5">
+                  {verificacionFinal.map((item, indice) => (
+                    <li key={indice} className="flex items-start gap-2.5 text-[16px] font-medium leading-[22px]">
+                      <IconoVentana nombre="comprobacion" tam={20} grosor={2.4} className="mt-px shrink-0 text-noct-exito" />
+                      <span className="min-w-0 text-pretty [overflow-wrap:anywhere]">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            {fecha && <p className="font-mono text-[13px] text-noct-neutral-400">{fecha}</p>}
           </div>
-          <div className="sticky bottom-0 z-10 -mx-4 flex flex-none flex-col items-center gap-1.5 border-t border-noct-divider bg-noct-bg px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3">
-            <div ref={huecoAvisoActualizacion} className="w-full max-w-xs empty:hidden" />
+          <div className="sticky bottom-0 z-10 -mx-4 flex flex-none flex-col items-center gap-1.5 border-t border-noct-divider bg-noct-surface px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-noct-pie)]">
+            <div ref={huecoAvisoActualizacion} className="w-full empty:hidden" />
             {salida && (
               <Link
                 to={salida.to}
                 state={salida.estado}
                 // La única acción rellena de la pantalla (regla 30).
-                className={`w-full max-w-xs ${BTN_PRIMARIO_RELLENO}`}
+                className={`${RELLENO_ACCION} inline-flex min-h-[58px] w-full items-center justify-center rounded-2xl px-4 text-[17px]`}
               >
                 Salir de la guía
               </Link>
@@ -1060,7 +1144,8 @@ export function AsistenteVista({
   // Consultando una ventana de más adelante nada la cierra ni se contesta
   // desde el pie: el único botón devuelve al trabajo.
   const ventanaAbierta = enVentana && !pasoActualHecho && !consultando
-  const numerosVentana = enVentana ? numerarInstrucciones(paso) : null
+  // Los números de lo que se ve (tarea 350): una microacción es una fila.
+  const numerosVentana = enVentana ? numerarFilasDeVentana(paso) : null
   const criticaPendiente = ventanaAbierta ? (criticasPendientes(paso, criticasLeidas)[0] ?? null) : null
   const siNoSinResponder = ventanaAbierta && siNoPendientes(paso, instruccionesHechas).length > 0
   // La pregunta que va fija al pie: la de opciones (pocas) o la de Sí/No que
@@ -1129,6 +1214,7 @@ export function AsistenteVista({
               tipo: 'retomada',
               numeroPaso: indiceActual + 1,
               totalPasos,
+              palabra: enVentana ? 'ventana' : 'paso',
               onEmpezarDeNuevo: () => void reiniciarYVolver(),
             }
           : esBorrador
@@ -1142,10 +1228,15 @@ export function AsistenteVista({
   // tarea 345; DESPUÉS de Claude Design): sobre los segmentos, de qué guía y
   // con qué equipo, y "Paso 2 de 4 · Vacía la cola de impresión". El
   // contador "2/4" deja su sitio a "Pasos", que abre el mismo índice.
-  const lineaDeLaGuia = [articulo?.titulo, equipoDeLaEjecucion && !equipoDeLaEjecucion.eliminadoEn ? equipoDeLaEjecucion.nombre : null]
-    .filter(Boolean)
-    .join(' · ')
   const pasoEnCabecera = `Paso ${indiceActual + 1}${totalPasos === null ? '' : ` de ${totalPasos}`} · ${tituloPaso}`
+  // En la ventana (tarea 350), cuál de cuántas; si el total depende de una
+  // respuesta, que la ruta la deciden las respuestas, como en el prototipo.
+  const rangoDeVentana =
+    totalPasos === null
+      ? `Ventana ${indiceActual + 1} · la ruta depende de tus respuestas`
+      : `Ventana ${indiceActual + 1} de ${totalPasos}`
+  // El título de la guía ya va en la fila de la cabecera: aquí, solo el equipo.
+  const equipoEnCabecera = equipoDeLaEjecucion && !equipoDeLaEjecucion.eliminadoEn ? equipoDeLaEjecucion.nombre : ''
   const estadoUI =
     nivel === 0 ? (
       <div className="flex flex-none flex-col">
@@ -1154,11 +1245,22 @@ export function AsistenteVista({
         <BandaBajoTarea enLineaSinCabecera>
           {(enCabecera) => (
             <>
-            {enCabecera && !esAncho && (
+            {/* LA CABECERA DEL PROTOTIPO (tarea 350): la fila ya dice el
+                título de la guía; debajo, alineado con él, en qué ventana se
+                va («Ventana 2 de 4») y con qué equipo. El título de la ventana
+                va en su tarjeta, a 22. En la acción a la vez, el paso con su
+                título, como antes: ahí la instrucción no lo repite. */}
+            {enCabecera && !esAncho && enVentana && (
+              <p
+                data-paso-en-cabecera
+                className="-mt-1.5 truncate pb-2 pl-[52px] pr-4 text-[13.5px] font-semibold leading-snug text-noct-neutral-300"
+              >
+                {[rangoDeVentana, equipoEnCabecera].filter(Boolean).join(' · ')}
+              </p>
+            )}
+            {enCabecera && !esAncho && !enVentana && (
               <div data-paso-en-cabecera className="flex min-w-0 flex-col gap-0.5 px-4 pb-2 pt-0.5">
-                {lineaDeLaGuia && (
-                  <p className="truncate text-[14px] leading-snug text-noct-neutral-400">{lineaDeLaGuia}</p>
-                )}
+                {equipoEnCabecera && <p className="truncate text-[14px] leading-snug text-noct-neutral-400">{equipoEnCabecera}</p>}
                 <p className="text-[17px] font-[650] leading-snug text-noct-text text-pretty [overflow-wrap:anywhere]">
                   {pasoEnCabecera}
                 </p>
@@ -1248,7 +1350,12 @@ export function AsistenteVista({
     ) : nivel === 0 ? (
       <>
         <BandaTarea>
-          <ContadorPaso indice={indiceActual} total={totalPasos} onAbrirIndice={() => setIndiceAbierto(true)} />
+          <ContadorPaso
+            indice={indiceActual}
+            total={totalPasos}
+            onAbrirIndice={() => setIndiceAbierto(true)}
+            palabra={enVentana ? 'Ventana' : 'Paso'}
+          />
         </BandaTarea>
         <HojaPasos
           abierto={indiceAbierto}
@@ -1420,6 +1527,36 @@ export function AsistenteVista({
   // acción aparece sola y el riesgo no se repite. Desmarcarla la vuelve
   // pendiente, y su advertencia vuelve.
   const advertenciasDelPaso = advertenciasDeLista(paso)
+  // LAS SALIDAS AL PIE DE LA VENTANA (tarea 348; dentro de su tarjeta, con el
+  // dibujo del prototipo, desde la 350): "Tengo un problema" abre las mismas
+  // salidas de siempre y "Detalles de la guía" lleva a su ficha.
+  const salidasDeLaVentana = enVentana ? (
+    <>
+      <button
+        type="button"
+        onClick={() => setHojaFalla({ tarea: null })}
+        aria-haspopup="dialog"
+        aria-label={`Tengo un problema en la ventana ${numeroPasoVisible}`}
+        className={SALIDA_VENTANA}
+      >
+        <IconoVentana nombre="problema" tam={16} className="shrink-0 text-noct-neutral-300" />
+        Tengo un problema
+      </button>
+      {articulo && (
+        <Link
+          to={`/soluciones/${articulo.categoriaId}/${articulo.id}/detalles`}
+          state={conOrigen(rutaOrigen, articulo.titulo)}
+          // «Detalles», como el prototipo: con «de la guía» no cabía junto a
+          // «Tengo un problema» a 390 px. El nombre accesible lo dice entero.
+          aria-label="Detalles de la guía"
+          className={SALIDA_VENTANA}
+        >
+          <IconoVentana nombre="info" tam={16} className="shrink-0 text-noct-neutral-300" />
+          Detalles
+        </Link>
+      )}
+    </>
+  ) : null
   // En la ventana no hay pantalla previa: la advertencia va dentro, antes de
   // su acción, así que ninguna acción espera.
   const enEspera = enVentana
@@ -1438,8 +1575,13 @@ export function AsistenteVista({
           barras de acento anidadas midiendo cosas distintas: los pasos
           del procedimiento principal y los del vinculado. */}
 
-      {requisitosVisibles.length > 0 && <AntesDeEmpezar requisitos={requisitosVisibles} />}
+      {requisitosVisibles.length > 0 && (
+        <AntesDeEmpezar requisitos={requisitosVisibles} variante={enVentana ? 'ventana' : 'lista'} />
+      )}
 
+      {/* LA VENTANA EN SU TARJETA (tarea 350): con su barra de título y sus
+          salidas al pie. Fuera de la ventana, lo de siempre, sin marco. */}
+      <EnMarcoSi activo={enVentana} numero={numeroPasoVisible} hecha={pasoActualHecho} pie={salidasDeLaVentana}>
       {/* DÓNDE ESTOY. En escritorio, la ruta de la guía principal (que ya
           dice "Paso N de M" y el título); en el teléfono y dentro de un
           vínculo, el título a secas. En el paso entero el título del paso
@@ -1459,9 +1601,14 @@ export function AsistenteVista({
             key={paso.id}
             // En la ventana del teléfono la cabecera ya dice "Paso 2 de 4 ·
             // título": aquí queda para el lector de pantalla y el foco.
-            className={`text-lg font-semibold text-noct-text ${
-              enVentana && !esAncho && hayCabeceraCompacta ? 'sr-only' : rutaUI ? 'md:sr-only' : ''
-            }`}
+            // EN LA VENTANA, SU TÍTULO A 22 · 800 DENTRO DE SU TARJETA (tarea 350,
+            // prototipo de Claude Design; 20 por debajo de 380 px). La cabecera
+            // dice en qué ventana se va.
+            className={
+              enVentana
+                ? 'text-[22px] font-extrabold leading-[28px] tracking-[-.01em] text-noct-text text-pretty [overflow-wrap:anywhere] max-[379px]:text-[20px] max-[379px]:leading-[26px]'
+                : `text-lg font-semibold text-noct-text ${rutaUI ? 'md:sr-only' : ''}`
+            }
           >
             {tituloPaso}
           </EncabezadoConFoco>
@@ -1734,6 +1881,7 @@ export function AsistenteVista({
           </div>
         )}
       </div>
+      </EnMarcoSi>
 
       {/* Acción dominante fija al pie (M-011, regla M-R3, mockup `3b`),
           REDUCIDA en la tarea 218 (G-09, G-11, G-12). Hasta la 217 esta
@@ -1844,27 +1992,6 @@ export function AsistenteVista({
           desplaza: el botón de cerrar la ventana o sus respuestas. */}
       {enVentana && (
         <>
-          <div className="flex flex-wrap gap-2 pb-1">
-            <button
-              type="button"
-              onClick={() => setHojaFalla({ tarea: null })}
-              aria-haspopup="dialog"
-              aria-label={`Tengo un problema en la ventana ${numeroPasoVisible}`}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-noct-divider-fuerte px-3.5 text-[14.5px] font-semibold text-noct-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent active:bg-noct-presionado"
-            >
-              <Warning size={17} className="shrink-0" aria-hidden />
-              Tengo un problema
-            </button>
-            {articulo && (
-              <Link
-                to={`/soluciones/${articulo.categoriaId}/${articulo.id}/detalles`}
-                state={conOrigen(rutaOrigen, articulo.titulo)}
-                className="inline-flex min-h-11 items-center rounded-xl border border-noct-divider-fuerte px-3.5 text-[14.5px] font-semibold text-noct-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent active:bg-noct-presionado"
-              >
-                Detalles de la guía
-              </Link>
-            )}
-          </div>
           <PieVentana indicador={ventanaAbierta ? <MasAbajoDeLaVentana contenedor={refVentana} clave={claveMasAbajo} /> : null}>
             {/* El aviso de versión nueva va aquí, encima de los botones, y no
                 flotando sobre ellos (tarea 273). Vacío no ocupa nada. */}
@@ -1986,6 +2113,189 @@ export function AsistenteVista({
   )
 }
 
+// LA COMPROBACIÓN FINAL EN EL TELÉFONO (tarea 350, «Guía completada · ¿El
+// problema quedó resuelto?» del prototipo de Claude Design, con la lógica de
+// siempre). Arriba, cuántas ventanas se hicieron y la guía; en su tarjeta, las
+// comprobaciones, que se marcan como hasta ahora (64 de toque cada una); y en
+// el pie, la pregunta del prototipo con sus dos respuestas: «Terminar» (el sí,
+// verde, que solo se puede con todo marcado y si no dice qué falta) y «No,
+// sigue igual», que abre qué hacer. Debajo, «Anterior», a todo el ancho:
+// vuelve por el camino recorrido sin cambiar nada (regla 28).
+function ComprobacionFinalTelefono({
+  titulo,
+  ventanas,
+  comprobaciones,
+  marcadas,
+  onAlternar,
+  etiqueta,
+  onTerminar,
+  onAnterior,
+  segmentos,
+}: {
+  titulo: string
+  ventanas: number
+  comprobaciones: string[]
+  marcadas: ReadonlySet<number>
+  onAlternar: (indice: number) => void
+  etiqueta: string
+  onTerminar: (() => void) | null
+  onAnterior: () => void
+  segmentos: ReactNode
+}) {
+  const [sigueIgual, setSigueIgual] = useState(false)
+  return (
+    <div className="flex flex-1 flex-col">
+      {segmentos}
+      <div className="flex flex-col gap-3.5 pb-6 pt-7">
+        <div className="flex items-center gap-3.5">
+          <span
+            aria-hidden
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-noct-accent-900 text-noct-accent-300"
+          >
+            <GlifoVentana tam={30} />
+          </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <p className="text-[13px] font-extrabold uppercase tracking-[.05em] text-noct-neutral-300">
+              {ventanas} {ventanas === 1 ? 'ventana hecha' : 'ventanas hechas'}
+            </p>
+            <EncabezadoConFoco className="text-[26px] font-extrabold leading-8 tracking-[-0.02em] text-noct-text">
+              Comprueba el resultado
+            </EncabezadoConFoco>
+          </div>
+        </div>
+        {titulo && (
+          <p className="text-[17px] font-semibold leading-6 text-noct-neutral-300 text-pretty [overflow-wrap:anywhere]">{titulo}</p>
+        )}
+        <section className={`${TARJETA} flex flex-col gap-2.5 rounded-[20px] p-4`}>
+          <h2 className="text-[16px] font-extrabold">Comprobación final</h2>
+          <p className="text-[14px] leading-5 text-noct-neutral-300">
+            Revísala en el equipo y marca lo que se cumple. Hasta entonces la guía no se da por terminada.
+          </p>
+          <ul className="flex flex-col gap-2">
+            {comprobaciones.map((item, indice) => {
+              const marcada = marcadas.has(indice)
+              return (
+                <li key={indice}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={marcada}
+                    onClick={() => onAlternar(indice)}
+                    className={`flex min-h-16 w-full cursor-pointer items-center gap-3 rounded-[14px] border-2 px-3 py-2 text-left ${
+                      marcada ? 'border-noct-exito-linea bg-noct-exito-tinte' : 'border-noct-divider bg-noct-surface active:bg-noct-presionado'
+                    }`}
+                  >
+                    <span
+                      aria-hidden
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] border-2 ${
+                        marcada ? 'border-noct-exito bg-noct-exito text-noct-exito-tinte' : 'border-noct-divider-fuerte'
+                      }`}
+                    >
+                      {marcada && <IconoVentana nombre="hecho" tam={14} grosor={3.6} />}
+                    </span>
+                    <span className="min-w-0 text-[16px] font-medium leading-[22px] text-noct-text text-pretty [overflow-wrap:anywhere]">
+                      {item}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      </div>
+      <div className="sticky bottom-0 z-10 -mx-4 mt-auto flex flex-none flex-col gap-2.5 border-t border-noct-divider bg-noct-surface px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-noct-pie)]">
+        <div ref={huecoAvisoActualizacion} className="empty:hidden" />
+        <p className="text-[18px] font-extrabold leading-6">¿El problema quedó resuelto?</p>
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            onClick={() => onTerminar?.()}
+            aria-disabled={onTerminar === null}
+            data-terminar-guia
+            className={`inline-flex min-h-[58px] items-center justify-center gap-2 rounded-2xl px-3 text-center leading-tight ${
+              onTerminar ? `${RELLENO_RESUELTO} text-[16px]` : 'cursor-default bg-noct-neutral-900 text-[15px] font-extrabold text-noct-neutral-300 shadow-[0_4px_0_var(--color-noct-divider)]'
+            }`}
+          >
+            {onTerminar && <IconoVentana nombre="hecho" tam={20} grosor={3} className="shrink-0" />}
+            {etiqueta}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSigueIgual(true)}
+            aria-haspopup="dialog"
+            className={`inline-flex min-h-[58px] cursor-pointer items-center justify-center rounded-2xl border-2 border-noct-divider-fuerte bg-noct-surface px-3 text-[16px] font-extrabold text-noct-text ${RELIEVE_BORDE_FUERTE}`}
+          >
+            No, sigue igual
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={onAnterior}
+          aria-label="Anterior. Vuelve a la última acción, sin cambiar lo marcado"
+          // Una navegación principal del pie, no un enlace pequeño (regla 28).
+          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-noct-divider text-[14.5px] font-bold text-noct-text active:bg-noct-presionado"
+        >
+          <IconoVentana nombre="atras" tam={16} grosor={2.6} />
+          Última ventana
+        </button>
+      </div>
+      {/* LO QUE SE PUEDE HACER SI SIGUE IGUAL (tarea 350): las mismas salidas
+          que ya había, dichas como respuesta. Nada se marca ni se termina. */}
+      <HojaInferior abierta={sigueIgual} onCerrar={() => setSigueIgual(false)} titulo="El problema sigue" contexto={titulo}>
+        <div className="flex flex-col gap-2.5">
+          <p className="text-[14px] font-semibold leading-snug text-noct-neutral-300">
+            Terminar la guía no siempre resuelve el problema. Elige cómo seguir; lo hecho no se pierde.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSigueIgual(false)
+              onAnterior()
+            }}
+            className={`${TARJETA_TOCABLE} flex min-h-16 items-center gap-3 px-3.5 py-2.5`}
+          >
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[16px] font-bold">Revisar las ventanas de la guía</span>
+              <span className="text-[14px] text-noct-neutral-300">Vuelve a la última, con todo lo hecho</span>
+            </span>
+            <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
+          </button>
+          <Link to="/" className={`${TARJETA_TOCABLE} flex min-h-16 items-center gap-3 px-3.5 py-2.5`}>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[16px] font-bold">Buscar otra solución</span>
+              <span className="text-[14px] text-noct-neutral-300">En Resolver; esta guía queda donde la dejaste</span>
+            </span>
+            <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
+          </Link>
+        </div>
+      </HojaInferior>
+    </div>
+  )
+}
+
+// LA VENTANA EN SU TARJETA, SOLO EN LA VENTANA (tarea 350). Fuera de ella, lo
+// de dentro va tal cual, sin envoltura, como antes.
+function EnMarcoSi({
+  activo,
+  numero,
+  hecha,
+  pie,
+  children,
+}: {
+  activo: boolean
+  numero: number
+  hecha: boolean
+  pie: ReactNode
+  children: ReactNode
+}) {
+  if (!activo) return <>{children}</>
+  return (
+    <MarcoVentana numero={numero} hecha={hecha} pie={pie}>
+      {children}
+    </MarcoVentana>
+  )
+}
+
 // Contador de paso, DENTRO de la barra compacta de 44 px del chasis
 // (tarea 218, G-09, G-10, G-14). Antes era `CabeceraPaso`: un bloque
 // propio de 56 px con el título repetido, las tareas del paso y una
@@ -2003,27 +2313,31 @@ function ContadorPaso({
   total,
   onAbrirIndice,
   persistente = false,
+  palabra = 'Paso',
 }: {
   indice: number
   total: number | null
   onAbrirIndice: () => void
   /** El índice ya está a la vista (desde 1280): no abre ninguna hoja. */
   persistente?: boolean
+  /** Cómo se llama lo que se recorre: «Ventana» en la ventana del teléfono. */
+  palabra?: 'Paso' | 'Ventana'
 }) {
   const ancho = useEsAncho()
-  // EN EL TELÉFONO, "PASOS" (tarea 345, DESPUÉS de Claude Design): el paso ya
-  // lo dice la cabecera, entero; este botón abre el índice y lo dice.
+  // EN EL TELÉFONO, "ÍNDICE" (tarea 350, prototipo de Claude Design; «Pasos»
+  // desde la 345): la cabecera ya dice dónde se va; este botón abre el índice
+  // y lo dice, sobre la superficie 2.
   if (!ancho) {
     return (
       <button
         type="button"
         onClick={onAbrirIndice}
         aria-haspopup="dialog"
-        aria-label={nombreDelContador(indice, total)}
-        className="flex min-h-12 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[15.5px] font-semibold text-noct-accent-300 hover:bg-noct-text/[.05] active:bg-noct-presionado"
+        aria-label={nombreDelContador(indice, total, palabra)}
+        className="mr-1 flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl bg-noct-neutral-900 px-3 text-[14px] font-bold text-noct-text active:bg-noct-presionado"
       >
-        <ListChecks size={20} className="shrink-0" aria-hidden />
-        <span aria-hidden>Pasos</span>
+        <IconoVentana nombre="indice" tam={18} grosor={2.4} className="shrink-0" />
+        <span aria-hidden>Índice</span>
       </button>
     )
   }
@@ -2051,8 +2365,8 @@ function ContadorPaso({
 
 // El nombre accesible de los contadores: "Paso 3 de 7", o "Paso 3" cuando el
 // total todavía depende de una respuesta.
-function nombreDelContador(indice: number, total: number | null): string {
-  return `Paso ${indice + 1}${total === null ? '' : ` de ${total}`}. Abrir el índice de pasos`
+function nombreDelContador(indice: number, total: number | null, palabra: 'Paso' | 'Ventana' = 'Paso'): string {
+  return `${palabra} ${indice + 1}${total === null ? '' : ` de ${total}`}. Abrir el índice de ${palabra === 'Ventana' ? 'ventanas' : 'pasos'}`
 }
 
 // EL ENCABEZADO DE UNA PANTALLA DE CIERRE RECIBE EL FOCO AL APARECER

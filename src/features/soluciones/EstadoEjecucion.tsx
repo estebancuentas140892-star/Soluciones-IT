@@ -63,20 +63,28 @@ export function SegmentosDePasos({
   const porConocer = Math.max(0, (total ?? resumenes.length) - resumenes.length)
   if (resumenes.length + porConocer + (conComprobacion ? 1 : 0) < 2) return null
   return (
-    <div aria-hidden data-segmentos-pasos className={`flex gap-1 md:hidden ${enCabecera ? 'px-3.5 pb-2.5 pt-0.5' : 'pt-1.5'}`}>
+    // LOS SEGMENTOS DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350): 6 px de alto,
+    // lo hecho en el verde que comprueba, lo que se ve en el acento y lo que
+    // falta en el color del borde; lo que todavía no se conoce (una respuesta
+    // decide el camino), punteado. Consultando otro paso, ese en ámbar.
+    <div aria-hidden data-segmentos-pasos className={`flex gap-1 md:hidden ${enCabecera ? 'px-2.5 pb-2.5 pt-0.5' : 'pt-1.5'}`}>
       {resumenes.map((resumen) => {
-        let clase = resumen.estado === 'hecho' ? 'bg-noct-accent' : 'bg-noct-neutral-700'
+        let clase = resumen.estado === 'hecho' ? 'bg-noct-exito' : 'bg-noct-divider'
         if (consultando && resumen.indice === indiceTrabajo) clase = 'bg-noct-neutral-400'
-        if (resumen.indice === indiceVisto) clase = consultando ? 'bg-noct-precaucion' : 'bg-noct-text'
-        return <span key={resumen.id} className={`h-1 min-w-0 flex-1 rounded-sm ${clase}`} />
+        if (resumen.indice === indiceVisto) clase = consultando ? 'bg-noct-precaucion' : 'bg-noct-accent'
+        return <span key={resumen.id} className={`h-1.5 min-w-0 flex-1 rounded-[3px] ${clase}`} />
       })}
       {Array.from({ length: porConocer }, (_, i) => (
-        <span key={`por-conocer-${i}`} className="h-1 min-w-0 flex-1 rounded-sm bg-noct-neutral-700" />
+        <span
+          key={`por-conocer-${i}`}
+          data-segmento-por-conocer
+          className="h-1.5 min-w-0 flex-1 rounded-[3px] bg-[repeating-linear-gradient(90deg,var(--color-noct-linea-media)_0_5px,transparent_5px_9px)]"
+        />
       ))}
       {conComprobacion && (
         <span
           data-segmento-comprobacion
-          className={`h-1 min-w-0 flex-1 rounded-sm ${enComprobacion ? 'bg-noct-text' : 'bg-noct-neutral-700'}`}
+          className={`h-1.5 min-w-0 flex-1 rounded-[3px] ${enComprobacion ? 'bg-noct-accent' : 'bg-noct-divider'}`}
         />
       )}
     </div>
@@ -86,7 +94,8 @@ export function SegmentosDePasos({
 export type EstadoLinea =
   | { tipo: 'consulta' }
   // `totalPasos` es null mientras el total dependa de una respuesta (tarea 302).
-  | { tipo: 'retomada'; numeroPaso: number; totalPasos: number | null; onEmpezarDeNuevo: () => void }
+  // `palabra`: «ventana» en la ventana del teléfono (tarea 350).
+  | { tipo: 'retomada'; numeroPaso: number; totalPasos: number | null; onEmpezarDeNuevo: () => void; palabra?: 'paso' | 'ventana' }
   | { tipo: 'borrador' }
 
 /** La línea de estado de la ejecución, o nada si no hay nada que decir. */
@@ -108,7 +117,7 @@ export function LineaDeEstado({ estado }: { estado: EstadoLinea | null }) {
         <p className="flex min-w-0 flex-1 items-center gap-2 text-[13px] leading-snug text-noct-neutral-400">
           <ClockCounterClockwise size={14} className="shrink-0" aria-hidden />
           <span className="min-w-0">
-            Retomando · paso {estado.numeroPaso}
+            Retomando · {estado.palabra ?? 'paso'} {estado.numeroPaso}
             {estado.totalPasos !== null && ` de ${estado.totalPasos}`}
           </span>
         </p>

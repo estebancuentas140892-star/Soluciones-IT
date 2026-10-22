@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { padreDe, vueltaDeTarea } from '../lib/navegacion'
 import { MagnifyingGlass, X } from './iconos'
 import { useEsAncho } from './useEsAncho'
+import { IconoVentana } from './ventana/IconoVentana'
 
 // Cabecera del nivel 3 del chasis (tarea 185, mockup 4c del handoff
 // "Auditoría de Soluciones TI"). Es la única pantalla que puede quedarse
@@ -121,17 +122,14 @@ export function BarraTarea({
   const rutaVuelta = vuelta ?? vueltaDeTarea(pathname)
 
   if (compacta) {
-    // La X de la guía en el teléfono lleva su palabra: es la salida, y salir
-    // no pierde el avance (tarea 345).
+    // LA X DE LA GUÍA EN EL TELÉFONO (tarea 350, prototipo de Claude Design;
+    // con la palabra "Salir" desde la 345): la X de trazo grueso, sola; su
+    // nombre accesible dice que el avance se guarda, y al salir lo dice el
+    // aviso de siempre.
     const claseSalida = guiaEnTelefono
-      ? 'flex min-h-12 shrink-0 items-center gap-1.5 rounded-lg pl-2 pr-2 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.07]'
+      ? 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-noct-text active:bg-noct-presionado'
       : 'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-noct-neutral-300 hover:bg-noct-text/[.07] hover:text-noct-text'
-    const contenidoSalida = (
-      <>
-        <X size={guiaEnTelefono ? 20 : 19} aria-hidden />
-        {guiaEnTelefono && <span aria-hidden>Salir</span>}
-      </>
-    )
+    const contenidoSalida = guiaEnTelefono ? <IconoVentana nombre="cerrar" tam={22} grosor={2.4} /> : <X size={19} aria-hidden />
     return (
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-surface/[.95] backdrop-blur-[12px]">
         {/* 56 de alto en la tableta y 60 en el escritorio (tarea 339, T5). */}
@@ -178,12 +176,13 @@ export function BarraTarea({
             </Link>
           )}
           {guiaEnTelefono ? (
-            <div className="min-w-0 flex-1 text-center">
-              <h1 className="sr-only">{titulo}</h1>
-              {/* Entera: a 320 baja a dos líneas antes que recortarse. */}
-              <p aria-hidden className="line-clamp-2 text-[13px] leading-tight text-noct-neutral-400 text-balance">
-                Tu avance se guarda solo
-              </p>
+            // EL TÍTULO DE LA GUÍA, A LA VISTA (tarea 350): a 15 · 800 en una
+            // línea; debajo, la banda de la guía dice en qué ventana se va. Se
+            // abrevia porque el título entero está en el índice y en Detalles.
+            <div className="min-w-0 flex-1 px-1">
+              <h1 title={titulo} className="truncate text-[15px] font-bold leading-snug">
+                {titulo}
+              </h1>
             </div>
           ) : contexto ? (
             // Dos líneas: con qué (12 px, el mínimo de texto) y qué (14 px

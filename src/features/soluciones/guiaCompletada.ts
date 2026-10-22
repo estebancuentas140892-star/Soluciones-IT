@@ -1,23 +1,23 @@
 // LO QUE DICE LA PANTALLA FINAL DE UNA GUÍA EN EL TELÉFONO (tarea 341,
 // handoff móvil "1b Pulgar"): qué se terminó, dónde, cuánto fue y cuándo.
+// Desde la tarea 350 (prototipo de Claude Design) cuánto fue va arriba, en su
+// línea de mayúsculas, y qué y dónde debajo del título, sin repetir la cuenta.
 
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
 /**
- * "Cambiar el tóner en POSPN01. 4 pasos y 2 comprobaciones." Sin equipo, sin
- * el "en"; sin comprobación final, solo los pasos.
+ * "4 ventanas · 2 comprobaciones", la línea sobre «Guía completada». Un paso,
+ * en el teléfono, es una ventana. Sin comprobación final, solo las ventanas.
  */
-export function resumenDeGuiaCompletada(
-  titulo: string,
-  equipo: string | null,
-  pasos: number,
-  comprobaciones: number,
-): string {
-  const donde = titulo ? (equipo ? `${titulo} en ${equipo}. ` : `${titulo}. `) : ''
-  const deLosPasos = `${pasos} ${pasos === 1 ? 'paso' : 'pasos'}`
-  const deLasComprobaciones =
-    comprobaciones > 0 ? ` y ${comprobaciones} ${comprobaciones === 1 ? 'comprobación' : 'comprobaciones'}` : ''
-  return `${donde}${deLosPasos}${deLasComprobaciones}.`
+export function cuentaDeGuiaCompletada(ventanas: number, comprobaciones: number): string {
+  const deLasVentanas = `${ventanas} ${ventanas === 1 ? 'ventana' : 'ventanas'}`
+  if (comprobaciones <= 0) return deLasVentanas
+  return `${deLasVentanas} · ${comprobaciones} ${comprobaciones === 1 ? 'comprobación' : 'comprobaciones'}`
+}
+
+/** "Cambiar el tóner · POSPN01": la guía y con qué equipo; sin equipo, la guía. */
+export function queYDondeDeGuiaCompletada(titulo: string, equipo: string | null): string {
+  return [titulo, equipo].filter(Boolean).join(' · ')
 }
 
 /**

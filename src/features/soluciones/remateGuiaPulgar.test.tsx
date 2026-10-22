@@ -64,17 +64,19 @@ afterEach(async () => {
   bloquear()
 })
 
-describe('el contador y el índice "Pasos"', () => {
-  it('en el teléfono el contador dice "Pasos", el paso va entero en la cabecera y el índice tiene la anatomía del handoff', async () => {
+describe('el contador y el índice', () => {
+  it('en el teléfono el contador dice "Índice", el paso va entero en la cabecera y el índice tiene la anatomía del handoff', async () => {
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes(ACCION), 'la acción')
-    // Desde la tarea 345 (DESPUÉS de Claude Design): "Pasos" de 48 abre el
-    // mismo índice, con el mismo nombre accesible, y el paso se lee arriba.
+    // Desde la tarea 350 (prototipo de Claude Design; «Pasos» desde la 345):
+    // «Índice» sobre la superficie 2 abre el mismo índice, con el mismo
+    // nombre accesible. La fila dice la guía y, debajo, el paso.
     const contador = await esperarControl(/^Paso 1 de 2\. Abrir el índice de pasos$/)
-    expect(contador.textContent).toBe('Pasos')
-    expect(contador.className).toContain('min-h-12')
+    expect(contador.textContent).toBe('Índice')
+    expect(contador.className).toContain('h-11')
+    expect(contador.className).toContain('bg-noct-neutral-900')
+    expect(Array.from(document.body.querySelectorAll('h1')).some((h) => h.textContent === 'Revisar un panel de prueba')).toBe(true)
     const enCabecera = document.body.querySelector<HTMLElement>('[data-paso-en-cabecera]')
-    expect(enCabecera?.textContent).toContain('Revisar un panel de prueba')
     expect(enCabecera?.textContent).toContain('Paso 1 de 2 · ')
 
     await tocar(contador)
@@ -143,13 +145,17 @@ describe('la guía en el teléfono (tarea 345)', () => {
     ventana.happyDOM.setViewport({ width: 375, height: 812 })
   })
 
-  it('la cabecera dice "Salir" y "Tu avance se guarda solo", y el botón dice a dónde lleva', async () => {
+  it('la cabecera lleva la X y el nombre de la guía a la vista, y el botón dice a dónde lleva', async () => {
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes(ACCION), 'la acción')
-    expect(textoPantalla()).toContain('Salir')
-    expect(textoPantalla()).toContain('Tu avance se guarda solo')
-    // El nombre de la guía sigue siendo el encabezado de la página.
-    expect(Array.from(document.body.querySelectorAll('h1')).some((h) => h.textContent === 'Revisar un panel de prueba')).toBe(true)
+    // Desde la tarea 350 (prototipo de Claude Design): la X sola, con su
+    // nombre accesible, y el nombre de la guía a la vista, que sigue siendo
+    // el encabezado de la página; con su texto entero en el título.
+    expect(control('Salir de la guía')).not.toBeNull()
+    expect(textoPantalla()).not.toContain('Tu avance se guarda solo')
+    const encabezado = Array.from(document.body.querySelectorAll('h1')).find((h) => h.textContent === 'Revisar un panel de prueba')
+    expect(encabezado?.className).not.toContain('sr-only')
+    expect(encabezado?.getAttribute('title')).toBe('Revisar un panel de prueba')
     // Dentro del paso, "Hecho, siguiente acción"; en su última, el paso al que lleva.
     await tocar(await esperarControl('Hecho, siguiente acción'))
     await esperar(() => textoPantalla().includes('Revisa el panel de prueba'), 'la segunda acción')

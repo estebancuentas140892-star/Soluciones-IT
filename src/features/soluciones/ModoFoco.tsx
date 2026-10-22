@@ -18,6 +18,7 @@ import {
   Warning,
   X,
 } from '../../components/iconos'
+import { IconoVentana } from '../../components/ventana/IconoVentana'
 import { CredencialEnHoja } from '../boveda/CredencialEnHoja'
 import { ChipReferencia } from '../referencia/ChipReferencia'
 import { fichasEnlazadasDelPaso } from '../referencia/comandosEnTexto'
@@ -1453,7 +1454,27 @@ export function ModoFoco({
 // sección 4): lo que tiene que estar a mano antes de la primera acción.
 // Sin casillas: no es trabajo que marcar, es algo que comprobar de un
 // vistazo. Nunca aparece vacío.
-export function AntesDeEmpezar({ requisitos }: { requisitos: string[] }) {
+export function AntesDeEmpezar({ requisitos, variante = 'lista' }: { requisitos: string[]; variante?: 'lista' | 'ventana' }) {
+  // EN LA VENTANA DEL TELÉFONO (tarea 350, prototipo de Claude Design): en su
+  // azul propio, el de preparar, con su icono de lista comprobada; lo que hay
+  // que tener listo, a 15.
+  if (variante === 'ventana') {
+    return (
+      <section data-antes-de-empezar className="flex gap-2.5 rounded-2xl bg-noct-antes-tinte px-3.5 py-3">
+        <IconoVentana nombre="requisitos" tam={22} className="mt-px shrink-0 text-noct-antes" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <h2 className="text-[13px] font-extrabold uppercase leading-snug tracking-[.04em] text-noct-antes">Antes de empezar</h2>
+          <ul className="flex flex-col gap-1">
+            {requisitos.map((requisito, i) => (
+              <li key={i} className="text-[15px] font-medium leading-[21px] text-noct-text text-pretty [overflow-wrap:anywhere]">
+                {requisito}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    )
+  }
   return (
     <section className="rounded-xl border border-noct-divider bg-noct-surface px-3.5 py-3">
       <h2 className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-300">

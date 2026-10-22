@@ -202,7 +202,8 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
     await esperar(() => textoPantalla().includes('Copiar el archivo a la carpeta de la persona'), 'el último paso')
     await tocar(await esperar(() => principal('Completar y terminar'), 'terminar'))
     await esperar(() => textoPantalla().includes('Guía completada'), 'la guía terminada')
-    expect(textoPantalla()).toContain('4 pasos')
+    // En el teléfono, un paso es una ventana (tarea 350).
+    expect(textoPantalla()).toContain('4 ventanas')
   })
 
   it('recargar conserva la ruta elegida y retoma en su paso', async () => {

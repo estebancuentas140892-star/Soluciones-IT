@@ -152,7 +152,11 @@ describe('una ventana con varias instrucciones', () => {
       expect.stringContaining('Guarda el cambio de prueba'),
     ])
     expect(document.body.querySelector('[role="checkbox"]')).toBeNull()
-    expect(document.body.querySelector('[data-paso-en-cabecera]')?.textContent).toContain('Paso 1 de 2 · Preparar el equipo')
+    // La cabecera dice en qué ventana se va y la tarjeta, cuál es (tarea 350,
+    // prototipo de Claude Design): «Ventana 1 de 2» arriba y su título a 22.
+    expect(document.body.querySelector('[data-paso-en-cabecera]')?.textContent).toContain('Ventana 1 de 2')
+    expect(document.body.querySelector('[data-marco-ventana] h2')?.textContent).toBe('Preparar el equipo')
+    expect(document.body.querySelector('[data-marco-ventana]')?.textContent).toContain('Ventana 1')
     expect(etiquetaPrincipal()).toBe('Listo · Siguiente ventana')
 
     await tocarPrincipal()
@@ -212,7 +216,7 @@ describe('una ventana con varias instrucciones', () => {
     await montar(RUTAS, ruta('guia-v1'), { ventanaPorDefecto: true })
     await enLaVentana('Abre el panel de prueba')
 
-    await tocar(await esperarControl(/^Paso 1 de 2\. Abrir el índice de pasos$/))
+    await tocar(await esperarControl(/^Ventana 1 de 2\. Abrir el índice de ventanas$/))
     const filas = await esperar(() => {
       const hoja = document.body.querySelector('[role="dialog"]')
       const lista = hoja ? Array.from(hoja.querySelectorAll<HTMLElement>('ol button')) : []
@@ -285,7 +289,7 @@ describe('las advertencias de la ventana', () => {
     // Confirmada, se puede cerrar.
     await tocar(await esperarControl('Confirmo que la leí'))
     await esperar(() => etiquetaPrincipal() === 'Listo · Siguiente ventana', 'el botón disponible')
-    expect(control('Leída')?.getAttribute('aria-pressed')).toBe('true')
+    expect(control('Advertencia confirmada')?.getAttribute('aria-pressed')).toBe('true')
     await tocarPrincipal()
     await enLaVentana('Revisa el campo de prueba')
   })
@@ -297,7 +301,7 @@ describe('las advertencias de la ventana', () => {
 
     await tocar(await esperarControl('Confirmo que la leí'))
     await esperar(() => etiquetaPrincipal() === 'Listo · Siguiente ventana', 'disponible')
-    await tocar(await esperarControl('Leída'))
+    await tocar(await esperarControl('Advertencia confirmada'))
     await esperar(() => etiquetaPrincipal() === 'Falta confirmar la advertencia', 'bloqueada otra vez')
   })
 
@@ -617,7 +621,8 @@ describe('un paso que reutiliza otra guía, dentro de la ventana', () => {
     // "Listo" de la última ventana lleva a la comprobación final de siempre.
     expect(etiquetaPrincipal()).toBe('Listo · Comprobar el resultado')
     await tocarPrincipal()
-    await esperar(() => textoPantalla().includes('¿Quedó resuelto?'), 'la comprobación final')
+    // El cierre del prototipo (tarea 350): la pregunta en el pie.
+    await esperar(() => textoPantalla().includes('¿El problema quedó resuelto?'), 'la comprobación final')
   })
 })
 
@@ -658,7 +663,9 @@ describe('cada quien con su forma de trabajar', () => {
     await montar(RUTAS, ruta('guia-v9'), { ventanaPorDefecto: true })
     await enLaVentana('Primera acción de prueba')
 
-    await tocar(await esperarControl(/^Paso 1 de 2\. Abrir el índice de pasos$/))
+    // En la ventana, el índice de ventanas (tarea 350); en la acción a la vez,
+    // el de pasos de siempre.
+    await tocar(await esperarControl(/^Ventana 1 de 2\. Abrir el índice de ventanas$/))
     await tocar(await esperarControl('Volver a una acción a la vez'))
     await esperar(() => !document.body.querySelector('[data-pie-ventana]'), 'sin ventana')
     expect(textoPantalla()).not.toContain('Segunda acción de prueba')

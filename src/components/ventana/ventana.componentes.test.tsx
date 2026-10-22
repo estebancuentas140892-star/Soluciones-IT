@@ -79,9 +79,13 @@ describe('AvisoVentana', () => {
     expect(critica.textContent).toContain('Advertencia crítica')
     expect(precaucion.querySelector('svg')).not.toBeNull()
     expect(critica.querySelector('svg')).not.toBeNull()
-    // Borde fino en la una, de 2 px en la otra.
-    expect(precaucion.className).toContain('border ')
+    // Borde fino en la una, de 2 px en la otra, cada una con su línea y su
+    // tinte (tarea 350, valores del prototipo).
+    expect(precaucion.className).toContain('border-[1.5px]')
+    expect(precaucion.className).toContain('border-noct-precaucion-linea')
     expect(critica.className).toContain('border-2')
+    expect(critica.className).toContain('border-noct-error-linea')
+    expect(critica.className).toContain('bg-noct-error-tinte')
   })
 
   it('la crítica sin confirmar se lee y no pide nada', async () => {
@@ -89,7 +93,7 @@ describe('AvisoVentana', () => {
     expect(contenedor.querySelector('button')).toBeNull()
   })
 
-  it('la crítica pide «Confirmo que la leí», pasa a «Leída» y se deshace tocándola otra vez', async () => {
+  it('la crítica pide «Confirmo que la leí», pasa a «Advertencia confirmada» y se deshace tocándola otra vez', async () => {
     const confirmar = vi.fn()
     await pintar(<AvisoVentana nivel="critica" texto="Irreversible." onConfirmar={confirmar} />)
     const pendiente = boton('Confirmo que la leí')
@@ -99,7 +103,9 @@ describe('AvisoVentana', () => {
     expect(confirmar).toHaveBeenCalledTimes(1)
 
     await pintar(<AvisoVentana nivel="critica" texto="Irreversible." confirmada onConfirmar={confirmar} />)
-    const leida = boton('Leída')
+    // Confirmada, en el verde de lo comprobado, como el prototipo (tarea 350).
+    const leida = boton('Advertencia confirmada')
+    expect(leida.className).toContain('bg-noct-exito-tinte')
     expect(leida.getAttribute('aria-pressed')).toBe('true')
     expect(contenedor.querySelector('[data-aviso-ventana]')?.getAttribute('data-confirmada')).toBe('true')
     await tocar(leida)
@@ -116,15 +122,41 @@ describe('FilaInstruccion y FilaComprobacion', () => {
   it('la instrucción lleva su número y ninguna casilla, y lo que cuelga va debajo', async () => {
     await pintar(
       <FilaInstruccion numero={3} texto="Guarda el cambio">
-        <span>Cómo hacerlo</span>
+        <span>Debes ver</span>
       </FilaInstruccion>,
     )
     const fila = contenedor.querySelector('[data-instruccion-ventana="3"]')
     expect(fila?.textContent).toContain('Guarda el cambio')
-    expect(fila?.textContent).toContain('Cómo hacerlo')
+    // A 19/27, el texto de la instrucción del prototipo (tarea 350).
+    expect(fila?.querySelector('p')?.className).toContain('text-[19px]')
+    // Lo que cuelga va debajo, alineado con el texto.
+    expect(contenedor.querySelector('.pl-\\[42px\\]')?.textContent).toBe('Debes ver')
     expect(contenedor.querySelector('[role="checkbox"], input[type="checkbox"]')).toBeNull()
     // El número visible se oculta al lector, que oye «Instrucción 3:».
     expect(contenedor.querySelector('.sr-only')?.textContent).toBe('Instrucción 3: ')
+  })
+
+  it('con dos microacciones o más, la instrucción encabeza y cada microacción lleva su número (tarea 350)', async () => {
+    await pintar(
+      <FilaInstruccion
+        numero={2}
+        texto="Elimina la carpeta de AppData"
+        microacciones={[
+          { id: 'm1', accion: 'Pulsa', elemento: 'Windows + R' },
+          { id: 'm2', accion: 'Escribe', elemento: '%appdata%', ubicacion: 'Cuadro Ejecutar' },
+        ]}
+      />,
+    )
+    // La instrucción, sin número, encabeza.
+    expect(contenedor.querySelector('[data-fila-ventana] > p')?.textContent).toBe('Elimina la carpeta de AppData')
+    // Cada microacción con su número, siguiendo el de la ventana, y el
+    // elemento en negrita.
+    const dos = contenedor.querySelector('[data-instruccion-ventana="2"]')
+    const tres = contenedor.querySelector('[data-instruccion-ventana="3"]')
+    expect(dos?.textContent).toContain('Pulsa Windows + R')
+    expect(dos?.querySelector('strong')?.textContent).toBe('Windows + R')
+    expect(tres?.textContent).toContain('Cuadro Ejecutar')
+    expect(contenedor.textContent).not.toContain('Cómo hacerlo')
   })
 
   it('sin nada que cuelgue no deja un hueco', async () => {
@@ -282,8 +314,9 @@ describe('PieVentana con BotonesDelPie', () => {
       </PieVentana>,
     )
     const atras = boton('Volver a la ventana 1')
-    expect(atras.className).toContain('h-[54px]')
-    expect(atras.className).toContain('w-[54px]')
+    // 58 x 58 con su relieve, el del prototipo (tarea 350).
+    expect(atras.className).toContain('h-[58px]')
+    expect(atras.className).toContain('w-[58px]')
     await tocar(atras)
     expect(volver).toHaveBeenCalledTimes(1)
   })

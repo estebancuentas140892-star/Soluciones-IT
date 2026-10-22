@@ -50,3 +50,7 @@ export const TITULO_GRUPO = 'text-[15px] font-extrabold leading-snug text-noct-n
 
 /** El título de una pantalla raíz del teléfono (Equipos, Bóveda, Más): 26 · 800. */
 export const TITULO_PANTALLA = 'text-[26px] font-extrabold leading-[1.15] tracking-[-.02em]'
+
+/** Una salida al pie de una ventana («Tengo un problema», «Detalles»): 40 de dibujo, 44 de toque. */
+export const SALIDA_VENTANA =
+  'toque-amplio relative inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] border-noct-divider bg-noct-surface px-3 text-[14px] font-bold text-noct-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent active:bg-noct-presionado'

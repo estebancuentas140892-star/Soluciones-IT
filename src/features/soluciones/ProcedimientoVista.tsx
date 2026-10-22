@@ -1273,8 +1273,9 @@ export function BloqueVista({
       )
     }
     return (
-      <FilaInstruccion numero={numero ?? 1} texto={bloque.texto}>
-        <ComoHacerlo microPasos={comoHacer} variante="fila" />
+      // La instrucción encabeza sus microacciones, cada una en su número
+      // (tarea 350): `FilaInstruccion` las dibuja; aquí no se repiten.
+      <FilaInstruccion numero={numero ?? 1} texto={bloque.texto} microacciones={comoHacerQueSeEnsena(comoHacer)}>
         {referencias && (
           <QueHaceEnTexto
             texto={[bloque.texto, ...comoHacerQueSeEnsena(comoHacer).map(fraseDeMicroPaso)].join('\n')}

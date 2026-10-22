@@ -1,4 +1,5 @@
 import type { BloquePaso, OpcionDecision, PasoProcedimiento } from '../../lib/db'
+import { comoHacerDe, comoHacerQueSeEnsena } from '../../lib/comoHacer'
 import { tareasDe } from '../../lib/procedimiento'
 import { decisionDeRuta } from '../../lib/rutaProcedimiento'
 import { acortarNombreGuia } from './cierrePaso'
@@ -46,6 +47,26 @@ export function numerarInstrucciones(paso: PasoProcedimiento): Map<string, numbe
     if (tarea.tipoTarea === 'verificacion' || tarea.tipoTarea === 'decision') continue
     numeros.set(tarea.id, siguiente)
     siguiente += 1
+  }
+  return numeros
+}
+
+/**
+ * LOS NÚMEROS DE LAS FILAS DE LA VENTANA (tarea 350, prototipo de Claude
+ * Design): como `numerarInstrucciones`, pero contando lo que se ve. Una acción
+ * con su «Cómo hacerlo» (dos microacciones o más) se lee como su instrucción
+ * encabezando y una fila numerada por microacción, así que ocupa tantos
+ * números como microacciones; una sin él, uno. Da el PRIMER número de cada
+ * acción; la numeración sigue por toda la ventana.
+ */
+export function numerarFilasDeVentana(paso: PasoProcedimiento): Map<string, number> {
+  const numeros = new Map<string, number>()
+  let siguiente = 1
+  for (const tarea of tareasDe(paso.bloques)) {
+    if (tarea.tipoTarea === 'verificacion' || tarea.tipoTarea === 'decision') continue
+    numeros.set(tarea.id, siguiente)
+    const micro = comoHacerQueSeEnsena(comoHacerDe(tarea)).length
+    siguiente += micro >= 2 ? micro : 1
   }
   return numeros
 }

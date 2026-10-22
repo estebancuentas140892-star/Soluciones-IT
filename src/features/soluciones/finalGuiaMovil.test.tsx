@@ -71,7 +71,10 @@ describe('la pantalla final de una guía', () => {
     await tocar(await esperar(() => control(/^Completar y terminar$/), 'la única acción'))
     await esperar(() => textoPantalla().includes('Guía completada'), 'la pantalla final del teléfono')
 
-    expect(textoPantalla()).toContain('Limpiar el rodillo de prueba en IMPRESORA-PRUEBA-FIN. 1 paso.')
+    // Como el prototipo (tarea 350): cuánto fue en su línea de mayúsculas y,
+    // bajo «Guía completada», qué y con qué equipo, sin repetir la cuenta.
+    expect(textoPantalla()).toContain('1 ventana')
+    expect(textoPantalla()).toContain('Limpiar el rodillo de prueba · IMPRESORA-PRUEBA-FIN')
     expect(textoPantalla()).not.toContain('Guía terminada')
     const fecha = await esperar(
       () => Array.from(document.body.querySelectorAll('p.font-mono')).find((p) => /\d{4} · \d{1,2}:\d{2}$/.test(p.textContent ?? '')),
