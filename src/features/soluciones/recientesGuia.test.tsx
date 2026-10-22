@@ -4,7 +4,6 @@ import { db } from '../../lib/db'
 import { obtenerRecientes, registrarVisita } from '../../lib/recientes'
 import {
   campoBuscador,
-  control,
   desmontarTodo,
   escribir,
   esperar,
