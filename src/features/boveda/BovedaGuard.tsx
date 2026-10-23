@@ -167,7 +167,14 @@ function PantallaDesbloqueo() {
 
       {(modo === 'verificar' || modo === 'crear') && (
         <form onSubmit={manejarEnvio} className="flex w-full max-w-[300px] flex-col gap-2.5 max-md:mt-1.5 max-md:max-w-[340px]">
+          {/* EL RÓTULO A LA VISTA, EN EL TELÉFONO (tarea 351, como el
+              prototipo): el campo dice qué pide aunque ya tenga algo escrito.
+              Desde 768, el marcador de siempre. */}
+          <label htmlFor="boveda-contrasena" className="hidden text-left text-[14.5px] font-extrabold max-md:block">
+            Contraseña maestra
+          </label>
           <CampoContrasena
+            id="boveda-contrasena"
             required
             autoFocus
             value={contrasena}
