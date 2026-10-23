@@ -15,6 +15,11 @@ import { IconoVentana } from './IconoVentana'
 interface Props {
   /** El número de la ventana en el recorrido (el de la cabecera). */
   numero: number
+  /**
+   * Lo que dice la barra, si no es «Ventana N»: «Pregunta 2» en una guía con
+   * preguntas (tarea 351), que se dibuja con la misma ventana.
+   */
+  rotulo?: string
   /** Se está revisando una ventana ya hecha. */
   hecha: boolean
   /** Las salidas al pie de la ventana. */
@@ -22,16 +27,16 @@ interface Props {
   children: ReactNode
 }
 
-export function MarcoVentana({ numero, hecha, pie, children }: Props) {
+export function MarcoVentana({ numero, rotulo = `Ventana ${numero}`, hecha, pie, children }: Props) {
   return (
     <article
-      aria-label={`Ventana ${numero}`}
+      aria-label={rotulo}
       data-marco-ventana
       className="flex-none overflow-hidden rounded-[22px] border-[1.5px] border-noct-divider bg-noct-surface shadow-[0_2px_0_var(--color-noct-sombra-tarjeta)]"
     >
       <div className="flex h-9 items-center gap-2 border-b border-noct-divider bg-noct-neutral-900 px-3.5">
         <IconoVentana nombre="ventana" tam={16} className="shrink-0 text-noct-neutral-300" />
-        <span className="text-[13px] font-extrabold uppercase tracking-[.06em] text-noct-neutral-300">Ventana {numero}</span>
+        <span className="text-[13px] font-extrabold uppercase tracking-[.06em] text-noct-neutral-300">{rotulo}</span>
         {hecha && (
           <span
             data-ventana-hecha

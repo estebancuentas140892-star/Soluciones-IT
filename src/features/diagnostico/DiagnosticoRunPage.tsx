@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   db,
@@ -43,6 +43,13 @@ import {
   type IconoProps,
 } from '../../components/iconos'
 import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
+import { SubtituloTarea } from '../../app/bandaTarea'
+import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
+import { useEsAncho } from '../../components/useEsAncho'
+import { IconoVentana } from '../../components/ventana/IconoVentana'
+import { MarcoVentana } from '../../components/ventana/MarcoVentana'
+import { BotonVolver } from '../../components/ventana/PieVentana'
+import { RELIEVE_BORDE_FUERTE, RELLENO_ACCION, RELLENO_RESUELTO, TARJETA } from '../../components/ventana/estilos'
 import { AsistenteVista } from '../soluciones/AsistenteVista'
 import { guiaTerminada } from '../soluciones/cierrePaso'
 import { ProveedorEjecucion } from '../soluciones/ProveedorEjecucion'
@@ -76,6 +83,7 @@ export function DiagnosticoRunPage() {
   const { pathname } = useLocation()
   const [confirmandoCancelar, setConfirmandoCancelar] = useState(false)
   const [cerrando, setCerrando] = useState(false)
+  const ancho = useEsAncho()
 
   // A DÓNDE SE VUELVE: de donde vino el técnico (la búsqueda de Resolver,
   // que se repone; la ficha de un equipo; la lista) y, si no, su padre
@@ -159,6 +167,7 @@ export function DiagnosticoRunPage() {
   }
 
   const titulo = diagnostico?.titulo ?? ''
+  const telefono = !ancho
   const cargando = diagnostico === undefined || progreso === undefined
   const sinPreguntas = !cargando && progreso === null && nodos.length === 0
   const esFinal = progreso?.estado.tipo === 'final'
@@ -186,18 +195,32 @@ export function DiagnosticoRunPage() {
     // avance antes de salir (`salir`). La ruta de vuelta la escribe el
     // chasis: el origen del salto o "Resolver". Debajo, la barra de
     // progreso pegajosa (08_ESTILO).
+    // EN EL TELÉFONO, LA CABECERA DE UNA GUÍA (tarea 351, prototipo de Claude
+    // Design): la X, el título con su línea debajo («Pregunta 2 · la ruta
+    // depende de tus respuestas») y, debajo, el avance en la barra gruesa del
+    // prototipo. Mientras se hace una guía dentro del recorrido, la línea y
+    // el avance son los de esa guía (sus ventanas), que los pone ella.
     <Chasis
       modo="tarea"
       rotulo="Resolviendo"
       titulo={titulo}
       salidaEtiqueta="Guardar el avance y salir"
       alSalir={() => void salir()}
+      compacta={telefono}
+      cabeceraDeGuia={telefono}
       barra={
         <>
+          {telefono && progreso && progreso.estado.tipo !== 'articulo' && (
+            <div aria-hidden className="px-3 pb-3 pt-0.5">
+              <span className="block h-[5px] overflow-hidden rounded-[3px] bg-noct-divider">
+                <span className={`block h-full rounded-[3px] ${colorBarra}`} style={{ width: `${porcentaje}%` }} />
+              </span>
+            </div>
+          )}
           {/* SIN LÁPIZ AQUÍ (tarea 207, hallazgo M-028, regla M-R10):
               editar se ofrece en la administración y en el resultado,
               con el camino recorrido delante. */}
-          {progreso && (
+          {progreso && !telefono && (
             <div className="flex items-center gap-2.5 px-4 pb-2">
               <span className="block h-[3px] flex-1 overflow-hidden rounded-full bg-noct-neutral-900">
                 <span
@@ -212,25 +235,64 @@ export function DiagnosticoRunPage() {
               M-027): la última pregunta con su respuesta, y lleva de
               vuelta a ella. Lo reversible vive arriba, nombrando su
               destino; lo irreversible, al pie y en texto (M-R12). */}
-          {ultimaRespuesta && (
-            <button
-              type="button"
-              onClick={() => void volverAtras(diagnosticoId)}
-              aria-label={`Volver a la pregunta anterior: ${ultimaRespuesta.pregunta}. Respondiste: ${ultimaRespuesta.etiqueta}`}
-              className="flex min-h-11 w-full items-center gap-2 px-4 pb-2.5 text-left hover:bg-noct-text/[.04]"
-            >
-              <ArrowLeft size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
-              <span className="min-w-0 flex-1 truncate text-[12.5px] leading-normal">
-                <span className="text-noct-neutral-500">{ultimaRespuesta.pregunta}: </span>
-                <span className="font-medium text-noct-neutral-300">{ultimaRespuesta.etiqueta}</span>
-              </span>
-            </button>
-          )}
+          {ultimaRespuesta &&
+            (telefono ? (
+              // Mientras se hace una guía, la vuelta a la pregunta está en su
+              // tarjeta («Estás realizando…»): no se repite aquí.
+              progreso?.estado.tipo !== 'articulo' &&
+              // En el teléfono, la vuelta a la respuesta anterior con el botón
+              // de 44 del pie de la ventana, a la izquierda y siempre a la vista.
+              <button
+                type="button"
+                onClick={() => void volverAtras(diagnosticoId)}
+                aria-label={`Volver a la pregunta anterior: ${ultimaRespuesta.pregunta}. Respondiste: ${ultimaRespuesta.etiqueta}`}
+                className="flex min-h-12 w-full cursor-pointer items-center gap-2.5 border-t border-noct-divider px-3 py-1.5 text-left active:bg-noct-presionado"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border-2 border-noct-divider bg-noct-surface text-noct-text"
+                >
+                  <IconoVentana nombre="atras" tam={18} grosor={2.6} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[14px] leading-snug">
+                  <span className="font-medium text-noct-neutral-300">{ultimaRespuesta.pregunta}: </span>
+                  <span className="font-extrabold text-noct-text">{ultimaRespuesta.etiqueta}</span>
+                </span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => void volverAtras(diagnosticoId)}
+                aria-label={`Volver a la pregunta anterior: ${ultimaRespuesta.pregunta}. Respondiste: ${ultimaRespuesta.etiqueta}`}
+                className="flex min-h-11 w-full items-center gap-2 px-4 pb-2.5 text-left hover:bg-noct-text/[.04]"
+              >
+                <ArrowLeft size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                <span className="min-w-0 flex-1 truncate text-[12.5px] leading-normal">
+                  <span className="text-noct-neutral-500">{ultimaRespuesta.pregunta}: </span>
+                  <span className="font-medium text-noct-neutral-300">{ultimaRespuesta.etiqueta}</span>
+                </span>
+              </button>
+            ))}
         </>
       }
     >
-      <main className="flex flex-1 flex-col gap-[18px] px-4 pb-10 pt-[22px]">
+      <main
+        className={`flex flex-1 flex-col gap-[18px] px-4 ${
+          telefono && (esFinal || progreso?.estado.tipo === 'articulo') ? 'pb-0' : 'pb-10'
+        } ${
+          telefono ? 'pt-4' : 'pt-[22px]'
+        }`}
+      >
         {cargando && <p className="text-sm text-noct-neutral-400">Cargando...</p>}
+        {/* La línea bajo el título de la cabecera (solo existe en el
+            teléfono). Mientras se hace una guía, la pone la guía. */}
+        {progreso && progreso.estado.tipo !== 'articulo' && (
+          <SubtituloTarea>
+            <p className="truncate text-[13px] font-semibold leading-[18px] text-noct-neutral-300">
+              {esFinal ? 'Recorrido terminado' : `${etiquetaProgreso} · la ruta depende de tus respuestas`}
+            </p>
+          </SubtituloTarea>
+        )}
 
         {sinPreguntas && (
           <div className="flex flex-col gap-3 rounded-lg border border-noct-divider bg-noct-text/[.04] px-4 py-3.5">
@@ -257,6 +319,7 @@ export function DiagnosticoRunPage() {
             onCerrar={(resuelto, motivo, solucionPropuesta) =>
               void cerrar(resuelto, progreso, motivo, solucionPropuesta)
             }
+            telefono={telefono}
           />
         )}
       </main>
@@ -272,6 +335,7 @@ function Sesion({
   confirmandoCancelar,
   onConfirmarCancelar,
   onCerrar,
+  telefono,
 }: {
   nodos: NodoDiagnostico[]
   progreso: ProgresoDiagnostico
@@ -280,14 +344,28 @@ function Sesion({
   confirmandoCancelar: boolean
   onConfirmarCancelar: (valor: boolean) => void
   onCerrar: (resuelto: 'si' | 'no' | 'abandonado', motivo?: MotivoNoResuelto, solucionPropuesta?: string) => void
+  telefono: boolean
 }) {
   const { estado } = progreso
 
   const nodoActual =
     estado.tipo === 'pregunta' ? nodos.find((n) => n.id === estado.nodoId) ?? null : null
+  const descartar = (
+    <Descartar
+      visible={estado.tipo !== 'final'}
+      confirmandoCancelar={confirmandoCancelar}
+      onConfirmarCancelar={onConfirmarCancelar}
+      onCerrar={onCerrar}
+      telefono={telefono}
+    />
+  )
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    // En el teléfono, el cierre y una guía dentro del recorrido llevan su pie
+    // fijo abajo (`mt-auto`): esta columna ocupa lo que quede de pantalla.
+    <div
+      className={`flex flex-col gap-[18px] ${telefono && (estado.tipo === 'final' || estado.tipo === 'articulo') ? 'flex-1' : ''}`}
+    >
       {estado.tipo === 'pregunta' && !nodoActual && (
         // La guía se editó a mitad de una sesión y la pregunta actual ya
         // no existe: no hay forma segura de continuar. Neutro: no es un
@@ -306,7 +384,15 @@ function Sesion({
         </div>
       )}
 
-      {estado.tipo === 'pregunta' && nodoActual && (
+      {estado.tipo === 'pregunta' && nodoActual && telefono && (
+        <PreguntaEnVentana
+          numero={progreso.camino.length + 1}
+          nodo={nodoActual}
+          onResponder={(opcion) => void responderOpcion(diagnosticoId, nodoActual, opcion)}
+        />
+      )}
+
+      {estado.tipo === 'pregunta' && nodoActual && !telefono && (
         <div className="flex flex-col gap-4">
           {/* LA PREGUNTA, EN EL IDIOMA DE LA GUÍA (tarea 263): la misma
               etiqueta "Decide" que una decisión dentro de una guía, con
@@ -353,18 +439,46 @@ function Sesion({
           articuloTitulo={estado.articuloTitulo}
           onCompletado={() => void terminarEjecucionArticulo(diagnosticoId)}
           onVolver={() => void volverAtras(diagnosticoId)}
+          bajoLaTarjeta={telefono ? descartar : null}
         />
       )}
 
-      {estado.tipo === 'final' && (
-        <Resultado progreso={progreso} diagnosticoId={diagnosticoId} onCerrar={onCerrar} />
-      )}
+      {estado.tipo === 'final' &&
+        (telefono ? (
+          <ResultadoEnTelefono progreso={progreso} diagnosticoId={diagnosticoId} onCerrar={onCerrar} />
+        ) : (
+          <Resultado progreso={progreso} diagnosticoId={diagnosticoId} onCerrar={onCerrar} />
+        ))}
 
+      {!(telefono && estado.tipo === 'articulo') && descartar}
+    </div>
+  )
+}
+
+function Descartar({
+  visible,
+  confirmandoCancelar,
+  onConfirmarCancelar,
+  onCerrar,
+  telefono,
+}: {
+  visible: boolean
+  confirmandoCancelar: boolean
+  onConfirmarCancelar: (valor: boolean) => void
+  onCerrar: (resuelto: 'abandonado') => void
+  telefono: boolean
+}) {
+  return (
+    <>
       {/* Descartar, en texto y fuera de la zona del pulgar (M-026, regla
           M-R12: lo irreversible no comparte forma con lo reversible). Y
           dice de entrada que salir SÍ guarda el avance. */}
-      {estado.tipo !== 'final' && !confirmandoCancelar && (
-        <p className="mt-1 text-center text-[12.5px] leading-relaxed text-noct-neutral-500">
+      {visible && !confirmandoCancelar && (
+        <p
+          className={`mt-1 text-center leading-relaxed ${
+            telefono ? 'text-[14px] font-medium text-noct-neutral-300' : 'text-[12.5px] text-noct-neutral-500'
+          }`}
+        >
           Salir guarda el avance.{' '}
           <button
             type="button"
@@ -398,7 +512,61 @@ function Sesion({
           </div>
         </div>
       )}
-    </div>
+    </>
+  )
+}
+
+// LA PREGUNTA EN SU VENTANA, EN EL TELÉFONO (tarea 351, prototipo de Claude
+// Design). La misma ventana que un paso de una guía, con su barra
+// («PREGUNTA 2»): dentro, la pregunta a 22 · 800, lo que la aclara y las
+// respuestas, cada una en su tarjeta con relieve, a lo ancho y de 60 de alto
+// como mínimo (se contesta de pie frente al equipo, con el pulgar). Todas en
+// el mismo color neutro (regla 31 c: ninguna es «la correcta»); la que lleva a
+// una guía lo dice debajo, en el acento. Responder es un toque, como siempre.
+function PreguntaEnVentana({
+  numero,
+  nodo,
+  onResponder,
+}: {
+  numero: number
+  nodo: NodoDiagnostico
+  onResponder: (opcion: NodoDiagnostico['opciones'][number]) => void
+}) {
+  return (
+    <MarcoVentana numero={numero} rotulo={`Pregunta ${numero}`} hecha={false}>
+      <h2 className="text-[22px] font-extrabold leading-[28px] tracking-[-.01em] text-pretty [overflow-wrap:anywhere]">
+        {nodo.pregunta}
+      </h2>
+      {nodo.descripcion && (
+        <p className="text-[15px] font-medium leading-[21px] text-noct-neutral-300 text-pretty">{nodo.descripcion}</p>
+      )}
+      {/* Dos respuestas, lado a lado, como el Sí y el No del prototipo; con
+          más, una debajo de otra. */}
+      <div
+        role="group"
+        aria-label={nodo.pregunta}
+        className={`pb-3.5 pt-1 ${nodo.opciones.length === 2 ? 'grid grid-cols-2 gap-2.5' : 'flex flex-col gap-2.5'}`}
+      >
+        {nodo.opciones.map((opcion) => (
+          <button
+            key={opcion.id}
+            type="button"
+            onClick={() => onResponder(opcion)}
+            className={`flex min-h-[60px] w-full cursor-pointer flex-col items-start justify-center gap-1 rounded-2xl border-2 border-noct-divider-fuerte bg-noct-surface px-3.5 py-2.5 text-left text-noct-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent ${RELIEVE_BORDE_FUERTE}`}
+          >
+            <span className="text-[17px] font-extrabold leading-[22px] text-pretty [overflow-wrap:anywhere]">
+              {opcion.etiqueta}
+            </span>
+            {opcion.articuloId && (
+              <span className="flex items-start gap-1.5 text-[13.5px] font-semibold leading-[18px] text-noct-accent-300">
+                <BookOpen size={14} className="mt-0.5 shrink-0" aria-hidden />
+                <span className="min-w-0 text-pretty">Te lleva a «{opcion.articuloTitulo || 'una guía'}»</span>
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+    </MarcoVentana>
   )
 }
 
@@ -419,6 +587,7 @@ function ProcedimientoEnRecorrido({
   articuloTitulo,
   onCompletado,
   onVolver,
+  bajoLaTarjeta,
 }: {
   diagnosticoId: string
   tituloRecorrido: string
@@ -426,8 +595,11 @@ function ProcedimientoEnRecorrido({
   articuloTitulo: string
   onCompletado: () => void
   onVolver: () => void
+  /** En el teléfono, «Salir guarda el avance» bajo la tarjeta: abajo está el pie de la guía. */
+  bajoLaTarjeta: ReactNode
 }) {
   const raiz = raizDelProcedimiento(diagnosticoId)
+  const telefono = !useEsAncho()
   const articulo = useLiveQuery(async () => (await db.articulos.get(articuloId)) ?? null, [articuloId])
   const progresoPasos = useLiveQuery(() => db.progresoPasos.get(raiz), [raiz])
   const procedimiento = useMemo(
@@ -488,7 +660,23 @@ function ProcedimientoEnRecorrido({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className={`flex flex-col gap-3 ${telefono ? 'flex-1' : ''}`}>
+      {telefono ? (
+        // EN EL TELÉFONO (tarea 351): para qué se hace esta guía, en una
+        // tarjeta, con la vuelta a la pregunta en el botón de 44 de siempre.
+        // Las ventanas de la guía, su línea y su avance van en la cabecera.
+        <div className={`${TARJETA} flex items-center gap-3 p-3`}>
+          <BotonVolver disponible etiqueta="Volver a la pregunta" onIr={onVolver} tamano="compacto" />
+          <h2 className="min-w-0 flex-1 text-[14.5px] font-medium leading-[20px] text-pretty text-noct-neutral-300">
+            Estás realizando <span className="font-extrabold text-noct-text">«{articulo.titulo}»</span>
+            {tituloRecorrido ? (
+              <>
+                {' '}para continuar con <span className="font-extrabold text-noct-text">«{tituloRecorrido}»</span>
+              </>
+            ) : null}
+          </h2>
+        </div>
+      ) : (
       <div className="flex flex-col gap-2.5 border-b border-noct-divider pb-3">
         <h2 className="text-[15px] leading-snug text-pretty text-noct-neutral-200">
           Estás realizando <span className="font-semibold text-noct-text">«{articulo.titulo}»</span>
@@ -510,6 +698,8 @@ function ProcedimientoEnRecorrido({
           Volver a la pregunta
         </button>
       </div>
+      )}
+      {bajoLaTarjeta}
       <ProveedorEjecucion raizId={raiz}>
         {/* Las respuestas ya eligieron la guía: solo se prepara (tarea 289). */}
         <AsistenteVista articuloId={articulo.id} procedimiento={procedimiento} nivel={0} preparacion="requisitos" />
@@ -547,6 +737,187 @@ const CABECERA_RESULTADO: Record<
     panel: 'border-noct-divider bg-noct-surface',
     color: 'text-noct-neutral-300',
   },
+}
+
+// El recuadro del icono de cada final, en el teléfono: el tinte de su estado.
+const TINTE_RESULTADO: Record<ResultadoRecorrido, string> = {
+  '': 'bg-noct-neutral-900 text-noct-neutral-300',
+  solucionado: 'bg-noct-exito-tinte text-noct-exito',
+  sin_resolver: 'bg-noct-neutral-900 text-noct-neutral-300',
+  escalar: 'bg-noct-error-tinte text-noct-error',
+  falta_informacion: 'bg-noct-neutral-900 text-noct-neutral-300',
+}
+
+// EL FINAL DEL RECORRIDO EN EL TELÉFONO (tarea 351), con la forma del cierre
+// de una guía del prototipo: el icono en su tinte, cuántas preguntas se
+// respondieron y cómo termina a 26; lo que dice el final; el camino en su
+// tarjeta; y, fija al pie, la pregunta de siempre con «Sí, resuelto» en el
+// verde que resuelve y «No» delineado. La lógica no cambia: los mismos
+// finales, los mismos motivos y el mismo registro.
+function ResultadoEnTelefono({
+  progreso,
+  diagnosticoId,
+  onCerrar,
+}: {
+  progreso: ProgresoDiagnostico
+  diagnosticoId: string
+  onCerrar: (resuelto: 'si' | 'no', motivo?: MotivoNoResuelto, solucionPropuesta?: string) => void
+}) {
+  const { estado, camino, articulosEjecutados } = progreso
+  const [pidiendoMotivo, setPidiendoMotivo] = useState(false)
+  const [motivo, setMotivo] = useState<MotivoNoResuelto>('')
+  const [solucionPropuesta, setSolucionPropuesta] = useState('')
+
+  if (estado.tipo !== 'final') return null
+
+  const resultado = resultadoDelFinal(estado)
+  const cabecera = CABECERA_RESULTADO[resultado]
+  const mensajeFinal =
+    estado.mensajeFinal ||
+    (estado.articuloTitulo ? `Se hizo «${estado.articuloTitulo}».` : 'Se recorrieron todas las preguntas.')
+  const respondidas = camino.length
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <div className="flex flex-col gap-3.5 pb-6 pt-3">
+        <div className="flex items-center gap-3.5">
+          <span
+            aria-hidden
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] ${TINTE_RESULTADO[resultado]}`}
+          >
+            <cabecera.Icono size={30} />
+          </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            {respondidas > 0 && (
+              <p className="text-[13px] font-extrabold uppercase tracking-[.05em] text-noct-neutral-300">
+                {respondidas} {respondidas === 1 ? 'respuesta' : 'respuestas'}
+              </p>
+            )}
+            <h2 className="text-[26px] font-extrabold leading-8 tracking-[-.02em] text-pretty">{cabecera.titulo}</h2>
+          </div>
+        </div>
+        <p className="text-[17px] font-semibold leading-6 text-noct-neutral-200 text-pretty">{mensajeFinal}</p>
+
+        {camino.length > 0 && (
+          <section className={`${TARJETA} flex flex-col gap-2.5 rounded-[20px] p-4`}>
+            <h3 className="text-[16px] font-extrabold">Camino recorrido</h3>
+            <ul className="flex flex-col gap-2">
+              {camino.map((paso, indice) => (
+                <li key={indice} className="flex items-start gap-2.5 text-[15px] leading-[21px]">
+                  <IconoVentana nombre="hecho" tam={18} grosor={3} className="mt-0.5 shrink-0 text-noct-accent-300" />
+                  <span className="min-w-0 text-pretty [overflow-wrap:anywhere]">
+                    <span className="text-noct-neutral-300">{paso.pregunta} </span>
+                    <span className="font-bold text-noct-text">→ {paso.etiqueta}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            {articulosEjecutados.length > 0 && (
+              <p className="text-[14px] font-medium text-noct-neutral-300">
+                Guías hechas: {articulosEjecutados.map((a) => a.titulo).join(', ')}
+              </p>
+            )}
+            {/* Editar, aquí sí (tarea 207, M-R10): con el camino delante. */}
+            <Link
+              to={`/diagnostico/${diagnosticoId}/editar`}
+              className="inline-flex min-h-11 items-center gap-2 self-start text-[14.5px] font-bold text-noct-accent-300"
+            >
+              <PencilSimple size={16} aria-hidden />
+              Editar este recorrido
+            </Link>
+          </section>
+        )}
+
+        {pidiendoMotivo && (
+          <section className={`${TARJETA} flex flex-col gap-2.5 rounded-[20px] p-4`}>
+            <h3 className="text-[16px] font-extrabold">¿Por qué no quedó resuelto?</h3>
+            <p className="text-[14px] leading-5 text-noct-neutral-300">Ayuda a mejorar la base.</p>
+            <div className="flex flex-col gap-2">
+              {MOTIVOS_ORDEN.map((valor) => {
+                const activo = motivo === valor
+                const Icono = ICONO_MOTIVO[valor]
+                return (
+                  <button
+                    key={valor}
+                    type="button"
+                    aria-pressed={activo}
+                    onClick={() => setMotivo(valor)}
+                    className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-[14px] border-2 px-3 text-left text-[15px] font-semibold ${
+                      activo ? 'border-noct-accent bg-noct-accent-900' : 'border-noct-divider bg-noct-surface active:bg-noct-presionado'
+                    }`}
+                  >
+                    <Icono size={18} className={`shrink-0 ${activo ? 'text-noct-accent-300' : 'text-noct-neutral-300'}`} aria-hidden />
+                    {ETIQUETA_MOTIVO[valor]}
+                  </button>
+                )
+              })}
+            </div>
+            {motivo === 'encontro_otra_solucion' && (
+              <textarea
+                rows={3}
+                value={solucionPropuesta}
+                onChange={(e) => setSolucionPropuesta(e.target.value)}
+                placeholder="Qué funcionó, para revisarlo e incorporarlo a la base de conocimiento"
+                className="w-full resize-y rounded-[14px] border-2 border-noct-divider bg-noct-bg px-3 py-2.5 text-[16px] leading-[1.5] text-noct-text outline-none placeholder:text-noct-neutral-400 focus:border-noct-accent"
+              />
+            )}
+          </section>
+        )}
+      </div>
+
+      <div className="sticky bottom-0 z-10 -mx-4 mt-auto flex flex-none flex-col gap-2.5 border-t border-noct-divider bg-noct-surface px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-noct-pie)]">
+        <div ref={huecoAvisoActualizacion} className="empty:hidden" />
+        {!pideConfirmacion(resultado) ? (
+          <>
+            <p className="text-[14px] font-semibold leading-snug text-noct-neutral-300">
+              Queda registrado como no resuelto, con el camino recorrido.
+            </p>
+            <button
+              type="button"
+              onClick={() => onCerrar('no')}
+              className={`${RELLENO_ACCION} inline-flex min-h-[58px] items-center justify-center gap-2 rounded-2xl px-3 text-[17px]`}
+            >
+              Terminar
+            </button>
+          </>
+        ) : pidiendoMotivo ? (
+          <div className="flex gap-2.5">
+            <BotonVolver disponible etiqueta="Volver" onIr={() => setPidiendoMotivo(false)} tamano="grande" />
+            <button
+              type="button"
+              onClick={() =>
+                onCerrar('no', motivo, motivo === 'encontro_otra_solucion' ? solucionPropuesta.trim() : '')
+              }
+              className={`${RELLENO_ACCION} inline-flex min-h-[58px] min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl px-3 text-[17px]`}
+            >
+              Confirmar
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="text-[18px] font-extrabold leading-6">¿Quedó resuelto el problema?</p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => onCerrar('si')}
+                className={`${RELLENO_RESUELTO} inline-flex min-h-[58px] items-center justify-center gap-2 rounded-2xl px-3 text-[16px]`}
+              >
+                <IconoVentana nombre="hecho" tam={20} grosor={3} className="shrink-0" />
+                Sí, resuelto
+              </button>
+              <button
+                type="button"
+                onClick={() => setPidiendoMotivo(true)}
+                className={`inline-flex min-h-[58px] cursor-pointer items-center justify-center rounded-2xl border-2 border-noct-divider-fuerte bg-noct-surface px-3 text-[16px] font-extrabold text-noct-text ${RELIEVE_BORDE_FUERTE}`}
+              >
+                No
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
 }
 
 // Resultado del recorrido: cómo termina, qué se hizo y, solo cuando la

@@ -184,8 +184,10 @@ describe('entrar desde Resolver sin elegir herramienta', () => {
     await esperar(() => textoPantalla().includes('¿La impresora aparece en Windows?'), 'la primera pregunta')
     expect(ubicacionActual().pathname).toBe('/diagnostico/rec-impresora')
     const texto = textoPantalla()
-    expect(texto).toContain('Resolviendo')
-    expect(texto).toContain('Decide')
+    // En el teléfono, con la cabecera de una guía (tarea 351): bajo el título,
+    // en qué pregunta va; la pregunta, en su ventana.
+    expect(texto).toContain('Pregunta 1 · la ruta depende de tus respuestas')
+    expect(document.body.querySelector('[data-marco-ventana]')?.getAttribute('aria-label')).toBe('Pregunta 1')
     expect(texto).toContain(`Te lleva a «${TITULO_CONECTAR}»`)
     expect(texto).not.toContain('Diagnóstico')
   })
@@ -562,7 +564,9 @@ describe('la administración vive en Guías', () => {
 
     await tocar(await esperar(() => enlaceDe(TITULO_IMPRESORA), 'el recorrido en la lista'))
     await esperar(() => textoPantalla().includes('¿La impresora aparece en Windows?'), 'la primera pregunta')
-    expect(textoPantalla()).toContain('Guías con preguntas · vuelves aquí al terminar')
+    // En el teléfono la cabecera es la de una guía (tarea 351): la X dice que
+    // guarda el avance y la pantalla lo repite; la vuelta es la de siempre.
+    expect(textoPantalla()).toContain('Salir guarda el avance.')
 
     await tocar(await esperarControl('Guardar el avance y salir'))
     await esperar(() => ubicacionActual().pathname === '/diagnostico', 'vuelve a la lista')
