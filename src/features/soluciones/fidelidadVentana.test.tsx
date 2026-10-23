@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { BloquePaso, OpcionDecision, PasoProcedimiento } from '../../lib/db'
+import type { BloquePaso, OpcionDecision } from '../../lib/db'
 import { CAMPOS_BLOQUE_VACIOS } from '../../lib/procedimiento'
 import {
   control,

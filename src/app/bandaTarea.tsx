@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { RanuraBajoContexto } from './ranuraBajoContexto'
+import { RanuraSubtitulo } from './ranuraSubtitulo'
 
 // Ranura pegajosa del nivel tarea del chasis (auditoría móvil del
 // 2026-08-03, hallazgo M-010, regla M-R1).
@@ -52,20 +53,11 @@ export const ProveedorBandaBajoTarea = RanuraBajoContexto.Provider
 // cabecera del prototipo de Claude Design): la X, el título con su línea
 // debajo («Ventana 2 de 4») y el índice, en UNA fila. Antes la línea iba en
 // la ranura de abajo, en su propia fila, y la cabecera medía 14 px más.
-// Solo existe donde la cabecera es la de una guía en el teléfono.
-const RanuraSubtitulo = createContext<HTMLElement | null>(null)
-
+// Solo existe donde la cabecera es la de una guía en el teléfono. El contexto
+// y `useHaySubtituloTarea` viven en `ranuraSubtitulo.ts`.
 export const ProveedorSubtituloTarea = RanuraSubtitulo.Provider
 
-/**
- * Pinta `children` bajo el título de la cabecera de la guía en el teléfono.
- * Devuelve false si esa ranura no existe, para que quien llama pinte el dato
- * donde iba antes.
- */
-export function useHaySubtituloTarea(): boolean {
-  return useContext(RanuraSubtitulo) !== null
-}
-
+/** Pinta `children` bajo el título de la cabecera de la guía en el teléfono; sin esa ranura, nada. */
 export function SubtituloTarea({ children }: { children: ReactNode }) {
   const ranura = useContext(RanuraSubtitulo)
   if (!ranura) return null

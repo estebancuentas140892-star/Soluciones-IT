@@ -37,7 +37,8 @@ import {
 } from '../../lib/preferenciasEjecucion'
 import { registrarIntervencion } from '../../lib/repositorio'
 import { conOrigen } from '../../lib/origenNavegacion'
-import { BandaBajoTarea, BandaTarea, SubtituloTarea, useHaySubtituloTarea } from '../../app/bandaTarea'
+import { BandaBajoTarea, BandaTarea, SubtituloTarea } from '../../app/bandaTarea'
+import { useHaySubtituloTarea } from '../../app/ranuraSubtitulo'
 import { useRanuraIndice } from '../../app/ranuraIndice'
 import { Adjuntos } from '../../components/Adjuntos'
 import {
