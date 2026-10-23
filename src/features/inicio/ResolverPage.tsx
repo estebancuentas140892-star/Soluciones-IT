@@ -378,6 +378,9 @@ export function ResolverPage() {
       // resolver?", justo sobre el campo. Desde 768 la barra no cambia.
       tituloContraido={escribiendo || !ancho}
       sinCabeceraEnTelefono={busquedaEnTelefono}
+      // Y sin la barra de pestañas (tarea 351), como la pantalla «Buscar» del
+      // prototipo: lo encontrado gana su alto; se sale con la flecha.
+      sinPestanasEnTelefono={busquedaEnTelefono}
       // LA CABECERA DE INICIO DEL PROTOTIPO (tarea 350): en el teléfono, la
       // marca «Soluciones IT», el estado rotulado («Al día») y la cuenta. El
       // escáner, que la tarea 344 dejó en esta fila, pasa al final del campo

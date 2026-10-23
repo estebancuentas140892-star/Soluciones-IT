@@ -190,6 +190,13 @@ interface PropsSeccion extends PropsComunes {
    * la barra no cambia.
    */
   sinCabeceraEnTelefono?: boolean
+  /**
+   * Sin la barra de pestañas, solo por debajo de 768 px (tarea 351): Resolver
+   * mientras busca, como la pantalla «Buscar» del prototipo de Claude Design.
+   * Lo encontrado gana el alto de la barra (72 px), que con el teclado abierto
+   * es casi un resultado más; salir de la búsqueda es su flecha de regreso.
+   */
+  sinPestanasEnTelefono?: boolean
   /** Una acción en la fila del título, solo en el teléfono (ver `BarraSuperior`). */
   accionTelefono?: ReactNode
   /**
@@ -864,6 +871,7 @@ export function Chasis(props: Props) {
 
           La pestaña activa la decide `destinoPrincipalDe`, no la ruta del
           enlace: una guía ilumina Resolver y Red ilumina Más. */}
+      {!(props.modo !== 'documento' && props.sinPestanasEnTelefono) && (
       <nav
         aria-label="Navegación principal"
         data-barra-pestanas
@@ -911,6 +919,7 @@ export function Chasis(props: Props) {
           )
         })}
       </nav>
+      )}
 
       {/* Atajos de teclado (encargo del 2026-09-10, tarea 6). No dibuja
           ningún control: son una mejora para quien tiene teclado, y
