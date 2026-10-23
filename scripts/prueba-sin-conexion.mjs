@@ -821,8 +821,17 @@ async function main() {
       '"Listo" es el botón del pie',
     )
     await s.evaluar(`${PIE_PRINCIPAL}.click(); await new Promise((r) => setTimeout(r, 800)); return true`)
+    // Tras la ejecución por ventanas, el cierre del prototipo (tarea 350):
+    // «Comprueba el resultado» y, en el pie, «¿El problema quedó resuelto?».
+    // Esta comprobación buscaba el «¿Quedó resuelto?» de la acción a la vez y
+    // fallaba desde la 350 (corregida en la tarea 351).
     comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)})`, 'la comprobación final')),
+      Boolean(
+        await s.hasta(
+          `document.body.innerText.includes('Comprueba el resultado') && document.body.innerText.includes('¿El problema quedó resuelto?')`,
+          'la comprobación final',
+        ),
+      ),
       '"Listo" lleva a la comprobación final, sin red',
     )
     comprobar(Boolean(await s.evaluar(PONER_MODO_Y_LIMPIAR_AVANCE('foco'))), 'se devuelve la ejecución de una acción a la vez para las secciones que siguen')
