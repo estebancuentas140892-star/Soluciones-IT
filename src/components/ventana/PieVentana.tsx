@@ -45,7 +45,8 @@ interface BotonVolverProps {
   tamano: 'grande' | 'compacto'
 }
 
-function BotonVolver({ disponible, etiqueta, onIr, tamano }: BotonVolverProps) {
+/** Volver desde el pie: 58 junto a «Listo», 44 junto a una pregunta (la de la ventana o la del cierre). */
+export function BotonVolver({ disponible, etiqueta, onIr, tamano }: BotonVolverProps) {
   return (
     <button
       type="button"

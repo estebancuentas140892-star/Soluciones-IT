@@ -37,7 +37,7 @@ import {
 } from '../../lib/preferenciasEjecucion'
 import { registrarIntervencion } from '../../lib/repositorio'
 import { conOrigen } from '../../lib/origenNavegacion'
-import { BandaBajoTarea, BandaTarea } from '../../app/bandaTarea'
+import { BandaBajoTarea, BandaTarea, SubtituloTarea, useHaySubtituloTarea } from '../../app/bandaTarea'
 import { useRanuraIndice } from '../../app/ranuraIndice'
 import { Adjuntos } from '../../components/Adjuntos'
 import {
@@ -56,7 +56,7 @@ import {
 } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
-import { BotonesDelPie, PieVentana, RespuestasDelPie } from '../../components/ventana/PieVentana'
+import { BotonesDelPie, BotonVolver, PieVentana, RespuestasDelPie } from '../../components/ventana/PieVentana'
 import { MasAbajoDeLaVentana } from '../../components/ventana/MasAbajoDeLaVentana'
 import { MarcoVentana } from '../../components/ventana/MarcoVentana'
 import { IconoVentana } from '../../components/ventana/IconoVentana'
@@ -537,6 +537,7 @@ export function AsistenteVista({
           largo={largoDeLaGuia}
           tiempoMin={tiempoEstimadoMin}
           siguienteEsRequisitos={pantallas[pasoPreparacion + 1] === 'requisitos'}
+          enVentana={nivel === 0 && modoEfectivo(modoEjecucion, esAncho) === 'ventana'}
           onSeguir={() => setPasoPreparacion(pasoPreparacion + 1 < pantallas.length ? pasoPreparacion + 1 : null)}
           onAnterior={pasoPreparacion > 0 ? () => setPasoPreparacion(pasoPreparacion - 1) : undefined}
         />
@@ -619,11 +620,7 @@ export function AsistenteVista({
               <BandaBajoTarea enLineaSinCabecera>
                 {(enCabecera) => (
                   <>
-                    {enCabecera && (
-                      <p className="-mt-1.5 truncate pb-2 pl-[52px] pr-4 text-[13.5px] font-semibold leading-snug text-noct-neutral-300">
-                        Comprobación final
-                      </p>
-                    )}
+                    {enCabecera && <LineaBajoElTitulo>Comprobación final</LineaBajoElTitulo>}
                     <SegmentosDePasos
                       resumenes={resumirPasos(pasos, hechos, instruccionesHechas, null, new Set(progreso?.pasosSaltados ?? []))}
                       total={totalPasos}
@@ -1251,12 +1248,7 @@ export function AsistenteVista({
                 va en su tarjeta, a 22. En la acción a la vez, el paso con su
                 título, como antes: ahí la instrucción no lo repite. */}
             {enCabecera && !esAncho && enVentana && (
-              <p
-                data-paso-en-cabecera
-                className="-mt-1.5 truncate pb-2 pl-[52px] pr-4 text-[13.5px] font-semibold leading-snug text-noct-neutral-300"
-              >
-                {[rangoDeVentana, equipoEnCabecera].filter(Boolean).join(' · ')}
-              </p>
+              <LineaBajoElTitulo>{[rangoDeVentana, equipoEnCabecera].filter(Boolean).join(' · ')}</LineaBajoElTitulo>
             )}
             {enCabecera && !esAncho && !enVentana && (
               <div data-paso-en-cabecera className="flex min-w-0 flex-col gap-0.5 px-4 pb-2 pt-0.5">
@@ -2205,7 +2197,19 @@ function ComprobacionFinalTelefono({
       </div>
       <div className="sticky bottom-0 z-10 -mx-4 mt-auto flex flex-none flex-col gap-2.5 border-t border-noct-divider bg-noct-surface px-3 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-noct-pie)]">
         <div ref={huecoAvisoActualizacion} className="empty:hidden" />
-        <p className="text-[18px] font-extrabold leading-6">¿El problema quedó resuelto?</p>
+        {/* VOLVER, JUNTO A LA PREGUNTA (tarea 351): el mismo botón de 44 que
+            acompaña la pregunta de una ventana, en el pie y siempre a la vista,
+            así que sigue siendo una navegación principal (regla 28), no un
+            enlace pequeño; y la pregunta y sus respuestas suben una fila. */}
+        <div className="flex items-center gap-2">
+          <BotonVolver
+            disponible
+            etiqueta="Anterior. Vuelve a la última ventana, sin cambiar lo marcado"
+            onIr={onAnterior}
+            tamano="compacto"
+          />
+          <p className="min-w-0 flex-1 text-[18px] font-extrabold leading-6 text-pretty">¿El problema quedó resuelto?</p>
+        </div>
         <div className="grid grid-cols-2 gap-2.5">
           <button
             type="button"
@@ -2228,16 +2232,6 @@ function ComprobacionFinalTelefono({
             No, sigue igual
           </button>
         </div>
-        <button
-          type="button"
-          onClick={onAnterior}
-          aria-label="Anterior. Vuelve a la última acción, sin cambiar lo marcado"
-          // Una navegación principal del pie, no un enlace pequeño (regla 28).
-          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-noct-divider text-[14.5px] font-bold text-noct-text active:bg-noct-presionado"
-        >
-          <IconoVentana nombre="atras" tam={16} grosor={2.6} />
-          Última ventana
-        </button>
       </div>
       {/* LO QUE SE PUEDE HACER SI SIGUE IGUAL (tarea 350): las mismas salidas
           que ya había, dichas como respuesta. Nada se marca ni se termina. */}
@@ -2271,6 +2265,26 @@ function ComprobacionFinalTelefono({
       </HojaInferior>
     </div>
   )
+}
+
+// LA LÍNEA BAJO EL TÍTULO DE LA GUÍA, EN EL TELÉFONO: en qué ventana se va
+// («Ventana 2 de 4 · POSPN01») o «Comprobación final». Desde la tarea 351 va
+// pegada al título, en la misma fila que la X y el índice, como en el
+// prototipo; si la cabecera no publica esa ranura, debajo de la fila, donde
+// iba en la tarea 350.
+function LineaBajoElTitulo({ children }: { children: ReactNode }) {
+  const enElTitulo = useHaySubtituloTarea()
+  const texto = (
+    <p
+      data-paso-en-cabecera
+      className={`truncate text-[13px] font-semibold leading-[18px] text-noct-neutral-300 ${
+        enElTitulo ? '' : '-mt-1.5 pb-2 pl-[52px] pr-4'
+      }`}
+    >
+      {children}
+    </p>
+  )
+  return enElTitulo ? <SubtituloTarea>{texto}</SubtituloTarea> : texto
 }
 
 // LA VENTANA EN SU TARJETA, SOLO EN LA VENTANA (tarea 350). Fuera de ella, lo

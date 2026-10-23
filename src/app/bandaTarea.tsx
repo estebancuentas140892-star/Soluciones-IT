@@ -48,6 +48,30 @@ export function BandaTarea({ children }: { children: ReactNode }) {
 // que pregunta si hay cabecera.
 export const ProveedorBandaBajoTarea = RanuraBajoContexto.Provider
 
+// TERCERA RANURA, BAJO EL TÍTULO DE LA GUÍA EN EL TELÉFONO (tarea 351, la
+// cabecera del prototipo de Claude Design): la X, el título con su línea
+// debajo («Ventana 2 de 4») y el índice, en UNA fila. Antes la línea iba en
+// la ranura de abajo, en su propia fila, y la cabecera medía 14 px más.
+// Solo existe donde la cabecera es la de una guía en el teléfono.
+const RanuraSubtitulo = createContext<HTMLElement | null>(null)
+
+export const ProveedorSubtituloTarea = RanuraSubtitulo.Provider
+
+/**
+ * Pinta `children` bajo el título de la cabecera de la guía en el teléfono.
+ * Devuelve false si esa ranura no existe, para que quien llama pinte el dato
+ * donde iba antes.
+ */
+export function useHaySubtituloTarea(): boolean {
+  return useContext(RanuraSubtitulo) !== null
+}
+
+export function SubtituloTarea({ children }: { children: ReactNode }) {
+  const ranura = useContext(RanuraSubtitulo)
+  if (!ranura) return null
+  return createPortal(children, ranura)
+}
+
 /**
  * Pinta `children` bajo la línea de la cabecera compacta del nivel tarea.
  * Sin cabecera compacta, nada; o, con `enLineaSinCabecera`, en su sitio

@@ -97,6 +97,12 @@ interface Props {
    * banda de la guía. Desde 768, la cabecera compacta de siempre.
    */
   deGuia?: boolean
+  /**
+   * La ranura bajo el título de la guía en el teléfono (tarea 351): la línea
+   * «Ventana 2 de 4» va pegada al título, en la misma fila que la X y el
+   * índice, como en el prototipo. Solo con `compacta` y `deGuia`.
+   */
+  ranuraSubtitulo?: ReactNode
 }
 
 export function BarraTarea({
@@ -114,6 +120,7 @@ export function BarraTarea({
   trailing,
   onBuscar,
   deGuia = false,
+  ranuraSubtitulo,
 }: Props) {
   const { pathname } = useLocation()
   const ancho = useEsAncho()
@@ -134,7 +141,9 @@ export function BarraTarea({
       <div className="sticky top-0 z-20 border-b border-noct-divider bg-noct-surface/[.95] backdrop-blur-[12px]">
         {/* 56 de alto en la tableta y 60 en el escritorio (tarea 339, T5). */}
         <div
-          className={`flex items-center gap-1 pl-1 pr-1 md:min-h-14 md:gap-2 md:pl-2.5 md:pr-4 xl:min-h-[60px] xl:pr-6 ${contexto ? 'min-h-[50px] py-0.5' : 'h-11'}`}
+          className={`flex items-center gap-1 pl-1 pr-1 md:min-h-14 md:gap-2 md:pl-2.5 md:pr-4 xl:min-h-[60px] xl:pr-6 ${
+            guiaEnTelefono ? 'min-h-[60px] py-1.5' : contexto ? 'min-h-[50px] py-0.5' : 'h-11'
+          }`}
         >
           {guiaEnTelefono ? (
             alSalir ? (
@@ -177,12 +186,14 @@ export function BarraTarea({
           )}
           {guiaEnTelefono ? (
             // EL TÍTULO DE LA GUÍA, A LA VISTA (tarea 350): a 15 · 800 en una
-            // línea; debajo, la banda de la guía dice en qué ventana se va. Se
-            // abrevia porque el título entero está en el índice y en Detalles.
-            <div className="min-w-0 flex-1 px-1">
-              <h1 title={titulo} className="truncate text-[15px] font-bold leading-snug">
+            // línea; justo debajo, en la misma fila que la X y el índice, en
+            // qué ventana se va (tarea 351, como el prototipo). Se abrevia
+            // porque el título entero está en el índice y en Detalles.
+            <div className="flex min-w-0 flex-1 flex-col px-1">
+              <h1 title={titulo} className="truncate text-[15px] font-extrabold leading-[20px]">
                 {titulo}
               </h1>
+              {ranuraSubtitulo}
             </div>
           ) : contexto ? (
             // Dos líneas: con qué (12 px, el mínimo de texto) y qué (14 px

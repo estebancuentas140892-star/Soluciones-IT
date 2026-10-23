@@ -17,7 +17,7 @@ import { Marca } from '../components/Marca'
 import { ANCHO_AMPLIO, ANCHO_ESCRITORIO, useEsAncho } from '../components/useEsAncho'
 import { huecoAvisoActualizacionChasis } from '../components/ranuraAvisoActualizacion'
 import { CapaAtajos } from './CapaAtajos'
-import { ProveedorBandaBajoTarea, ProveedorBandaTarea } from './bandaTarea'
+import { ProveedorBandaBajoTarea, ProveedorBandaTarea, ProveedorSubtituloTarea } from './bandaTarea'
 import { ProveedorRanuraIndice } from './ranuraIndice'
 import { direccionPara } from './direccionTransicion'
 import { useOrigen } from './useOrigen'
@@ -390,6 +390,9 @@ export function Chasis(props: Props) {
   // La segunda ranura de la cabecera compacta, bajo su línea (tarea 328):
   // ahí van los segmentos de la guía. En estado por el mismo motivo.
   const [ranuraBajoTarea, setRanuraBajoTarea] = useState<HTMLDivElement | null>(null)
+  // La tercera, bajo el título de la guía en el teléfono (tarea 351): ahí va
+  // «Ventana 2 de 4». Solo existe mientras BarraTarea la monta.
+  const [ranuraSubtitulo, setRanuraSubtitulo] = useState<HTMLDivElement | null>(null)
   // La columna del índice persistente de una tarea `amplio` desde 1280 (tarea
   // 339, T5), en estado por el mismo motivo que las ranuras de arriba. Se
   // pega bajo la cabecera, cuyo alto cambia con el título y los segmentos:
@@ -491,6 +494,7 @@ export function Chasis(props: Props) {
             alPulsarSalida={props.alPulsarSalida}
             compacta={props.compacta}
             deGuia={props.cabeceraDeGuia}
+            ranuraSubtitulo={<div ref={setRanuraSubtitulo} className="empty:hidden" />}
             onBuscar={props.compacta && props.conBusqueda ? () => setBuscadorTarea(true) : undefined}
             // La ranura de `BandaTarea` cambia de sitio según la altura
             // de la cabecera: en la compacta va en la MISMA línea que el
@@ -516,6 +520,7 @@ export function Chasis(props: Props) {
             {props.compacta && <div ref={setRanuraBajoTarea} />}
           </BarraTarea>
           <ProveedorBandaTarea value={ranuraTarea}>
+            <ProveedorSubtituloTarea value={ranuraSubtitulo}>
             <ProveedorBandaBajoTarea value={props.compacta ? ranuraBajoTarea : undefined}>
               <ProveedorRanuraIndice value={conIndice ? ranuraIndice : null}>
                 {conIndice ? (
@@ -537,6 +542,7 @@ export function Chasis(props: Props) {
                 )}
               </ProveedorRanuraIndice>
             </ProveedorBandaBajoTarea>
+            </ProveedorSubtituloTarea>
           </ProveedorBandaTarea>
         </div>
         {/* MODO CONSULTA (encargo del 2026-09-16, secciones 8 a 11): sobre
