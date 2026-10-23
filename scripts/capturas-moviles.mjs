@@ -789,7 +789,14 @@ async function main() {
       writeFileSync(join(SALIDA, `${etiqueta}-${parada.nombre}-arriba.png`), Buffer.from(arriba.data, 'base64'))
       if (CONTRASTE) {
         const medida = await s.enviar('Runtime.evaluate', { expression: AUDITORIA_CONTRASTE, returnByValue: true })
-        for (const bajo of JSON.parse(medida.result.value)) contrastes.push(`${etiqueta} ${parada.nombre}: ${bajo}`)
+        // Si la medida no se pudo hacer (la página se recargó a mitad, por
+        // ejemplo), se anota como un guion que falló y se sigue: antes se
+        // caía todo el recorrido con un JSON.parse de `undefined` (tarea 351).
+        if (typeof medida?.result?.value !== 'string') {
+          anotar('contraste', medida?.exceptionDetails?.exception?.description?.split('\n')[0] ?? 'sin resultado')
+        } else {
+          for (const bajo of JSON.parse(medida.result.value)) contrastes.push(`${etiqueta} ${parada.nombre}: ${bajo}`)
+        }
       }
       // La auditoria se hace AL FINAL DEL SCROLL: un control que
       // se cruza con la barra fija a mitad de recorrido es scroll
