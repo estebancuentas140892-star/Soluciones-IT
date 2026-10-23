@@ -1226,12 +1226,18 @@ export function AsistenteVista({
   // con qué equipo, y "Paso 2 de 4 · Vacía la cola de impresión". El
   // contador "2/4" deja su sitio a "Pasos", que abre el mismo índice.
   const pasoEnCabecera = `Paso ${indiceActual + 1}${totalPasos === null ? '' : ` de ${totalPasos}`} · ${tituloPaso}`
-  // En la ventana (tarea 350), cuál de cuántas; si el total depende de una
-  // respuesta, que la ruta la deciden las respuestas, como en el prototipo.
+  // En la ventana (tarea 350), cuál de cuántas. Si el total depende de una
+  // respuesta, cuántas como poco y como mucho, como el prototipo («Ventana 1
+  // de 4 · hasta 6 si hace falta», tarea 351): el camino más corto ya cuenta
+  // las ventanas recorridas, así que nunca es menor que la actual. Si no se
+  // puede decir, que la ruta la deciden las respuestas.
+  const largoAbierto = totalPasos === null ? largoDeLaRuta(procedimiento, elecciones) : null
   const rangoDeVentana =
-    totalPasos === null
-      ? `Ventana ${indiceActual + 1} · la ruta depende de tus respuestas`
-      : `Ventana ${indiceActual + 1} de ${totalPasos}`
+    totalPasos !== null
+      ? `Ventana ${indiceActual + 1} de ${totalPasos}`
+      : largoAbierto && largoAbierto.minimo < largoAbierto.maximo && largoAbierto.minimo >= indiceActual + 1
+        ? `Ventana ${indiceActual + 1} de ${largoAbierto.minimo} · hasta ${largoAbierto.maximo} si hace falta`
+        : `Ventana ${indiceActual + 1} · la ruta depende de tus respuestas`
   // El título de la guía ya va en la fila de la cabecera: aquí, solo el equipo.
   const equipoEnCabecera = equipoDeLaEjecucion && !equipoDeLaEjecucion.eliminadoEn ? equipoDeLaEjecucion.nombre : ''
   const estadoUI =
