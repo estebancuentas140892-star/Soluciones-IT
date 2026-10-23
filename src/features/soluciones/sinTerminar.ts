@@ -1,6 +1,6 @@
 import type { Articulo, Procedimiento, ProgresoPasos } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
-import { avanceDeLaRuta } from '../../lib/rutaProcedimiento'
+import { avanceDeLaRuta, hechosDeRuta } from '../../lib/rutaProcedimiento'
 import { guiaTerminada } from './cierrePaso'
 
 // Los procedimientos que este técnico dejó a medias, para el bloque
@@ -32,6 +32,10 @@ export interface ArticuloSinTerminar {
   // fino no existe, pero "te quedan ~14 min" decide si vale la pena
   // retomarlo ahora, que es la pregunta real.
   minutosRestantes: number | null
+  // El primer paso de la ruta sin hacer, con su número en ella y su título
+  // (tarea 351): «Ventana 4 · Comprobar la sincronización inicial» en
+  // «Sigue donde ibas», como el prototipo. Null si no se sabe cuál es.
+  siguiente: { numero: number; titulo: string } | null
 }
 
 // Sólo cuenta como "sin terminar" lo que está EMPEZADO y no acabado:
@@ -55,7 +59,7 @@ export function articulosSinTerminar(
       // Se cuenta sobre la ruta y contra los ids vigentes: el
       // procedimiento pudo editarse después de marcar avance (los pasos
       // eliminados no cuentan) y los caminos no elegidos no existen.
-      const { hechos, total, totalAbierto, pasosListos } = avanceDeLaRuta(procedimiento, progreso)
+      const { ruta, hechos, total, totalAbierto, pasosListos } = avanceDeLaRuta(procedimiento, progreso)
       if (total === 0) return []
       if (hechos === 0 || pasosListos) return []
 
@@ -64,15 +68,21 @@ export function articulosSinTerminar(
       const minutosRestantes =
         estimado == null || totalAbierto ? null : Math.max(1, Math.round((estimado * (total - hechos)) / total))
 
-      return [{ articulo, hechos, total, totalAbierto, minutosRestantes, actualizadoEn: progreso.actualizadoEn }]
+      const hechosEnRuta = hechosDeRuta(ruta, progreso.pasosHechos)
+      const indice = ruta.pasos.findIndex((paso) => !hechosEnRuta.has(paso.id))
+      const tituloSiguiente = indice >= 0 ? ruta.pasos[indice].titulo.trim() : ''
+      const siguiente = tituloSiguiente ? { numero: indice + 1, titulo: tituloSiguiente } : null
+
+      return [{ articulo, hechos, total, totalAbierto, minutosRestantes, siguiente, actualizadoEn: progreso.actualizadoEn }]
     })
     .sort((a, b) => b.actualizadoEn.localeCompare(a.actualizadoEn))
-    .map(({ articulo, hechos, total, totalAbierto, minutosRestantes }) => ({
+    .map(({ articulo, hechos, total, totalAbierto, minutosRestantes, siguiente }) => ({
       articulo,
       hechos,
       total,
       totalAbierto,
       minutosRestantes,
+      siguiente,
     }))
 }
 

@@ -759,7 +759,8 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     const continuar = await esperar(() => control(/^Continuar en la ventana 2: Instalar la impresora/), 'la tarjeta')
     expect(continuar.hasAttribute('data-seguir-donde-ibas')).toBe(true)
     expect(continuar.textContent).toContain('Instalar la impresora de prueba')
-    expect(continuar.textContent).toContain('Ventana 2 de 2')
+    // La ventana en la que se va, con su nombre, como el prototipo (tarea 351).
+    expect(continuar.textContent).toContain('Ventana 2 · Segundo paso')
     // El icono de su categoría, a 44 px.
     expect(continuar.querySelector('[data-icono-categoria]')).not.toBeNull()
     // El avance a la vista (tarea 349) con los colores del prototipo (tarea

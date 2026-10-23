@@ -229,7 +229,7 @@ export function ResolverPage() {
       new Map(
         articulosSinTerminar(articulos, progresos).map((s) => [
           s.articulo.id,
-          { hechos: s.hechos, total: s.total, totalAbierto: s.totalAbierto },
+          { hechos: s.hechos, total: s.total, totalAbierto: s.totalAbierto, siguiente: s.siguiente },
         ]),
       ),
     [articulos, progresos],
@@ -675,9 +675,19 @@ function SegmentosAvance({
 // dónde lleva ("Continuar en la ventana 2: …").
 function SeguirEnTelefono({ guia }: { guia: GuiaReciente }) {
   const avance = guia.avance
-  const numero = avance ? Math.min(avance.hechos + 1, avance.total) : null
+  // LA VENTANA EN LA QUE SE VA, CON SU NOMBRE (tarea 351, como el prototipo:
+  // «Ventana 4 · Comprobar la sincronización inicial»): se reconoce dónde se
+  // dejó sin abrir la guía. Cuántas faltan lo dicen los segmentos de debajo.
+  // Si no se sabe cuál es, «Ventana 2 de 3», como antes.
+  const siguiente = avance?.siguiente ?? null
+  const numero = siguiente ? siguiente.numero : avance ? Math.min(avance.hechos + 1, avance.total) : null
   const donde =
-    guia.enCurso ?? (avance && numero !== null ? ventanaDeTotal(numero, avance.total, avance.totalAbierto ?? false) : '')
+    guia.enCurso ??
+    (siguiente
+      ? `Ventana ${siguiente.numero} · ${siguiente.titulo}`
+      : avance && numero !== null
+        ? ventanaDeTotal(numero, avance.total, avance.totalAbierto ?? false)
+        : '')
   const verbo = guia.enCurso === null && numero !== null ? `Continuar en la ventana ${numero}` : 'Continuar'
   return (
     <section aria-labelledby="resolver-seguir-telefono" className="flex flex-col gap-2.5">

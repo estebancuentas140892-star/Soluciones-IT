@@ -146,6 +146,8 @@ export interface AvanceReciente {
   hechos: number
   total: number
   totalAbierto?: boolean
+  /** La ventana en la que se va, con su número y su título (tarea 351), si se sabe. */
+  siguiente?: { numero: number; titulo: string } | null
 }
 
 export interface GuiaReciente {
