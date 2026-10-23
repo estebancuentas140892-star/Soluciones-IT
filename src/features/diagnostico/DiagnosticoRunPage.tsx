@@ -240,8 +240,9 @@ export function DiagnosticoRunPage() {
               // Mientras se hace una guía, la vuelta a la pregunta está en su
               // tarjeta («Estás realizando…»): no se repite aquí.
               progreso?.estado.tipo !== 'articulo' &&
-              // En el teléfono, la vuelta a la respuesta anterior con el botón
-              // de 44 del pie de la ventana, a la izquierda y siempre a la vista.
+              // En el teléfono, la vuelta a la respuesta anterior: la fila
+              // entera (48 de alto) se toca, con el «‹» de la ventana a la
+              // izquierda, y siempre a la vista en la cabecera.
               <button
                 type="button"
                 onClick={() => void volverAtras(diagnosticoId)}

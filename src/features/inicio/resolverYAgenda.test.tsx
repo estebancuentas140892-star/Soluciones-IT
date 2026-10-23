@@ -682,11 +682,15 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     await montar(RUTAS, '/')
     await esperarResolver()
     const campo = campoBuscador() as HTMLInputElement
+    expect(document.body.querySelector('[data-barra-pestanas]')).not.toBeNull()
     await enfocar(campo)
     await esperarTexto('Puedes escribir')
     // Es el MISMO campo, con el foco: cambiar de forma no lo desmonta.
     expect(campoBuscador()).toBe(campo)
     expect(document.activeElement).toBe(campo)
+    // Como la pantalla «Buscar» del prototipo (tarea 351): sin la barra de
+    // pestañas mientras se busca; vuelve al salir.
+    expect(document.body.querySelector('[data-barra-pestanas]')).toBeNull()
     // La pantalla de búsqueda: sin la pregunta ni lo de Resolver.
     expect(textoPantalla()).not.toContain('Guías por categoría')
     expect(textoPantalla()).not.toContain('¿Qué necesitas resolver?')
@@ -698,6 +702,7 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     await tocar(await esperar(() => control('Volver a Resolver'), 'el regreso'))
     expect(campoBuscador()?.value).toBe('')
     expect(await esperarTexto('Guías por categoría')).not.toContain('Puedes escribir')
+    expect(document.body.querySelector('[data-barra-pestanas]')).not.toBeNull()
   })
 
   it('escribir abre lo encontrado y nada que coincida lo dice con sus salidas', async () => {
