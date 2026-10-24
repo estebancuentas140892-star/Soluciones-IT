@@ -646,9 +646,10 @@ describe('el mantenimiento en el teléfono (tarea 343)', () => {
     await montar(RUTAS, '/dispositivos/pc/mantenimientos/abierto')
     await esperar(() => document.body.querySelector('[role="radiogroup"]'), 'las respuestas')
     const respuestas = Array.from(document.body.querySelectorAll<HTMLElement>('[role="radio"]'))
-    // Desde la tarea 345, segmentos de 48 sin círculo (DESPUÉS de Claude Design).
+    // Desde la tarea 345, segmentos sin círculo (DESPUÉS de Claude Design); desde
+    // la tarea 352, de 52 y con la forma de una respuesta de la ventana.
     expect(respuestas.map((r) => r.textContent)).toEqual(['Se hizo', 'Se pospone', 'Se cancela'])
-    for (const respuesta of respuestas) expect(respuesta.className).toContain('max-md:min-h-12')
+    for (const respuesta of respuestas) expect(respuesta.className).toContain('max-md:min-h-[52px]')
     expect(textoPantalla()).toContain('Queda en el historial del equipo')
     await tocar(opcion('Se pospone'))
     expect(textoPantalla()).toContain('Sigue pendiente, con otra fecha')

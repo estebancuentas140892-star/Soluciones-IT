@@ -42,14 +42,17 @@ const BASE =
   'inline-flex shrink-0 items-center gap-[5px] rounded-full border px-[9px] py-[3px] text-[11px] max-md:text-[12px] font-medium leading-[1.35]'
 
 // LA PASTILLA CON PUNTO DEL TELÉFONO (tarea 342, carnet del handoff móvil
-// "1b Pulgar"): el borde en el color pleno del estado, la palabra a 12/600 y
-// un punto de 6 px delante, así el estado no se lee solo por el color de la
-// palabra. Desde 768 es la pastilla de siempre, sin punto.
+// "1b Pulgar"): la palabra a 12/600 y un punto de 6 px delante, así el estado
+// no se lee solo por el color de la palabra. Desde la tarea 352, con el tinte
+// de su estado y sin borde, como la pastilla de la tarjeta de Equipos del
+// prototipo «Ventana» (`FilaDispositivo`, tarea 350): el mismo estado tiene
+// la misma forma en la lista, en la ficha, en el mantenimiento y en la
+// facturación. Desde 768 es la pastilla de siempre, sin punto.
 const CLASES_PUNTO_TELEFONO: Record<TonoPastilla, string> = {
-  precaucion: 'max-md:border-noct-precaucion',
-  neutro: 'max-md:border-noct-neutral-500',
-  exito: 'max-md:border-noct-exito',
-  error: 'max-md:border-noct-error',
+  precaucion: 'max-md:border-transparent max-md:bg-noct-precaucion-tinte',
+  neutro: 'max-md:border-transparent max-md:bg-noct-neutral-900',
+  exito: 'max-md:border-transparent max-md:bg-noct-exito-tinte',
+  error: 'max-md:border-transparent max-md:bg-noct-error-tinte',
 }
 
 export function PastillaEstado({
@@ -72,7 +75,7 @@ export function PastillaEstado({
   return (
     <span
       className={`${BASE} ${CLASES_POR_TONO[tono]} ${
-        conPunto ? `max-md:px-2.5 max-md:font-semibold ${CLASES_PUNTO_TELEFONO[tono]}` : ''
+        conPunto ? `max-md:px-2.5 max-md:font-bold ${CLASES_PUNTO_TELEFONO[tono]}` : ''
       } ${className}`}
     >
       {conPunto && <span data-punto-estado aria-hidden className="hidden h-1.5 w-1.5 shrink-0 rounded-full bg-current max-md:block" />}

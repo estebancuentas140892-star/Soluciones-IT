@@ -51,6 +51,31 @@ export const TITULO_GRUPO = 'text-[15px] font-extrabold leading-snug text-noct-n
 /** El título de una pantalla raíz del teléfono (Equipos, Bóveda, Más): 26 · 800. */
 export const TITULO_PANTALLA = 'text-[26px] font-extrabold leading-[1.15] tracking-[-.02em]'
 
+/**
+ * LAS MISMAS PIEZAS EN UN COMPONENTE QUE EL TELÉFONO COMPARTE CON LA TABLETA Y
+ * EL ESCRITORIO (tarea 352: Agenda, Mantenimiento y Facturación). Con
+ * `max-md:`, así desde 768 no cambia nada.
+ *
+ * El relieve y el radio de una tarjeta; el borde lo pone cada una, porque una
+ * tarjeta con barra de estado a la izquierda (lo realizado) no puede perderla.
+ */
+export const RELIEVE_EN_TELEFONO = 'max-md:rounded-2xl max-md:shadow-[0_3px_0_var(--color-noct-divider)]'
+
+/** Filas con divisor dentro de una tarjeta, como los grupos de Más (tarea 350). */
+export const FILAS_EN_TARJETA =
+  'max-md:overflow-hidden max-md:rounded-[18px] max-md:border-[1.5px] max-md:border-noct-divider max-md:bg-noct-surface max-md:px-3.5'
+
+/**
+ * Un control delineado que no hace avanzar («Registrar lectura», «Volver al
+ * equipo»): el borde de 2, el radio 16 y el relieve fuerte que baja con el dedo,
+ * como «No, sigue igual» (`RELIEVE_BORDE_FUERTE`).
+ */
+export const DELINEADO_EN_TELEFONO =
+  'max-md:min-h-12 max-md:rounded-2xl max-md:border-2 max-md:border-noct-divider-fuerte max-md:bg-noct-surface max-md:px-4 max-md:text-[15px] max-md:font-extrabold max-md:shadow-[0_4px_0_var(--color-noct-divider-fuerte)] max-md:active:translate-y-[3px] max-md:active:shadow-[0_1px_0_var(--color-noct-divider-fuerte)]'
+
+/** El título de un grupo (`TITULO_GRUPO`) en un componente compartido. */
+export const TITULO_GRUPO_EN_TELEFONO = 'max-md:text-[15px] max-md:font-extrabold max-md:text-noct-neutral-300'
+
 /** Una salida al pie de una ventana («Tengo un problema», «Detalles»): 40 de dibujo, 44 de toque. */
 export const SALIDA_VENTANA =
   'toque-amplio relative inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] border-noct-divider bg-noct-surface px-3 text-[14px] font-bold text-noct-text outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent active:bg-noct-presionado'

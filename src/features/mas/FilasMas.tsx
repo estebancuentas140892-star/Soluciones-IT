@@ -23,9 +23,9 @@ import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 // EN EL TELÉFONO, LOS GRUPOS DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350): el
 // rótulo a 14 · 800 en tinta 2 y las filas en su tarjeta (`FILAS_EN_TARJETA`),
 // con el título a 16. El icono y lo que contiene cada fila se quedan: dicen
-// qué hay dentro sin abrirla (tarea 268).
-export const FILAS_EN_TARJETA =
-  'max-md:overflow-hidden max-md:rounded-[18px] max-md:border-[1.5px] max-md:border-noct-divider max-md:bg-noct-surface max-md:px-3.5'
+// qué hay dentro sin abrirla (tarea 268). Desde la tarea 352 la tarjeta vive
+// en `ventana/estilos.ts`: la Agenda y la Facturación la comparten.
+export { FILAS_EN_TARJETA } from '../../components/ventana/estilos'
 
 export function TituloGrupo({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (

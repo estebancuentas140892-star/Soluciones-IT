@@ -22,11 +22,15 @@ const TARJETA_TELEFONO =
 // EL SEGMENTO DEL TELÉFONO (tarea 345, cierre de un mantenimiento del DESPUÉS
 // de Claude Design): las respuestas lado a lado, de 48, centradas y sin el
 // círculo; lo que hace la elegida lo dice quien lo usa, debajo. Solo en el
-// teléfono: desde 768 nadie lo pide.
+// teléfono: desde 768 nadie lo pide. Desde la tarea 352, con la forma de una
+// respuesta de la ventana (`PieVentana`, prototipo «Ventana»): radio 16, borde
+// de 2, la palabra a 800 y, sin elegir, el relieve que baja con el dedo;
+// elegida, el borde y el tinte del acento.
 const SEGMENTO_TELEFONO =
-  'max-md:min-h-12 max-md:justify-center max-md:rounded-[13px] max-md:border-[1.5px] max-md:px-1 max-md:text-center max-md:text-[14.5px] max-md:font-semibold max-md:leading-tight max-md:active:bg-noct-presionado max-[374px]:text-[13.5px]'
-const SEGMENTO_ACTIVO = 'max-md:text-noct-accent-300'
-const SEGMENTO_INACTIVO = 'max-md:border-noct-text/20 max-md:text-noct-text'
+  'max-md:min-h-[52px] max-md:justify-center max-md:rounded-2xl max-md:border-2 max-md:px-1 max-md:text-center max-md:text-[15px] max-md:font-extrabold max-md:leading-tight max-[374px]:text-[14px]'
+const SEGMENTO_ACTIVO = 'max-md:border-noct-accent max-md:bg-noct-accent-900 max-md:text-noct-accent-300'
+const SEGMENTO_INACTIVO =
+  'max-md:border-noct-divider-fuerte max-md:bg-noct-surface max-md:text-noct-text max-md:shadow-[0_4px_0_var(--color-noct-divider-fuerte)] max-md:active:translate-y-[3px] max-md:active:shadow-[0_1px_0_var(--color-noct-divider-fuerte)]'
 
 export function OpcionRadio({
   activa,
