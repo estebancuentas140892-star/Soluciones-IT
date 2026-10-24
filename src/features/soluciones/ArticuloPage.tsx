@@ -33,6 +33,8 @@ import { BotonFavorito } from '../../components/BotonFavorito'
 import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
 import { IntroduccionGuia, ListaIntro, ResumenGuia, SeccionIntro } from './IntroduccionGuia'
+import { cuandoUsarParaMostrar } from './preparacionGuia'
+import { useEsAncho } from '../../components/useEsAncho'
 import { TerminosDeLaGuia } from '../referencia/TerminosDeLaGuia'
 import { colorIconoDeTipo } from './iconosSoluciones'
 import { etiquetaDeTipo } from './tiposArticulo'
@@ -99,6 +101,11 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
   // cuerpo en pasos del procedimiento solo tienen sentido si hay algo
   // que ejecutar.
   const tieneProcedimiento = procedimientoEjecutable(procedimiento)
+  // En el teléfono, el «cuándo usar» de una guía va en su sección con rótulo
+  // (tarea 351): es la orientación que antes daba «Qué vas a hacer».
+  const ancho = useEsAncho()
+  const cuandoEnSeccion =
+    !ancho && tieneProcedimiento && procedimiento ? cuandoUsarParaMostrar(procedimiento.descripcion) : ''
 
   // Impacto antes de eliminar (fase N1): otros procedimientos o
   // diagnósticos que referencian este artículo y quedarían con el
@@ -207,7 +214,7 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
             {etiquetaDeTipo(articulo.tipo)}
           </p>
           <h1 className="text-pretty text-[22px] font-medium leading-[1.25]">{articulo.titulo}</h1>
-          {procedimiento?.descripcion && (
+          {procedimiento?.descripcion && !cuandoEnSeccion && (
             <p className="text-pretty text-[13.5px] leading-normal text-noct-neutral-400">
               {procedimiento.descripcion}
             </p>
@@ -253,6 +260,15 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
         {/* Objetivo y "Antes de empezar", que vivían dentro del
             procedimiento y desaparecían con él. El paso a paso NO se
             monta aquí: se ejecuta desde la barra de abajo. */}
+        {/* LA ORIENTACIÓN, AQUÍ, EN EL TELÉFONO (tarea 351, propuesta B):
+            la ejecución por ventanas ya no tiene la pantalla «Qué vas a
+            hacer», así que «Cuándo usarla» se lee aquí con su rótulo, antes
+            del objetivo, como se leía en ella. Desde 768, bajo el título. */}
+        {cuandoEnSeccion && (
+          <SeccionIntro titulo="Cuándo usarla">
+            <p className="whitespace-pre-line text-[15px] leading-[1.5] text-pretty">{cuandoEnSeccion}</p>
+          </SeccionIntro>
+        )}
         {procedimiento && <IntroduccionGuia procedimiento={procedimiento} />}
 
         {/* "Terminos de esta guia" (encargo del 2026-09-10, tarea 3):

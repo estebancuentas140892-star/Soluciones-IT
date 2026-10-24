@@ -783,12 +783,19 @@ async function main() {
     paso('4b3. La ventana sin red: un paso que reutiliza otra guía, "Listo" y la precaución en su sitio (tarea 348)')
     comprobar(Boolean(await s.evaluar(PONER_MODO_Y_LIMPIAR_AVANCE('ventana'))), 'el modo ventana guardado y el avance de la guía limpio, con la red cortada')
     await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-sin-conexion' })
-    await s.hasta(`/qué vas a hacer/i.test(document.body.innerText)`, 'la orientación', 45000)
-    await s.tocar('Ver lo que necesitas')
-    await s.tocar('Todo listo, empezar')
+    // Sin pantallas previas en la ventana del teléfono (propuesta B, tarea
+    // 351): la guía se abre en la ventana 1, con sus requisitos encima.
     comprobar(
       Boolean(await s.hasta(`${PIE_PRINCIPAL} != null && document.body.innerText.includes('Abre el programa de prueba sin red')`, 'la ventana 1', 45000)),
       'el teléfono abre la ventana: la acción de la guía reutilizada y el pie fijo, sin red',
+    )
+    comprobar(
+      Boolean(
+        await s.evaluar(
+          `return document.querySelector('[data-antes-de-empezar]')?.textContent.includes('Datos de la persona de prueba.') === true && !/qué vas a hacer/i.test(document.body.innerText)`,
+        ),
+      ),
+      'sin pantallas previas: «Antes de empezar» va encima de la ventana 1, sin red',
     )
     comprobar(
       Boolean(

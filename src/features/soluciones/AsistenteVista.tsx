@@ -311,6 +311,14 @@ export function AsistenteVista({
     () => (conPreparacion ? requisitosEfectivos(requisitos) : []),
     [conPreparacion, requisitos],
   )
+  // SIN PANTALLAS PREVIAS EN LA VENTANA DEL TELÉFONO (propuesta B de AD-093,
+  // aprobada por el usuario el 2026-10-23, tarea 351; regla 25 b). Como el
+  // prototipo: «Empezar» abre directo la ventana 1; los requisitos van en la
+  // tarjeta «Antes de empezar», encima de ella, y la orientación (cuándo
+  // usarla, objetivo) vive en «Detalles» y en la mejor coincidencia de la
+  // búsqueda. La acción a la vez del teléfono, la tableta y el escritorio
+  // conservan sus dos pantallas.
+  const preparaEnVentana = conPreparacion && !esAncho && modoEfectivo(modoEjecucion, esAncho) === 'ventana'
   // Mover la VISTA a un paso: consultar, revisar, volver atrás. No toca
   // ni el avance ni el paso de trabajo.
   function verPaso(indice: number | null, porElFinal = false) {
@@ -427,8 +435,11 @@ export function AsistenteVista({
       // mitad del acceso del paso 1 se retoma, no se vuelve a preparar.
       const habiaAvance = hayAvanceEnEjecucion(prog)
       setRetomadaEn(nivel === 0 && habiaAvance ? inicial : null)
-      // Una ejecución NUEVA de la página de la guía empieza preparándose.
-      setPasoPreparacion(conPreparacion && !habiaAvance ? 0 : null)
+      // Una ejecución NUEVA de la página de la guía empieza preparándose,
+      // salvo en la ventana del teléfono (propuesta B, tarea 351): ahí se
+      // prepara en la ventana 1.
+      const enVentanaDelTelefono = !esAncho && modoEfectivo(modo, esAncho) === 'ventana'
+      setPasoPreparacion(conPreparacion && !habiaAvance && !enVentanaDelTelefono ? 0 : null)
       setModoEjecucion(modo)
       setListo(true)
     })
@@ -504,8 +515,9 @@ export function AsistenteVista({
   async function reiniciarYVolver() {
     await reiniciarProgreso(clave)
     setRetomadaEn(null)
-    // Empezar de nuevo es una ejecución nueva: vuelve a prepararse.
-    setPasoPreparacion(conPreparacion ? 0 : null)
+    // Empezar de nuevo es una ejecución nueva: vuelve a prepararse (en la
+    // ventana del teléfono, en la ventana 1).
+    setPasoPreparacion(conPreparacion && !preparaEnVentana ? 0 : null)
     setPasoEnteroPorFalla(null)
     setFalla(null)
     irAPaso(siguientePasoPendiente(idsPasos, new Set<string>(), -1))
@@ -521,7 +533,9 @@ export function AsistenteVista({
 
   // ORIENTAR Y PREPARAR ANTES DE LA PRIMERA ACCIÓN (tarea 289, fase 2). Se
   // espera al artículo (su título es "qué vas a hacer").
-  if (pasoPreparacion !== null) {
+  // (Si el modo cambia a la ventana del teléfono con la preparación abierta,
+  // tampoco se enseña: se prepara en la ventana 1.)
+  if (pasoPreparacion !== null && !preparaEnVentana) {
     if (articulo === undefined) {
       return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
     }
@@ -1115,7 +1129,15 @@ export function AsistenteVista({
   // Y lo reutilizado dentro del flujo tampoco los enseña: lo que hace falta
   // antes de empezar lo decide y lo escribe el autor de la guía que se abrió
   // (tarea 289, regla definitiva del criterio adicional de la fase 4).
-  const requisitosVisibles = !conPreparacion && !integrada && indiceActual === 0 && sinAvance ? requisitos : []
+  //
+  // En la ventana del teléfono (propuesta B, tarea 351) la preparación ES la
+  // ventana 1: sus requisitos, sin repetidos, en la tarjeta de encima.
+  const requisitosVisibles =
+    (!conPreparacion || preparaEnVentana) && !integrada && indiceActual === 0 && sinAvance
+      ? conPreparacion
+        ? requisitosPrevios
+        : requisitos
+      : []
 
   // CONSULTAR OTRO PASO NO MARCA NADA (propuesta final de Claude Design,
   // 2026-10-01). Un paso pendiente de MÁS ADELANTE que el de trabajo,

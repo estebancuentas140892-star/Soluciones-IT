@@ -214,6 +214,10 @@ const TODAS_LAS_PARADAS = [
   // advertencia critica sin confirmar (el pie dice por que "Listo" esta
   // apagado), la misma ya confirmada, y la ultima ventana ("Terminar guia").
   // Desde 768 px la preferencia 'ventana' se ve como el paso entero de siempre.
+  // Desde la tarea 351 (propuesta B) el telefono no tiene pantallas previas: la
+  // guia abre en la ventana 1 con «Antes de empezar» encima y los toques de
+  // «Ver lo que necesitas» y «Todo listo» no encuentran nada; desde 768 px
+  // siguen haciendo falta.
   {
     nombre: 'guia-ventana',
     ruta: '/soluciones/cat-pos/art-tonos',

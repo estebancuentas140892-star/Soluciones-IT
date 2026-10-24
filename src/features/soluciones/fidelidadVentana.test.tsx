@@ -16,20 +16,24 @@ import {
   textoPantalla,
   tocar,
 } from '../../pruebas/montaje'
+import { ArticuloPage } from './ArticuloPage'
 import { GuiaPage } from './GuiaPage'
 
 // LA SEGUNDA PASADA DE FIDELIDAD AL PROTOTIPO EN LA GUÍA (tarea 351, AD-094),
 // con la pantalla de verdad en el teléfono y la ejecución por ventanas:
 //
+//   - sin pantallas previas (propuesta B, aprobada el 2026-10-23): la guía se
+//     abre en la ventana 1 con «Antes de empezar» encima, y la orientación
+//     se lee en «Detalles»; la acción a la vez conserva sus dos pantallas;
 //   - la línea bajo el título («Ventana 1 de 2», «Antes de empezar») va DENTRO
 //     de la fila de la cabecera, junto al título, no en una fila aparte;
 //   - con caminos de distinto largo, cuántas ventanas como poco y como mucho;
-//   - la preparación cuenta ventanas;
 //   - el cierre vuelve con el botón de 44 junto a la pregunta.
 // Desde 768 px la cabecera de siempre no tiene esa línea.
 
 const RUTAS = [
   { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> },
+  { ruta: '/soluciones/:categoriaId/:articuloId/detalles', elemento: <ArticuloPage comoDetalles /> },
   { ruta: '/soluciones', elemento: <p>LISTA DE GUÍAS</p> },
 ]
 
@@ -52,27 +56,73 @@ afterEach(async () => {
   await desmontarTodo()
 })
 
-describe('la cabecera de la guía en el teléfono (tarea 351)', () => {
-  it('dice la ventana bajo el título, en la misma fila, y la preparación cuenta ventanas', async () => {
-    await sembrarGuia({
-      id: 'guia-dos',
-      titulo: 'Guía de dos ventanas de prueba',
-      pasos: [pasoPrueba('d-p1', 'Abrir la ventana de prueba', ['Abrir el programa de prueba']), pasoPrueba('d-p2', 'Cerrar la ventana de prueba', ['Cerrar el programa de prueba'])],
-      procedimiento: { descripcion: 'Cuando hay que probar dos ventanas.', requisitos: ['Acceso de prueba'] },
-    })
+async function sembrarGuiaDos(): Promise<void> {
+  await sembrarGuia({
+    id: 'guia-dos',
+    titulo: 'Guía de dos ventanas de prueba',
+    pasos: [
+      pasoPrueba('d-p1', 'Abrir la ventana de prueba', ['Abrir el programa de prueba']),
+      pasoPrueba('d-p2', 'Cerrar la ventana de prueba', ['Cerrar el programa de prueba']),
+    ],
+    procedimiento: {
+      descripcion: 'Usa esta guía cuando hay que probar dos ventanas.',
+      objetivoGeneral: 'Dejar probadas las dos ventanas.',
+      requisitos: ['Acceso de prueba', 'acceso de prueba.'],
+    },
+  })
+}
+
+describe('sin pantallas previas en la ventana del teléfono (propuesta B, tarea 351)', () => {
+  it('abrir la guía es estar en la ventana 1, con «Antes de empezar» encima y sin orientación', async () => {
+    await sembrarGuiaDos()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-dos', { ventanaPorDefecto: true })
-
-    await esperar(() => (textoPantalla().includes('Qué vas a hacer') ? true : null), 'la orientación')
-    expect(lineaEnElTitulo()).toBe('Antes de empezar')
-    expect(textoPantalla()).toContain('2 ventanas')
-
-    await tocar(await esperarControl('Ver lo que necesitas'))
-    expect(textoPantalla()).toContain('Ten esto listo antes de la primera ventana.')
-    await tocar(await esperarControl('Todo listo, empezar'))
 
     await esperar(() => (textoPantalla().includes('Abrir el programa de prueba') ? true : null), 'la ventana 1')
     expect(lineaEnElTitulo()).toBe('Ventana 1 de 2')
+    const texto = textoPantalla()
+    expect(texto).not.toContain('Qué vas a hacer')
+    expect(control('Ver lo que necesitas')).toBeNull()
+    expect(control('Todo listo, empezar')).toBeNull()
+    // Los requisitos de la guía, sin repetidos, en la tarjeta de encima de la
+    // ventana (fuera de su marco), como el prototipo.
+    const tarjeta = document.body.querySelector('[data-antes-de-empezar]')
+    expect(tarjeta?.textContent).toContain('Acceso de prueba')
+    expect(tarjeta?.querySelectorAll('li')).toHaveLength(1)
+    expect(tarjeta?.closest('[data-marco-ventana]')).toBeNull()
+    expect(tarjeta?.compareDocumentPosition(document.body.querySelector('[data-marco-ventana]')!)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    )
+
+    // Hecha la ventana 1, la tarjeta ya no vuelve: el trabajo empezó.
+    await tocar(await esperarControl(/^Listo/))
+    await esperar(() => (textoPantalla().includes('Cerrar el programa de prueba') ? true : null), 'la ventana 2')
+    expect(document.body.querySelector('[data-antes-de-empezar]')).toBeNull()
   })
+
+  it('la acción a la vez del teléfono conserva sus dos pantallas', async () => {
+    await sembrarGuiaDos()
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-dos')
+
+    await esperar(() => (textoPantalla().includes('Qué vas a hacer') ? true : null), 'la orientación')
+    expect(lineaEnElTitulo()).toBe('Antes de empezar')
+    await tocar(await esperarControl('Ver lo que necesitas'))
+    expect(textoPantalla()).toContain('Ten esto listo antes de la primera acción.')
+  })
+
+  it('en «Detalles» del teléfono, la orientación: «Cuándo usarla» con su rótulo y el objetivo', async () => {
+    await sembrarGuiaDos()
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-dos/detalles')
+
+    await esperar(() => (textoPantalla().includes('Dejar probadas las dos ventanas.') ? true : null), 'los detalles')
+    const texto = textoPantalla()
+    expect(texto.toLowerCase()).toContain('cuándo usarla')
+    // Sin la fórmula «Usa esta guía», como la decía «Qué vas a hacer».
+    expect(texto).toContain('Cuando hay que probar dos ventanas.')
+    expect(texto).not.toContain('Usa esta guía cuando')
+  })
+})
+
+describe('la cabecera de la guía en el teléfono (tarea 351)', () => {
 
   it('con caminos de distinto largo dice cuántas ventanas como poco y como mucho', async () => {
     const primero = pasoPrueba('c-p1', 'Elegir el camino de prueba', ['Mirar el equipo de prueba'])
