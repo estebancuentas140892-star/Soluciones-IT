@@ -268,7 +268,17 @@ const TODAS_LAS_PARADAS = [
       tocar('Confirmo que la leí') +
       tocar('Listo') +
       `{ document.querySelector('[role="checkbox"]')?.click(); await new Promise(r=>setTimeout(r,500)); }` +
-      tocar('Terminar'),
+      // Desde la tarea 352 (propuesta A2) el sí del cierre es «Sí, quedó resuelto».
+      tocar('Sí, quedó resuelto'),
+    despues: modo('foco'),
+  },
+  // Tarea 352 (propuesta A2): «Sí, quedó resuelto» sin marcar nada pide
+  // confirmar lo que falta, por su nombre, en el pie.
+  {
+    nombre: 'guia-ventana-confirmar',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: modo('ventana') + `{ const { db } = await import('/src/lib/db.ts'); await db.progresoPasos.delete('art-tonos'); }`,
+    guion: tocar('Listo') + tocar('Confirmo que la leí') + tocar('Listo') + tocar('Sí, quedó resuelto'),
     despues: modo('foco'),
   },
   { nombre: 'guia-retomada', ruta: '/soluciones/cat-impresoras/art-recurso-compartido' },

@@ -260,6 +260,15 @@ export function guiaTerminada(
  * faltaba algo, "Faltan N comprobaciones". El gesto no cambia: entrar,
  * volver y terminar siguen siendo tres gestos distintos (regla 28).
  */
+/**
+ * LAS COMPROBACIONES QUE FALTAN, EN SU ORDEN (tarea 352, propuesta A2): las
+ * que «Sí, quedó resuelto» pide confirmar por su nombre antes de terminar.
+ * Vacía, se puede terminar sin preguntar nada más.
+ */
+export function comprobacionesPendientes(total: number, marcadas: ReadonlySet<number>): number[] {
+  return Array.from({ length: total }, (_, indice) => indice).filter((indice) => !marcadas.has(indice))
+}
+
 export function cierreDeLaComprobacion(total: number, marcadas: number): { listo: boolean; etiqueta: string } {
   const faltan = Math.max(0, total - marcadas)
   if (faltan === 0) return { listo: true, etiqueta: 'Terminar' }

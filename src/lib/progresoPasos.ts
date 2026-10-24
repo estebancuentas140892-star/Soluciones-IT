@@ -476,6 +476,22 @@ export async function finalizarEjecucion(clave: ClaveProgreso): Promise<void> {
   await guardarProgreso(clave, { cierrePendiente: false })
 }
 
+/**
+ * «SÍ, QUEDÓ RESUELTO» CON LO QUE FALTABA CONFIRMADO (tarea 352, propuesta
+ * A2 aprobada por el usuario el 2026-10-23). Quien termina la guía afirma,
+ * nombradas una a una en la pantalla, las comprobaciones que no había
+ * marcado: quedan marcadas y la comprobación se cierra en UNA escritura,
+ * para que nunca quede marcada sin cerrar ni cerrada sin marcar. Quien
+ * llama comprueba antes que con ellas la guía queda terminada
+ * (`guiaTerminada`) y pasa la lista completa de marcadas.
+ */
+export async function confirmarComprobacionYFinalizar(
+  clave: ClaveProgreso,
+  verificacionHecha: number[],
+): Promise<void> {
+  await guardarProgreso(clave, { verificacionHecha, cierrePendiente: false })
+}
+
 // La verificacion final cuenta como completa cuando no hay items (no
 // se definio) o cuando todos estan marcados.
 export function verificacionFinalCompleta(

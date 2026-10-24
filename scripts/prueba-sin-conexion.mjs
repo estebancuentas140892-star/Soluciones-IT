@@ -841,6 +841,24 @@ async function main() {
       ),
       '"Listo" lleva a la comprobación final, sin red',
     )
+    // Tarea 352 (propuestas A1 y A2): «Sí, quedó resuelto» sin marcar la
+    // comprobación no termina: nombra lo que falta y solo al confirmarlo lo
+    // marca y termina la guía, todo sin red.
+    await s.tocar('Sí, quedó resuelto')
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `(() => { const g = document.querySelector('[data-confirmar-pendientes]'); return g != null && g.textContent.includes('La persona de prueba aparece registrada sin red.') && document.body.innerText.includes('¿Comprobaste esto en el equipo?') && !document.body.innerText.includes('Guía completada') })()`,
+          'la confirmación de lo que falta',
+        ),
+      ),
+      '«Sí, quedó resuelto» con la comprobación sin marcar la nombra y no termina todavía',
+    )
+    await s.tocar('Sí, la comprobé')
+    comprobar(
+      Boolean(await s.hasta(`innerWidth < 768 && document.body.innerText.includes('Guía completada')`, 'la guía terminada')),
+      'confirmarla la marca y termina la guía, sin red: "Guía completada"',
+    )
     comprobar(Boolean(await s.evaluar(PONER_MODO_Y_LIMPIAR_AVANCE('foco'))), 'se devuelve la ejecución de una acción a la vez para las secciones que siguen')
 
     // Tarea 290: la relación equipo y credencial se lee del teléfono, sin

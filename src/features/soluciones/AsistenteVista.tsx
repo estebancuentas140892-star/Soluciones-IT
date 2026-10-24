@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
 import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
@@ -88,7 +88,13 @@ import { useReferencias } from '../referencia/useReferencias'
 import { FranjaEquipoConectado } from '../asistencia/FranjaEquipoConectado'
 import { useSesionAsistencia } from '../asistencia/sesionAsistencia'
 import { useAuth } from '../autenticacion/authContext'
-import { cierreDeLaComprobacion, cierreDelPaso, guiaPendienteDelPaso, guiaTerminada } from './cierrePaso'
+import {
+  cierreDeLaComprobacion,
+  cierreDelPaso,
+  comprobacionesPendientes,
+  guiaPendienteDelPaso,
+  guiaTerminada,
+} from './cierrePaso'
 import {
   claveDeVinculo,
   useAvanceProgreso,
@@ -478,6 +484,7 @@ export function AsistenteVista({
     alternarTarea,
     alternarVerificacion,
     finalizar,
+    confirmarYFinalizar,
     intentarCompletarPaso,
     completarVentana,
     completarPasoYAvanzar,
@@ -606,14 +613,15 @@ export function AsistenteVista({
       const desde = origenComprobacion === null ? -1 : idsPasos.indexOf(origenComprobacion)
       verPaso(desde >= 0 ? desde : pasos.length - 1, true)
     }
-    // EN EL TELÉFONO, EL CIERRE DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350),
-    // con la lógica de siempre: las comprobaciones se marcan y solo
-    // «Terminar» termina la guía (regla 28). El pie pregunta lo que el
-    // prototipo pregunta, «¿El problema quedó resuelto?»; «Terminar» es el
-    // sí, en el verde que resuelve, y «No, sigue igual» abre lo que se puede
-    // hacer entonces. «Anterior» sigue siendo una navegación principal del pie.
-    // Solo tras la ejecución por ventanas, la del teléfono por defecto: quien
-    // eligió una acción a la vez conserva su cierre de siempre.
+    // EN EL TELÉFONO, EL CIERRE DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350;
+    // propuestas A1 y A2 aprobadas por el usuario el 2026-10-23, tarea 352).
+    // El pie pregunta «¿El problema quedó resuelto?» y su sí, «Sí, quedó
+    // resuelto», es el único gesto que termina la guía (regla 28): con todo
+    // marcado termina; con algo sin marcar pide confirmar, por su nombre, lo
+    // que falta, y solo entonces lo marca y termina. «No, sigue igual» abre lo
+    // que se puede hacer; «Anterior» sigue siendo una navegación principal del
+    // pie. Solo tras la ejecución por ventanas, la del teléfono por defecto:
+    // quien eligió una acción a la vez conserva su cierre de siempre.
     if (nivel === 0 && !esAncho && !integrada && modoEfectivo(modoEjecucion, esAncho) === 'ventana') {
       return (
         <ComprobacionFinalTelefono
@@ -622,8 +630,8 @@ export function AsistenteVista({
           comprobaciones={verificacionFinal}
           marcadas={marcadasComprobacion}
           onAlternar={(indice) => void alternarVerificacion(indice)}
-          etiqueta={cierreComprobacion.etiqueta}
-          onTerminar={cierreComprobacion.listo ? () => void finalizar() : null}
+          onTerminar={() => void finalizar()}
+          onConfirmarYTerminar={(pendientes) => void confirmarYFinalizar(pendientes)}
           onAnterior={volverALaUltimaAccion}
           segmentos={
             <>
@@ -2135,21 +2143,28 @@ export function AsistenteVista({
 }
 
 // LA COMPROBACIÓN FINAL EN EL TELÉFONO (tarea 350, «Guía completada · ¿El
-// problema quedó resuelto?» del prototipo de Claude Design, con la lógica de
-// siempre). Arriba, cuántas ventanas se hicieron y la guía; en su tarjeta, las
-// comprobaciones, que se marcan como hasta ahora (64 de toque cada una); y en
-// el pie, la pregunta del prototipo con sus dos respuestas: «Terminar» (el sí,
-// verde, que solo se puede con todo marcado y si no dice qué falta) y «No,
-// sigue igual», que abre qué hacer. Debajo, «Anterior», a todo el ancho:
-// vuelve por el camino recorrido sin cambiar nada (regla 28).
+// problema quedó resuelto?» del prototipo de Claude Design). Arriba, cuántas
+// ventanas se hicieron y la guía; en su tarjeta, las comprobaciones; y en el
+// pie, la pregunta del prototipo con sus dos respuestas y «Anterior» (regla 28).
+//
+// PROPUESTAS A1 Y A2 (aprobadas por el usuario el 2026-10-23, tarea 352):
+//   - A1, la lista del prototipo: las comprobaciones en una sola tarjeta con
+//     divisores, cada una con su círculo, que se llena de verde con el visto al
+//     tocarla (sigue siendo una casilla: se marca y se desmarca, 52 de toque).
+//   - A2, «Sí, quedó resuelto» siempre disponible: con todo marcado termina la
+//     guía en un toque; con algo sin marcar, el pie cambia a «¿Comprobaste esto
+//     en el equipo?» con lo que falta nombrado una a una, «Sí, lo comprobé» (lo
+//     marca y termina) y «Revisarlas» (vuelve a la pregunta sin marcar nada).
+//     Nada se da por comprobado sin el gesto que nombra lo comprobado, y «No,
+//     sigue igual» sigue sin registrar nada.
 function ComprobacionFinalTelefono({
   titulo,
   ventanas,
   comprobaciones,
   marcadas,
   onAlternar,
-  etiqueta,
   onTerminar,
+  onConfirmarYTerminar,
   onAnterior,
   segmentos,
 }: {
@@ -2158,12 +2173,27 @@ function ComprobacionFinalTelefono({
   comprobaciones: string[]
   marcadas: ReadonlySet<number>
   onAlternar: (indice: number) => void
-  etiqueta: string
-  onTerminar: (() => void) | null
+  /** Termina la guía con todas las comprobaciones marcadas. */
+  onTerminar: () => void
+  /** Marca las pendientes que se confirmaron, por su nombre, y termina. */
+  onConfirmarYTerminar: (pendientes: number[]) => void
   onAnterior: () => void
   segmentos: ReactNode
 }) {
   const [sigueIgual, setSigueIgual] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
+  const pendientes = comprobacionesPendientes(comprobaciones.length, marcadas)
+  // Si mientras se confirma se marca todo a mano, ya no hay nada que confirmar.
+  const confirmar = confirmando && pendientes.length > 0
+  const idConfirmar = useId()
+  const preguntaConfirmar = useRef<HTMLParagraphElement>(null)
+  useEffect(() => {
+    if (confirmar) preguntaConfirmar.current?.focus()
+  }, [confirmar])
+  const responderSi = () => {
+    if (pendientes.length === 0) onTerminar()
+    else setConfirmando(true)
+  }
   return (
     <div className="flex flex-1 flex-col">
       {segmentos}
@@ -2187,12 +2217,12 @@ function ComprobacionFinalTelefono({
         {titulo && (
           <p className="text-[17px] font-semibold leading-6 text-noct-neutral-300 text-pretty [overflow-wrap:anywhere]">{titulo}</p>
         )}
-        <section className={`${TARJETA} flex flex-col gap-2.5 rounded-[20px] p-4`}>
+        <section className={`${TARJETA} flex flex-col rounded-[20px] px-4 pb-1.5 pt-4`}>
           <h2 className="text-[16px] font-extrabold">Comprobación final</h2>
-          <p className="text-[14px] leading-5 text-noct-neutral-300">
-            Revísala en el equipo y marca lo que se cumple. Hasta entonces la guía no se da por terminada.
+          <p className="pt-1 text-[14px] leading-5 text-noct-neutral-300">
+            Revísala en el equipo antes de responder. Marca lo que ya comprobaste.
           </p>
-          <ul className="flex flex-col gap-2">
+          <ul data-comprobaciones-finales className="flex flex-col divide-y divide-noct-divider pt-1">
             {comprobaciones.map((item, indice) => {
               const marcada = marcadas.has(indice)
               return (
@@ -2202,13 +2232,12 @@ function ComprobacionFinalTelefono({
                     role="checkbox"
                     aria-checked={marcada}
                     onClick={() => onAlternar(indice)}
-                    className={`flex min-h-16 w-full cursor-pointer items-center gap-3 rounded-[14px] border-2 px-3 py-2 text-left ${
-                      marcada ? 'border-noct-exito-linea bg-noct-exito-tinte' : 'border-noct-divider bg-noct-surface active:bg-noct-presionado'
-                    }`}
+                    className="-mx-2 flex min-h-[52px] w-[calc(100%+16px)] cursor-pointer items-center gap-3 rounded-xl px-2 py-2 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-noct-accent active:bg-noct-presionado"
                   >
                     <span
                       aria-hidden
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-[7px] border-2 ${
+                      data-circulo-comprobacion
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
                         marcada ? 'border-noct-exito bg-noct-exito text-noct-exito-tinte' : 'border-noct-divider-fuerte'
                       }`}
                     >
@@ -2229,7 +2258,8 @@ function ComprobacionFinalTelefono({
         {/* VOLVER, JUNTO A LA PREGUNTA (tarea 351): el mismo botón de 44 que
             acompaña la pregunta de una ventana, en el pie y siempre a la vista,
             así que sigue siendo una navegación principal (regla 28), no un
-            enlace pequeño; y la pregunta y sus respuestas suben una fila. */}
+            enlace pequeño; y la pregunta y sus respuestas suben una fila. También
+            mientras se confirma lo que falta. */}
         <div className="flex items-center gap-2">
           <BotonVolver
             disponible
@@ -2237,30 +2267,79 @@ function ComprobacionFinalTelefono({
             onIr={onAnterior}
             tamano="compacto"
           />
-          <p className="min-w-0 flex-1 text-[18px] font-extrabold leading-6 text-pretty">¿El problema quedó resuelto?</p>
+          {confirmar ? (
+            <p
+              id={idConfirmar}
+              ref={preguntaConfirmar}
+              tabIndex={-1}
+              className="min-w-0 flex-1 text-[18px] font-extrabold leading-6 text-pretty outline-none"
+            >
+              ¿Comprobaste esto en el equipo?
+            </p>
+          ) : (
+            <p className="min-w-0 flex-1 text-[18px] font-extrabold leading-6 text-pretty">¿El problema quedó resuelto?</p>
+          )}
         </div>
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            type="button"
-            onClick={() => onTerminar?.()}
-            aria-disabled={onTerminar === null}
-            data-terminar-guia
-            className={`inline-flex min-h-[58px] items-center justify-center gap-2 rounded-2xl px-3 text-center leading-tight ${
-              onTerminar ? `${RELLENO_RESUELTO} text-[16px]` : 'cursor-default bg-noct-neutral-900 text-[15px] font-extrabold text-noct-neutral-300 shadow-[0_4px_0_var(--color-noct-divider)]'
-            }`}
-          >
-            {onTerminar && <IconoVentana nombre="hecho" tam={20} grosor={3} className="shrink-0" />}
-            {etiqueta}
-          </button>
-          <button
-            type="button"
-            onClick={() => setSigueIgual(true)}
-            aria-haspopup="dialog"
-            className={`inline-flex min-h-[58px] cursor-pointer items-center justify-center rounded-2xl border-2 border-noct-divider-fuerte bg-noct-surface px-3 text-[16px] font-extrabold text-noct-text ${RELIEVE_BORDE_FUERTE}`}
-          >
-            No, sigue igual
-          </button>
-        </div>
+        {confirmar ? (
+          // LO QUE FALTA, POR SU NOMBRE (A2): la misma lista que arriba, solo lo
+          // sin marcar, con su círculo vacío. Si es larga, se desplaza dentro
+          // del pie sin tapar la pregunta ni las respuestas.
+          <div role="group" aria-labelledby={idConfirmar} data-confirmar-pendientes className="flex flex-col gap-2.5">
+            <ul className="flex max-h-[34svh] flex-col gap-1.5 overflow-y-auto rounded-[14px] bg-noct-bg px-3 py-2.5">
+              {pendientes.map((indice) => (
+                <li key={indice} className="flex items-start gap-2.5">
+                  <span aria-hidden className="mt-0.5 h-[18px] w-[18px] shrink-0 rounded-full border-2 border-noct-divider-fuerte" />
+                  <span className="min-w-0 text-[15px] font-semibold leading-[21px] text-pretty [overflow-wrap:anywhere]">
+                    {comprobaciones[indice]}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[14px] leading-5 text-noct-neutral-300">
+              {pendientes.length === 1
+                ? 'Al confirmarla, queda marcada y la guía termina.'
+                : 'Al confirmarlas, quedan marcadas y la guía termina.'}
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => onConfirmarYTerminar(pendientes)}
+                data-terminar-guia
+                className={`inline-flex min-h-[58px] items-center justify-center gap-2 rounded-2xl px-3 text-center text-[16px] leading-tight ${RELLENO_RESUELTO}`}
+              >
+                <IconoVentana nombre="hecho" tam={20} grosor={3} className="shrink-0" />
+                {pendientes.length === 1 ? 'Sí, la comprobé' : 'Sí, las comprobé'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmando(false)}
+                className={`inline-flex min-h-[58px] cursor-pointer items-center justify-center rounded-2xl border-2 border-noct-divider-fuerte bg-noct-surface px-3 text-[16px] font-extrabold text-noct-text ${RELIEVE_BORDE_FUERTE}`}
+              >
+                {pendientes.length === 1 ? 'Revisarla' : 'Revisarlas'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={responderSi}
+              data-terminar-guia
+              className={`inline-flex min-h-[58px] items-center justify-center gap-2 rounded-2xl px-3 text-center text-[16px] leading-tight ${RELLENO_RESUELTO}`}
+            >
+              <IconoVentana nombre="hecho" tam={20} grosor={3} className="shrink-0" />
+              Sí, quedó resuelto
+            </button>
+            <button
+              type="button"
+              onClick={() => setSigueIgual(true)}
+              aria-haspopup="dialog"
+              className={`inline-flex min-h-[58px] cursor-pointer items-center justify-center rounded-2xl border-2 border-noct-divider-fuerte bg-noct-surface px-3 text-[16px] font-extrabold text-noct-text ${RELIEVE_BORDE_FUERTE}`}
+            >
+              No, sigue igual
+            </button>
+          </div>
+        )}
       </div>
       {/* LO QUE SE PUEDE HACER SI SIGUE IGUAL (tarea 350): las mismas salidas
           que ya había, dichas como respuesta. Nada se marca ni se termina. */}

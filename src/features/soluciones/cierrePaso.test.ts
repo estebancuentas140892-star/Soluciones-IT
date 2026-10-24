@@ -4,6 +4,7 @@ import {
   acortarNombreGuia,
   cierreDeLaComprobacion,
   cierreDelPaso,
+  comprobacionesPendientes,
   guiaPendienteDelPaso,
   guiaTerminada,
   LARGO_MAXIMO_NOMBRE_GUIA,
@@ -255,5 +256,14 @@ describe('cierreDeLaComprobacion (tarea 308)', () => {
     expect(cierreDeLaComprobacion(2, 1)).toEqual({ listo: false, etiqueta: 'Marca 1 comprobación' })
     expect(cierreDeLaComprobacion(2, 2)).toEqual({ listo: true, etiqueta: 'Terminar' })
     expect(cierreDeLaComprobacion(1, 0)).toEqual({ listo: false, etiqueta: 'Marca 1 comprobación' })
+  })
+})
+
+describe('comprobacionesPendientes (tarea 352, propuesta A2)', () => {
+  it('las que faltan, en su orden; vacía con todo marcado', () => {
+    expect(comprobacionesPendientes(3, new Set([1]))).toEqual([0, 2])
+    expect(comprobacionesPendientes(3, new Set())).toEqual([0, 1, 2])
+    expect(comprobacionesPendientes(2, new Set([0, 1]))).toEqual([])
+    expect(comprobacionesPendientes(0, new Set())).toEqual([])
   })
 })

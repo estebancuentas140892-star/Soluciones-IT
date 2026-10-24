@@ -12,6 +12,7 @@ import {
   alternarInstruccionHecha,
   alternarVerificacionFinal,
   avanceDe,
+  confirmarComprobacionYFinalizar,
   contarInstruccionesHechas,
   establecerPasoHecho,
   finalizarEjecucion,
@@ -356,6 +357,26 @@ export function useProcedimientoEjecucion({
   }
 
   /**
+   * «SÍ, QUEDÓ RESUELTO» CON LO QUE FALTABA (tarea 352, propuesta A2 aprobada
+   * por el usuario). La pantalla nombra cada comprobación sin marcar y quien
+   * termina confirma que las comprobó: se marcan esas, y solo esas (un índice
+   * fuera de la guía no cuenta), y la guía termina con la misma exigencia de
+   * `finalizar`: todos los pasos de la ruta y todas las comprobaciones. Si
+   * falta un paso no se escribe nada. Con nada pendiente es `finalizar`.
+   */
+  async function confirmarYFinalizar(pendientes: readonly number[]) {
+    const prog = await leerAvance(clave)
+    const marcadas = new Set(prog?.verificacionHecha ?? [])
+    for (const indice of pendientes) {
+      if (Number.isInteger(indice) && indice >= 0 && indice < verificacionFinal.length) marcadas.add(indice)
+    }
+    const verificacion = [...marcadas].sort((a, b) => a - b)
+    if (!guiaTerminada(procedimiento, prog?.pasosHechos, verificacion, prog?.elecciones)) return
+    await confirmarComprobacionYFinalizar(clave, verificacion)
+    onCompletado?.()
+  }
+
+  /**
    * Deshace el cierre de un paso ya hecho. Es lo UNICO que queda del
    * antiguo `alternarPaso` (tarea 3 del encargo): marcarlo con un toque
    * arrastraba tambien todas sus tareas, es decir daba por hecho un
@@ -584,6 +605,7 @@ export function useProcedimientoEjecucion({
     alternarTarea,
     alternarVerificacion,
     finalizar,
+    confirmarYFinalizar,
     intentarCompletarPaso,
     completarVentana,
     completarPasoYAvanzar,
