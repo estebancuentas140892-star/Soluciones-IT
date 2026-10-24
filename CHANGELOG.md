@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-23
 
+### Agregado (tarea 354): la pantalla no se apaga en la guía y las notas de la guía en Detalles, en el teléfono
+
+**Área modificada:** `src/components/usePantallaEncendida.ts` (nuevo), `src/features/soluciones/AsistentePage.tsx` y `src/features/diagnostico/DiagnosticoRunPage.tsx` (lo usan en el teléfono), `src/features/soluciones/notasGuia.ts` y `NotasDeLaGuia.tsx` (nuevos), `ArticuloPage.tsx` («Notas de la guía» en Detalles del teléfono), `tonos.ts` (comentario), `scripts/capturas-moviles.mjs` (parada `detalles-notas`); pruebas nuevas `usePantallaEncendida.test.tsx` y `notasGuia.test.tsx`.
+**Tipo:** Agregado.
+**Motivo:** el usuario pidió aplicar solo los cambios recomendados en el HTML de Claude Design; estos dos eran los que faltaban.
+**Qué cambia (solo por debajo de 768 px):** mientras una guía o una guía con preguntas está abierta, la pantalla del teléfono no se apaga (donde el navegador lo permite). «Detalles» de una guía muestra «Notas de la guía»: la información y los consejos de cada ventana, que la ejecución no enseña desde la tarea 307.
+**Estructura de datos:** sin cambios.
+**Verificación:** pruebas nuevas `src/components/usePantallaEncendida.test.tsx` (se pide al abrir, se vuelve a pedir al regresar a la app, se suelta al salir, sin la API o con la petición negada no pasa nada) y `src/features/soluciones/notasGuia.test.tsx` (qué notas se reúnen y por ventana, «Notas de la guía» en Detalles del teléfono, nada desde 768 px y la ventana sin enseñarlas); suite completa en verde, `tsc -b`, `oxlint` y build; en Chrome real, con un espía de `navigator.wakeLock`, la guía y la guía con preguntas piden la pantalla encendida a 360 y 390 px, e Inicio, Detalles y 1366 px no; «Notas de la guía» capturada a 360 x 640, 390 x 844 y 1366 x 768 en los dos temas, y auditoría por CDP de `detalles` y la nueva `detalles-notas` a 360 x 640, 360 x 740, 390 x 844 y 430 x 932 en los dos temas: contraste de 4.5:1 y sin desbordes (el único hallazgo, el título truncado de la cabecera de Detalles, es el falso positivo conocido de la tarea 260).
+
 ### Agregado (tarea 353): «Soluciones IT se actualizó a la versión X» al abrir una versión nueva
 
 **Área modificada:** `src/lib/versionVista.ts` (nuevo), `src/components/ActualizacionDisponible.tsx`, `src/components/avisosFlotantes.ts` (`duracionMs`), `scripts/prueba-actualizacion-pwa.mjs`; prueba nueva `src/lib/versionVista.test.ts`.

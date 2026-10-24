@@ -145,8 +145,10 @@ export function tonoDelEditor(tono: TonoAviso | null): TonoBase {
 //   - 'dato': un valor que hace falta para ejecutar la acción. A la
 //     vista, subordinado a la instrucción (su rótulo y monoespaciada,
 //     tarea 303), sin color de alerta.
-//   - null: información y consejo, heredados. No se muestran (tarea 307):
-//     no se pliegan en ningún sitio ni dejan un hueco.
+//   - null: información y consejo, heredados. No se muestran al ejecutar
+//     (tarea 307): no se pliegan en la ventana ni dejan un hueco. Desde la
+//     tarea 354 se leen, bajo demanda, en «Notas de la guía» de Detalles
+//     del teléfono (`notasGuia.ts`).
 export type PresenciaAviso = 'alerta' | 'dato'
 
 export function presenciaDeAviso(tono: TonoAviso | null): PresenciaAviso | null {

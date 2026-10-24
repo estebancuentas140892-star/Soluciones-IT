@@ -9,6 +9,8 @@ import { registrarVisita } from '../../lib/recientes'
 import { Chasis } from '../../app/Chasis'
 import { useOrigen } from '../../app/useOrigen'
 import { avisar } from '../../components/avisosFlotantes'
+import { usePantallaEncendida } from '../../components/usePantallaEncendida'
+import { useEsAncho } from '../../components/useEsAncho'
 import { esIdDeEquipo } from '../boveda/credencialDelEquipo'
 import { AsistenteVista } from './AsistenteVista'
 import { ProveedorEjecucion } from './ProveedorEjecucion'
@@ -78,6 +80,12 @@ export function AsistentePage() {
   useEffect(() => {
     if (idVisitado) void registrarVisita('articulo', idVisitado)
   }, [idVisitado])
+
+  // EN EL TELÉFONO, LA PANTALLA NO SE APAGA MIENTRAS LA GUÍA ESTÁ ABIERTA
+  // (tarea 354): el técnico la deja al lado mientras trabaja en el otro
+  // equipo. Desde 768 px, como siempre.
+  const ancho = useEsAncho()
+  usePantallaEncendida(!ancho && idVisitado !== null)
 
   if (articulo === null) return <Navigate to="/soluciones" replace />
   if (!articulo) {

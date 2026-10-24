@@ -45,6 +45,7 @@ import {
 import { BTN_GHOST, BTN_PRIMARIO } from '../../components/nocturne'
 import { SubtituloTarea } from '../../app/bandaTarea'
 import { huecoAvisoActualizacion } from '../../components/ranuraAvisoActualizacion'
+import { usePantallaEncendida } from '../../components/usePantallaEncendida'
 import { useEsAncho } from '../../components/useEsAncho'
 import { IconoVentana } from '../../components/ventana/IconoVentana'
 import { MarcoVentana } from '../../components/ventana/MarcoVentana'
@@ -110,6 +111,10 @@ export function DiagnosticoRunPage() {
   useEffect(() => {
     if (idVisitado) void registrarVisita('diagnostico', idVisitado)
   }, [idVisitado])
+
+  // En el teléfono la pantalla no se apaga mientras la guía con preguntas
+  // está abierta, como en una guía (tarea 354).
+  usePantallaEncendida(!ancho && idVisitado !== null)
 
   // Auto-inicio: al abrir un problema sin sesión previa se arranca en la
   // primera pregunta (sin pantalla intermedia). El ref evita un doble

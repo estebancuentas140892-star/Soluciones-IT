@@ -347,6 +347,13 @@ const TODAS_LAS_PARADAS = [
   { nombre: 'decision', ruta: '/soluciones/cat-pos/art-decision', guion: siguiente },
   { nombre: 'problema', ruta: '/soluciones/cat-pos/art-decision', guion: tocar('Tengo un problema') },
   { nombre: 'detalles', ruta: '/soluciones/cat-impresoras/art-recurso-compartido/detalles' },
+  // Tarea 354: «Notas de la guía» en Detalles del teléfono (la guía de
+  // tonos trae una nota de información y un consejo).
+  {
+    nombre: 'detalles-notas',
+    ruta: '/soluciones/cat-pos/art-tonos/detalles',
+    guion: `{ document.querySelector('[data-notas-guia]')?.scrollIntoView({block:'start'}); await new Promise(r=>setTimeout(r,400)); }`,
+  },
   { nombre: 'editor-pasos', ruta: '/soluciones/cat-impresoras/art-alcance-tarea/editar', guion: `[...document.querySelectorAll('button')].find(b=>b.textContent.trim()==='Pasos')?.click();` },
   // Tarea 263 (encargo "Resolucion guiada"): los cinco ejemplos.
   { nombre: 'recorrido-buscar-problema', ruta: '/', antes: RECORRIDOS_LIMPIOS, guion: buscarEnResolver('impresora no imprime') },

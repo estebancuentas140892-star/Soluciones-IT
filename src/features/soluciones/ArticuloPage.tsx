@@ -33,6 +33,7 @@ import { BotonFavorito } from '../../components/BotonFavorito'
 import { BTN_ICONO_SECUNDARIO, TagNeutral, TituloSeccion } from '../../components/nocturne'
 import { Historial } from '../historial/Historial'
 import { IntroduccionGuia, ListaIntro, ResumenGuia, SeccionIntro } from './IntroduccionGuia'
+import { NotasDeLaGuia } from './NotasDeLaGuia'
 import { cuandoUsarParaMostrar } from './preparacionGuia'
 import { useEsAncho } from '../../components/useEsAncho'
 import { TerminosDeLaGuia } from '../referencia/TerminosDeLaGuia'
@@ -277,6 +278,12 @@ export function ArticuloPage({ comoDetalles = false }: { comoDetalles?: boolean 
             la guia tiene terminos vinculados, y al abrirlo muestra una
             lista breve, nunca las tareas del procedimiento. */}
         <TerminosDeLaGuia procedimiento={procedimiento} />
+
+        {/* LAS NOTAS Y LOS CONSEJOS, BAJO DEMANDA, EN EL TELÉFONO (tarea 354,
+            prototipo de Claude Design: «Orientación y notas pasan a Detalles.
+            Nada se elimina»). La ejecución sigue sin enseñarlos (tarea 307).
+            Desde 768, como siempre. */}
+        {!ancho && tieneProcedimiento && <NotasDeLaGuia procedimiento={procedimiento} />}
 
         {articulo.contenido.trim() !== '' && (
           <article className="prose prose-invert prose-sm max-w-none prose-headings:font-medium prose-headings:text-noct-text prose-p:text-noct-neutral-200 prose-li:text-noct-neutral-200 prose-strong:text-noct-text prose-a:text-noct-accent-400">
