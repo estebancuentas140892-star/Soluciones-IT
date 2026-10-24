@@ -11,6 +11,13 @@ import { BTN_PRIMARIO_PELIGRO, BTN_PRIMARIO_RELLENO, BTN_SECUNDARIO } from '../.
 import { OpcionRadio } from '../../components/OpcionRadio'
 import { PastillaEstado } from '../../components/PastillaEstado'
 import { useEsAncho } from '../../components/useEsAncho'
+import {
+  DELINEADO_EN_TELEFONO,
+  RELIEVE_BORDE,
+  RELIEVE_EN_TELEFONO,
+  RELLENO_ACCION,
+  TARJETA,
+} from '../../components/ventana/estilos'
 import { db, type Mantenimiento } from '../../lib/db'
 import {
   esPorValidar,
@@ -54,6 +61,14 @@ import {
 // con qué hay que hacer, la última vez que se hizo (confirmado) y lo que una
 // fuente antigua anota (por validar), y "¿Cómo terminó?" en tres segmentos,
 // con el registro fijo abajo. Lo que se guarda y cómo, igual que siempre.
+//
+// CON LAS PIEZAS DE «VENTANA» (tarea 352): el título a 24 · 800, la tarjeta de
+// contexto con su relieve, las tres respuestas con la forma de las de una
+// ventana (`OpcionRadio`), y el pie de la guía con «Guardar en el historial»
+// relleno y con relieve. Ni un campo ni un paso más; desde 768, lo de siempre.
+
+// Guardar el desenlace, en el teléfono: el relleno que avanza, como «Listo».
+const GUARDAR_TELEFONO = `${RELLENO_ACCION} inline-flex min-h-[58px] w-full items-center justify-center gap-2 rounded-2xl px-4 text-[17px] leading-tight disabled:cursor-not-allowed disabled:opacity-45`
 
 type Respuesta = 'realizado' | 'pospuesto' | 'cancelado'
 
@@ -116,8 +131,10 @@ function Resumen({ mantenimiento }: { mantenimiento: Mantenimiento }) {
   const ancho = useEsAncho()
   return (
     <section className="flex flex-col gap-1">
-      <h1 className="text-[20px] font-semibold leading-[1.3]">{nombreMantenimiento(mantenimiento.tipo)}</h1>
-      <p className="text-[13.5px] text-noct-neutral-300">
+      <h1 className="text-[20px] font-semibold leading-[1.3] max-md:text-[24px] max-md:font-extrabold max-md:leading-[1.2] max-md:tracking-[-.02em]">
+        {nombreMantenimiento(mantenimiento.tipo)}
+      </h1>
+      <p className="text-[13.5px] text-noct-neutral-300 max-md:text-[15px]">
         {!fecha
           ? 'Sin fecha programada'
           : esPorValidar(mantenimiento)
@@ -190,11 +207,11 @@ function ContextoDelMantenimiento({ mantenimiento }: { mantenimiento: Mantenimie
     <section
       aria-label="Antes de cerrarlo"
       data-contexto-mantenimiento
-      className="flex flex-col divide-y divide-noct-divider overflow-hidden rounded-2xl border border-noct-divider bg-noct-surface"
+      className={`${TARJETA} ${RELIEVE_BORDE} flex flex-col divide-y divide-noct-divider overflow-hidden`}
     >
       {mantenimiento.observaciones && (
         <div className="flex flex-col gap-1 px-3.5 py-3">
-          <h2 className="text-[13px] text-noct-neutral-400">Qué hay que hacer</h2>
+          <h2 className="text-[13.5px] font-bold text-noct-neutral-300">Qué hay que hacer</h2>
           <p className="whitespace-pre-wrap text-[15px] font-medium leading-[1.45] [overflow-wrap:anywhere]">
             {mantenimiento.observaciones}
           </p>
@@ -202,7 +219,7 @@ function ContextoDelMantenimiento({ mantenimiento }: { mantenimiento: Mantenimie
       )}
       <div className="flex flex-col gap-1 px-3.5 py-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-[13px] text-noct-neutral-400">La última vez</h2>
+          <h2 className="text-[13.5px] font-bold text-noct-neutral-300">La última vez</h2>
           {ultima && (
             <PastillaEstado tono="exito" conPunto>
               Confirmado
@@ -216,7 +233,7 @@ function ContextoDelMantenimiento({ mantenimiento }: { mantenimiento: Mantenimie
             {ultima.resultado && `${ultima.fechaRealizada || ultima.tecnico ? '. ' : ''}${ultima.resultado}`}
           </p>
         ) : (
-          <p className="text-[14px] leading-[1.45] text-noct-neutral-400">
+          <p className="text-[14px] leading-[1.45] text-noct-neutral-300">
             Todavía no hay uno cerrado en la app para este equipo.
           </p>
         )}
@@ -229,7 +246,7 @@ function ContextoDelMantenimiento({ mantenimiento }: { mantenimiento: Mantenimie
             </PastillaEstado>
             <Link
               to={`/dispositivos/${antecedente.dispositivoId}/mantenimientos/${antecedente.id}`}
-              className="flex min-h-10 items-center text-[14px] font-semibold text-noct-accent-300"
+              className="toque-amplio relative flex min-h-10 items-center text-[14px] font-semibold text-noct-accent-300"
             >
               Ver fuente
             </Link>
@@ -263,9 +280,11 @@ function AntecedentePorValidar({ mantenimiento }: { mantenimiento: Mantenimiento
   const marca = estadoMarcadoDe(mantenimiento.observaciones)
   const ancho = useEsAncho()
   return (
-    <section className="flex flex-col gap-2 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5">
-      <p className="text-[13.5px] font-medium">Antecedente por validar</p>
-      <p className="text-[12.5px] leading-[1.5] text-noct-neutral-300">
+    <section
+      className={`flex flex-col gap-2 rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 max-md:gap-2.5 max-md:border-[1.5px] max-md:px-4 max-md:py-3.5 ${RELIEVE_EN_TELEFONO}`}
+    >
+      <p className="text-[13.5px] font-medium max-md:text-[16px] max-md:font-extrabold">Antecedente por validar</p>
+      <p className="text-[12.5px] leading-[1.5] text-noct-neutral-300 max-md:text-[14px]">
         {datos.length > 0
           ? 'Sale de documentación histórica. Lo que esa fuente dice está abajo, sin confirmar, y no se cierra desde aquí.'
           : 'Sale de documentación histórica. No confirma que siga pendiente ni que se hiciera, y no se cierra desde aquí.'}
@@ -274,7 +293,7 @@ function AntecedentePorValidar({ mantenimiento }: { mantenimiento: Mantenimiento
         <div
           role="group"
           aria-label="Documentado en la fuente, por validar"
-          className="flex flex-col rounded-md border border-dashed border-noct-neutral-700 px-3 py-1.5"
+          className="flex flex-col rounded-md border border-dashed border-noct-neutral-700 px-3 py-1.5 max-md:rounded-[14px] max-md:border-[1.5px] max-md:border-noct-divider-fuerte"
         >
           <p className="pt-1 text-[11px] max-md:text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
             Documentado en la fuente · por validar
@@ -316,7 +335,7 @@ function FilaDeDato({ etiqueta, children }: { etiqueta: string; children: ReactN
   return (
     <div className="flex flex-col gap-0.5 py-2">
       <span className={CLASE_ETIQUETA}>{etiqueta}</span>
-      <span className="whitespace-pre-wrap text-[13.5px] text-noct-text [overflow-wrap:anywhere]">{children}</span>
+      <span className="whitespace-pre-wrap text-[13.5px] text-noct-text [overflow-wrap:anywhere] max-md:text-[15px]">{children}</span>
     </div>
   )
 }
@@ -343,14 +362,14 @@ function Desenlace({ mantenimiento, ficha }: { mantenimiento: Mantenimiento; fic
     <section className="flex flex-col gap-3">
       {mantenimiento.estado === 'realizado' && (
         <>
-          <p className="flex items-center gap-2 rounded-md border border-noct-exito/35 bg-noct-exito/[.08] px-3 py-2.5 text-[13px] text-noct-exito">
+          <p className="flex items-center gap-2 rounded-md border border-noct-exito/35 bg-noct-exito/[.08] px-3 py-2.5 text-[13px] text-noct-exito max-md:rounded-[14px] max-md:border-transparent max-md:bg-noct-exito-tinte max-md:text-[14px] max-md:font-bold">
             <CheckCircle size={16} className="shrink-0" aria-hidden />
             Realizado y registrado en el historial del equipo.
           </p>
           {/* EN EL TELÉFONO, LO HECHO EN SU FORMA (tarea 343, "Realizado y
               confirmado" del handoff): superficie sólida con la barra verde,
               los datos y, debajo, su evidencia y que está en el historial. */}
-          <div className="flex flex-col max-md:rounded-2xl max-md:border max-md:border-l-4 max-md:border-noct-divider max-md:border-l-noct-exito max-md:bg-noct-surface max-md:px-3.5 max-md:pb-2.5 max-md:pt-0.5 max-md:shadow-[var(--shadow-noct-elevacion)]">
+          <div className="flex flex-col max-md:rounded-2xl max-md:border max-md:border-l-4 max-md:border-noct-divider max-md:border-l-noct-exito max-md:bg-noct-surface max-md:px-3.5 max-md:pb-2.5 max-md:pt-0.5 max-md:shadow-[0_3px_0_var(--color-noct-divider)]">
             <div className="divide-y divide-noct-divider">
               {mantenimiento.fechaRealizada && (
                 <FilaDeDato etiqueta="Se hizo el">{fechaConAnio(mantenimiento.fechaRealizada)}</FilaDeDato>
@@ -388,11 +407,11 @@ function Desenlace({ mantenimiento, ficha }: { mantenimiento: Mantenimiento; fic
         </>
       )}
       {mantenimiento.estado === 'cancelado' && (
-        <p className="rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-[13px] text-noct-neutral-300">
+        <p className="rounded-md border border-noct-divider bg-noct-surface px-3 py-2.5 text-[13px] text-noct-neutral-300 max-md:rounded-[14px] max-md:border-[1.5px] max-md:text-[14px]">
           Cancelado. El motivo está en el historial del equipo.
         </p>
       )}
-      <Link to={ficha} className={`${BTN_SECUNDARIO} min-h-11 self-start px-4`}>
+      <Link to={ficha} className={`${BTN_SECUNDARIO} min-h-11 self-start px-4 ${DELINEADO_EN_TELEFONO}`}>
         Volver al equipo
       </Link>
     </section>
@@ -486,7 +505,7 @@ export function RegistrarDesenlace({
   return (
     <form onSubmit={guardar} noValidate className="flex flex-col gap-3.5">
       <div className="flex flex-col gap-1.5">
-        <span id={idPregunta} className={`${CLASE_ETIQUETA} max-md:text-[17px] max-md:font-bold max-md:text-noct-text`}>
+        <span id={idPregunta} className={`${CLASE_ETIQUETA} max-md:text-[18px] max-md:font-extrabold max-md:text-noct-text`}>
           ¿Cómo terminó?
         </span>
         {/* En el teléfono, tres segmentos y, debajo, lo que hace el elegido
@@ -509,7 +528,7 @@ export function RegistrarDesenlace({
             </OpcionRadio>
           ))}
         </div>
-        {!ancho && detalleElegido && <p className="text-[13.5px] leading-snug text-noct-neutral-400">{detalleElegido}</p>}
+        {!ancho && detalleElegido && <p className="pt-1 text-[14px] leading-snug text-noct-neutral-300">{detalleElegido}</p>}
       </div>
 
       {desenlace === 'realizado' && (
@@ -556,7 +575,8 @@ export function RegistrarDesenlace({
                 type="button"
                 onClick={() => setCambiandoQuienYCuando(true)}
                 aria-label="Cambiar la fecha o quién lo hizo"
-                className="-mx-1 flex min-h-10 items-center rounded-lg px-1 font-semibold text-noct-accent-300 hover:bg-noct-text/[.05]"
+                // 44 de toque sin crecer la línea (`toque-amplio`, tarea 352).
+                className="toque-amplio relative -mx-1 flex min-h-10 items-center rounded-lg px-1 font-semibold text-noct-accent-300 hover:bg-noct-text/[.05]"
               >
                 Cambiar
               </button>
@@ -589,7 +609,7 @@ export function RegistrarDesenlace({
           {!ancho && (
             <p
               data-evidencia-al-guardar
-              className="flex items-start gap-2 rounded-[13px] border-[1.5px] border-dashed border-noct-text/20 px-3.5 py-3 text-[13.5px] leading-snug text-noct-neutral-400"
+              className="flex items-start gap-2 rounded-[14px] border-[1.5px] border-dashed border-noct-divider-fuerte px-3.5 py-3 text-[14px] leading-snug text-noct-neutral-300"
             >
               <Paperclip size={17} className="mt-px shrink-0" aria-hidden />
               Fotos o actas: se adjuntan después de guardar, en el registro que queda en el historial del equipo.
@@ -650,7 +670,9 @@ export function RegistrarDesenlace({
           className={
             desenlace === 'cancelado'
               ? `${BTN_PRIMARIO_PELIGRO} min-h-11 self-start px-4 disabled:opacity-50 max-md:min-h-[54px] max-md:w-full max-md:rounded-[15px] max-md:text-[16px]`
-              : `${BTN_PRIMARIO_RELLENO} w-full`
+              : ancho
+                ? `${BTN_PRIMARIO_RELLENO} w-full`
+                : GUARDAR_TELEFONO
           }
         >
           {guardando
@@ -672,7 +694,8 @@ export function RegistrarDesenlace({
 function PieDelRegistro({ fijo, children }: { fijo: boolean; children: ReactNode }) {
   if (!fijo) return children
   return (
-    <div className="sticky bottom-0 z-10 -mx-4 mt-1 flex flex-col border-t border-noct-divider bg-noct-bg/[.94] px-4 pb-[calc(10px+env(safe-area-inset-bottom))] pt-2.5 backdrop-blur-[12px]">
+    // El pie de la guía (`PieVentana`, tarea 352): la superficie con su sombra.
+    <div className="sticky bottom-0 z-10 -mx-4 mt-1 flex flex-col border-t border-noct-divider bg-noct-surface px-3 pb-[calc(14px+env(safe-area-inset-bottom))] pt-3 shadow-[var(--shadow-noct-pie)]">
       {children}
     </div>
   )

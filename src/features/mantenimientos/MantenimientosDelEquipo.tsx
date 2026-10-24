@@ -8,6 +8,7 @@ import { Check, ClockCountdown, ClockCounterClockwise, Note, Paperclip, Plus, Se
 import { BTN_GHOST, BTN_PRIMARIO_RELLENO } from '../../components/nocturne'
 import { PastillaEstado } from '../../components/PastillaEstado'
 import { ANCHO_TABLETA_HORIZONTAL, useEsAncho } from '../../components/useEsAncho'
+import { RELIEVE_BORDE_FUERTE, RELIEVE_EN_TELEFONO, TITULO_GRUPO_EN_TELEFONO } from '../../components/ventana/estilos'
 import { db, type Mantenimiento, type TipoMantenimiento } from '../../lib/db'
 import { esPorValidar, fechaConAnio, nombreMantenimiento } from '../../lib/mantenimientos'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
@@ -43,6 +44,13 @@ import { SelectorTipoMantenimiento } from './SelectorTipoMantenimiento'
 // Sin ninguno, un estado vacío que dice qué aparecerá. Programar va abajo,
 // delineado (no hace avanzar nada: la acción rellena es la del cierre); desde
 // 768 px, en la cabecera de la pantalla (tarea 339).
+//
+// EN EL TELÉFONO, LAS PIEZAS DE «VENTANA» (tarea 352): los rótulos de grupo a
+// 15 · 800 en tinta 2, cada tarjeta con el relieve del prototipo y su título a
+// 800, el estado en la pastilla tintada de Equipos, «Cerrar mantenimiento» en
+// el tinte del acento y «Programar» con el relieve del pie. Las tres formas de
+// arriba (sólida, barra verde, punteada) no cambian: son lo que las distingue.
+const TITULO_GRUPO_MANTENIMIENTO = `flex items-center gap-2 text-[15px] font-semibold ${TITULO_GRUPO_EN_TELEFONO}`
 
 export function MantenimientosDelEquipo({
   dispositivoId,
@@ -108,7 +116,7 @@ export function MantenimientosDelEquipo({
 
   const programado = abiertos.length > 0 && (
     <section aria-labelledby="mant-programado" className="flex flex-col gap-2.5">
-      <h2 id="mant-programado" className="flex items-center gap-2 text-[15px] font-semibold">
+      <h2 id="mant-programado" className={TITULO_GRUPO_MANTENIMIENTO}>
         <ClockCountdown size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
         Programado
       </h2>
@@ -121,7 +129,7 @@ export function MantenimientosDelEquipo({
   const realizado = realizados.length > 0 && (
     <section aria-labelledby="mant-realizado" className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-2">
-        <h2 id="mant-realizado" className="flex items-center gap-2 text-[15px] font-semibold">
+        <h2 id="mant-realizado" className={TITULO_GRUPO_MANTENIMIENTO}>
           <SealCheck size={17} className="shrink-0 text-noct-exito" aria-hidden />
           Realizado y confirmado
         </h2>
@@ -140,11 +148,11 @@ export function MantenimientosDelEquipo({
   const porValidar = antecedentes.length > 0 && (
     <section aria-labelledby="mant-antecedentes" className="flex flex-col gap-2.5">
       <div className="flex flex-col gap-0.5">
-        <h2 id="mant-antecedentes" className="flex items-center gap-2 text-[15px] font-semibold">
+        <h2 id="mant-antecedentes" className={TITULO_GRUPO_MANTENIMIENTO}>
           <Note size={17} className="shrink-0 text-noct-precaucion" aria-hidden />
           Documentado, por validar
         </h2>
-        <p className="text-[13px] leading-[1.45] text-noct-neutral-400">
+        <p className="text-[13px] leading-[1.45] text-noct-neutral-400 max-md:text-[14px] max-md:text-noct-neutral-300">
           Marcas de una fuente histórica. No dicen técnico, resultado ni evidencia: no son mantenimientos hechos ni
           pendientes.
         </p>
@@ -189,15 +197,17 @@ export function MantenimientosDelEquipo({
 
       {/* PROGRAMAR, ABAJO Y DELINEADO: no hace avanzar nada. Solo en el
           teléfono; desde 768 px va en la cabecera (tarea 339). */}
+      {/* Desde la tarea 352, el pie del prototipo «Ventana»: superficie con su
+          sombra y el botón delineado con relieve, el mismo de «No, sigue igual». */}
       {!ancho && (
-        <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden">
+        <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-surface px-3 pb-3 pt-3 shadow-[var(--shadow-noct-pie)] md:hidden">
           <button
             type="button"
             onClick={() => onProgramar(true)}
             aria-haspopup="dialog"
-            className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[15px] border-[1.5px] border-noct-text/25 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.05]"
+            className={`flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-noct-divider-fuerte bg-noct-surface text-[16px] font-extrabold text-noct-text ${RELIEVE_BORDE_FUERTE}`}
           >
-            <Plus size={17} aria-hidden />
+            <Plus size={18} aria-hidden />
             Programar mantenimiento
           </button>
         </div>
@@ -228,10 +238,10 @@ function TarjetaProgramado({ mantenimiento, onCerrar }: { mantenimiento: Manteni
   const ancho = useEsAncho()
   const pospuesto = mantenimiento.estado === 'pospuesto'
   return (
-    <div className="overflow-hidden rounded-2xl border border-noct-divider bg-noct-surface shadow-[var(--shadow-noct-elevacion)]">
-      <Link to={ruta} className="flex flex-col gap-1.5 p-3.5 text-noct-text hover:bg-noct-text/[.03]">
+    <div className={`overflow-hidden rounded-2xl border border-noct-divider bg-noct-surface shadow-[var(--shadow-noct-elevacion)] max-md:border-[1.5px] ${RELIEVE_EN_TELEFONO}`}>
+      <Link to={ruta} className="flex flex-col gap-1.5 p-3.5 text-noct-text hover:bg-noct-text/[.03] max-md:p-4 max-md:active:bg-noct-presionado">
         <span className="flex items-baseline justify-between gap-2.5">
-          <span className="text-[16.5px] font-semibold">{nombreMantenimiento(mantenimiento.tipo)}</span>
+          <span className="text-[16.5px] font-semibold max-md:text-[17px] max-md:font-extrabold">{nombreMantenimiento(mantenimiento.tipo)}</span>
           <span className="shrink-0 whitespace-nowrap font-mono text-[13.5px] text-noct-neutral-300">{fechaConAnio(fecha)}</span>
         </span>
         {/* En el teléfono lo atrasado va en error y lo pospuesto lleva su
@@ -266,7 +276,7 @@ function TarjetaProgramado({ mantenimiento, onCerrar }: { mantenimiento: Manteni
         onClick={onCerrar}
         aria-haspopup="dialog"
         aria-label={`Cerrar mantenimiento: ${nombreMantenimiento(mantenimiento.tipo)}`}
-        className="flex min-h-[52px] w-full items-center justify-center gap-2 border-t border-noct-divider bg-noct-accent/[.14] text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.2] xl:min-h-[42px] xl:text-[14px]"
+        className="flex min-h-[52px] w-full items-center justify-center gap-2 border-t border-noct-divider bg-noct-accent/[.14] text-[15px] font-semibold text-noct-accent-300 hover:bg-noct-accent/[.2] max-md:border-t-[1.5px] max-md:bg-noct-accent-900 max-md:text-[16px] max-md:font-extrabold max-md:active:bg-noct-accent-800 xl:min-h-[42px] xl:text-[14px]"
       >
         <Check size={17} aria-hidden />
         Cerrar mantenimiento
@@ -286,10 +296,10 @@ function TarjetaRealizado({ mantenimiento, evidencias }: { mantenimiento: Manten
   return (
     <Link
       to={`/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`}
-      className="flex flex-col gap-1.5 rounded-2xl border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-3 text-noct-text shadow-[var(--shadow-noct-elevacion)] hover:bg-noct-text/[.03]"
+      className={`flex flex-col gap-1.5 rounded-2xl border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-3 text-noct-text shadow-[var(--shadow-noct-elevacion)] hover:bg-noct-text/[.03] max-md:py-3.5 max-md:active:bg-noct-presionado ${RELIEVE_EN_TELEFONO}`}
     >
       <span className="flex items-baseline justify-between gap-2.5">
-        <span className="text-[15.5px] font-semibold">{nombreMantenimiento(mantenimiento.tipo)}</span>
+        <span className="text-[15.5px] font-semibold max-md:text-[16px] max-md:font-extrabold">{nombreMantenimiento(mantenimiento.tipo)}</span>
         {mantenimiento.fechaRealizada && (
           <span className="shrink-0 whitespace-nowrap font-mono text-[13px] text-noct-neutral-300">
             {fechaConAnio(mantenimiento.fechaRealizada)}
@@ -299,7 +309,7 @@ function TarjetaRealizado({ mantenimiento, evidencias }: { mantenimiento: Manten
       {mantenimiento.resultado && (
         <span className="text-[14px] leading-[1.45] [overflow-wrap:anywhere]">{mantenimiento.resultado}</span>
       )}
-      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-noct-neutral-400">
+      <span className="flex flex-wrap gap-x-3 gap-y-1 text-[12.5px] text-noct-neutral-400 max-md:text-[13.5px] max-md:text-noct-neutral-300">
         {mantenimiento.tecnico && (
           <span className="inline-flex items-center gap-1">
             <User size={13} aria-hidden />
@@ -398,13 +408,13 @@ function TarjetaAntecedente({ mantenimiento }: { mantenimiento: Mantenimiento })
     <Link
       data-documentado
       to={`/dispositivos/${mantenimiento.dispositivoId}/mantenimientos/${mantenimiento.id}`}
-      className="flex flex-col gap-1.5 rounded-2xl border-[1.5px] border-dashed border-noct-text/25 px-3.5 py-3 text-noct-text hover:bg-noct-text/[.03]"
+      className="flex flex-col gap-1.5 rounded-2xl border-[1.5px] border-dashed border-noct-text/25 px-3.5 py-3 text-noct-text hover:bg-noct-text/[.03] max-md:border-noct-divider-fuerte max-md:active:bg-noct-presionado"
     >
       <span className="flex items-baseline justify-between gap-2.5">
-        <span className="text-[15px] font-[550] text-noct-neutral-200">{nombreMantenimiento(mantenimiento.tipo)}</span>
-        <span className="shrink-0 whitespace-nowrap font-mono text-[13px] text-noct-neutral-400">{cuando}</span>
+        <span className="text-[15px] font-[550] text-noct-neutral-200 max-md:font-bold">{nombreMantenimiento(mantenimiento.tipo)}</span>
+        <span className="shrink-0 whitespace-nowrap font-mono text-[13px] text-noct-neutral-400 max-md:text-noct-neutral-300">{cuando}</span>
       </span>
-      <span className="text-[13px] text-noct-neutral-400 [overflow-wrap:anywhere]">
+      <span className="text-[13px] text-noct-neutral-400 [overflow-wrap:anywhere] max-md:text-[14px] max-md:text-noct-neutral-300">
         Según {mantenimiento.fuente}
         {marca && (
           <>
