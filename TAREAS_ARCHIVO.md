@@ -1,5 +1,17 @@
 # Historial de tareas finalizadas
 
+## Encargo del 2026-10-23: que el teléfono diga que se actualizó
+
+### 353. «Soluciones IT se actualizó a la versión X» la primera vez que se abre una versión nueva
+
+- **Título:** que el teléfono diga que se actualizó y a qué versión, aunque la actualización se haya aplicado sola.
+- **Descripción:** el usuario no vio «Actualizar» tras el despliegue de `91d803a` (2026-10-23). Diagnóstico: el mecanismo funciona (el salto real `e20cb62` → `91d803a`, compilado de esos commits y servido en el mismo origen con un navegador persistente, avisa y actualiza; y el aviso se ve en todas las pantallas, en el código viejo y en el nuevo, con sesión). La causa probable es que la app se cerró del todo y se volvió a abrir: el navegador activa solo el worker en espera, la app arranca ya actualizada y no hay botón que enseñar, sin decir nada. **Hecho:** cada teléfono recuerda la última versión que abrió (`sit-version-vista` en `localStorage`) y, la primera vez que abre otra, avisa 6 segundos «Soluciones IT se actualizó a la versión X» con el aviso flotante, venga del botón o se haya aplicado sola. Sin versión guardada (el primer arranque con este aviso) solo avisa si el teléfono ya tenía datos de la app (`hayDatosPrevios`: categorías o guías en la base local), así que una instalación nueva no dice nada. En desarrollo no avisa.
+- **Motivo:** pedido del usuario del 2026-10-23: «agrega un aviso que diga que la aplicación se actualizó y a qué versión, la primera vez que abra la versión nueva, aunque se haya aplicado sola».
+- **Impacto:** bajo; solo un aviso al arrancar. No toca la sesión, IndexedDB, el avance de las guías ni la cola de sincronización, ni Supabase.
+- **Prioridad:** Alta. **Estado:** Hecha (2026-10-23): integrada en `main` (`4feb7c9`), desplegada y confirmada por el usuario en su teléfono («ahora sí se aplicaron los cambios»). Verificación: pruebas nuevas `src/lib/versionVista.test.ts` (cuándo se anuncia: otra versión, la misma, sin versión guardada con y sin datos previos, desarrollo, una sola vez por versión) y la suite completa en verde, `tsc -b`, `oxlint` y build; `npm run prueba:pwa` (`scripts/prueba-actualizacion-pwa.mjs`, navegador real con perfil persistente) con dos pasos nuevos: tras «Actualizar» sale «Soluciones IT se actualizó a la versión bbbbbbb» y al volver a abrirla no se repite; una variante en el scratchpad comprobó el caso que motivó el pedido (la versión nueva en espera, la app se cierra sin tocar «Actualizar» y se reabre ya actualizada): el aviso sale igual; antes, en ese caso, la app no decía nada. El salto real `e20cb62` → `91d803a` también se probó con las compilaciones de esos dos commits: avisa y actualiza. El aviso se ve a 360 x 640 en los dos temas, sobre el pie, sin tapar controles.
+- **Área afectada:** `src/lib/versionVista.ts` (nuevo: `versionEstrenada`, `estrenoDeVersion`, `hayDatosPrevios`, `textoVersionEstrenada`, `CLAVE_VERSION_VISTA`), `src/components/ActualizacionDisponible.tsx` (el efecto que avisa al montar), `src/components/avisosFlotantes.ts` (`avisar` con `duracionMs`), `scripts/prueba-actualizacion-pwa.mjs` (pasos 5 y 8); prueba nueva `src/lib/versionVista.test.ts`.
+- **Dependencias:** ninguna.
+
 ## Encargo del 2026-10-20 (legibilidad): distinguir cada guía en Resolver
 
 ### 347. Cada guía, con su divisor, en Recientes y en los resultados de Resolver
