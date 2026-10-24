@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { Plus } from '../../components/iconos'
 import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { FILAS_EN_TARJETA } from '../../components/ventana/estilos'
 import { necesitaRevision } from '../../lib/autorizaciones'
 import { db, type AutorizacionFacturacion } from '../../lib/db'
 import { conOrigen } from '../../lib/origenNavegacion'
@@ -49,12 +50,13 @@ export function AutorizacionesPage() {
     if (filas.length === 0) return null
     return (
       <section className="flex flex-col gap-1">
-        {/* En el teléfono, el grupo como frase y con cuántas tiene (tarea 345). */}
-        <TituloSeccion className="max-md:flex max-md:items-baseline max-md:gap-2 max-md:text-[15px] max-md:font-semibold max-md:normal-case max-md:tracking-normal max-md:text-noct-text">
+        {/* En el teléfono, el grupo como frase y con cuántas tiene (tarea 345);
+            desde la tarea 352, el rótulo y la tarjeta de los grupos de Más. */}
+        <TituloSeccion className="max-md:flex max-md:items-baseline max-md:gap-2 max-md:px-1 max-md:pb-1.5 max-md:text-[15px] max-md:font-extrabold max-md:normal-case max-md:tracking-normal max-md:text-noct-neutral-300">
           {titulo}
-          <span className="font-mono text-[13px] font-normal text-noct-neutral-500 md:hidden">{filas.length}</span>
+          <span className="font-mono text-[13px] font-normal text-noct-neutral-500 md:hidden max-md:text-noct-neutral-400">{filas.length}</span>
         </TituloSeccion>
-        <ul className="flex flex-col divide-y divide-noct-divider">
+        <ul className={`flex flex-col divide-y divide-noct-divider ${FILAS_EN_TARJETA}`}>
           {filas.map((a) => (
             <li key={a.id}>
               <FilaAutorizacion autorizacion={a} pos={posDe(a)} origen={origen} />
@@ -76,8 +78,13 @@ export function AutorizacionesPage() {
       }
       barra={
         <div className="px-4 pb-2.5 pt-0.5">
-          <h1 className="m-0 text-[22px] font-medium leading-[1.25]">Autorizaciones de facturación</h1>
-          <p className="mt-[3px] text-[12.5px] text-noct-neutral-500">Prefijos y rangos DIAN de los POS</p>
+          {/* En el teléfono, el título de una pantalla del prototipo «Ventana» (tarea 352). */}
+          <h1 className="m-0 text-[22px] font-medium leading-[1.25] max-md:text-[24px] max-md:font-extrabold max-md:leading-[1.2] max-md:tracking-[-.02em]">
+            Autorizaciones de facturación
+          </h1>
+          <p className="mt-[3px] text-[12.5px] text-noct-neutral-500 max-md:mt-1 max-md:text-[14px] max-md:text-noct-neutral-300">
+            Prefijos y rangos DIAN de los POS
+          </p>
         </div>
       }
     >

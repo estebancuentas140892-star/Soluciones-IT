@@ -25,7 +25,15 @@ import {
   FILA_ACCION_HOJA,
   FILA_ACCION_HOJA_PELIGRO,
 } from '../../components/nocturne'
+import { IconoCategoria } from '../../components/IconoCategoria'
 import { useEsAncho } from '../../components/useEsAncho'
+import {
+  DELINEADO_EN_TELEFONO,
+  FILAS_EN_TARJETA,
+  RELIEVE_BORDE_FUERTE,
+  RELIEVE_EN_TELEFONO,
+  TITULO_GRUPO_EN_TELEFONO,
+} from '../../components/ventana/estilos'
 import { formatearNumero, textoRango } from '../../lib/autorizaciones'
 import { db, type AutorizacionFacturacion } from '../../lib/db'
 import { fechaConAnio } from '../../lib/mantenimientos'
@@ -46,6 +54,12 @@ import { RegistrarLectura } from './RegistrarLectura'
 //     fuente, y cuántos números quedan según ella. Sin lectura no se
 //     estima nada.
 // Editar es otra pantalla (`AutorizacionForm`).
+//
+// EN EL TELÉFONO, LAS PIEZAS DE «VENTANA» (tarea 352): los rótulos de capa a
+// 800, las tres formas (punteada, barra verde, instrumento) con el radio y el
+// relieve del prototipo, la pastilla tintada del estado, cada POS en su fila
+// con el icono de su clase (como en Equipos) y «Editar» en el pie con relieve.
+// Lo que dice cada capa y en qué orden, igual; desde 768, lo de siempre.
 
 export function AutorizacionPage() {
   const { autorizacionId = '' } = useParams()
@@ -203,8 +217,8 @@ export function AutorizacionPage() {
                   </span>
                 }
               />
-              <div data-documentado className="rounded-[14px] border-[1.5px] border-dashed border-noct-text/25 px-3.5 pb-1.5 pt-1">
-                <p className="flex items-center gap-1.5 pb-1 pt-2 text-[13px] font-semibold text-noct-neutral-400 [overflow-wrap:anywhere]">
+              <div data-documentado className="rounded-[14px] border-[1.5px] border-dashed border-noct-text/25 px-3.5 pb-1.5 pt-1 max-md:rounded-2xl max-md:border-noct-divider-fuerte max-md:px-4">
+                <p className="flex items-center gap-1.5 pb-1 pt-2 text-[13px] font-semibold text-noct-neutral-400 [overflow-wrap:anywhere] max-md:pt-2.5 max-md:text-[14px] max-md:font-bold max-md:text-noct-neutral-300">
                   <Paperclip size={13} className="shrink-0" aria-hidden />
                   Según {autorizacion.fuente}
                 </p>
@@ -254,13 +268,13 @@ export function AutorizacionPage() {
                 }
               />
               {autorizacion.verificadoEn ? (
-                <div className="rounded-[14px] border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-1 shadow-[var(--shadow-noct-elevacion)]">
+                <div className={`rounded-[14px] border border-l-4 border-noct-divider border-l-noct-exito bg-noct-surface px-3.5 py-1 shadow-[var(--shadow-noct-elevacion)] max-md:px-4 ${RELIEVE_EN_TELEFONO}`}>
                   <div className="flex justify-between gap-3 border-b border-noct-divider py-2.5 last:border-b-0">
-                    <span className="text-[13px] text-noct-neutral-400">Verificada</span>
-                    <span className="text-right text-[14.5px] font-medium">
+                    <span className="text-[13px] text-noct-neutral-400 max-md:text-[14px] max-md:text-noct-neutral-300">Verificada</span>
+                    <span className="text-right text-[14.5px] font-medium max-md:text-[15px] max-md:font-semibold">
                       {fechaConAnio(autorizacion.verificadoEn)}
                       {autorizacion.verificacionFuente && (
-                        <span className="block text-[12.5px] font-normal text-noct-neutral-400 [overflow-wrap:anywhere]">
+                        <span className="block text-[12.5px] font-normal text-noct-neutral-400 [overflow-wrap:anywhere] max-md:text-[13.5px] max-md:text-noct-neutral-300">
                           con {autorizacion.verificacionFuente}
                         </span>
                       )}
@@ -268,13 +282,13 @@ export function AutorizacionPage() {
                   </div>
                   {autorizacion.vencimientoConfirmado && (
                     <div className="flex justify-between gap-3 py-2.5">
-                      <span className="text-[13px] text-noct-neutral-400">Vence</span>
-                      <span className="text-[14.5px] font-semibold text-noct-exito">{fechaConAnio(autorizacion.vencimientoConfirmado)}</span>
+                      <span className="text-[13px] text-noct-neutral-400 max-md:text-[14px] max-md:text-noct-neutral-300">Vence</span>
+                      <span className="text-[14.5px] font-semibold text-noct-exito max-md:text-[15px] max-md:font-bold">{fechaConAnio(autorizacion.vencimientoConfirmado)}</span>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col gap-2.5 rounded-[14px] border border-noct-divider bg-noct-surface p-3.5 shadow-[var(--shadow-noct-elevacion)]">
+                <div className={`flex flex-col gap-2.5 rounded-[14px] border border-noct-divider bg-noct-surface p-3.5 shadow-[var(--shadow-noct-elevacion)] max-md:border-[1.5px] max-md:p-4 ${RELIEVE_EN_TELEFONO}`}>
                   <p className="text-[14.5px] text-noct-neutral-300">Sin verificar con una fuente actual.</p>
                   {/* Abre el formulario de siempre, donde se registra la
                       verificación con su día y su fuente. */}
@@ -307,21 +321,25 @@ export function AutorizacionPage() {
           </div>
 
           <section aria-labelledby="aut-pos" className="flex flex-col">
-            <h2 id="aut-pos" className="pb-0.5 text-[13.5px] font-semibold text-noct-neutral-400">
+            <h2 id="aut-pos" className={`pb-0.5 text-[13.5px] font-semibold text-noct-neutral-400 max-md:px-1 max-md:pb-1.5 ${TITULO_GRUPO_EN_TELEFONO}`}>
               {pos && pos.length === 1 ? 'POS' : 'POS que la usan'}
             </h2>
             {pos && pos.length > 0 ? (
-              <ul className="flex flex-col">
+              <ul className={`flex flex-col max-md:divide-y max-md:divide-noct-divider ${FILAS_EN_TARJETA}`}>
                 {pos.map((d) => (
                   <li key={d.id}>
                     <Link
                       to={`/dispositivos/${d.id}`}
                       state={aqui}
-                      className="flex min-h-[52px] items-center gap-3 border-b border-noct-divider text-noct-text hover:bg-noct-text/[.04]"
+                      className="flex min-h-[52px] items-center gap-3 border-b border-noct-divider text-noct-text hover:bg-noct-text/[.04] max-md:min-h-16 max-md:border-b-0 max-md:active:bg-noct-presionado"
                     >
-                      <Storefront size={18} className="shrink-0 text-noct-neutral-400" aria-hidden />
-                      <span className="min-w-0 flex-1 text-[15px] [overflow-wrap:anywhere]">{d.nombre}</span>
-                      <CaretRight size={14} className="shrink-0 text-noct-neutral-500" aria-hidden />
+                      {ancho ? (
+                        <Storefront size={18} className="shrink-0 text-noct-neutral-400" aria-hidden />
+                      ) : (
+                        <IconoCategoria clase="pos" tam={40} />
+                      )}
+                      <span className="min-w-0 flex-1 text-[15px] [overflow-wrap:anywhere] max-md:text-[16px] max-md:font-bold">{d.nombre}</span>
+                      <CaretRight size={14} className="shrink-0 text-noct-neutral-500 max-md:text-noct-neutral-400" aria-hidden />
                     </Link>
                   </li>
                 ))}
@@ -335,8 +353,8 @@ export function AutorizacionPage() {
 
           {autorizacion.observaciones && (
             <section className="flex flex-col gap-1">
-              <h2 className="text-[13.5px] font-semibold text-noct-neutral-400">Observaciones</h2>
-              <p className="whitespace-pre-wrap text-[14px] leading-[1.55] text-noct-neutral-200 [overflow-wrap:anywhere]">
+              <h2 className={`text-[13.5px] font-semibold text-noct-neutral-400 max-md:px-1 ${TITULO_GRUPO_EN_TELEFONO}`}>Observaciones</h2>
+              <p className="whitespace-pre-wrap text-[14px] leading-[1.55] text-noct-neutral-200 [overflow-wrap:anywhere] max-md:px-1 max-md:text-[15px]">
                 {autorizacion.observaciones}
               </p>
             </section>
@@ -347,12 +365,12 @@ export function AutorizacionPage() {
             ficha (regla 13): sin origen, su X vuelve aquí. Solo en el
             teléfono; desde 768 px va en la cabecera (tarea 339). */}
         {!ancho && (
-          <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-bg/[.94] px-3 pb-2.5 pt-2.5 backdrop-blur-[12px] md:hidden lg:-mx-10">
+          <div className="sticky bottom-[calc(72px+env(safe-area-inset-bottom))] z-10 -mx-4 mt-auto border-t border-noct-divider bg-noct-surface px-3 pb-3 pt-3 shadow-[var(--shadow-noct-pie)] md:hidden lg:-mx-10">
             <Link
               to={`/facturacion/${autorizacionId}/editar`}
-              className="flex h-[52px] w-full items-center justify-center gap-2 rounded-[15px] border-[1.5px] border-noct-text/25 text-[15.5px] font-semibold text-noct-text hover:bg-noct-text/[.05]"
+              className={`flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border-2 border-noct-divider-fuerte bg-noct-surface text-[16px] font-extrabold text-noct-text ${RELIEVE_BORDE_FUERTE}`}
             >
-              <PencilSimple size={17} aria-hidden />
+              <PencilSimple size={18} aria-hidden />
               Editar
             </Link>
           </div>
@@ -423,8 +441,8 @@ export function AutorizacionPage() {
   )
 }
 
-const ACCION_DELINEADA =
-  'inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border-[1.5px] border-noct-text/25 px-3.5 text-[14px] font-semibold text-noct-text hover:bg-noct-text/[.05]'
+// En el teléfono (tarea 352), el control delineado del prototipo «Ventana».
+const ACCION_DELINEADA = `inline-flex min-h-11 w-fit items-center gap-2 rounded-xl border-[1.5px] border-noct-text/25 px-3.5 text-[14px] font-semibold text-noct-text hover:bg-noct-text/[.05] ${DELINEADO_EN_TELEFONO}`
 
 /**
  * El rótulo de una capa: su número, su forma y su nombre. En el teléfono,
@@ -452,11 +470,11 @@ function EncabezadoCapa({
       <div className="min-w-0">
         <h2
           id={id}
-          className="text-[12.5px] font-bold uppercase tracking-[.06em] text-noct-neutral-300 max-md:text-[15px] max-md:font-semibold max-md:normal-case max-md:tracking-normal max-md:text-noct-text"
+          className="text-[12.5px] font-bold uppercase tracking-[.06em] text-noct-neutral-300 max-md:text-[16px] max-md:font-extrabold max-md:normal-case max-md:tracking-normal max-md:text-noct-text"
         >
           {numero} · {titulo}
         </h2>
-        <p className="text-[12.5px] leading-snug text-noct-neutral-400 md:hidden max-md:text-[13px]">{descripcion}</p>
+        <p className="text-[12.5px] leading-snug text-noct-neutral-400 md:hidden max-md:text-[14px] max-md:text-noct-neutral-300">{descripcion}</p>
       </div>
     </div>
   )
@@ -465,9 +483,9 @@ function EncabezadoCapa({
 /** Un dato de lo documentado: el nombre a la izquierda y el valor a la derecha, con divisor punteado. */
 function DatoDocumentado({ etiqueta, children }: { etiqueta: string; children: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 border-t border-dashed border-noct-divider py-2">
-      <span className="min-w-0 flex-1 text-[13px] text-noct-neutral-400">{etiqueta}</span>
-      <span className="max-w-[62%] text-right text-[14.5px] font-medium text-noct-neutral-200 [overflow-wrap:anywhere]">{children}</span>
+    <div className="flex items-baseline justify-between gap-3 border-t border-dashed border-noct-divider py-2 max-md:py-2.5">
+      <span className="min-w-0 flex-1 text-[13px] text-noct-neutral-400 max-md:text-[14px] max-md:text-noct-neutral-300">{etiqueta}</span>
+      <span className="max-w-[62%] text-right text-[14.5px] font-medium text-noct-neutral-200 [overflow-wrap:anywhere] max-md:text-[15px] max-md:font-semibold max-md:text-noct-text">{children}</span>
     </div>
   )
 }
@@ -502,7 +520,7 @@ function Consecutivo({
   )
   if (!tieneConsecutivoLeido(autorizacion)) {
     return (
-      <div data-instrumento className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5">
+      <div data-instrumento className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5 max-md:rounded-2xl max-md:border-[1.5px] max-md:border-noct-divider-fuerte max-md:p-4">
         {/* EL INSTRUMENTO, VACÍO, EN EL TELÉFONO (tarea 343, handoff): la
             misma lectura sin número, su rótulo, el marcador en IBM Plex Mono
             y, si el rango está documentado, su carril sin llenar. Nada se
@@ -526,7 +544,7 @@ function Consecutivo({
   const gastado =
     desde !== null && hasta !== null && hasta > desde ? Math.min(100, Math.max(0, ((actual - desde) / (hasta - desde)) * 100)) : null
   return (
-    <div data-instrumento className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5">
+    <div data-instrumento className="flex flex-col gap-2.5 rounded-[14px] border border-noct-text/25 bg-noct-bg p-3.5 max-md:rounded-2xl max-md:border-[1.5px] max-md:border-noct-divider-fuerte max-md:p-4">
       <p className="text-[12.5px] text-noct-neutral-400">Último emitido</p>
       <p className="font-mono text-[34px] font-semibold leading-none tracking-[-.02em] text-noct-accent-300">
         {formatearNumero(actual)}

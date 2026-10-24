@@ -608,7 +608,8 @@ describe('la autorización en el teléfono (tarea 343)', () => {
     expect(fila.className).toContain('max-md:active:bg-noct-presionado')
     const prefijo = Array.from(fila.querySelectorAll('span')).find((s) => s.textContent === 'FIL')
     expect(prefijo?.className).toContain('max-md:font-mono')
-    expect(prefijo?.className).toContain('max-md:text-[17px]')
+    // A 18 · 700 desde la tarea 352 (las piezas de «Ventana»).
+    expect(prefijo?.className).toContain('max-md:text-[18px]')
     expect(fila.textContent).toContain('Documentada, por validar')
     expect(fila.textContent).toContain('Rango 3.000 a 8.000')
     // El galón de pantalla en el teléfono (desde 768, el "Ver" de siempre).

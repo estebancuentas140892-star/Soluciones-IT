@@ -91,7 +91,7 @@ export function FilaAutorizacion({
     >
       <span className="flex min-w-0 flex-1 flex-col gap-0.5 max-md:gap-1">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-[14px] font-medium leading-[1.35] [overflow-wrap:anywhere] max-md:font-mono max-md:text-[17px] max-md:font-semibold">
+          <span className="text-[14px] font-medium leading-[1.35] [overflow-wrap:anywhere] max-md:font-mono max-md:text-[18px] max-md:font-bold">
             {autorizacion.prefijo}
           </span>
           <PastillaEstadoAutorizacion estado={autorizacion.estado} conPunto />
@@ -114,14 +114,14 @@ export function FilaAutorizacion({
               {rango ? `Rango ${rango}` : 'Sin rango documentado'}
               {pos !== undefined && ` · ${pos || 'Sin POS asociado'}`}
             </span>
-            {vence && <span className="text-[13px] text-noct-neutral-400">{vence}</span>}
+            {vence && <span className="text-[13.5px] text-noct-neutral-300">{vence}</span>}
           </>
         )}
       </span>
       <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300 max-md:hidden" aria-hidden>
         Ver
       </span>
-      <CaretRight size={14} className="shrink-0 text-noct-neutral-500 md:hidden" aria-hidden />
+      <CaretRight size={16} className="shrink-0 text-noct-neutral-400 md:hidden" aria-hidden />
     </Link>
   )
 }
