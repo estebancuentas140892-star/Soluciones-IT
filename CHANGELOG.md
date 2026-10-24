@@ -8,6 +8,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-23
 
+### Cambiado (tarea 351, propuesta B): en el teléfono, la guía abre en su ventana 1, sin pantallas previas
+
+**Área modificada:** `src/features/soluciones/AsistenteVista.tsx` (`preparaEnVentana`, `requisitosVisibles`), `ArticuloPage.tsx` («Cuándo usarla» en el teléfono), `REGLAS.md` (excepción de la regla 25 b y punto g de la regla 31), `scripts/prueba-sin-conexion.mjs` (4b3) y `capturas-moviles.mjs`; pruebas en `fidelidadVentana.test.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** el usuario aprobó la propuesta B de AD-093 (2026-10-23): como el prototipo, «Empezar abre directo la primera ventana, sin pantallas previas».
+**Qué cambia (solo por debajo de 768 px y en la ejecución por ventanas):** no hay «Qué vas a hacer» ni «Antes de empezar» como pantallas: la guía abre en la ventana 1; los requisitos (sin repetidos) van en la tarjeta «Antes de empezar» encima de ella mientras no hay avance; la orientación se lee en «Detalles», que en el teléfono dice «Cuándo usarla» con su rótulo, y en la mejor coincidencia de la búsqueda. Dos toques menos al empezar. La acción a la vez del teléfono, la tableta y el escritorio conservan sus dos pantallas.
+**Estructura de datos:** sin cambios. El avance y la lógica de la ejecución son los de siempre; lo que piden las guías reutilizadas sigue sin pasar solo a la guía (regla 25 f).
+**Impacto esperado:** empezar una guía en el teléfono cuesta un toque («Empezar»), con lo que hay que tener listo a la vista en la misma pantalla.
+**Verificación:** Suite completa en verde (237 archivos, 3632 pruebas), `tsc -b`, `oxlint` sin avisos; el recorrido del prototipo (búsqueda, «Empezar», ventana 1 con «Antes de empezar» encima) en el navegador a 390 px; auditoría por CDP a 360, 390 y 430 px en los dos temas de las paradas de la guía, de «Detalles» y de la guía con preguntas: contraste de 4.5:1, sin desbordes y 44 px de toque (el único hallazgo, el título truncado de la barra de «Detalles», es el falso positivo conocido de la tarea 260); capturas de 768, 1366 y 1920 px comparadas con las de antes de la propuesta: 323 de 360 idénticas y el resto, el cursor de un campo, rasterizado del riel o el chip de Equipos (las pantallas de preparación de la tableta y el escritorio, idénticas); y la prueba sin conexión real entera en verde (99 comprobaciones).
+
 ### Cambiado (tarea 351): segunda pasada de fidelidad al prototipo móvil de Claude Design, en la rama `feat/rediseno-movil-ventanas`, sin integrar
 
 **Área modificada:** `src/app/bandaTarea.tsx` (`SubtituloTarea`) y `ranuraSubtitulo.ts` (nuevo), `src/app/Chasis.tsx` (`ranuraSubtitulo`, `sinPestanasEnTelefono`), `src/components/BarraTarea.tsx`, `src/components/ventana/MarcoVentana.tsx` (`rotulo`) y `PieVentana.tsx` (`BotonVolver` exportado), `src/features/soluciones/AsistenteVista.tsx`, `PantallaPreparacion.tsx` y `sinTerminar.ts`, `src/features/inicio/resolver.ts` y `ResolverPage.tsx`, `src/features/diagnostico/DiagnosticoRunPage.tsx`, `src/features/boveda/BovedaGuard.tsx`; pruebas nuevas `fidelidadVentana.test.tsx` y ajustadas `resolverYAgenda.test.tsx` y `resolucionGuiada.test.tsx`.
