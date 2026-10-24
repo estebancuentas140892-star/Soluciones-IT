@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-23
 
+### Desplegado (tareas 348 a 352): el rediseño móvil «Ventana» en producción
+
+**Área modificada:** `main` avanza de `e20cb62` a la punta de `feat/rediseno-movil-ventanas` (50 commits, sin fusión); [TAREAS.md](TAREAS.md), [DECISIONES.md](DECISIONES.md) AD-091 a AD-095 y [REGLAS.md](REGLAS.md) regla 11.
+**Tipo:** Cambiado.
+**Motivo:** el usuario pidió el 2026-10-23 que todo cambio se vea en la versión de Vercel y que su app ofrezca «Actualizar»: casi todo es visual y no toca las guías ni los datos guardados.
+**Qué cambia:** la app instalada detecta la versión nueva y ofrece «Actualizar» (`registerType: 'prompt'`); al aceptarla, el teléfono pasa a la ejecución por ventanas, el sistema visual «Ventana», el cierre «Sí, quedó resuelto» y Agenda, Mantenimiento y Facturación con sus piezas. Tableta y escritorio no cambian.
+**Estructura de datos:** sin cambios (ni Supabase, ni RLS, ni permisos, ni Dexie): las guías y la información guardada siguen igual.
+
 ### Documentación (tarea 352): el tema por defecto sigue oscuro (propuesta C3)
 
 **Área modificada:** [DECISIONES.md](DECISIONES.md) AD-095 (decisión 6) y AD-093, [TAREAS.md](TAREAS.md) tarea 352.
