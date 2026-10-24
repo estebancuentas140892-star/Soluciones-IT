@@ -14,6 +14,7 @@ import {
   User,
   Wrench,
 } from '../../components/iconos'
+import { FILAS_EN_TARJETA, RELIEVE_EN_TELEFONO, TITULO_GRUPO_EN_TELEFONO } from '../../components/ventana/estilos'
 import { tarjetaReanudarVisible, useReanudar } from '../soluciones/useReanudar'
 import type { ItemPendiente } from './pendientes'
 import {
@@ -45,6 +46,14 @@ import {
 // plegado entero y, al abrirlo, se ve todo.
 export const PROXIMOS_VISIBLES = 3
 
+// EN EL TELÉFONO, CADA GRUPO EN SU TARJETA (tarea 352, las piezas de «Ventana»):
+// las filas con su divisor dentro de la tarjeta de los grupos de Más, el rótulo
+// a 15 · 800 en tinta 2, los contadores con el tinte y la línea de su estado y
+// «Sin fecha» como tarjeta con relieve. La barra de estado, la razón en su
+// color y el verbo de cada fila se quedan: son lo que dice cómo está cada cosa.
+// Desde 768, la lista de siempre.
+const FILAS_AGENDA = `flex flex-col ${FILAS_EN_TARJETA}`
+
 /**
  * LOS TRES CONTADORES (rediseño móvil "1b Pulgar", tareas 330 y 332):
  * vencidos, para hoy y próximos, con el número en IBM Plex Mono y en el
@@ -69,19 +78,19 @@ export function ContadoresAgenda({ agenda, enlace }: { agenda: Agenda; enlace?: 
         // El número conserva sus 24 px (el lienzo lo baja a 22): a 22 el rojo
         // sobre su tinte del tema claro quedaba en 4.49:1, y a 24 es texto
         // grande (T11, auditoría de contraste).
-        const clase = `flex min-h-16 flex-col justify-center gap-px rounded-[14px] px-3 py-2 md:min-h-[60px] xl:min-h-[54px] xl:flex-row xl:flex-wrap xl:items-baseline xl:content-center xl:gap-x-2 xl:px-3.5 xl:py-0 ${
-          c.n > 0 ? FONDO_CONTADOR[c.tono] : 'bg-noct-text/[.06]'
+        const clase = `flex min-h-16 flex-col justify-center gap-px rounded-[14px] px-3 py-2 md:min-h-[60px] xl:min-h-[54px] xl:flex-row xl:flex-wrap xl:items-baseline xl:content-center xl:gap-x-2 xl:px-3.5 xl:py-0 max-md:min-h-[72px] max-md:rounded-2xl max-md:border-[1.5px] max-md:px-3.5 ${
+          c.n > 0 ? FONDO_CONTADOR[c.tono] : 'bg-noct-text/[.06] max-md:border-noct-divider max-md:bg-noct-surface'
         }`
         // El espacio entre el número y su rótulo no se ve (la caja es una
         // columna) pero hace que se lea "1 para hoy" y no "1para hoy".
         const contenido = (
           <>
             <span
-              className={`font-mono text-[24px] font-semibold leading-[1.1] ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
+              className={`font-mono text-[24px] font-semibold leading-[1.1] max-md:font-inter max-md:text-[28px] max-md:font-extrabold max-md:tracking-[-.02em] ${c.n > 0 ? COLOR_CONTADOR[c.tono] : 'text-noct-neutral-400'}`}
             >
               {c.n}
             </span>{' '}
-            <span className="text-[12.5px] font-[550] text-noct-neutral-300">{etiqueta}</span>
+            <span className="text-[12.5px] font-[550] text-noct-neutral-300 max-md:text-[14px] max-md:font-bold">{etiqueta}</span>
           </>
         )
         return enlace ? (
@@ -98,10 +107,12 @@ export function ContadoresAgenda({ agenda, enlace }: { agenda: Agenda; enlace?: 
   )
 }
 
+// En el teléfono (tarea 352), el tinte y la línea de su estado del prototipo
+// «Ventana», los mismos de un aviso de la ventana; sin nada, una tarjeta.
 const FONDO_CONTADOR = {
-  error: 'bg-noct-error/(--tinte-estado)',
-  precaucion: 'bg-noct-precaucion/(--tinte-estado)',
-  neutro: 'bg-noct-text/[.06]',
+  error: 'bg-noct-error/(--tinte-estado) max-md:border-noct-error-linea max-md:bg-noct-error-tinte',
+  precaucion: 'bg-noct-precaucion/(--tinte-estado) max-md:border-noct-precaucion-linea max-md:bg-noct-precaucion-tinte',
+  neutro: 'bg-noct-text/[.06] max-md:border-noct-divider max-md:bg-noct-surface',
 } as const
 const COLOR_CONTADOR = {
   error: 'text-noct-error',
@@ -175,10 +186,10 @@ export function SeccionesAgenda({
   // todas sus letras, en vez de dejar el hueco en blanco. Con algo
   // vencido o de hoy NO aparece: sería mentir.
   const todoAlDia = urgentes === 0 && (
-    <div className="flex items-center gap-3 rounded-[14px] bg-noct-exito/(--tinte-estado) p-3.5">
+    <div className="flex items-center gap-3 rounded-[14px] bg-noct-exito/(--tinte-estado) p-3.5 max-md:rounded-2xl max-md:border-[1.5px] max-md:border-noct-exito-linea max-md:bg-noct-exito-tinte">
       <Check size={20} className="shrink-0 text-noct-exito" aria-hidden />
       <p className="min-w-0 flex-1">
-        <span className="block text-[15.5px] font-semibold leading-[1.3]">Todo al día por hoy</span>
+        <span className="block text-[15.5px] font-semibold leading-[1.3] max-md:text-[16px] max-md:font-extrabold">Todo al día por hoy</span>
         <span className="block text-[13px] leading-[1.35] text-noct-neutral-300">Nada vencido ni para hoy.</span>
       </p>
     </div>
@@ -187,7 +198,7 @@ export function SeccionesAgenda({
   const vencidos = vista.vencidos.length > 0 && (
     <section>
       <CabeceraAgenda titulo="Vencidos" total={vista.vencidos.length} estado="vencido" />
-      <div className="flex flex-col">
+      <div className={FILAS_AGENDA}>
         {vista.vencidos.map((item) => (
           <FilaAgenda key={item.clave} item={item} estado="vencido" />
         ))}
@@ -198,7 +209,7 @@ export function SeccionesAgenda({
   const hoy = vista.hoy.length > 0 && (
     <section>
       <CabeceraAgenda titulo="Para hoy" total={vista.hoy.length} estado="hoy" />
-      <div className="flex flex-col">
+      <div className={FILAS_AGENDA}>
         {vista.hoy.map((item) => (
           <FilaAgenda key={item.clave} item={item} estado="hoy" />
         ))}
@@ -249,7 +260,7 @@ export function SeccionesAgenda({
               />
             )}
             {vista.enCurso.length > 0 && (
-              <div className="flex flex-col">
+              <div className={FILAS_AGENDA}>
                 {vista.enCurso.map((item) => (
                   <FilaAgenda key={item.clave} item={item} estado="enCurso" />
                 ))}
@@ -263,7 +274,7 @@ export function SeccionesAgenda({
       {vista.porRevisar.length > 0 && (
         <section>
           <CabeceraAgenda titulo="Por revisar del equipo" total={vista.porRevisar.length} estado="porRevisar" />
-          <div className="flex flex-col">
+          <div className={FILAS_AGENDA}>
             {vista.porRevisar.map((item) => (
               <FilaAgenda key={item.clave} item={item} estado="porRevisar" />
             ))}
@@ -301,11 +312,11 @@ export function SeccionesAgenda({
               onClick={() => setSinFechaElegido(!sinFechaAbierto)}
               aria-expanded={sinFechaAbierto}
               aria-controls={idSinFecha}
-              className="flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
+              className={`flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04] max-md:min-h-16 max-md:border-[1.5px] max-md:bg-noct-surface max-md:px-4 max-md:active:bg-noct-presionado ${RELIEVE_EN_TELEFONO}`}
             >
               <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold leading-[1.3]">Sin fecha</span>
-                <span className="block text-[13px] leading-[1.35] text-noct-neutral-400">
+                <span className="block text-[15px] font-semibold leading-[1.3] max-md:text-[16px] max-md:font-extrabold">Sin fecha</span>
+                <span className="block text-[13px] leading-[1.35] text-noct-neutral-400 max-md:text-[14px] max-md:text-noct-neutral-300">
                   Por revisar y en curso. No vencen.
                 </span>
               </span>
@@ -407,7 +418,7 @@ function BloqueLista({
   return (
     <section>
       <CabeceraAgenda titulo={titulo} total={total} estado={estado} />
-      <div className="flex flex-col">{children(desplegado ? total : visiblesIniciales)}</div>
+      <div className={FILAS_AGENDA}>{children(desplegado ? total : visiblesIniciales)}</div>
       {ocultos > 0 && !desplegado && (
         <button
           type="button"
@@ -431,9 +442,9 @@ function BloqueLista({
 // rótulo en mayúsculas) y el conteo en IBM Plex Mono.
 function CabeceraAgenda({ titulo, total, estado }: { titulo: string; total: number; estado: EstadoAgenda }) {
   return (
-    <div className="flex items-center gap-2 pb-1">
+    <div className="flex items-center gap-2 pb-1 max-md:px-1 max-md:pb-2">
       <span className={`h-2 w-2 shrink-0 rounded-full ${COLOR_ESTADO[estado]}`} aria-hidden />
-      <h2 className="min-w-0 flex-1 text-[15px] font-semibold leading-[1.3]">{titulo}</h2>
+      <h2 className={`min-w-0 flex-1 text-[15px] font-semibold leading-[1.3] ${TITULO_GRUPO_EN_TELEFONO}`}>{titulo}</h2>
       <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500">{total}</span>
     </div>
   )
@@ -456,10 +467,10 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
     <Link
       to={item.ruta}
       aria-label={`${accion} ${item.titulo} · ${ETIQUETA_ESTADO[estado]}`}
-      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado md:min-h-14 xl:min-h-[52px] xl:gap-[11px] xl:py-1.5"
+      className="flex min-h-[62px] items-center gap-3 border-b border-noct-divider py-2 text-noct-text hover:bg-noct-text/[.04] max-md:min-h-[68px] max-md:py-2.5 max-md:last:border-b-0 max-md:active:bg-noct-presionado md:min-h-14 xl:min-h-[52px] xl:gap-[11px] xl:py-1.5"
     >
       <span aria-hidden data-barra-estado className={`my-1 w-1 shrink-0 self-stretch rounded-sm ${BARRA_PENDIENTE[item.tono]}`} />
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300 xl:h-8 xl:w-8 xl:rounded-[9px]">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-noct-text/[.06] text-noct-neutral-300 max-md:h-10 max-md:w-10 max-md:rounded-xl max-md:bg-noct-neutral-900 xl:h-8 xl:w-8 xl:rounded-[9px]">
         <Icono size={18} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
@@ -467,20 +478,22 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
             hay que revisar. La razón de debajo sí se recorta. */}
         <span
           data-nombre-principal
-          className="block min-w-0 text-[15.5px] font-semibold leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty] xl:text-[14.5px]"
+          className="block min-w-0 text-[15.5px] font-semibold leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty] max-md:text-[16px] max-md:font-bold xl:text-[14.5px]"
         >
           {item.titulo}
         </span>
-        <span className="mt-0.5 block truncate text-[13px] leading-[1.35]">
-          <span className={`font-[550] ${COLOR_RAZON[item.tono]}`}>{item.detalle}</span>
-          {item.fecha !== null && item.origen && <span className="text-noct-neutral-400"> · {item.origen}</span>}
+        {/* En el teléfono, dentro de su tarjeta, la razón ya no se corta: es lo
+            que dice por qué la fila está aquí ("con 1 equipo", tarea 352). */}
+        <span className="mt-0.5 block truncate text-[13px] leading-[1.35] max-md:whitespace-normal max-md:text-[14px] max-md:[text-wrap:pretty]">
+          <span className={`font-[550] max-md:font-bold ${COLOR_RAZON[item.tono]}`}>{item.detalle}</span>
+          {item.fecha !== null && item.origen && <span className="text-noct-neutral-400 max-md:text-noct-neutral-300"> · {item.origen}</span>}
         </span>
       </span>
       {/* La acción en su palabra, SIN chevron detrás: los dos dicen lo
           mismo ("esto lleva a otro sitio") y en 360 px el chevron se
           come 20 px del título, que es el dato que de verdad hay que
           leer. */}
-      <span className="shrink-0 text-[14px] font-semibold text-noct-accent-300" aria-hidden>
+      <span className="shrink-0 text-[14px] font-semibold text-noct-accent-300 max-md:text-[15px] max-md:font-extrabold" aria-hidden>
         {accion}
       </span>
     </Link>

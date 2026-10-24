@@ -166,10 +166,13 @@ export function BarraReanudar({
         // accesible decía "Sigues en el paso 2 de 5 …", que describe
         // el estado, no lo que pasa al tocarla.
         aria-label={`Continuar ${articulo.titulo} · ${paso}`}
-        className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3 text-noct-text shadow-[var(--shadow-noct-elevacion)] hover:bg-noct-accent/[.13]"
+        // En el teléfono (tarea 352), la tarjeta de «Sigue donde ibas» de
+        // Inicio, con las piezas de «Ventana»: superficie, borde de 1.5, radio
+        // 20 y relieve. Lo que dice, igual.
+        className="flex flex-col gap-2.5 rounded-lg border border-noct-accent/35 bg-noct-accent/[.08] p-3 text-noct-text shadow-[var(--shadow-noct-elevacion)] hover:bg-noct-accent/[.13] max-md:rounded-[20px] max-md:border-[1.5px] max-md:border-noct-divider max-md:bg-noct-surface max-md:p-3.5 max-md:shadow-[0_3px_0_var(--color-noct-divider)] max-md:active:bg-noct-presionado"
       >
-        <span className="flex items-center gap-[11px]">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.16] text-noct-accent-300">
+        <span className="flex items-center gap-[11px] max-md:gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-accent/[.16] text-noct-accent-300 max-md:h-11 max-md:w-11 max-md:rounded-xl max-md:bg-noct-accent-900">
             <Play size={18} aria-hidden />
           </span>
           <span className="min-w-0 flex-1">
@@ -177,10 +180,10 @@ export function BarraReanudar({
                 decía "Continuar donde quedaste"): es el dato que decide
                 si vale la pena retomarlo ahora, y en el rótulo se lee
                 antes que en la línea del progreso. */}
-            <span className="block text-[11px] max-md:text-[12px] font-medium uppercase tracking-[0.07em] text-noct-accent-300">
+            <span className="block text-[11px] max-md:text-[12.5px] font-medium uppercase tracking-[0.07em] text-noct-accent-300 max-md:font-extrabold">
               Sigues en el {paso}
             </span>
-            <span className="mt-[3px] block text-[15px] font-medium leading-[1.3] [text-wrap:pretty]">
+            <span className="mt-[3px] block text-[15px] font-medium leading-[1.3] [text-wrap:pretty] max-md:text-[16px] max-md:font-bold">
               {articulo.titulo}
             </span>
           </span>
@@ -193,7 +196,7 @@ export function BarraReanudar({
             />
           </span>
           {minutosRestantes != null && (
-            <span className="shrink-0 text-[12px] text-noct-neutral-400">~{minutosRestantes} min</span>
+            <span className="shrink-0 text-[12px] text-noct-neutral-400 max-md:text-[13px] max-md:font-semibold max-md:text-noct-neutral-300">~{minutosRestantes} min</span>
           )}
         </span>
       </Link>

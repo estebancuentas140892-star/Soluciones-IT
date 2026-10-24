@@ -859,3 +859,33 @@ describe('La agenda completa por ancho', () => {
     expect(textoPantalla()).not.toContain('Cambiar el tóner')
   })
 })
+
+// EN EL TELÉFONO, LAS PIEZAS DE «VENTANA» (tarea 352): cada grupo en su
+// tarjeta, los contadores con el tinte de su estado, la razón entera y «Sin
+// fecha» como tarjeta con relieve. Los grupos, su orden y lo que dice cada
+// fila no cambian (las pruebas de arriba corren a 375 px).
+describe('La agenda completa en el teléfono, con las piezas de «Ventana»', () => {
+  it('pinta los grupos en tarjetas y los contadores con el tinte de su estado', async () => {
+    await sembrarAcceso('c1', 'Panel del router de una sede con nombre largo', -3)
+    await sembrarBorradorPropio('b1', 'Cambiar el tóner')
+    await montar(RUTAS, '/agenda')
+
+    await esperarTexto('Panel del router')
+    const fila = await esperar(() => control(/^Abrir Panel del router/), 'la fila vencida')
+    // Las filas viven en la tarjeta de los grupos de Más.
+    expect(fila.parentElement?.className).toContain('max-md:rounded-[18px]')
+    expect(fila.parentElement?.className).toContain('max-md:bg-noct-surface')
+    // La razón no se corta en el teléfono; la barra de estado se queda.
+    const razon = Array.from(fila.querySelectorAll('span')).find((s) => s.className.includes('truncate'))
+    expect(razon?.className).toContain('max-md:whitespace-normal')
+    expect(fila.querySelector('[data-barra-estado]')).not.toBeNull()
+    // El contador de vencidos, con el tinte y la línea del error.
+    const vencidos = Array.from(document.body.querySelectorAll('main p')).find((p) => p.textContent === '1 vencido')
+    expect(vencidos?.className).toContain('max-md:bg-noct-error-tinte')
+    expect(vencidos?.className).toContain('max-md:border-noct-error-linea')
+    // «Sin fecha», una tarjeta con relieve que sigue plegada.
+    const sinFecha = await esperar(() => control(/^Sin fecha/), 'la fila plegada')
+    expect(sinFecha.className).toContain('max-md:shadow-[0_3px_0_var(--color-noct-divider)]')
+    expect(sinFecha.getAttribute('aria-expanded')).toBe('false')
+  })
+})
