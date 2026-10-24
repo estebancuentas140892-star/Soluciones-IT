@@ -966,6 +966,14 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **`Chasis` `sinPestanasEnTelefono`:** sin la barra de pestañas por debajo de 768 px (Resolver mientras busca).
 - **`DiagnosticoRunPage` en el teléfono:** `PreguntaEnVentana` (la pregunta en `MarcoVentana` y las respuestas en tarjetas con `RELIEVE_BORDE_FUERTE`, dos lado a lado), `ResultadoEnTelefono` (el cierre con el pie fijo: `RELLENO_RESUELTO` y «No» delineado, o «Terminar») y `Descartar` (la línea «Salir guarda el avance»), con la cabecera de guía (`compacta` y `cabeceraDeGuia`).
 
+### 3.8zk Las piezas de «Ventana» en Agenda, Mantenimiento y Facturación (2026-10-23, tarea 352, AD-095)
+- **Propósito:** que los módulos que el teléfono comparte con la tableta y el escritorio se dibujen con las piezas de 3.8zi sin cambiar nada desde 768 px.
+- **`ventana/estilos.ts`, piezas con `max-md:` en cada clase:** `RELIEVE_EN_TELEFONO` (radio 16 y relieve; el borde lo pone cada tarjeta, porque lo realizado conserva su barra verde), `FILAS_EN_TARJETA` (la tarjeta de filas de Más, que `FilasMas` reexporta), `DELINEADO_EN_TELEFONO` (el control delineado con relieve fuerte: «Registrar lectura», «Volver al equipo») y `TITULO_GRUPO_EN_TELEFONO`. `piezasModulos.test.tsx` exige el prefijo.
+- **`PastillaEstado` `conPunto`:** en el teléfono, el tinte de su estado sin borde (`*-tinte`, como `FilaDispositivo`), la palabra a 700 y el punto; desde 768, el contorno de siempre.
+- **`OpcionRadio` `segmento`:** la forma de una respuesta de `PieVentana`: 52 de alto, radio 16, borde de 2, relieve fuerte sin elegir y borde y tinte del acento elegida.
+- **`BarraReanudar` variante `tarjeta`** (la fila «En curso» de la Agenda): en el teléfono, la tarjeta de «Sigue donde ibas» (superficie, borde de 1.5, radio 20, relieve, icono de 44).
+- **Dónde:** `SeccionesAgenda` (`FILAS_AGENDA`, `FONDO_CONTADOR` con tinte y línea, la razón sin cortar), `MantenimientosDelEquipo` (`TITULO_GRUPO_MANTENIMIENTO`), `MantenimientoPage` (`GUARDAR_TELEFONO`, `PieDelRegistro` con la superficie y la sombra del pie), `AutorizacionesPage`, `PresentacionAutorizacion` y `AutorizacionPage` (`ACCION_DELINEADA` con `DELINEADO_EN_TELEFONO`, cada POS con `IconoCategoria` `pos`).
+
 ### 3.8f `soluciones/DialogoProbarPaso`
 - **Propósito:** confirmación de "Probar" en el editor de pasos (tarea 209). Dice qué paso se va a ver y que no se sale del editor ni se guarda nada, antes de que la vista previa tape la pantalla completa.
 - **Props:** `{ abierto, numeroPaso, onCerrar, onVerComoTecnico }`.

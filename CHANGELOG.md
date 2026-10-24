@@ -8,6 +8,23 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-23
 
+### Cambiado (tarea 352): Agenda, Mantenimiento y Facturación con las piezas de «Ventana» en el teléfono, en la rama `feat/rediseno-movil-ventanas`, sin integrar
+
+**Área modificada:** `src/components/ventana/estilos.ts` (`RELIEVE_EN_TELEFONO`, `FILAS_EN_TARJETA`, `DELINEADO_EN_TELEFONO`, `TITULO_GRUPO_EN_TELEFONO`), `src/components/PastillaEstado.tsx` (`conPunto` con tinte), `src/components/OpcionRadio.tsx` (`segmento`), `src/components/BarraReanudar.tsx` (variante `tarjeta`), `src/features/mas/FilasMas.tsx` (reexporta `FILAS_EN_TARJETA`), `src/features/inicio/SeccionesAgenda.tsx`, `src/features/mantenimientos/MantenimientosDelEquipo.tsx` y `MantenimientoPage.tsx`, `src/features/facturacion/AutorizacionesPage.tsx`, `PresentacionAutorizacion.tsx` y `AutorizacionPage.tsx`, `scripts/capturas-moviles.mjs` (paradas `facturacion` y `equipo-mantenimiento-cerrar`); prueba nueva `src/components/ventana/piezasModulos.test.tsx` y ajustadas `resolverYAgenda.test.tsx`, `mantenimientoFlujo.test.tsx` y `facturacionFlujo.test.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** encargo del usuario del 2026-10-23 (continuación del rediseño móvil): los tres módulos solo habían recibido la paleta y seguían en la forma anterior, distinta de Inicio, Equipos y Más.
+**Qué cambia (solo por debajo de 768 px):** los grupos en tarjeta con su rótulo a 15 · 800; el estado en la pastilla tintada de Equipos (también en la ficha del equipo); tarjetas con relieve; en la Agenda, los contadores con el tinte de su estado, la razón entera y «Sin fecha» y «En curso» como tarjetas; en el mantenimiento, las respuestas de «¿Cómo terminó?» como las de una ventana y «Guardar en el historial» como «Listo»; en la facturación, el título a 24 · 800, el prefijo a 18, las tres capas con el radio y el relieve del prototipo y cada POS con el icono de su clase. «Programar», «Editar», «Registrar lectura» y «Volver al equipo», delineados con relieve.
+**Estructura de datos:** sin cambios (ni Supabase, ni RLS, ni permisos, ni Dexie). La lógica de los tres módulos no cambia.
+**Impacto esperado:** el teléfono entero se lee con el mismo lenguaje; ningún flujo pide un toque más y la razón de la Agenda ya no se corta. Tableta y escritorio no cambian.
+**Verificación:** suite completa en verde (238 archivos, 3638 pruebas; nueva `piezasModulos.test.tsx` y una prueba nueva de la Agenda en el teléfono), `tsc -b`, `oxlint` sin avisos y build; capturas antes y después a 390 x 844 en los dos temas, módulo por módulo (Agenda, Inicio con «Tu trabajo de hoy», mantenimiento del equipo, cerrar un mantenimiento, realizado, antecedente, lista y ficha de autorizaciones y la ficha del equipo); auditoría por CDP (`capturas-moviles.mjs --contraste`) a 360 x 640, 360 x 740, 390 x 844 y 430 x 932 en los dos temas de las paradas de la Agenda, el mantenimiento, la facturación, la ficha del equipo, Resolver y Más: todo el texto llega a 4.5:1, sin desbordes ni recortes, y el único hallazgo (los 40 px de «Cambiar» al cerrar un mantenimiento, de la tarea 345) quedó en 44 con `toque-amplio`; capturas de 768 x 1024, 1366 x 768 y 1920 x 1080 en los dos temas comparadas píxel a píxel con la base `b6ac32b`: 102 de 102 idénticas; y la prueba sin conexión real entera en verde (99 comprobaciones).
+
+### Documentación (tarea 352): las propuestas A (finalización) y C (tema por defecto), estudiadas para la decisión del usuario
+
+**Área modificada:** [DECISIONES.md](DECISIONES.md) AD-095, [TAREAS.md](TAREAS.md) tarea 352.
+**Tipo:** Documentación.
+**Motivo:** el usuario pidió una finalización tan rápida como la del prototipo sin perder la verificación técnica, y una alternativa al tema «Automático» que no cambie en silencio la preferencia de nadie.
+**Qué cambia:** nada en la app. Quedan escritas A1 (visual), A2 (recomendada: «Sí, quedó resuelto» con la confirmación de lo que falta, 2 toques en lugar de N + 1) y A3 (desaconsejada), y C1, C2 (recomendada si se quiere promover «Automático»: preguntar una vez a quien tiene el teléfono en claro) y C3 (como está).
+
 ### Cambiado (tarea 351, propuesta B): en el teléfono, la guía abre en su ventana 1, sin pantallas previas
 
 **Área modificada:** `src/features/soluciones/AsistenteVista.tsx` (`preparaEnVentana`, `requisitosVisibles`), `ArticuloPage.tsx` («Cuándo usarla» en el teléfono), `REGLAS.md` (excepción de la regla 25 b y punto g de la regla 31), `scripts/prueba-sin-conexion.mjs` (4b3) y `capturas-moviles.mjs`; pruebas en `fidelidadVentana.test.tsx`.
