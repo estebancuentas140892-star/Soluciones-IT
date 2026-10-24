@@ -7,7 +7,12 @@ import {
   estadoActualizacion,
   suscribirActualizacion,
 } from '../lib/actualizacionApp'
+import { estrenoDeVersion, textoVersionEstrenada } from '../lib/versionVista'
 import { AvisoActualizacion } from './AvisoActualizacion'
+import { avisar } from './avisosFlotantes'
+
+/** Seis segundos: se dice al abrir la app, antes de mirar la pantalla. */
+const DURACION_AVISO_VERSION_MS = 6000
 
 // Enchufe entre la librería del service worker y el resto de la app.
 // Aquí solo queda el cableado: cuándo se comprueba vive en
@@ -35,6 +40,14 @@ export function ActualizacionDisponible() {
   useEffect(() => {
     anotarVersionNueva(necesitaActualizar)
   }, [necesitaActualizar])
+
+  // LA PRIMERA VEZ QUE SE ABRE UNA VERSIÓN NUEVA, SE DICE (tarea 353),
+  // venga del botón «Actualizar» o se haya aplicado sola al reabrir la app.
+  useEffect(() => {
+    void estrenoDeVersion().then((version) => {
+      if (version) avisar(textoVersionEstrenada(version), 'hecho', DURACION_AVISO_VERSION_MS)
+    })
+  }, [])
 
   // El aviso sale también cuando lo descubre una comprobación nuestra
   // (fase 'disponible'): `needRefresh` solo se enciende si el evento de

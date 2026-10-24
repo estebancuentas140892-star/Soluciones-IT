@@ -265,6 +265,15 @@ async function main() {
     const scriptB = await s.evaluar(`return document.querySelector('script[type=module]').src`)
     console.log('   script de la version B:', scriptB)
 
+    // Tarea 353: la primera vez que se abre la version nueva, la app lo dice
+    // con su numero (la A ya anoto la suya al abrirse).
+    await s.hasta(
+      `document.body.innerText.includes('Soluciones IT se actualizó a la versión ${VERSION_B}')`,
+      `aparece "Soluciones IT se actualizó a la versión ${VERSION_B}"`,
+      20000,
+    )
+    console.log(`   aviso "se actualizo a la version ${VERSION_B}": SI`)
+
     paso('6. Los datos de la version A siguen ahi')
     const datos = await s.evaluar(`
       const local = localStorage.getItem('prueba_pwa')
@@ -291,6 +300,13 @@ async function main() {
     const extra = s.navegaciones - trasActualizar
     console.log(`   navegaciones desde el aviso: ${s.navegaciones - navegacionesAntes}, nuevas tras 8 s: ${extra}`)
     if (extra > 0) throw new Error('la pagina se sigue recargando sola')
+
+    paso('8. Al volver a abrirla, el aviso de la version nueva no se repite (tarea 353)')
+    await s.enviar('Page.navigate', { url: BASE })
+    await esperar(6000)
+    const repetido = await s.evaluar(`return document.body.innerText.includes('se actualizó a la versión')`)
+    if (repetido) throw new Error('el aviso de la version nueva salio otra vez')
+    console.log('   sin repetirse: SI')
 
     console.log('\nPRUEBA A->B: OK')
   } finally {

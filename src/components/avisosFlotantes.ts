@@ -40,15 +40,19 @@ function suscribir(escucha: () => void): () => void {
   return () => suscriptores.delete(escucha)
 }
 
-/** Muestra `texto` 2,4 s. Nunca un secreto: el aviso lo lee cualquiera. */
-export function avisar(texto: string, icono: IconoAviso = 'hecho'): void {
+/**
+ * Muestra `texto` 2,4 s (o `duracionMs`). Nunca un secreto: el aviso lo lee
+ * cualquiera. La duración larga es para lo que se dice al abrir la app (la
+ * versión nueva, tarea 353), cuando todavía no se está mirando la pantalla.
+ */
+export function avisar(texto: string, icono: IconoAviso = 'hecho', duracionMs: number = DURACION_AVISO_MS): void {
   clearTimeout(temporizador)
   actual = { id: siguienteId++, texto, icono }
   notificar()
   temporizador = setTimeout(() => {
     actual = null
     notificar()
-  }, DURACION_AVISO_MS)
+  }, duracionMs)
 }
 
 /** Para las pruebas: quita el aviso a la vista sin esperar. */

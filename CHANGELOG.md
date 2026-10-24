@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-23
 
+### Agregado (tarea 353): «Soluciones IT se actualizó a la versión X» al abrir una versión nueva
+
+**Área modificada:** `src/lib/versionVista.ts` (nuevo), `src/components/ActualizacionDisponible.tsx`, `src/components/avisosFlotantes.ts` (`duracionMs`), `scripts/prueba-actualizacion-pwa.mjs`; prueba nueva `src/lib/versionVista.test.ts`.
+**Tipo:** Agregado.
+**Motivo:** el usuario no vio «Actualizar» tras el despliegue de `91d803a`: si la app se cierra y se vuelve a abrir, la versión nueva se aplica sola y la app no lo decía.
+**Qué cambia:** la primera vez que un teléfono abre una versión nueva, un aviso de 6 segundos dice «Soluciones IT se actualizó a la versión X», venga del botón «Actualizar» o se haya aplicado sola. Una sola vez por versión; una instalación nueva no lo ve.
+**Estructura de datos:** una clave de `localStorage` de este teléfono (`sit-version-vista`). Ni Dexie, ni Supabase, ni la sesión.
+
 ### Desplegado (tareas 348 a 352): el rediseño móvil «Ventana» en producción
 
 **Área modificada:** `main` avanza de `e20cb62` a la punta de `feat/rediseno-movil-ventanas` (50 commits, sin fusión); [TAREAS.md](TAREAS.md), [DECISIONES.md](DECISIONES.md) AD-091 a AD-095 y [REGLAS.md](REGLAS.md) regla 11.
