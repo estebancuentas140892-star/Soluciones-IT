@@ -100,6 +100,10 @@ const AUTORIZACION_SEMBRADA = `{ const { db } = await import('/src/lib/db.ts'); 
 const VERIFICADOR_DE_PRUEBA = `{ const { db, ID_VERIFICADOR } = await import('/src/lib/db.ts'); await db.bovedaMeta.put({ id: ID_VERIFICADOR, verificador: 'verificador-inventado-de-captura', updatedAt: new Date().toISOString() }); }`
 const SIN_VERIFICADOR = `{ const { db, ID_VERIFICADOR } = await import('/src/lib/db.ts'); await db.bovedaMeta.delete(ID_VERIFICADOR); }`
 const SIN_AUTORIZACION = `{ const { db } = await import('/src/lib/db.ts'); await db.autorizaciones_facturacion.delete('aut-captura-339'); }`
+// Tarea 352: un mantenimiento atrasado de la impresora de ejemplo, para la
+// pantalla de cerrarlo (la semilla no trae mantenimientos). Se quita después.
+const MANTENIMIENTO_SEMBRADO = `{ const { db } = await import('/src/lib/db.ts'); const f=new Date(Date.now()-4*864e5).toISOString().slice(0,10); await db.mantenimientos.put({ id: 'man-captura-352', dispositivoId: 'dis-impresora-ejemplo', tipo: 'preventivo', fechaProgramada: f, estado: 'programado', tecnico: '', fechaRealizada: null, resultado: '', observaciones: 'Limpieza de rodillos de ejemplo', historialId: null, fuente: '', validacion: 'confirmado', updatedAt: new Date().toISOString(), updatedBy: null, eliminadoEn: null }); }`
+const SIN_MANTENIMIENTO = `{ const { db } = await import('/src/lib/db.ts'); await db.mantenimientos.delete('man-captura-352'); }`
 // Tarea 266: repone las personas y los computadores inventados de la
 // semilla (una parada de retiro o de asignación los cambia).
 const PERSONAS_SEMBRADAS = `{ const { db } = await import('/src/lib/db.ts'); await db.personas.clear(); await db.dispositivos.bulkDelete(['dis-pc-ejemplo-62','dis-pc-ejemplo-15','dis-pc-ejemplo-41','dis-pc-ejemplo-07','dis-pc-ejemplo-44','dis-pc-ejemplo-45']); const { sembrarBancoDePruebas } = await import('/src/pruebas/semillaLocal.ts'); await sembrarBancoDePruebas({ conProgreso: false }); }`
@@ -196,6 +200,15 @@ const TODAS_LAS_PARADAS = [
     guion: tocar('Programar mantenimiento'),
   },
   { nombre: 'autorizacion', ruta: '/facturacion/aut-captura-339', antes: AUTORIZACION_SEMBRADA, despues: SIN_AUTORIZACION },
+  // Tarea 352: la lista de Facturación y el cierre de un mantenimiento, con
+  // las piezas de «Ventana» en el teléfono.
+  { nombre: 'facturacion', ruta: '/facturacion', antes: AUTORIZACION_SEMBRADA, despues: SIN_AUTORIZACION },
+  {
+    nombre: 'equipo-mantenimiento-cerrar',
+    ruta: '/dispositivos/dis-impresora-ejemplo/mantenimientos/man-captura-352',
+    antes: MANTENIMIENTO_SEMBRADO,
+    despues: SIN_MANTENIMIENTO,
+  },
   { nombre: 'escaner', ruta: '/escaner' },
   {
     nombre: 'escaner-asistencia',
