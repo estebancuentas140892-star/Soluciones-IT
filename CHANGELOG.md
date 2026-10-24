@@ -8,6 +8,13 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-23
 
+### Documentación (tarea 352): el tema por defecto sigue oscuro (propuesta C3)
+
+**Área modificada:** [DECISIONES.md](DECISIONES.md) AD-095 (decisión 6) y AD-093, [TAREAS.md](TAREAS.md) tarea 352.
+**Tipo:** Documentación.
+**Motivo:** el usuario eligió el 2026-10-23 la propuesta C3 de AD-095: oscuro por defecto, como está, con «Apariencia» arriba de Más.
+**Qué cambia:** nada en la app. La regla 12 y AD-085 siguen vigentes; C1 («Automático» al estrenar en un teléfono) y C2 (preguntar una vez) quedan descartadas.
+
 ### Cambiado (tarea 352, propuestas A1 y A2): en el teléfono, terminar la guía es responder «Sí, quedó resuelto», sin perder la verificación
 
 **Área modificada:** `src/features/soluciones/AsistenteVista.tsx` (`ComprobacionFinalTelefono`: la lista y la confirmación), `useProcedimientoEjecucion.ts` (`confirmarYFinalizar`), `cierrePaso.ts` (`comprobacionesPendientes`), `src/lib/progresoPasos.ts` (`confirmarComprobacionYFinalizar`), `REGLAS.md` (regla 28 y 31 h), `scripts/prueba-sin-conexion.mjs` (4b3) y `capturas-moviles.mjs` (`guia-ventana-confirmar`); prueba nueva `cierreResuelto.test.tsx` y `cierrePaso.test.ts` ampliada.
