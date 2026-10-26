@@ -47,7 +47,7 @@ async function intervenciones() {
 }
 
 async function terminarLaGuia(): Promise<void> {
-  await tocar(await esperar(() => control(/^Completar y terminar$/), 'la única acción'))
+  await tocar(await esperar(() => control(/^Listo · Terminar guía$/), 'la única acción'))
   await esperar(() => textoPantalla().includes('Guía completada'), 'la guía terminada')
 }
 

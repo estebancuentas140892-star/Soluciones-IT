@@ -124,11 +124,14 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
 
     await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('¿Qué versión del programa de prueba usas?'), 'la pregunta')
-    // La pregunta es la acción: sus respuestas con su ayuda, y el pie dice lo que falta.
+    // La pregunta es la acción: sus respuestas con su ayuda. En el teléfono
+    // (tarea 355) van en el pie, como en la ventana: responder es avanzar, en
+    // un solo toque, y no hay un botón que diga lo que falta.
     expect(textoPantalla()).toContain('Veo el menú Archivo arriba.')
     expect(textoPantalla()).toContain('Uso la versión nueva del programa.')
-    expect(principal('Elige una opción')?.hasAttribute('disabled')).toBe(true)
-    const grupo = document.body.querySelector('[role="group"]')
+    expect(document.body.querySelectorAll('[data-pie-ventana] [data-respuesta-ventana]')).toHaveLength(2)
+    expect(principal('Elige una opción')).toBeNull()
+    const grupo = document.body.querySelector('[data-pie-ventana] [role="group"]')
     expect(grupo?.getAttribute('aria-labelledby')).toBeTruthy()
     expect(document.getElementById(grupo?.getAttribute('aria-labelledby') ?? '')?.textContent).toBe(
       '¿Qué versión del programa de prueba usas?',
@@ -173,8 +176,8 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
     // Y desde ahí, a la pregunta ya respondida.
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('¿Qué versión del programa de prueba usas?'), 'la pregunta respondida')
-    // "Decide" sigue siendo el rótulo; lo hecho, solo con la marca (tarea 307).
-    expect(textoPantalla()).toContain('Decide')
+    // Lo hecho, solo con la marca (tarea 307). En el teléfono no hay rótulo
+    // «Decide» (tarea 355): la pantalla enseña solo lo de la sección 5.
     expect(document.body.querySelector('[role="img"][aria-label="Completada"]')).not.toBeNull()
     expect(textoPantalla()).not.toContain('respondida')
     expect(opcion('Versión clásica')?.textContent).toContain('Tu respuesta')
@@ -200,10 +203,10 @@ describe('una decisión con dos opciones que llevan a dos pasos', () => {
     await esperar(() => textoPantalla().includes('Comprobar que el archivo existe'), 'el paso común')
     await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'cerrar el paso común'))
     await esperar(() => textoPantalla().includes('Copiar el archivo a la carpeta de la persona'), 'el último paso')
-    await tocar(await esperar(() => principal('Completar y terminar'), 'terminar'))
+    await tocar(await esperar(() => principal('Listo · Terminar guía'), 'terminar'))
     await esperar(() => textoPantalla().includes('Guía completada'), 'la guía terminada')
-    // En el teléfono, un paso es una ventana (tarea 350).
-    expect(textoPantalla()).toContain('4 ventanas')
+    // En la acción a la vez del teléfono, lo recorrido son pasos (tarea 355).
+    expect(textoPantalla()).toContain('4 pasos')
   })
 
   it('recargar conserva la ruta elegida y retoma en su paso', async () => {

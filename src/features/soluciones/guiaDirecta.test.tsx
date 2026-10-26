@@ -17,6 +17,7 @@ import {
   textoPantalla,
   tocar,
   ubicacionActual,
+  ponerAncho,
 } from '../../pruebas/montaje'
 import { GuiaPage, RedireccionAGuia } from './GuiaPage'
 
@@ -64,7 +65,13 @@ async function sembrarCaja(requisitos: string[] = []) {
   }
 }
 
+// DESDE LA TAREA 355, TABLETA Y ESCRITORIO: en el teléfono la acción a la vez
+// es la de «Equilibrada esencial» (el riesgo en la pantalla de su acción, sin
+// pantallas previas y lo que acompaña en «Ayuda con este paso»), y la prueba
+// accionTelefono.test.tsx. Estas pruebas describen la pantalla de tableta y
+// escritorio, que no cambia, así que miran una tableta.
 beforeEach(async () => {
+  ponerAncho('tableta')
   await limpiarBase()
   await sembrarPerfil(false)
 })
@@ -148,7 +155,7 @@ describe('los avisos acompañan, no detienen', () => {
 
     // Y la acción se hace como siempre: es la última, así que termina.
     await tocar((await esperar(() => principal('Completar y terminar'), 'Completar y terminar en la última acción')) as HTMLElement)
-    await esperar(() => textoPantalla().includes('Guía completada'), 'la guía queda terminada')
+    await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía queda terminada')
     expect(control('Salir de la guía')).not.toBeNull()
   })
 })

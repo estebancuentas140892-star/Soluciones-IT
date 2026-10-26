@@ -61,8 +61,9 @@ const CONTRASTE = argumentos.includes('--contraste')
 const tocar = (texto) =>
   `{ const el=[...document.querySelectorAll('button, a')].find(b=>((b.getAttribute('aria-label')||b.textContent||'').replace(/\\s+/g,' ').trim()).startsWith(${JSON.stringify(texto)})); el?.click(); await new Promise(r=>setTimeout(r,500)); }`
 // "Completar y seguir" es el boton de la ejecucion desde la propuesta final
-// de Claude Design (2026-10-01); antes decia "Siguiente".
-const siguiente = `{ const s=[...document.querySelectorAll('button')].find(b=>b.textContent.replace(/\\s+/g,' ').trim()==='Completar y seguir'); s?.click(); await new Promise(r=>setTimeout(r,500)); }`
+// de Claude Design (2026-10-01); antes decia "Siguiente". En la accion a la
+// vez del telefono, desde la tarea 355, «Listo · Siguiente» (o «Listo · ...»).
+const siguiente = `{ const s=[...document.querySelectorAll('button')].find(b=>{ const t=b.textContent.replace(/\\s+/g,' ').trim(); return t==='Completar y seguir'||t.startsWith('Listo · '); }); s?.click(); await new Promise(r=>setTimeout(r,500)); }`
 // Una fila de la hoja del indice ("Ruta de la guia"), por el nombre del paso.
 // Desde la tarea 339 (T5) el indice es una columna fija desde 1280: la fila
 // se busca en la hoja o en esa columna.
@@ -76,6 +77,9 @@ const tocarFilaIndice = (texto) =>
 // el servidor de desarrollo (misma base IndexedDB).
 const AVANCE_SEMBRADO = `{ const { db } = await import('/src/lib/db.ts'); await db.progresoPasos.put({ articuloId: 'art-recurso-compartido', pasosHechos: ['rec-p1'], instruccionesHechas: ['rec-p1-t1'], verificacionHecha: [], actualizadoEn: new Date().toISOString() }); }`
 const modo = (m) => `{ const { guardarModoEjecucion } = await import('/src/lib/preferenciasEjecucion.ts'); await guardarModoEjecucion('${m}'); }`
+// Tarea 355: la guia de los avisos por tono, sin avance, para las paradas de
+// la accion a la vez del telefono.
+const SIN_AVANCE_TONOS = `{ const { db } = await import('/src/lib/db.ts'); await db.progresoPasos.delete('art-tonos'); }`
 
 // Tarea 263 (resolucion guiada): cada parada de un recorrido con
 // preguntas arranca limpia (sin sesion, sin avance de su procedimiento
@@ -217,6 +221,71 @@ const TODAS_LAS_PARADAS = [
   },
   { nombre: 'agenda', ruta: '/agenda' },
   { nombre: 'guia-paso-1-con-requisitos', ruta: '/soluciones/cat-pos/art-tonos' },
+  // Tarea 355: una accion por pantalla en el telefono («Equilibrada
+  // esencial»). La primera accion con «Ten a mano 2 cosas» en el boton de la
+  // ayuda, la ayuda abierta, la accion con su dato tecnico (su nota, en la
+  // ayuda), la de la advertencia critica sin confirmar («Listo» no esta
+  // disponible y lo dice) y confirmada, la comprobacion final, «Donde» con la
+  // credencial en linea, y «Ver el paso entero» del indice, que lleva a la
+  // ventana. Cada parada empieza sin avance.
+  { nombre: 'guia-accion-primera', ruta: '/soluciones/cat-pos/art-tonos', antes: SIN_AVANCE_TONOS + modo('foco') },
+  {
+    nombre: 'guia-accion-ayuda',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: SIN_AVANCE_TONOS + modo('foco'),
+    guion: tocar('Ayuda con este paso'),
+  },
+  { nombre: 'guia-accion-dato', ruta: '/soluciones/cat-pos/art-tonos', antes: SIN_AVANCE_TONOS + modo('foco'), guion: siguiente },
+  {
+    nombre: 'guia-accion-dato-ayuda',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: SIN_AVANCE_TONOS + modo('foco'),
+    guion: siguiente + tocar('Ayuda con este paso'),
+  },
+  {
+    nombre: 'guia-accion-critica',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: SIN_AVANCE_TONOS + modo('foco'),
+    guion: siguiente + siguiente,
+  },
+  {
+    nombre: 'guia-accion-critica-confirmada',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: SIN_AVANCE_TONOS + modo('foco'),
+    guion: siguiente + siguiente + tocar('Confirmo que la leí'),
+  },
+  {
+    nombre: 'guia-accion-final',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: SIN_AVANCE_TONOS + modo('foco'),
+    guion: siguiente + siguiente + tocar('Confirmo que la leí') + siguiente,
+    despues: SIN_AVANCE_TONOS,
+  },
+  {
+    nombre: 'guia-accion-donde',
+    ruta: '/soluciones/cat-impresoras/art-recurso-compartido',
+    antes: AVANCE_SEMBRADO + modo('foco'),
+  },
+  // Las preguntas, con sus respuestas en el pie: la de Si/No (con el camino
+  // del «No» dicho en su boton) y la de opciones con su criterio.
+  {
+    nombre: 'guia-accion-decision',
+    ruta: '/soluciones/cat-pos/art-decision',
+    antes: `{ const { db } = await import('/src/lib/db.ts'); await db.progresoPasos.delete('art-decision'); }` + modo('foco'),
+    guion: siguiente,
+  },
+  {
+    nombre: 'guia-accion-opciones',
+    ruta: '/soluciones/cat-software/art-caminos',
+    antes: `{ const { db } = await import('/src/lib/db.ts'); await db.progresoPasos.delete('art-caminos'); }` + modo('foco'),
+  },
+  {
+    nombre: 'guia-accion-paso-entero',
+    ruta: '/soluciones/cat-pos/art-tonos',
+    antes: SIN_AVANCE_TONOS + modo('foco'),
+    guion: tocar('Paso 1 de 2. Abrir el índice') + tocar('Ver el paso entero'),
+    despues: modo('foco'),
+  },
   // Desde la tarea 348 el telefono abre cada guia en ventana; estas paradas
   // describen la ejecucion de una accion a la vez ("Completar y seguir"), asi
   // que la piden. Las de la ventana estan mas abajo (`guia-ventana-*`).

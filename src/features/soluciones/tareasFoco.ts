@@ -14,6 +14,7 @@ import { tareasDe } from '../../lib/procedimiento'
 import { decisionDeRuta, guiaDeLaRespuesta, type Elecciones } from '../../lib/rutaProcedimiento'
 import { apoyosDelPaso, apoyosDeTarea } from './apoyosTarea'
 import { guiasObligatoriasDeTarea } from './guiasObligatorias'
+import { notaDeAviso, type NotaDeGuia } from './notasGuia'
 import { presenciaDeAviso } from './tonos'
 
 // LO QUE EL MODO FOCO RECORRE (tarea 217, hallazgo G-18; ampliado el
@@ -311,6 +312,12 @@ export interface AvisosDeTarea {
   alertas: BloquePaso[]
   /** Datos técnicos: a la vista, sin color de alerta. */
   datos: BloquePaso[]
+  /**
+   * Información y consejo: nunca a la vista (tarea 307). En el teléfono se
+   * leen a pedido, en «Ayuda con este paso» (tarea 355); en tableta y
+   * escritorio, solo en Detalles.
+   */
+  notas: NotaDeGuia[]
 }
 
 /**
@@ -328,15 +335,35 @@ export function avisosDeTareaFoco(paso: PasoProcedimiento, tareas: TareaFoco[], 
   if (indice === 0) avisos.push(...apoyosDelPaso(paso).avisos)
   if (tarea?.clase === 'tarea') avisos.push(...apoyosDeTarea(paso, tarea.id).avisos)
 
-  // La información y los consejos heredados no van a ningún sitio: la
-  // ejecución mínima no los muestra (tarea 307).
-  const repartidos: AvisosDeTarea = { alertas: [], datos: [] }
+  // La información y los consejos no se muestran en la acción (tarea 307):
+  // se apartan como notas, que el teléfono ofrece a pedido (tarea 355).
+  const repartidos: AvisosDeTarea = { alertas: [], datos: [], notas: [] }
   for (const aviso of avisos) {
     const presencia = presenciaDeAviso(aviso.tono)
     if (presencia === 'alerta') repartidos.alertas.push(aviso)
     else if (presencia === 'dato') repartidos.datos.push(aviso)
+    else {
+      const nota = notaDeAviso(aviso)
+      if (nota) repartidos.notas.push(nota)
+    }
   }
   return repartidos
+}
+
+/**
+ * LA INSTRUCCIÓN DE UNA ENTRADA DEL RECORRIDO: lo que su pantalla dice que se
+ * haga. Una tarea, su texto; la guía del paso, el título del paso (lo que se
+ * hace, no de dónde sale) o, si no está en el dispositivo, que no está. La
+ * usan la pantalla de la acción y «Lo que sigue» de la ayuda del teléfono
+ * (tarea 355), para que digan lo mismo.
+ */
+export function instruccionDeEntrada(paso: PasoProcedimiento, tarea: TareaFoco, guiaDisponible = true): string {
+  if (tarea.clase === 'guia-del-paso') {
+    return guiaDisponible
+      ? paso.titulo.trim() || tarea.texto || tarea.guiaTitulo
+      : 'Las instrucciones de este paso no están en este dispositivo'
+  }
+  return tarea.texto || 'Tarea sin texto'
 }
 
 /**

@@ -2,7 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation } from 'react-router-dom'
-import { db, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
+import { db, type BloquePaso, type PasoProcedimiento, type Procedimiento } from '../../lib/db'
 import {
   normalizarProcedimiento,
   pasoTrabajoPrevioCompleto,
@@ -37,8 +37,7 @@ import {
 } from '../../lib/preferenciasEjecucion'
 import { registrarIntervencion } from '../../lib/repositorio'
 import { conOrigen } from '../../lib/origenNavegacion'
-import { BandaBajoTarea, BandaTarea, SubtituloTarea } from '../../app/bandaTarea'
-import { useHaySubtituloTarea } from '../../app/ranuraSubtitulo'
+import { BandaBajoTarea, BandaTarea } from '../../app/bandaTarea'
 import { useRanuraIndice } from '../../app/ranuraIndice'
 import { Adjuntos } from '../../components/Adjuntos'
 import {
@@ -111,6 +110,9 @@ import { TarjetaGuiaVinculada } from './TarjetaGuiaVinculada'
 import { useProcedimientoEjecucion } from './useProcedimientoEjecucion'
 import { HojaPasos, IndicePasos } from './HojaPasos'
 import { AntesDeEmpezar, BOTON_ANTERIOR, BotonPrincipal, ModoFoco, TEXTO_INSTRUCCION } from './ModoFoco'
+import { LineaBajoElTitulo } from './LineaBajoElTitulo'
+import { instruccionDeEntrada, tareasParaFoco } from './tareasFoco'
+import type { DestinoListo } from './accionTelefono'
 import { RutaProcedimiento } from './RutaProcedimiento'
 import { presenciaDeAviso } from './tonos'
 import { HojaFalla } from './HojaFalla'
@@ -317,14 +319,15 @@ export function AsistenteVista({
     () => (conPreparacion ? requisitosEfectivos(requisitos) : []),
     [conPreparacion, requisitos],
   )
-  // SIN PANTALLAS PREVIAS EN LA VENTANA DEL TELÉFONO (propuesta B de AD-093,
-  // aprobada por el usuario el 2026-10-23, tarea 351; regla 25 b). Como el
-  // prototipo: «Empezar» abre directo la ventana 1; los requisitos van en la
-  // tarjeta «Antes de empezar», encima de ella, y la orientación (cuándo
-  // usarla, objetivo) vive en «Detalles» y en la mejor coincidencia de la
-  // búsqueda. La acción a la vez del teléfono, la tableta y el escritorio
-  // conservan sus dos pantallas.
-  const preparaEnVentana = conPreparacion && !esAncho && modoEfectivo(modoEjecucion, esAncho) === 'ventana'
+  // SIN PANTALLAS PREVIAS EN EL TELÉFONO (propuesta B de AD-093, aprobada por
+  // el usuario el 2026-10-23, tarea 351, para la ventana; desde la tarea 355
+  // también para la acción a la vez, regla 31 g). «Empezar» abre directo la
+  // primera acción o la ventana 1. Los requisitos van, en la ventana, en la
+  // tarjeta «Antes de empezar» encima de ella; en la acción a la vez, en
+  // «Ayuda con este paso» de su primera acción. La orientación (cuándo usarla,
+  // objetivo) vive en «Detalles» y en la mejor coincidencia de la búsqueda.
+  // La tableta y el escritorio conservan sus dos pantallas.
+  const preparaEnElPaso = conPreparacion && !esAncho
   // Mover la VISTA a un paso: consultar, revisar, volver atrás. No toca
   // ni el avance ni el paso de trabajo.
   function verPaso(indice: number | null, porElFinal = false) {
@@ -378,7 +381,9 @@ export function AsistenteVista({
   //   contingencia. Antes no hacía falta porque la contingencia solo
   //   aparecía con el paso entero marcado, que es justo el defecto.
   const [falla, setFalla] = useState<{ pasoId: string; tarea: string | null; conEvidencia: boolean } | null>(null)
-  const [hojaFalla, setHojaFalla] = useState<{ tarea: string | null } | null>(null)
+  // En el teléfono lleva además las guías de contingencia de la acción, que
+  // ahí se ofrecen con las demás salidas (tarea 355).
+  const [hojaFalla, setHojaFalla] = useState<{ tarea: string | null; contingencias?: BloquePaso[] } | null>(null)
   const [contingenciaPasoId, setContingenciaPasoId] = useState<string | null>(null)
   // Lleva al técnico hasta la cámara cuando elige "fotografiar y
   // anotar": el bloque de evidencia vive al final del paso. Se desplaza
@@ -442,10 +447,9 @@ export function AsistenteVista({
       const habiaAvance = hayAvanceEnEjecucion(prog)
       setRetomadaEn(nivel === 0 && habiaAvance ? inicial : null)
       // Una ejecución NUEVA de la página de la guía empieza preparándose,
-      // salvo en la ventana del teléfono (propuesta B, tarea 351): ahí se
-      // prepara en la ventana 1.
-      const enVentanaDelTelefono = !esAncho && modoEfectivo(modo, esAncho) === 'ventana'
-      setPasoPreparacion(conPreparacion && !habiaAvance && !enVentanaDelTelefono ? 0 : null)
+      // salvo en el teléfono (propuesta B, tareas 351 y 355): ahí se prepara
+      // en la primera acción o en la ventana 1.
+      setPasoPreparacion(conPreparacion && !habiaAvance && esAncho ? 0 : null)
       setModoEjecucion(modo)
       setListo(true)
     })
@@ -522,9 +526,9 @@ export function AsistenteVista({
   async function reiniciarYVolver() {
     await reiniciarProgreso(clave)
     setRetomadaEn(null)
-    // Empezar de nuevo es una ejecución nueva: vuelve a prepararse (en la
-    // ventana del teléfono, en la ventana 1).
-    setPasoPreparacion(conPreparacion && !preparaEnVentana ? 0 : null)
+    // Empezar de nuevo es una ejecución nueva: vuelve a prepararse (en el
+    // teléfono, en la primera acción o en la ventana 1).
+    setPasoPreparacion(conPreparacion && !preparaEnElPaso ? 0 : null)
     setPasoEnteroPorFalla(null)
     setFalla(null)
     irAPaso(siguientePasoPendiente(idsPasos, new Set<string>(), -1))
@@ -540,9 +544,9 @@ export function AsistenteVista({
 
   // ORIENTAR Y PREPARAR ANTES DE LA PRIMERA ACCIÓN (tarea 289, fase 2). Se
   // espera al artículo (su título es "qué vas a hacer").
-  // (Si el modo cambia a la ventana del teléfono con la preparación abierta,
-  // tampoco se enseña: se prepara en la ventana 1.)
-  if (pasoPreparacion !== null && !preparaEnVentana) {
+  // (Si la pantalla se estrecha al teléfono con la preparación abierta,
+  // tampoco se enseña: se prepara en el paso.)
+  if (pasoPreparacion !== null && !preparaEnElPaso) {
     if (articulo === undefined) {
       return <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
     }
@@ -620,13 +624,14 @@ export function AsistenteVista({
     // marcado termina; con algo sin marcar pide confirmar, por su nombre, lo
     // que falta, y solo entonces lo marca y termina. «No, sigue igual» abre lo
     // que se puede hacer; «Anterior» sigue siendo una navegación principal del
-    // pie. Solo tras la ejecución por ventanas, la del teléfono por defecto:
-    // quien eligió una acción a la vez conserva su cierre de siempre.
-    if (nivel === 0 && !esAncho && !integrada && modoEfectivo(modoEjecucion, esAncho) === 'ventana') {
+    // pie. En el teléfono, tras la ventana y, desde la tarea 355, también tras
+    // la acción a la vez (regla 31 h): el final del teléfono es uno solo.
+    if (nivel === 0 && !esAncho && !integrada) {
       return (
         <ComprobacionFinalTelefono
           titulo={articulo?.titulo ?? ''}
-          ventanas={pasos.length}
+          pasos={pasos.length}
+          palabra={modoEfectivo(modoEjecucion, esAncho) === 'ventana' ? 'ventana' : 'paso'}
           comprobaciones={verificacionFinal}
           marcadas={marcadasComprobacion}
           onAlternar={(indice) => void alternarVerificacion(indice)}
@@ -789,7 +794,11 @@ export function AsistenteVista({
               </span>
               <div className="flex min-w-0 flex-col gap-0.5">
                 <p className="text-[13px] font-extrabold uppercase tracking-[.05em] text-noct-neutral-300">
-                  {cuentaDeGuiaCompletada(pasos.length, verificacionFinal.length)}
+                  {cuentaDeGuiaCompletada(
+                    pasos.length,
+                    verificacionFinal.length,
+                    modoEfectivo(modoEjecucion, esAncho) === 'ventana' ? 'ventana' : 'paso',
+                  )}
                 </p>
                 <EncabezadoConFoco className="text-[26px] font-extrabold leading-8 tracking-[-0.02em] text-noct-text">
                   Guía completada
@@ -962,17 +971,20 @@ export function AsistenteVista({
     (!integrada || integracion.terminaLaGuia)
   // El número que ve el técnico es el de la guía que abrió.
   const numeroPasoVisible = integrada ? integracion.numeroPaso : indiceActual + 1
-  // EL BOTÓN DICE A DÓNDE LLEVA (tarea 345, DESPUÉS de Claude Design: "Hecho,
-  // ir al paso 3"): al cerrar la última acción del paso, el paso al que se
-  // pasa o la comprobación final. En el flujo de otra guía, o cuando lo que
-  // sigue depende de una respuesta, no se promete nada: el rótulo de siempre.
-  const rotuloAlCerrarElPaso = integrada
+  // EL BOTÓN DICE A DÓNDE LLEVA, EN EL TELÉFONO (tarea 345; «Listo · …» desde
+  // la 355): al cerrar la última acción del paso, el paso siguiente, la
+  // comprobación final («Listo · Comprobar el resultado») o el fin («Listo ·
+  // Terminar guía»). En el flujo de otra guía, o cuando lo que sigue depende
+  // de una respuesta, no se promete nada: «Listo · Siguiente».
+  const destinoAlCerrarElPaso: DestinoListo | null = integrada
     ? null
     : destinoTrasEste !== null
-      ? `Hecho, ir al paso ${destinoTrasEste + 1}`
+      ? 'siguiente'
       : ruta.pendiente === null && verificacionFinal.length > 0
-        ? 'Hecho, comprobar el resultado'
-        : null
+        ? 'comprobar'
+        : terminaDeVerdad
+          ? 'fin'
+          : null
 
   // Etiqueta de la acción dominante (M-R3: una acción fija abajo que
   // dice qué va a pasar) y, cuando no se puede avanzar, la razón escrita
@@ -1083,6 +1095,7 @@ export function AsistenteVista({
       numeroPaso={numeroPasoVisible}
       pasosHechos={completados}
       tarea={hojaFalla?.tarea ?? null}
+      guiasDeContingencia={hojaFalla?.contingencias ?? []}
       solucionArticuloId={paso.solucionArticuloId || null}
       solucionArticuloTitulo={paso.solucionArticuloTitulo}
       onAbrirContingencia={() => {
@@ -1138,10 +1151,11 @@ export function AsistenteVista({
   // antes de empezar lo decide y lo escribe el autor de la guía que se abrió
   // (tarea 289, regla definitiva del criterio adicional de la fase 4).
   //
-  // En la ventana del teléfono (propuesta B, tarea 351) la preparación ES la
-  // ventana 1: sus requisitos, sin repetidos, en la tarjeta de encima.
+  // En el teléfono (propuesta B, tareas 351 y 355) la preparación ES la primera
+  // acción o la ventana 1: sus requisitos, sin repetidos, en la tarjeta de
+  // encima de la ventana o en la ayuda de la acción.
   const requisitosVisibles =
-    (!conPreparacion || preparaEnVentana) && !integrada && indiceActual === 0 && sinAvance
+    (!conPreparacion || preparaEnElPaso) && !integrada && indiceActual === 0 && sinAvance
       ? conPreparacion
         ? requisitosPrevios
         : requisitos
@@ -1254,21 +1268,24 @@ export function AsistenteVista({
   // la cabecera y el paso, la línea de estado.
   // EL PASO, DOMINANTE, EN LA CABECERA DEL TELÉFONO (rediseño móvil, fase 2,
   // tarea 345; DESPUÉS de Claude Design): sobre los segmentos, de qué guía y
-  // con qué equipo, y "Paso 2 de 4 · Vacía la cola de impresión". El
-  // contador "2/4" deja su sitio a "Pasos", que abre el mismo índice.
+  // con qué equipo, y "Paso 2 de 4 · Vacía la cola de impresión". Desde la
+  // tarea 355 solo en el paso entero que abre una falla: la acción a la vez
+  // lleva su propia línea («Paso 2 de 4 · acción 1 de 3», la pinta `ModoFoco`).
   const pasoEnCabecera = `Paso ${indiceActual + 1}${totalPasos === null ? '' : ` de ${totalPasos}`} · ${tituloPaso}`
   // En la ventana (tarea 350), cuál de cuántas. Si el total depende de una
   // respuesta, cuántas como poco y como mucho, como el prototipo («Ventana 1
   // de 4 · hasta 6 si hace falta», tarea 351): el camino más corto ya cuenta
   // las ventanas recorridas, así que nunca es menor que la actual. Si no se
-  // puede decir, que la ruta la deciden las respuestas.
+  // puede decir, que la ruta la deciden las respuestas. En la acción a la vez
+  // (tarea 355), lo mismo con «Paso».
   const largoAbierto = totalPasos === null ? largoDeLaRuta(procedimiento, elecciones) : null
-  const rangoDeVentana =
+  const rangoDe = (palabra: 'Ventana' | 'Paso') =>
     totalPasos !== null
-      ? `Ventana ${indiceActual + 1} de ${totalPasos}`
+      ? `${palabra} ${indiceActual + 1} de ${totalPasos}`
       : largoAbierto && largoAbierto.minimo < largoAbierto.maximo && largoAbierto.minimo >= indiceActual + 1
-        ? `Ventana ${indiceActual + 1} de ${largoAbierto.minimo} · hasta ${largoAbierto.maximo} si hace falta`
-        : `Ventana ${indiceActual + 1} · la ruta depende de tus respuestas`
+        ? `${palabra} ${indiceActual + 1} de ${largoAbierto.minimo} · hasta ${largoAbierto.maximo} si hace falta`
+        : `${palabra} ${indiceActual + 1} · la ruta depende de tus respuestas`
+  const rangoDeVentana = rangoDe('Ventana')
   // El título de la guía ya va en la fila de la cabecera: aquí, solo el equipo.
   const equipoEnCabecera = equipoDeLaEjecucion && !equipoDeLaEjecucion.eliminadoEn ? equipoDeLaEjecucion.nombre : ''
   const estadoUI =
@@ -1287,7 +1304,7 @@ export function AsistenteVista({
             {enCabecera && !esAncho && enVentana && (
               <LineaBajoElTitulo>{[rangoDeVentana, equipoEnCabecera].filter(Boolean).join(' · ')}</LineaBajoElTitulo>
             )}
-            {enCabecera && !esAncho && !enVentana && (
+            {enCabecera && !esAncho && !enVentana && !enFoco && (
               <div data-paso-en-cabecera className="flex min-w-0 flex-col gap-0.5 px-4 pb-2 pt-0.5">
                 {equipoEnCabecera && <p className="truncate text-[14px] leading-snug text-noct-neutral-400">{equipoEnCabecera}</p>}
                 <p className="text-[17px] font-[650] leading-snug text-noct-text text-pretty [overflow-wrap:anywhere]">
@@ -1363,6 +1380,16 @@ export function AsistenteVista({
           estadoConectar: conOrigen(rutaOrigen, articulo?.titulo ?? 'la guía'),
         }
       : null
+  // El botón «Índice» del teléfono (o el contador «2/4» desde 768).
+  const botonIndice = (
+    <ContadorPaso
+      indice={indiceActual}
+      total={totalPasos}
+      onAbrirIndice={() => setIndiceAbierto(true)}
+      palabra={enVentana ? 'Ventana' : 'Paso'}
+      soloIconoEnEstrecho={enFoco}
+    />
+  )
   const indiceUI =
     propsIndice && indicePersistente ? (
       <>
@@ -1378,14 +1405,9 @@ export function AsistenteVista({
       </>
     ) : nivel === 0 ? (
       <>
-        <BandaTarea>
-          <ContadorPaso
-            indice={indiceActual}
-            total={totalPasos}
-            onAbrirIndice={() => setIndiceAbierto(true)}
-            palabra={enVentana ? 'Ventana' : 'Paso'}
-          />
-        </BandaTarea>
+        {/* En la acción a la vez del teléfono el botón va en la cabecera que
+            pinta `ModoFoco`, después de «Tengo un problema» (tarea 355). */}
+        {!(enFoco && !esAncho) && <BandaTarea>{botonIndice}</BandaTarea>}
         <HojaPasos
           abierto={indiceAbierto}
           onCerrar={() => setIndiceAbierto(false)}
@@ -1414,6 +1436,23 @@ export function AsistenteVista({
       </>
     ) : null
 
+  // LA ACCIÓN A LA VEZ DEL TELÉFONO (tarea 355): su cabecera (el paso, el
+  // equipo y el botón del índice) y «Lo que sigue» de la ayuda desde la última
+  // acción del paso: con qué empieza el siguiente de la ruta, la comprobación
+  // final o el fin. Si lo que sigue depende de una respuesta, nada.
+  const enFocoTelefono = enFoco && !esAncho && nivel === 0
+  let loQueSigueTrasElPaso: string | null = null
+  if (enFocoTelefono) {
+    const siguiente = pasos[indiceActual + 1] as PasoProcedimiento | undefined
+    if (siguiente) {
+      const tituloSiguiente = siguiente.titulo || siguiente.subArticuloTitulo || `Paso ${indiceActual + 2}`
+      const primera = tareasParaFoco(siguiente, tituloSiguiente, guiaIntegrable, elecciones)[0]
+      loQueSigueTrasElPaso = primera ? instruccionDeEntrada(siguiente, primera, guiaDelPasoDisponible(siguiente)) : null
+    } else if (ruta.pendiente === null) {
+      loQueSigueTrasElPaso = verificacionFinal.length > 0 ? 'Comprobación final' : 'Fin de la guía'
+    }
+  }
+
   if (enFoco) {
     return (
       <>
@@ -1429,7 +1468,15 @@ export function AsistenteVista({
           numeroPaso={indiceActual + 1}
           totalPasos={totalPasos}
           cierraLaGuia={!pasoActualHecho && terminaDeVerdad}
-          rotuloAlCerrarElPaso={rotuloAlCerrarElPaso}
+          destinoAlCerrarElPaso={destinoAlCerrarElPaso}
+          cabeceraTelefono={
+            enFocoTelefono ? { paso: rangoDe('Paso'), equipo: equipoEnCabecera, botonIndice } : null
+          }
+          // El riesgo, en la pantalla de su acción (tarea 355): lo confirmado
+          // es de la sesión, como en la ventana.
+          criticasConfirmadas={criticasLeidas}
+          onAlternarCritica={alternarCritica}
+          loQueSigueTrasElPaso={loQueSigueTrasElPaso}
           requisitos={requisitosVisibles}
           entrarPorElFinal={entradaPorElFinal === paso.id}
           // Desde la primera acción de lo reutilizado, "Anterior" vuelve a
@@ -1473,7 +1520,7 @@ export function AsistenteVista({
           }}
           onCompletarPaso={avanzar}
           cierre={cierre}
-          onFalla={(texto) => setHojaFalla({ tarea: texto })}
+          onFalla={(texto, contingencias) => setHojaFalla({ tarea: texto, contingencias: contingencias ?? [] })}
           guiasPendientes={(tareaId) => guiasPendientesDeTarea(paso, tareaId)}
           guiaCumplida={guiaCumplida}
           // RESPONDER UNA DECISIÓN CON OPCIONES (tarea 302) es actuar, como
@@ -2159,7 +2206,8 @@ export function AsistenteVista({
 //     sigue igual» sigue sin registrar nada.
 function ComprobacionFinalTelefono({
   titulo,
-  ventanas,
+  pasos,
+  palabra,
   comprobaciones,
   marcadas,
   onAlternar,
@@ -2169,7 +2217,9 @@ function ComprobacionFinalTelefono({
   segmentos,
 }: {
   titulo: string
-  ventanas: number
+  pasos: number
+  /** Cómo se llama lo recorrido: «ventana» tras la ventana, «paso» tras la acción a la vez (tarea 355). */
+  palabra: 'ventana' | 'paso'
   comprobaciones: string[]
   marcadas: ReadonlySet<number>
   onAlternar: (indice: number) => void
@@ -2207,7 +2257,14 @@ function ComprobacionFinalTelefono({
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
             <p className="text-[13px] font-extrabold uppercase tracking-[.05em] text-noct-neutral-300">
-              {ventanas} {ventanas === 1 ? 'ventana hecha' : 'ventanas hechas'}
+              {pasos}{' '}
+              {palabra === 'ventana'
+                ? pasos === 1
+                  ? 'ventana hecha'
+                  : 'ventanas hechas'
+                : pasos === 1
+                  ? 'paso hecho'
+                  : 'pasos hechos'}
             </p>
             <EncabezadoConFoco className="text-[26px] font-extrabold leading-8 tracking-[-0.02em] text-noct-text">
               Comprueba el resultado
@@ -2263,7 +2320,7 @@ function ComprobacionFinalTelefono({
         <div className="flex items-center gap-2">
           <BotonVolver
             disponible
-            etiqueta="Anterior. Vuelve a la última ventana, sin cambiar lo marcado"
+            etiqueta={`Anterior. Vuelve a la última ${palabra === 'ventana' ? 'ventana' : 'acción'}, sin cambiar lo marcado`}
             onIr={onAnterior}
             tamano="compacto"
           />
@@ -2357,8 +2414,12 @@ function ComprobacionFinalTelefono({
             className={`${TARJETA_TOCABLE} flex min-h-16 items-center gap-3 px-3.5 py-2.5`}
           >
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-[16px] font-bold">Revisar las ventanas de la guía</span>
-              <span className="text-[14px] text-noct-neutral-300">Vuelve a la última, con todo lo hecho</span>
+              <span className="text-[16px] font-bold">
+                {palabra === 'ventana' ? 'Revisar las ventanas de la guía' : 'Revisar los pasos de la guía'}
+              </span>
+              <span className="text-[14px] text-noct-neutral-300">
+                {palabra === 'ventana' ? 'Vuelve a la última, con todo lo hecho' : 'Vuelve a la última acción, con todo lo hecho'}
+              </span>
             </span>
             <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
           </button>
@@ -2373,26 +2434,6 @@ function ComprobacionFinalTelefono({
       </HojaInferior>
     </div>
   )
-}
-
-// LA LÍNEA BAJO EL TÍTULO DE LA GUÍA, EN EL TELÉFONO: en qué ventana se va
-// («Ventana 2 de 4 · POSPN01») o «Comprobación final». Desde la tarea 351 va
-// pegada al título, en la misma fila que la X y el índice, como en el
-// prototipo; si la cabecera no publica esa ranura, debajo de la fila, donde
-// iba en la tarea 350.
-function LineaBajoElTitulo({ children }: { children: ReactNode }) {
-  const enElTitulo = useHaySubtituloTarea()
-  const texto = (
-    <p
-      data-paso-en-cabecera
-      className={`truncate text-[13px] font-semibold leading-[18px] text-noct-neutral-300 ${
-        enElTitulo ? '' : '-mt-1.5 pb-2 pl-[52px] pr-4'
-      }`}
-    >
-      {children}
-    </p>
-  )
-  return enElTitulo ? <SubtituloTarea>{texto}</SubtituloTarea> : texto
 }
 
 // LA VENTANA EN SU TARJETA, SOLO EN LA VENTANA (tarea 350). Fuera de ella, lo
@@ -2436,6 +2477,7 @@ function ContadorPaso({
   onAbrirIndice,
   persistente = false,
   palabra = 'Paso',
+  soloIconoEnEstrecho = false,
 }: {
   indice: number
   total: number | null
@@ -2444,6 +2486,12 @@ function ContadorPaso({
   persistente?: boolean
   /** Cómo se llama lo que se recorre: «Ventana» en la ventana del teléfono. */
   palabra?: 'Paso' | 'Ventana'
+  /**
+   * Por debajo de 350 px, solo el icono (tarea 355): en la acción a la vez la
+   * fila lleva además «Tengo un problema», y a 320 la palabra dejaba sin sitio
+   * la línea de dónde se va. El nombre accesible no cambia.
+   */
+  soloIconoEnEstrecho?: boolean
 }) {
   const ancho = useEsAncho()
   // EN EL TELÉFONO, "ÍNDICE" (tarea 350, prototipo de Claude Design; «Pasos»
@@ -2456,10 +2504,14 @@ function ContadorPaso({
         onClick={onAbrirIndice}
         aria-haspopup="dialog"
         aria-label={nombreDelContador(indice, total, palabra)}
-        className="mr-1 flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl bg-noct-neutral-900 px-3 text-[14px] font-bold text-noct-text active:bg-noct-presionado"
+        className={`mr-1 flex h-11 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl bg-noct-neutral-900 px-3 text-[14px] font-bold text-noct-text active:bg-noct-presionado ${
+          soloIconoEnEstrecho ? 'max-[349px]:w-11 max-[349px]:justify-center max-[349px]:px-0' : ''
+        }`}
       >
         <IconoVentana nombre="indice" tam={18} grosor={2.4} className="shrink-0" />
-        <span aria-hidden>Índice</span>
+        <span aria-hidden className={soloIconoEnEstrecho ? 'max-[349px]:hidden' : undefined}>
+          Índice
+        </span>
       </button>
     )
   }

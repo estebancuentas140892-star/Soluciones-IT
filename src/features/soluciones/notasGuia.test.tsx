@@ -100,7 +100,7 @@ describe('«Notas de la guía» en Detalles', () => {
 
   it('la ventana sigue sin enseñarlas', async () => {
     await sembrarGuia({ id: 'guia-notas', titulo: 'Guía de prueba con notas', pasos: guiaConNotas() })
-    await montar(RUTAS, '/soluciones/cat-pruebas/guia-notas', { ventanaPorDefecto: true })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-notas', { modo: 'ventana' })
     await esperar(() => document.body.querySelector('[data-pie-ventana]'), 'la ventana 1')
     expect(textoPantalla()).toContain('No cierres la ventana de prueba.')
     expect(textoPantalla()).not.toContain('El panel de prueba tarda unos segundos en abrir.')

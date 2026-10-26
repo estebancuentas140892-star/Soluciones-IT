@@ -143,7 +143,13 @@ function clasesDe(elemento: Element): string[] {
   return [elemento, ...Array.from(elemento.querySelectorAll('*'))].flatMap((e) => Array.from(e.classList))
 }
 
+// LA PANTALLA DE ADVERTENCIA APARTE ES DE TABLETA Y ESCRITORIO DESDE LA TAREA
+// 355: en la acción a la vez del teléfono el riesgo va en la pantalla de su
+// acción, antes de la instrucción, como en la ventana (regla 31 a; lo prueba
+// accionTelefono.test.tsx). Estas pruebas describen la regla 27 g, así que
+// miran una tableta.
 beforeEach(async () => {
+  ponerAncho('tableta')
   await limpiarBase()
   await sembrarPerfil(false)
 })

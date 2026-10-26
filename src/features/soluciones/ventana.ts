@@ -269,13 +269,19 @@ export function motivoDeLasRespuestas(datos: {
   return null
 }
 
-/** Las partes de la ventana que quedan fuera de la vista, para el indicador «Más abajo». */
-export type ParteDeLaVentana = 'critica' | 'precaucion' | 'instruccion' | 'comprobacion' | 'pregunta'
+/**
+ * Las partes de la ventana que quedan fuera de la vista, para el indicador «Más abajo».
+ * 'contenido' es lo que acompaña a la acción de una acción a la vez del teléfono
+ * (tarea 355): «cómo hacerlo», el dato técnico, la credencial; su `rotulo` dice cuál.
+ */
+export type ParteDeLaVentana = 'critica' | 'precaucion' | 'instruccion' | 'comprobacion' | 'pregunta' | 'contenido'
 
 export interface FueraDeVista {
   parte: ParteDeLaVentana
   /** El número de la instrucción, solo para 'instruccion'. */
   numero?: number
+  /** Cómo se nombra, solo para 'contenido' («cómo hacerlo», «dato técnico»). */
+  rotulo?: string
 }
 
 /**
@@ -298,9 +304,16 @@ export function textoMasAbajo(fuera: readonly FueraDeVista[]): { texto: string; 
   const pregunta = fuera.some((parte) => parte.parte === 'pregunta')
   const precaucion = fuera.some((parte) => parte.parte === 'precaucion')
 
+  // Lo que acompaña a la acción (tarea 355), con su nombre y en su orden, sin
+  // repetir: dos como mucho, para que la franja no se recorte.
+  const contenido = [
+    ...new Set(fuera.filter((parte) => parte.parte === 'contenido' && parte.rotulo).map((parte) => parte.rotulo as string)),
+  ]
+
   const partes: string[] = []
   if (numeros.length === 1) partes.push(`acción ${numeros[0]}`)
   else if (numeros.length > 1) partes.push(`acciones ${numeros[0]} a ${numeros[numeros.length - 1]}`)
+  partes.push(...contenido.slice(0, Math.max(0, 2 - partes.length)))
   if (comprobacion) partes.push('comprobación')
   if (pregunta) partes.push('pregunta')
   if (partes.length === 0 && precaucion) partes.push('precaución')

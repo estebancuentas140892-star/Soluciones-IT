@@ -295,7 +295,7 @@ describe('abrir el borrador desde Inicio es hacerlo', () => {
     expect(ubicacionActual().pathname).toBe(`/soluciones/cat-pos/${ID_DIAN}`)
     // Está EJECUTÁNDOSE (no en la ficha ni en el editor) y en el paso pendiente.
     const texto = await esperar(
-      () => (textoPantalla().includes('Registrar la resolución nueva') ? textoPantalla() : null),
+      () => (textoPantalla().includes('Escribir los datos de ejemplo') ? textoPantalla() : null),
       'el paso 2, que es el pendiente',
     )
     expect(texto).toContain('Paso 2 de 2')

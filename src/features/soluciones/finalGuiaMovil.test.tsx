@@ -68,12 +68,13 @@ describe('la pantalla final de una guía', () => {
 
   it('en el teléfono: "Guía completada", qué y dónde, la hora en mono y una sola acción rellena', async () => {
     await montar(RUTAS, `${RUTA}?equipo=fin-1`)
-    await tocar(await esperar(() => control(/^Completar y terminar$/), 'la única acción'))
+    await tocar(await esperar(() => control(/^Listo · Terminar guía$/), 'la única acción'))
     await esperar(() => textoPantalla().includes('Guía completada'), 'la pantalla final del teléfono')
 
     // Como el prototipo (tarea 350): cuánto fue en su línea de mayúsculas y,
-    // bajo «Guía completada», qué y con qué equipo, sin repetir la cuenta.
-    expect(textoPantalla()).toContain('1 ventana')
+    // bajo «Guía completada», qué y con qué equipo, sin repetir la cuenta. Tras
+    // la acción a la vez (tarea 355), lo recorrido son pasos.
+    expect(textoPantalla()).toContain('1 paso')
     expect(textoPantalla()).toContain('Limpiar el rodillo de prueba · IMPRESORA-PRUEBA-FIN')
     expect(textoPantalla()).not.toContain('Guía terminada')
     const fecha = await esperar(

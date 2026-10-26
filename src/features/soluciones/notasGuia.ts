@@ -1,4 +1,4 @@
-import type { Procedimiento } from '../../lib/db'
+import type { BloquePaso, Procedimiento } from '../../lib/db'
 import { presenciaDeAviso } from './tonos'
 
 // LAS NOTAS Y LOS CONSEJOS DE UNA GUÍA, BAJO DEMANDA (tarea 354; Fase 1 del
@@ -29,6 +29,21 @@ export interface NotasDeVentana {
 }
 
 /**
+ * Un aviso como nota: solo la Información y el Consejo (también el aviso sin
+ * tono, que se lee como Información) y solo si dice algo. Lo demás (un riesgo,
+ * un dato técnico, un bloque que no es aviso) no es una nota: null.
+ *
+ * La misma regla para Detalles (aquí abajo) y para «Ayuda con este paso» del
+ * teléfono (tarea 355), que enseña las de una acción.
+ */
+export function notaDeAviso(bloque: BloquePaso): NotaDeGuia | null {
+  if (bloque.tipo !== 'aviso' || presenciaDeAviso(bloque.tono) !== null) return null
+  const texto = bloque.texto.trim()
+  if (!texto) return null
+  return { id: bloque.id, tono: bloque.tono === 'consejo' ? 'consejo' : 'info', texto }
+}
+
+/**
  * Las notas y los consejos de cada paso, en el orden de la guía. Solo los
  * pasos que tienen alguna, y solo las que dicen algo (sin texto, nada).
  */
@@ -36,13 +51,7 @@ export function notasDeLaGuia(procedimiento: Procedimiento | null | undefined): 
   if (!procedimiento) return []
   const resultado: NotasDeVentana[] = []
   procedimiento.pasos.forEach((paso, indice) => {
-    const notas: NotaDeGuia[] = []
-    for (const bloque of paso.bloques) {
-      if (bloque.tipo !== 'aviso' || presenciaDeAviso(bloque.tono) !== null) continue
-      const texto = bloque.texto.trim()
-      if (!texto) continue
-      notas.push({ id: bloque.id, tono: bloque.tono === 'consejo' ? 'consejo' : 'info', texto })
-    }
+    const notas = paso.bloques.flatMap((bloque) => notaDeAviso(bloque) ?? [])
     if (notas.length > 0) resultado.push({ numero: indice + 1, titulo: paso.titulo, notas })
   })
   return resultado

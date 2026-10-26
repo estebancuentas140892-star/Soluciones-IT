@@ -22,6 +22,7 @@ import {
   textoPantalla,
   tocar,
   ubicacionActual,
+  ponerAncho,
 } from '../../pruebas/montaje'
 import { GuiaPage } from '../soluciones/GuiaPage'
 import { bloquear, bovedaDesbloqueada } from './sesionBoveda'
@@ -51,7 +52,12 @@ function pasoConCredencial(): PasoProcedimiento {
   return paso
 }
 
+// LA CREDENCIAL COMO FILA QUE ABRE SU HOJA ES DE TABLETA Y ESCRITORIO DESDE LA
+// TAREA 355: en la acción a la vez del teléfono el bloque protegido va en
+// línea, en la pantalla de su acción (regla 29), y lo prueba
+// accionTelefono.test.tsx. Estas pruebas miran una tableta.
 beforeEach(async () => {
+  ponerAncho('tableta')
   await limpiarBase()
   await sembrarPerfil(true)
   await anclarMaestra()

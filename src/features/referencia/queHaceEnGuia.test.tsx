@@ -74,8 +74,15 @@ describe('¿Qué hace? en la vista de una acción a la vez', () => {
     await montar(RUTAS, RUTA)
     await esperar(() => textoPantalla().includes(TAREA_DNS), 'la primera acción')
 
+    // En el teléfono (tarea 355) va en «Qué significa» de «Ayuda con este paso».
+    expect(control(ROTULO_DNS)).toBeNull()
+    await tocar(await esperar(() => document.body.querySelector<HTMLElement>('[data-ayuda-paso]'), 'la ayuda'))
     await tocar(await esperarControl(ROTULO_DNS))
-    const hoja = await esperar(() => document.body.querySelector('[role=dialog]'), 'la hoja de la ficha')
+    // La ficha se abre encima de la ayuda: es la última hoja.
+    const hoja = await esperar(
+      () => Array.from(document.body.querySelectorAll('[role=dialog]')).find((h) => h.textContent?.includes('Cuando un nombre')) ?? null,
+      'la hoja de la ficha',
+    )
     expect(hoja.textContent).toContain('Limpiar la caché DNS de prueba')
     expect(hoja.textContent).toContain('Cuando un nombre de prueba resuelve a una IP vieja.')
     // Leer la ficha no es trabajo hecho.

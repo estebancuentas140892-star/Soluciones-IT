@@ -56,9 +56,11 @@ describe('preferencias de ejecucion', () => {
   })
 
   // LA VENTANA (tarea 348).
-  it('en el teléfono el defecto es la ventana, y en pantalla ancha el foco', () => {
-    expect(MODO_EJECUCION_POR_DEFECTO_MOVIL).toBe('ventana')
-    expect(modoPorDefecto(false)).toBe('ventana')
+  // Tarea 355: en el teléfono, una acción por pantalla («Equilibrada
+  // esencial»); la ventana de la tarea 348 queda como opción del índice.
+  it('en el teléfono y en pantalla ancha el defecto es una acción a la vez', () => {
+    expect(MODO_EJECUCION_POR_DEFECTO_MOVIL).toBe('foco')
+    expect(modoPorDefecto(false)).toBe('foco')
     expect(modoPorDefecto(true)).toBe('foco')
   })
 

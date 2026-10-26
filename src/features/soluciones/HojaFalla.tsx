@@ -1,11 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import type { ReactNode } from 'react'
-import { db } from '../../lib/db'
+import { db, type BloquePaso } from '../../lib/db'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
 import { HojaInferior } from '../../components/HojaInferior'
 import { Modal } from '../../components/Modal'
 import { useEsAncho } from '../../components/useEsAncho'
 import { ArrowRight, Camera, CaretRight, Info, Warning, Wrench, X } from '../../components/iconos'
+import { GuiaVinculadaEnBloque } from './ProcedimientoVista'
 import { fraseAvanceConservado } from './salidasFalla'
 
 // La hoja "Algo va mal en el paso N" (handoff "Diseño móvil", tablero
@@ -41,6 +42,12 @@ interface Props {
   // La tarea concreta en la que el técnico declaró la falla, cuando
   // viene del modo foco. En la vista completa no hay una tarea señalada.
   tarea: string | null
+  /**
+   * LAS GUÍAS DE CONTINGENCIA DE LA ACCIÓN (tarea 355). En la acción a la vez
+   * del teléfono no van en la pantalla ni en la ayuda: se ofrecen aquí, con las
+   * demás salidas, y se abren aparte. Desde 768 siguen en la acción.
+   */
+  guiasDeContingencia?: BloquePaso[]
   solucionArticuloId: string | null
   solucionArticuloTitulo: string
   onAbrirContingencia: () => void
@@ -145,6 +152,7 @@ export function HojaFalla({
   numeroPaso,
   pasosHechos,
   tarea,
+  guiasDeContingencia = [],
   solucionArticuloId,
   solucionArticuloTitulo,
   onAbrirContingencia,
@@ -206,7 +214,19 @@ export function HojaFalla({
               en este dispositivo. Avisa a quien mantiene la guía.
             </p>
           )}
-          {!solucionArticuloId && (
+          {guiasDeContingencia.length > 0 && (
+            <div data-contingencias-accion className="flex flex-col gap-2 border-b border-noct-divider py-2.5">
+              {guiasDeContingencia.map((bloque) => (
+                <GuiaVinculadaEnBloque
+                  key={bloque.id}
+                  articuloId={bloque.guiaArticuloId as string}
+                  tituloReferencia={bloque.guiaArticuloTitulo}
+                  intencion={bloque.intencionGuia}
+                />
+              ))}
+            </div>
+          )}
+          {!solucionArticuloId && guiasDeContingencia.length === 0 && (
             <p className="my-1.5 flex items-start gap-2 rounded-[10px] border border-noct-divider px-3 py-2.5 text-[13px] leading-normal text-noct-neutral-300">
               <Info size={15} className="mt-px shrink-0 text-noct-neutral-400" aria-hidden />
               <span>

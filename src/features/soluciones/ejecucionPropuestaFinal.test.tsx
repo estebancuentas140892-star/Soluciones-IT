@@ -54,7 +54,13 @@ async function sembrarTresPasos() {
   })
 }
 
+// DESDE LA TAREA 355, TABLETA Y ESCRITORIO: en el teléfono la acción a la vez
+// es la de «Equilibrada esencial» (el riesgo en la pantalla de su acción, sin
+// pantallas previas y lo que acompaña en «Ayuda con este paso»), y la prueba
+// accionTelefono.test.tsx. Estas pruebas describen la pantalla de tableta y
+// escritorio, que no cambia, así que miran una tableta.
 beforeEach(async () => {
+  ponerAncho('tableta')
   await limpiarBase()
   await sembrarPerfil(false)
 })

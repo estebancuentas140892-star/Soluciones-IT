@@ -229,7 +229,9 @@ export function DebesVer({
   )
 }
 
-function ImagenDelResultado({ resultado }: { resultado: ResultadoVisual }) {
+// Exportada: «Así sabes que funcionó» de la ayuda del teléfono la enseña ya
+// abierta (tarea 355).
+export function ImagenDelResultado({ resultado }: { resultado: ResultadoVisual }) {
   const url = useUrlAdjunto(resultado.adjunto.referencia)
   const descripcion = resultado.descripcion ?? null
   if (!url) {

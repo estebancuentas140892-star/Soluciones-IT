@@ -7,12 +7,18 @@ const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'o
 
 /**
  * "4 ventanas · 2 comprobaciones", la línea sobre «Guía completada». Un paso,
- * en el teléfono, es una ventana. Sin comprobación final, solo las ventanas.
+ * en la ventana del teléfono, es una ventana; en la acción a la vez (tarea
+ * 355), un paso: "4 pasos". Sin comprobación final, solo los pasos.
  */
-export function cuentaDeGuiaCompletada(ventanas: number, comprobaciones: number): string {
-  const deLasVentanas = `${ventanas} ${ventanas === 1 ? 'ventana' : 'ventanas'}`
-  if (comprobaciones <= 0) return deLasVentanas
-  return `${deLasVentanas} · ${comprobaciones} ${comprobaciones === 1 ? 'comprobación' : 'comprobaciones'}`
+export function cuentaDeGuiaCompletada(
+  pasos: number,
+  comprobaciones: number,
+  palabra: 'ventana' | 'paso' = 'ventana',
+): string {
+  const plural = palabra === 'paso' ? 'pasos' : 'ventanas'
+  const deLosPasos = `${pasos} ${pasos === 1 ? palabra : plural}`
+  if (comprobaciones <= 0) return deLosPasos
+  return `${deLosPasos} · ${comprobaciones} ${comprobaciones === 1 ? 'comprobación' : 'comprobaciones'}`
 }
 
 /** "Cambiar el tóner · POSPN01": la guía y con qué equipo; sin equipo, la guía. */

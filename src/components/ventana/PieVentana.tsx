@@ -137,7 +137,15 @@ export interface RespuestaDelPie {
 }
 
 interface RespuestasDelPieProps {
-  pregunta: string
+  /**
+   * La pregunta, sobre las respuestas. Sin ella (la acción a la vez del
+   * teléfono, tarea 355: la pregunta ya es la instrucción de la pantalla y no
+   * se repite), volver va junto a las respuestas y el grupo toma su nombre de
+   * `idEtiqueta`.
+   */
+  pregunta?: string
+  /** El id del texto que nombra el grupo de respuestas cuando no hay `pregunta`. */
+  idEtiqueta?: string
   respuestas: RespuestaDelPie[]
   /** La respuesta ya dada (ventana revisada), o null. */
   elegida: string | null
@@ -162,6 +170,7 @@ interface RespuestasDelPieProps {
  */
 export function RespuestasDelPie({
   pregunta,
+  idEtiqueta,
   respuestas,
   elegida,
   motivoBloqueo,
@@ -173,6 +182,78 @@ export function RespuestasDelPie({
   const idPregunta = useId()
   const bloqueada = motivoBloqueo !== null
   const disposicion = disposicionDeRespuestas(respuestas.map((r) => ({ ...r, destino: { tipo: 'continuar' as const } })))
+  const conPregunta = pregunta !== undefined
+  const grupo = (
+    // DOS RESPUESTAS, LADO A LADO (tarea 350, prototipo de Claude Design):
+    // cada una en su tarjeta con relieve, de 60 de alto como mínimo, con el
+    // criterio debajo. Las dos pesan igual y en el mismo color (regla 31
+    // c): el prototipo pintaba el Sí en verde y el No en rojo, y aquí no,
+    // porque ninguna respuesta es «la correcta». Con tres o más, una
+    // debajo de otra.
+    <div
+      role="group"
+      aria-labelledby={conPregunta ? idPregunta : idEtiqueta}
+      className={`${respuestas.length === 2 ? 'grid grid-cols-2 gap-2.5' : 'flex flex-col gap-2'} ${conPregunta ? '' : 'min-w-0 flex-1'}`}
+    >
+      {respuestas.map((respuesta) => {
+        const esLaElegida = respuesta.id === elegida
+        const enRejilla = respuestas.length === 2
+        return (
+          <button
+            key={respuesta.id}
+            type="button"
+            aria-disabled={bloqueada}
+            aria-pressed={elegida !== null ? esLaElegida : undefined}
+            data-respuesta-ventana
+            onClick={() => {
+              if (!bloqueada) onElegir(respuesta.id)
+            }}
+            className={`flex w-full cursor-pointer gap-x-3 rounded-2xl border-2 px-3 py-2 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent ${
+              enRejilla ? 'min-h-[60px] min-w-0 flex-col items-start gap-y-1' : disposicion === 'fila' ? 'min-h-[52px] flex-row items-center' : 'min-h-[52px] flex-col items-start gap-y-0.5'
+            } ${
+              bloqueada
+                ? 'cursor-default border-noct-divider bg-noct-surface'
+                : esLaElegida
+                  ? 'border-noct-accent bg-noct-accent-900'
+                  : `border-noct-divider-fuerte bg-noct-surface ${RELIEVE_BORDE_FUERTE}`
+            }`}
+          >
+            <span
+              className={`flex shrink-0 items-center gap-1.5 text-[18px] font-extrabold leading-6 ${
+                !enRejilla && disposicion === 'fila' ? 'min-w-[34px]' : ''
+              } ${bloqueada ? 'text-noct-neutral-300' : 'text-noct-text'}`}
+            >
+              {respuesta.id === 'si' && <IconoVentana nombre="hecho" tam={20} grosor={3} />}
+              {respuesta.id === 'no' && <IconoVentana nombre="cerrar" tam={20} grosor={3} />}
+              {respuesta.titulo}
+            </span>
+            {respuesta.descripcion.trim() !== '' && (
+              <span className="min-w-0 flex-1 text-[13.5px] font-medium leading-[18px] text-noct-neutral-300 text-pretty [overflow-wrap:anywhere]">
+                {respuesta.descripcion}
+              </span>
+            )}
+            {esLaElegida && (
+              <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-[.06em] text-noct-accent-300">
+                <IconoVentana nombre="hecho" tam={13} grosor={3} className="shrink-0" />
+                Tu respuesta
+              </span>
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+  if (!conPregunta) {
+    return (
+      <div className="flex flex-col gap-2">
+        {bloqueada && <MensajeNoDisponible texto={motivoBloqueo} />}
+        <div className="flex items-start gap-2.5">
+          <BotonVolver disponible={puedeVolver} etiqueta={etiquetaVolver} onIr={onVolver} tamano="grande" />
+          {grupo}
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-start gap-2">
@@ -182,64 +263,7 @@ export function RespuestasDelPie({
         </p>
       </div>
       {bloqueada && <MensajeNoDisponible texto={motivoBloqueo} />}
-      {/* DOS RESPUESTAS, LADO A LADO (tarea 350, prototipo de Claude Design):
-          cada una en su tarjeta con relieve, de 60 de alto como mínimo, con el
-          criterio debajo. Las dos pesan igual y en el mismo color (regla 31
-          c): el prototipo pintaba el Sí en verde y el No en rojo, y aquí no,
-          porque ninguna respuesta es «la correcta». Con tres o más, una
-          debajo de otra. */}
-      <div
-        role="group"
-        aria-labelledby={idPregunta}
-        className={respuestas.length === 2 ? 'grid grid-cols-2 gap-2.5' : 'flex flex-col gap-2'}
-      >
-        {respuestas.map((respuesta) => {
-          const esLaElegida = respuesta.id === elegida
-          const enRejilla = respuestas.length === 2
-          return (
-            <button
-              key={respuesta.id}
-              type="button"
-              aria-disabled={bloqueada}
-              aria-pressed={elegida !== null ? esLaElegida : undefined}
-              data-respuesta-ventana
-              onClick={() => {
-                if (!bloqueada) onElegir(respuesta.id)
-              }}
-              className={`flex w-full cursor-pointer gap-x-3 rounded-2xl border-2 px-3 py-2 text-left outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent ${
-                enRejilla ? 'min-h-[60px] min-w-0 flex-col items-start gap-y-1' : disposicion === 'fila' ? 'min-h-[52px] flex-row items-center' : 'min-h-[52px] flex-col items-start gap-y-0.5'
-              } ${
-                bloqueada
-                  ? 'cursor-default border-noct-divider bg-noct-surface'
-                  : esLaElegida
-                    ? 'border-noct-accent bg-noct-accent-900'
-                    : `border-noct-divider-fuerte bg-noct-surface ${RELIEVE_BORDE_FUERTE}`
-              }`}
-            >
-              <span
-                className={`flex shrink-0 items-center gap-1.5 text-[18px] font-extrabold leading-6 ${
-                  !enRejilla && disposicion === 'fila' ? 'min-w-[34px]' : ''
-                } ${bloqueada ? 'text-noct-neutral-300' : 'text-noct-text'}`}
-              >
-                {respuesta.id === 'si' && <IconoVentana nombre="hecho" tam={20} grosor={3} />}
-                {respuesta.id === 'no' && <IconoVentana nombre="cerrar" tam={20} grosor={3} />}
-                {respuesta.titulo}
-              </span>
-              {respuesta.descripcion.trim() !== '' && (
-                <span className="min-w-0 flex-1 text-[13.5px] font-medium leading-[18px] text-noct-neutral-300 text-pretty [overflow-wrap:anywhere]">
-                  {respuesta.descripcion}
-                </span>
-              )}
-              {esLaElegida && (
-                <span className="flex items-center gap-1 text-[12px] font-bold uppercase tracking-[.06em] text-noct-accent-300">
-                  <IconoVentana nombre="hecho" tam={13} grosor={3} className="shrink-0" />
-                  Tu respuesta
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+      {grupo}
     </div>
   )
 }

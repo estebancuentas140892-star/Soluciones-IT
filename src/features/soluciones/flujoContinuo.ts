@@ -1,4 +1,5 @@
 import type { BloquePaso, PasoAdjunto, VinculoProtegido } from '../../lib/db'
+import type { NotaDeGuia } from './notasGuia'
 
 // UN SOLO FLUJO, AUNQUE POR DENTRO SE REUTILICEN OTRAS GUÍAS (tarea 289,
 // fase 3).
@@ -71,6 +72,13 @@ export interface ApoyosDelFlujo {
   /** Términos, atajos y comandos del Centro de consulta enlazados al paso. */
   referencias: BloquePaso[]
   vinculoProtegido: VinculoProtegido | null
+  /**
+   * Lo que el teléfono ofrece a pedido en «Ayuda con este paso» (tarea 355):
+   * las notas del paso que reutiliza esta guía y su «Para qué». Tableta y
+   * escritorio no los enseñan.
+   */
+  notas?: NotaDeGuia[]
+  paraQue?: string
 }
 
 /** ¿Hay algo que prestar? Sin nada, no se pasa nada. */
@@ -81,7 +89,9 @@ export function hayApoyosDelFlujo(apoyos: ApoyosDelFlujo): boolean {
     apoyos.imagenes.length > 0 ||
     apoyos.archivos.length > 0 ||
     apoyos.referencias.length > 0 ||
-    apoyos.vinculoProtegido !== null
+    apoyos.vinculoProtegido !== null ||
+    (apoyos.notas?.length ?? 0) > 0 ||
+    (apoyos.paraQue ?? '').trim() !== ''
   )
 }
 

@@ -142,7 +142,7 @@ describe('una ventana con varias instrucciones', () => {
 
   it('las lee numeradas y sin casillas, y un solo "Listo" cierra la ventana y deja el avance de siempre', async () => {
     await sembrar()
-    await montar(RUTAS, ruta('guia-v1'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v1'), { modo: 'ventana' })
     await enLaVentana('Abre el panel de prueba')
 
     // Las tres instrucciones a la vez, con su número, y ninguna casilla.
@@ -171,7 +171,7 @@ describe('una ventana con varias instrucciones', () => {
 
   it('una ventana de una sola instrucción también se cierra con "Listo", y la última termina la guía', async () => {
     await sembrar()
-    await montar(RUTAS, ruta('guia-v1'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v1'), { modo: 'ventana' })
     await enLaVentana('Abre el panel de prueba')
     await tocarPrincipal()
     await enLaVentana('Cierra el panel de prueba')
@@ -184,7 +184,7 @@ describe('una ventana con varias instrucciones', () => {
 
   it('"Ver la ventana anterior" la muestra hecha, sin cambiar nada, y su botón lleva a la siguiente', async () => {
     await sembrar()
-    await montar(RUTAS, ruta('guia-v1'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v1'), { modo: 'ventana' })
     await enLaVentana('Abre el panel de prueba')
     await tocarPrincipal()
     await enLaVentana('Cierra el panel de prueba')
@@ -201,7 +201,7 @@ describe('una ventana con varias instrucciones', () => {
 
   it('en la primera ventana, "volver" dice con palabras que no hay anterior', async () => {
     await sembrar()
-    await montar(RUTAS, ruta('guia-v1'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v1'), { modo: 'ventana' })
     await enLaVentana('Abre el panel de prueba')
     const volver = control(/^No hay ventana anterior/)
     expect(volver).not.toBeNull()
@@ -213,7 +213,7 @@ describe('una ventana con varias instrucciones', () => {
 
   it('consultar una ventana de más adelante no la cierra: el botón devuelve al trabajo', async () => {
     await sembrar()
-    await montar(RUTAS, ruta('guia-v1'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v1'), { modo: 'ventana' })
     await enLaVentana('Abre el panel de prueba')
 
     await tocar(await esperarControl(/^Ventana 1 de 2\. Abrir el índice de ventanas$/))
@@ -252,7 +252,7 @@ describe('las advertencias de la ventana', () => {
 
   it('una precaución se lee antes de su acción, con su palabra, y no pide ningún toque', async () => {
     await sembrar('precaucion')
-    await montar(RUTAS, ruta('guia-v2'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v2'), { modo: 'ventana' })
     await enLaVentana('Abre el campo de prueba')
 
     const precaucion = document.body.querySelector<HTMLElement>('[data-aviso-ventana="precaucion"]')
@@ -270,7 +270,7 @@ describe('las advertencias de la ventana', () => {
 
   it('una crítica pide "Confirmo que la leí": sin ella la ventana no se cierra y el botón apagado dice por qué', async () => {
     await sembrar('importante')
-    await montar(RUTAS, ruta('guia-v2'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v2'), { modo: 'ventana' })
     await enLaVentana('Abre el campo de prueba')
 
     expect(critica()?.textContent).toContain('Advertencia crítica')
@@ -296,7 +296,7 @@ describe('las advertencias de la ventana', () => {
 
   it('confirmar por error se deshace tocando otra vez, y la ventana vuelve a quedar bloqueada', async () => {
     await sembrar('importante')
-    await montar(RUTAS, ruta('guia-v2'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v2'), { modo: 'ventana' })
     await enLaVentana('Abre el campo de prueba')
 
     await tocar(await esperarControl('Confirmo que la leí'))
@@ -328,7 +328,7 @@ describe('las advertencias de la ventana', () => {
       titulo: 'Guía de prueba con crítica y pregunta',
       pasos: [paso, ventana('v2b-p2', 'Seguir', ['Revisa el resultado de prueba'])],
     })
-    await montar(RUTAS, ruta('guia-v2b'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v2b'), { modo: 'ventana' })
     await enLaVentana('Abre el campo de prueba')
     expect(respuestasDelPie()).toHaveLength(0)
 
@@ -356,7 +356,7 @@ describe('la comprobación de la ventana', () => {
         ventana('v3-p2', 'Terminar', ['Cierra la prueba']),
       ],
     })
-    await montar(RUTAS, ruta('guia-v3'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v3'), { modo: 'ventana' })
     await enLaVentana('Aplica el cambio de prueba')
 
     const tarjeta = document.body.querySelector<HTMLElement>('[data-comprobacion-ventana]')
@@ -380,7 +380,7 @@ describe('la comprobación de la ventana', () => {
         ventana('v3-p1', 'Aplicar y comprobar', ['Aplica el cambio de prueba'], [comprobacion('v3-p1-c', 'Comprueba que el cambio de prueba se ve')]),
       ],
     })
-    await montar(RUTAS, ruta('guia-v3'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v3'), { modo: 'ventana' })
     await enLaVentana('Aplica el cambio de prueba')
 
     await tocar(await esperarControl('No se cumple'))
@@ -399,7 +399,7 @@ describe('las preguntas de la ventana', () => {
         ventana('v4-p2', 'Seguir', ['Registra la revisión de prueba']),
       ],
     })
-    await montar(RUTAS, ruta('guia-v4'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v4'), { modo: 'ventana' })
     await enLaVentana('Enciende el equipo de prueba')
 
     // La pregunta y sus dos respuestas, en el pie y con la misma forma.
@@ -437,7 +437,7 @@ describe('las preguntas de la ventana', () => {
       titulo: 'Guía de prueba con opciones',
       pasos: [preguntar, ventana('v5-p2', 'Camino clásico', ['Exporta desde Archivo']), ventana('v5-p3', 'Camino nuevo', ['Exporta desde la cinta'])],
     })
-    await montar(RUTAS, ruta('guia-v5'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v5'), { modo: 'ventana' })
     await enLaVentana('Abre el programa de prueba')
 
     // Lo que hace falta para contestar está en los propios botones.
@@ -472,7 +472,7 @@ describe('las preguntas de la ventana', () => {
         ventana('v6-p2', 'Seguir', ['Termina la prueba']),
       ],
     })
-    await montar(RUTAS, ruta('guia-v6'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v6'), { modo: 'ventana' })
     await enLaVentana('Abre el programa de prueba')
 
     const respuestas = respuestasDelPie()
@@ -518,7 +518,7 @@ describe('las preguntas de la ventana', () => {
         ventana('v7-p2', 'Seguir', ['Registra la revisión de prueba']),
       ],
     })
-    await montar(RUTAS, ruta('guia-v7'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v7'), { modo: 'ventana' })
     await enLaVentana('Enciende el equipo de prueba')
 
     // Dentro de la ventana, no en el pie; el "No" dice a dónde lleva.
@@ -562,7 +562,7 @@ describe('una guía necesaria dentro de la ventana', () => {
       intencionGuia: 'necesario',
     })
     await sembrarGuia({ id: 'guia-v8', titulo: 'Guía de prueba con guía necesaria', pasos: [paso] })
-    await montar(RUTAS, ruta('guia-v8'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v8'), { modo: 'ventana' })
     await enLaVentana('Ejecuta el instalador de prueba')
 
     expect(piePrincipal()?.getAttribute('aria-disabled')).toBe('true')
@@ -600,7 +600,7 @@ describe('un paso que reutiliza otra guía, dentro de la ventana', () => {
       pasos: [entrar, guardar],
       procedimiento: { verificacionFinal: ['El registro de prueba aparece guardado.'] },
     })
-    await montar(RUTAS, ruta('guia-v9r'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v9r'), { modo: 'ventana' })
     // La guía reutilizada carga desde la base local; sus acciones salen en la ventana.
     await esperar(() => textoPantalla().includes('Abre el programa de prueba'), 'la acción de la guía reutilizada', 10000)
 
@@ -635,9 +635,20 @@ describe('cada quien con su forma de trabajar', () => {
     })
   }
 
-  it('en el teléfono, sin preferencia guardada, abre en ventana', async () => {
+  // Desde la tarea 355 el teléfono abre una acción a la vez; la ventana es una
+  // opción del índice, y quien la eligió la conserva.
+  it('en el teléfono, sin preferencia guardada, abre una acción a la vez (tarea 355)', async () => {
     await sembrar()
-    await montar(RUTAS, ruta('guia-v9'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v9'), { modo: 'defecto' })
+    await esperar(() => document.body.querySelector('[data-accion-telefono]') !== null, 'la acción a la vez')
+    expect(document.body.querySelector('[data-marco-ventana]')).toBeNull()
+    expect(textoPantalla()).not.toContain('Segunda acción de prueba')
+  })
+
+  it('en el teléfono, quien eligió la ventana la conserva', async () => {
+    await sembrar()
+    await guardarModoEjecucion('ventana')
+    await montar(RUTAS, ruta('guia-v9'))
     await enLaVentana('Primera acción de prueba')
     expect(document.body.querySelector('[role="checkbox"]')).toBeNull()
   })
@@ -647,7 +658,7 @@ describe('cada quien con su forma de trabajar', () => {
     await guardarModoEjecucion('foco')
     await montar(RUTAS, ruta('guia-v9'))
     await esperar(() => textoPantalla().includes('Primera acción de prueba'), 'la primera acción')
-    expect(document.body.querySelector('[data-pie-ventana]')).toBeNull()
+    expect(document.body.querySelector('[data-marco-ventana]')).toBeNull()
     expect(textoPantalla()).not.toContain('Segunda acción de prueba')
   })
 
@@ -660,14 +671,14 @@ describe('cada quien con su forma de trabajar', () => {
 
   it('en el teléfono, el índice cambia entre una acción a la vez y la ventana', async () => {
     await sembrar()
-    await montar(RUTAS, ruta('guia-v9'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v9'), { modo: 'ventana' })
     await enLaVentana('Primera acción de prueba')
 
     // En la ventana, el índice de ventanas (tarea 350); en la acción a la vez,
     // el de pasos de siempre.
     await tocar(await esperarControl(/^Ventana 1 de 2\. Abrir el índice de ventanas$/))
     await tocar(await esperarControl('Volver a una acción a la vez'))
-    await esperar(() => !document.body.querySelector('[data-pie-ventana]'), 'sin ventana')
+    await esperar(() => !document.body.querySelector('[data-marco-ventana]'), 'sin ventana')
     expect(textoPantalla()).not.toContain('Segunda acción de prueba')
 
     await tocar(await esperarControl(/^Paso 1 de 2\. Abrir el índice de pasos$/))
@@ -688,7 +699,7 @@ describe('cada quien con su forma de trabajar', () => {
   it('en tableta y escritorio, sin preferencia, sigue una acción a la vez', async () => {
     await sembrar()
     ponerAncho('tableta')
-    await montar(RUTAS, ruta('guia-v9'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-v9'), { modo: 'defecto' })
     await esperar(() => textoPantalla().includes('Primera acción de prueba'), 'la primera acción')
     expect(document.body.querySelector('[data-pie-ventana]')).toBeNull()
     expect(textoPantalla()).not.toContain('Segunda acción de prueba')
@@ -712,7 +723,7 @@ describe('guías de tamaños distintos', () => {
       titulo: 'Guía de prueba de tamaños',
       pasos: [ventana('tam-p1', 'Ventana de prueba', nombres, extras), ventana('tam-p2', 'Cierre de prueba', ['Cierra todo'])],
     })
-    await montar(RUTAS, ruta('guia-tam'), { ventanaPorDefecto: true })
+    await montar(RUTAS, ruta('guia-tam'), { modo: 'ventana' })
     await enLaVentana('Acción 1 de prueba')
 
     expect(instrucciones()).toHaveLength(acciones)

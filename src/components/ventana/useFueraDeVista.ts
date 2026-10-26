@@ -13,7 +13,13 @@ import type { FueraDeVista } from '../../features/soluciones/ventana'
 // Sin `IntersectionObserver` (un navegador viejo, las pruebas) no hay
 // indicador: la ventana funciona igual, solo que sin ese aviso.
 
-const PARTES = '[data-aviso-ventana],[data-instruccion-ventana],[data-comprobacion-ventana],[data-decision-ventana]'
+//
+// En la acción a la vez del teléfono (tarea 355) se observa además lo que
+// acompaña a la acción, marcado con `data-parte-accion` y su nombre
+// («cómo hacerlo», «dato técnico»): ahí no hay instrucciones numeradas.
+
+const PARTES =
+  '[data-aviso-ventana],[data-instruccion-ventana],[data-comprobacion-ventana],[data-decision-ventana],[data-parte-accion]'
 
 function parteDe(elemento: Element): FueraDeVista | null {
   const aviso = elemento.getAttribute('data-aviso-ventana')
@@ -22,6 +28,8 @@ function parteDe(elemento: Element): FueraDeVista | null {
   if (instruccion) return { parte: 'instruccion', numero: Number(instruccion) }
   if (elemento.hasAttribute('data-comprobacion-ventana')) return { parte: 'comprobacion' }
   if (elemento.getAttribute('data-decision-ventana') === 'pendiente') return { parte: 'pregunta' }
+  const contenido = elemento.getAttribute('data-parte-accion')
+  if (contenido) return { parte: 'contenido', rotulo: contenido }
   return null
 }
 

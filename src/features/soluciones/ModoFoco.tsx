@@ -19,9 +19,15 @@ import {
   X,
 } from '../../components/iconos'
 import { IconoVentana } from '../../components/ventana/IconoVentana'
+import { AvisoVentana } from '../../components/ventana/AvisoVentana'
+import { MasAbajoDeLaVentana } from '../../components/ventana/MasAbajoDeLaVentana'
+import { BotonesDelPie, PieVentana, RespuestasDelPie } from '../../components/ventana/PieVentana'
+import { BandaTarea } from '../../app/bandaTarea'
+import { useHaySubtituloTarea } from '../../app/ranuraSubtitulo'
 import { CredencialEnHoja } from '../boveda/CredencialEnHoja'
+import { CredencialEnPaso } from '../boveda/CredencialEnPaso'
 import { ChipReferencia } from '../referencia/ChipReferencia'
-import { fichasEnlazadasDelPaso } from '../referencia/comandosEnTexto'
+import { comandosEnTexto, fichasEnlazadasDelPaso } from '../referencia/comandosEnTexto'
 import { QueHaceEnTexto } from '../referencia/QueHaceEnTexto'
 import { TarjetaComando } from '../referencia/TarjetaComando'
 import { bloquesUnicos, tipoEfectivo } from '../referencia/referencias'
@@ -35,10 +41,26 @@ import {
   avisosDeTareaFoco,
   esDecisionConOpcionesFoco,
   esGuiaDelRecorrido,
+  instruccionDeEntrada,
   tareaFocoHecha,
   tareasParaFoco,
   type TareaFoco,
 } from './tareasFoco'
+import {
+  claseTamanoInstruccion,
+  esImagen,
+  etiquetaTenAMano,
+  partesDeLaLinea,
+  motivoGuiasDeLaAccion,
+  pieDeLaAccion,
+  seccionesDeAyuda,
+  type DatosPieDeLaAccion,
+  type DestinoListo,
+  type ImagenDeAyuda,
+} from './accionTelefono'
+import { BotonAyudaPaso, BotonProblemaCabecera, HojaAyudaPaso, LineaDonde } from './AccionEnTelefono'
+import { LineaBajoElTitulo } from './LineaBajoElTitulo'
+import { MAXIMO_RESPUESTAS_EN_EL_PIE, type PieDeLaVentana } from './ventana'
 import { RespuestasDecision } from './RespuestasDecision'
 import { PantallaAdvertencia } from './PantallaAdvertencia'
 import { subirElContenedor } from './subirElContenedor'
@@ -145,11 +167,36 @@ interface Props {
   // "Completar y terminar"; si no, "Completar y seguir".
   cierraLaGuia: boolean
   /**
-   * Lo que dice el botón principal en el teléfono al cerrar la ÚLTIMA acción
-   * del paso: "Hecho, ir al paso 3" o "Hecho, comprobar el resultado" (tarea
-   * 345). Sin él, o desde 768, el rótulo de siempre.
+   * A dónde lleva «Listo» en el teléfono desde la ÚLTIMA acción del paso
+   * (tarea 355): al paso siguiente, a la comprobación final o al fin de la
+   * guía. Lo decide `AsistenteVista`, que conoce la ruta. Sin él, «Listo ·
+   * Siguiente». Desde 768, el rótulo de siempre.
    */
-  rotuloAlCerrarElPaso?: string | null
+  destinoAlCerrarElPaso?: DestinoListo | null
+  /**
+   * LA CABECERA DE LA ACCIÓN EN EL TELÉFONO (tarea 355). Solo la guía que se
+   * abrió (nivel 0) la pasa: en la fila de la X, el icono «Tengo un problema» y
+   * el botón del índice (`botonIndice`, que arma `AsistenteVista`); bajo el
+   * título, «Paso 2 de 4 · acción 1 de 3 · POSPN01». La pinta esta vista porque
+   * es la que sabe en qué acción del paso se está.
+   */
+  cabeceraTelefono?: { paso: string; equipo: string; botonIndice: ReactNode } | null
+  /**
+   * LAS ADVERTENCIAS CRÍTICAS YA CONFIRMADAS EN ESTA SESIÓN, por su id, y cómo
+   * confirmar o deshacer una (tarea 355): en el teléfono el riesgo va en la
+   * pantalla de su acción, como en la ventana, y la crítica pide «Confirmo que
+   * la leí» antes de «Listo». Lo guarda `AsistenteVista`, así que volver a una
+   * acción no lo pierde. Desde 768 no se usa: allí el riesgo tiene su pantalla.
+   */
+  criticasConfirmadas?: ReadonlySet<string>
+  onAlternarCritica?: (avisoId: string) => void
+  /**
+   * «Lo que sigue» de la ayuda del teléfono desde la última acción del paso
+   * (tarea 355): la instrucción con la que empieza el paso siguiente,
+   * «Comprobación final» o «Fin de la guía». Null si depende de una respuesta
+   * o no se sabe (lo de dentro de otra guía).
+   */
+  loQueSigueTrasElPaso?: string | null
   instruccionesHechas: ReadonlySet<string>
   // ¿La guía vinculada del paso ya está completa? La resuelve quien
   // llama con lectura en vivo; aquí decide si la primera tarea del
@@ -210,8 +257,10 @@ interface Props {
   // paso de trabajo ("Ir al paso N"). null fuera de la consulta.
   consulta?: { numeroPasoTrabajo: number; onVolver: () => void } | null
   // El técnico declara que algo va mal en esta tarea. Abre la MISMA
-  // hoja de salidas que el "Falla" de la vista completa (tablero 3d).
-  onFalla: (textoTarea: string) => void
+  // hoja de salidas que el "Falla" de la vista completa (tablero 3d). En el
+  // teléfono lleva además las guías de contingencia de la acción, que ahí se
+  // ofrecen en esa hoja y no en la pantalla (tarea 355).
+  onFalla: (textoTarea: string, contingencias?: BloquePaso[]) => void
   // El destino de un "No" terminó: la decisión queda respondida y el
   // avance del destino se reinicia para su próximo uso, aquí o en
   // cualquier otra guía que lo reutilice. Lo resuelve `AsistenteVista`,
@@ -312,6 +361,16 @@ function adjuntosDe(bloques: BloquePaso[]): PasoAdjunto[] {
   return bloques.flatMap((b) => (b.adjunto ? [b.adjunto] : []))
 }
 
+// «Para qué» de la primera acción de un paso en la ayuda del teléfono (tarea
+// 355): el del paso que reutiliza esta guía, si llega, y el del propio paso,
+// sin vacíos.
+function textosParaQue(...textos: (string | undefined)[]): string {
+  return textos
+    .map((texto) => (texto ?? '').trim())
+    .filter(Boolean)
+    .join('\n\n')
+}
+
 // Clases compartidas de los controles del pie. 62 px de alto: es lo que
 // se toca sin mirar, de pie frente al equipo. Inactivo NO es transparente:
 // el rótulo dice qué falta y tiene que leerse (fondo tenue y texto neutro).
@@ -407,7 +466,11 @@ export function ModoFoco({
   numeroPaso,
   totalPasos,
   cierraLaGuia,
-  rotuloAlCerrarElPaso = null,
+  destinoAlCerrarElPaso = null,
+  cabeceraTelefono = null,
+  criticasConfirmadas,
+  onAlternarCritica,
+  loQueSigueTrasElPaso = null,
   instruccionesHechas,
   subSatisfecho,
   guiaDelPasoDisponible = true,
@@ -439,6 +502,17 @@ export function ModoFoco({
   // Teléfono o desde 768 (el rótulo del botón principal, tarea 345). Aquí, antes
   // de cualquier salida temprana: es un hook.
   const ancho = useEsAncho()
+  // UNA ACCIÓN POR PANTALLA EN EL TELÉFONO (tarea 355, AD-098): por debajo de
+  // 768, la pantalla de la acción es la de «Equilibrada esencial» (más abajo,
+  // al final). La lógica del recorrido es la misma; cambian la presentación y
+  // dos cosas que la acompañan: el riesgo real va en la pantalla de su acción,
+  // antes de la instrucción (no en una pantalla previa), y lo que acompaña se
+  // abre a pedido en «Ayuda con este paso». Lo de dentro del paso entero de la
+  // ventana (`anidado`) sigue como estaba.
+  const enTelefono = !ancho && !anidado
+  // La línea «Paso 2 de 4 · acción 1 de 3» va bajo el título de la cabecera de
+  // la guía; sin esa ranura (otra cabecera), no se pinta en el cuerpo.
+  const haySubtituloEnCabecera = useHaySubtituloTarea()
 
   // Una entrada de guía ('guia-de-tarea', 'guia-de-respuesta') está
   // cumplida cuando su guía terminó en esta ejecución: el avance es por
@@ -486,10 +560,11 @@ export function ModoFoco({
     )
   }
 
-  // ¿La pantalla de esta entrada tiene una advertencia previa?
+  // ¿La pantalla de esta entrada tiene una advertencia previa? En el teléfono,
+  // nunca: el riesgo se lee en la pantalla de su acción (tarea 355).
   function llevaAdvertencia(i: number): boolean {
     const t = tareas[i]
-    return t !== undefined && !seHaceEnElSitio(t) && alertasDe(i).length > 0
+    return !enTelefono && t !== undefined && !seHaceEnElSitio(t) && alertasDe(i).length > 0
   }
 
   // LLEGAR A UNA ENTRADA (tarea 311). Una acción de riesgo PENDIENTE nunca
@@ -538,6 +613,11 @@ export function ModoFoco({
   // de tarea, al completar una y al volver de un vínculo, para que el
   // lector de pantalla anuncie lo que toca y la vista arranque arriba.
   const encabezado = useRef<HTMLHeadingElement>(null)
+  // EN EL TELÉFONO (tarea 355): la hoja «Ayuda con este paso», abierta o no, y
+  // el cuerpo de la acción, que es lo que observa «Más abajo» y donde se busca
+  // lo que falta cuando «Listo» no está disponible.
+  const [ayudaAbierta, setAyudaAbierta] = useState(false)
+  const cuerpoTelefono = useRef<HTMLDivElement>(null)
 
   const indice = Math.min(posicion.indice, tareas.length - 1)
   // ¿Se está leyendo la advertencia previa de esta entrada?
@@ -592,6 +672,8 @@ export function ModoFoco({
     tareaMostrada.current = indice
     if (vinculoAbierto !== null) setVinculoAbierto(null)
     if (decisionAbierta !== null) setDecisionAbierta(null)
+    // La ayuda es de la acción que se miraba: la siguiente llega sin ella.
+    if (ayudaAbierta) setAyudaAbierta(false)
   }
 
   // ARRIBA DEL TODO Y CON EL FOCO EN EL ENCABEZADO, cada vez que cambia
@@ -743,29 +825,23 @@ export function ModoFoco({
   // guía, que se nombra por SU título: lo que se lee es qué se hace, no de
   // dónde sale). Así no hay dos frases que compitan ni hace falta comparar
   // textos para adivinar si dicen lo mismo.
-  const textoInstruccion =
-    tarea.clase === 'guia-del-paso'
-      ? !guiaDelPasoDisponible
-        ? 'Las instrucciones de este paso no están en este dispositivo'
-        : paso.titulo.trim() || tarea.texto || tarea.guiaTitulo
-      : tarea.texto || 'Tarea sin texto'
+  const textoInstruccion = instruccionDeEntrada(paso, tarea, guiaDelPasoDisponible)
 
   // ¿Esta es la última acción pendiente de TODO el procedimiento? Solo
   // cambia el rótulo: "Completar y terminar" en vez de "Completar y
   // seguir".
   const quedaTrabajoEnElPaso = tareas.some((t) => t.id !== tarea.id && !cumplida(t))
   const esUltimoTrabajo = cierraLaGuia && !quedaTrabajoEnElPaso
-  // EN EL TELÉFONO, EL BOTÓN DICE A DÓNDE LLEVA (tarea 345, DESPUÉS de Claude
-  // Design): "Hecho, siguiente acción" dentro del paso y, en su última acción,
-  // "Hecho, ir al paso 3" o "Hecho, comprobar el resultado". Lo que hace no
-  // cambia: marca la acción y trae lo siguiente. Desde 768, el de siempre.
+  // Desde 768, «Completar y seguir» o «Completar y terminar». Lo de dentro del
+  // paso entero de la ventana del teléfono conserva «Hecho, siguiente acción»
+  // (tarea 345). La acción a la vez del teléfono dice «Listo · …» (tarea 355,
+  // `rotuloListo`, más abajo). Lo que hace no cambia: marca la acción y trae lo
+  // siguiente.
   const rotuloCompletar = esUltimoTrabajo
     ? 'Completar y terminar'
-    : ancho
-      ? 'Completar y seguir'
-      : quedaTrabajoEnElPaso
-        ? 'Hecho, siguiente acción'
-        : (rotuloAlCerrarElPaso ?? 'Completar y seguir')
+    : !ancho && quedaTrabajoEnElPaso
+      ? 'Hecho, siguiente acción'
+      : 'Completar y seguir'
 
   // Desde una acción con advertencia previa, "Anterior" vuelve a ella: la
   // navegación refleja exactamente lo que se acaba de leer (tarea 311).
@@ -893,12 +969,41 @@ export function ModoFoco({
     })
   }
 
+  // LAS GUÍAS DE CONTINGENCIA DE LA ACCIÓN, EN EL TELÉFONO (tarea 355): no van
+  // en la pantalla ni en la ayuda, sino con las demás salidas de «Tengo un
+  // problema». Desde 768 siguen siendo tarjetas de la acción.
+  const contingenciasDeLaAccion = enTelefono ? guiasDeApoyo.filter((g) => g.intencionGuia === 'contingencia') : []
+  function tengoUnProblema() {
+    onFalla(tarea.texto, contingenciasDeLaAccion)
+  }
+
+  // LA CABECERA DE LA ACCIÓN EN EL TELÉFONO (tarea 355): en la fila de la X,
+  // «Tengo un problema» y el índice; bajo el título, el paso y la acción («Paso
+  // 2 de 4 · acción 1 de 3»). Solo la guía que se abrió la pasa, y se pinta
+  // también mientras lo de esta acción ocupa la pantalla (una guía que se hace
+  // en el sitio, una consulta o el camino de un «No»): sigue siendo esta acción.
+  const cabecera =
+    enTelefono && cabeceraTelefono ? (
+      <>
+        <BandaTarea>
+          <BotonProblemaCabecera onAbrir={tengoUnProblema} />
+          {cabeceraTelefono.botonIndice}
+        </BandaTarea>
+        {haySubtituloEnCabecera && (
+          <LineaBajoElTitulo
+            partes={partesDeLaLinea(cabeceraTelefono.paso, { actual: indice, total: tareas.length }, cabeceraTelefono.equipo)}
+          />
+        )}
+      </>
+    ) : null
+
   // EL CAMINO DEL "NO" SIGUE EN EL FLUJO (tarea 289, fase 3): sus acciones
   // ocupan el sitio de la decisión sin cabecera ni regreso propios.
   // "Anterior" desde su primera acción deshace la respuesta.
   if (vinculoAbierto?.enFlujo) {
     return (
       <div className="flex flex-1 flex-col">
+        {cabecera}
         {renderGuia({
           guiaId: vinculoAbierto.guiaId,
           tituloReferencia: vinculoAbierto.titulo,
@@ -918,6 +1023,7 @@ export function ModoFoco({
   if (vinculoAbierto) {
     return (
       <div className="flex flex-1 flex-col">
+        {cabecera}
         <div className="flex flex-none flex-col gap-2 border-b border-noct-divider pb-3 pt-1">
           {vinculoAbierto.rotulo && (
             <p className="text-[12px] font-semibold uppercase tracking-[.06em] text-noct-neutral-400">
@@ -971,6 +1077,8 @@ export function ModoFoco({
     // Lo que esta entrada enseñaría con la primera acción del paso viaja a
     // la primera acción reutilizada: sus avisos, sus imágenes y su
     // credencial.
+    // En el teléfono viajan además sus notas y su «Para qué», que allí se leen
+    // en «Ayuda con este paso» (tarea 355).
     const apoyos: ApoyosDelFlujo | null = esPrimeraDelPaso
       ? {
           alertas: avisos.alertas,
@@ -979,10 +1087,13 @@ export function ModoFoco({
           archivos: archivosALaVista,
           referencias: propios.referencias,
           vinculoProtegido,
+          notas: [...(prestados?.notas ?? []), ...avisosPropios.notas],
+          paraQue: textosParaQue(prestados?.paraQue, paso.objetivo),
         }
       : null
     return (
       <div className="flex flex-1 flex-col">
+        {cabecera}
         {ruta && <div className="hidden md:block md:pt-2.5">{ruta}</div>}
         {renderGuia({
           guiaId: tarea.guiaId,
@@ -1129,6 +1240,383 @@ export function ModoFoco({
         icono="marca"
         onClick={completarYContinuar}
       />
+    )
+  }
+
+  // UNA ACCIÓN POR PANTALLA EN EL TELÉFONO (tarea 355, «Equilibrada esencial»
+  // de Claude Design, AD-098). De arriba abajo, solo lo necesario para hacer
+  // la acción, cada cosa en su condición (sección 5 de la especificación):
+  // dónde, el riesgo real, «Comprueba», la instrucción, «Cómo hacerlo», el dato
+  // técnico, el comando, la credencial, lo que una guía necesaria pide, «Debes
+  // ver» y «No se cumple» de una comprobación, las respuestas de una pregunta y
+  // el botón de la ayuda. Lo demás se abre a pedido en «Ayuda con este paso».
+  // El pie es el de la ventana: volver y la única acción rellena.
+  if (enTelefono) {
+    const confirmadas = criticasConfirmadas ?? new Set<string>()
+    const alertas = alertasDe(indice)
+    // La crítica pide su confirmación mientras la acción está por hacer; ya
+    // hecha, o en la consulta, se lee y no pide nada.
+    const pideConfirmar = !hecha && consulta === null && onAlternarCritica !== undefined
+    const criticaPendiente = pideConfirmar && alertas.some((a) => a.tono === 'importante' && !confirmadas.has(a.id))
+    const esComprobacion = tarea.tipoTarea === 'verificacion'
+    // La credencial de la acción; la del paso, solo con su primera acción.
+    const credencial =
+      tarea.clase === 'tarea' ? (propios.vinculoProtegido ?? (esPrimeraDelPaso ? paso.vinculoProtegido : null)) : vinculoProtegido
+    const credencialDelFlujo = credencialPrestada && !mismoVinculoProtegido(credencialPrestada, credencial) ? credencialPrestada : null
+    const conComoHacerlo = comoHacerQueSeEnsena(tarea.comoHacer).length >= 2
+
+    // LO QUE ACOMPAÑA, A PEDIDO (sección 6 de la especificación).
+    const imagenesAyuda: ImagenDeAyuda[] = [
+      ...imagenesALaVista.flatMap((b) => (b.adjunto ? [{ id: b.id, adjunto: b.adjunto, pie: b.texto.trim() }] : [])),
+      ...archivosALaVista.filter(esImagen).map((adjunto) => ({ id: adjunto.referencia, adjunto, pie: '' })),
+    ]
+    const queHace =
+      tarea.clase === 'tarea'
+        ? comandosEnTexto(
+            [tarea.texto, ...comoHacerQueSeEnsena(tarea.comoHacer).map(fraseDeMicroPaso)].join('\n'),
+            referenciasVivas.values(),
+          ).filter((referencia) => !fichasEnlazadasDelPaso(paso.bloques).has(referencia.id))
+        : []
+    const siguienteEntrada = tareas[indice + 1]
+    const secciones = seccionesDeAyuda({
+      requisitos: esPrimeraDelPaso ? requisitos : [],
+      resultadoVisual: esComprobacion ? null : tarea.resultadoVisual,
+      imagenes: imagenesAyuda,
+      terminos,
+      queHace,
+      paraQue: esPrimeraDelPaso ? textosParaQue(prestados?.paraQue, paso.objetivo) : '',
+      notas: [...(prestados?.notas ?? []), ...avisosPropios.notas],
+      archivos: archivosALaVista.filter((adjunto) => !esImagen(adjunto)),
+      guiasDeConsulta: guiasDeApoyo.filter((g) => g.intencionGuia === 'consulta'),
+      loQueSigue: siguienteEntrada
+        ? instruccionDeEntrada(paso, siguienteEntrada, guiaDelPasoDisponible)
+        : loQueSigueTrasElPaso,
+    })
+    const etiquetaAyuda = esPrimeraDelPaso ? etiquetaTenAMano(requisitos) : null
+
+    // EL PIE: la misma gramática que la ventana (`pieDeLaAccion`).
+    const destinoListo: DestinoListo = quedaTrabajoEnElPaso
+      ? 'siguiente'
+      : esUltimoTrabajo
+        ? 'fin'
+        : (destinoAlCerrarElPaso ?? 'siguiente')
+    const base: DatosPieDeLaAccion = {
+      numeroDelTrabajo: consulta?.numeroPasoTrabajo ?? null,
+      seguir: null,
+      guiaPendiente: null,
+      criticaPendiente,
+      preguntaPendiente: false,
+      destino: destinoListo,
+    }
+    // Seguir sin marcar nada hacia lo que diga el cierre del paso: ir al
+    // siguiente, cerrarlo o decir qué falta.
+    const segunElCierre = (ir: () => void): [PieDeLaVentana, () => void] => {
+      if (cierre.accion === 'navegar') {
+        return [pieDeLaAccion({ ...base, seguir: { etiqueta: cierre.etiqueta, etiquetaCompleta: cierre.etiquetaCompleta } }), ir]
+      }
+      if (cierre.accion === 'bloqueado') {
+        const motivo =
+          cierre.guiaPendiente !== null
+            ? motivoGuiasDeLaAccion([cierre.guiaPendiente])
+            : 'Termina lo que falta en este paso para poder seguir.'
+        return [{ accion: 'no-disponible', etiqueta: cierre.etiqueta, etiquetaCompleta: cierre.etiquetaCompleta, motivo }, ir]
+      }
+      return [pieDeLaAccion(base), ir]
+    }
+    const sinMarcar = (): [PieDeLaVentana, () => void] =>
+      destinoSinTocar !== null
+        ? [pieDeLaAccion({ ...base, seguir: { etiqueta: `Ir a la acción ${destinoSinTocar + 1}` } }), continuarSinMarcar]
+        : segunElCierre(continuarSinMarcar)
+    const entradaDeLaGuia = tareas.findIndex(
+      (e) => pendientes.length > 0 && e.clase === 'guia-de-tarea' && e.guiaId === pendientes[0].guiaArticuloId,
+    )
+    const [pie, alPrincipal]: [PieDeLaVentana, () => void] = consulta
+      ? [pieDeLaAccion(base), consulta.onVolver]
+      : cierraPaso
+        ? indice + 1 < tareas.length
+          ? [pieDeLaAccion({ ...base, seguir: { etiqueta: `Ir a la acción ${indice + 2}` } }), () => irA(indice + 1)]
+          : segunElCierre(onCompletarPaso)
+        : tarea.clase === 'guia-del-paso'
+          ? hecha || !guiaDelPasoDisponible
+            ? sinMarcar()
+            : [pieDeLaAccion({ ...base, guiaPendiente: motivoGuiasDeLaAccion([tarea.guiaTitulo || tarea.texto]) }), () => {}]
+          : hecha
+            ? sinMarcar()
+            : entradaDeLaGuia >= 0
+              ? [pieDeLaAccion({ ...base, seguir: { etiqueta: `Ir a la acción ${entradaDeLaGuia + 1}` } }), () => irA(entradaDeLaGuia)]
+              : pendientes.length > 0
+                ? [pieDeLaAccion({ ...base, guiaPendiente: motivoGuiasDeLaAccion(pendientes.map((g) => g.guiaArticuloTitulo)) }), () => {}]
+                : conOpciones
+                  ? [pieDeLaAccion({ ...base, preguntaPendiente: true }), () => {}]
+                  : [pieDeLaAccion(base), completarYContinuar]
+    // LA PREGUNTA SE RESPONDE EN EL PIE (regla 31 c): la de Sí/No y la de
+    // opciones con pocas respuestas. Responder es avanzar, en un solo toque.
+    // Con más respuestas, o ya respondida, se quedan en la pantalla.
+    const respuestasEnElPie =
+      consulta === null &&
+      !hecha &&
+      ((esDecision && !noAbierto) || (conOpciones && tarea.opciones.length <= MAXIMO_RESPUESTAS_EN_EL_PIE))
+    const motivoDeLasRespuestas =
+      motivoGuias !== null
+        ? motivoGuiasDeLaAccion(pendientes.map((g) => g.guiaArticuloTitulo))
+        : criticaPendiente
+          ? 'Primero confirma la advertencia de arriba.'
+          : null
+    const etiquetaVolver = consulta
+      ? consultaPuedeVolver
+        ? 'Ver la acción anterior de este paso. Solo mueve la vista'
+        : 'No hay acción anterior en este paso'
+      : puedeRetroceder
+        ? 'Anterior. Solo mueve la vista, no cambia lo marcado'
+        : 'No hay acción anterior: estás en la primera'
+    // Tocar lo que no está disponible lleva a lo que falta.
+    const irALoQueFalta = () => {
+      const raiz = cuerpoTelefono.current
+      const destino =
+        raiz?.querySelector('[data-aviso-ventana="critica"][data-confirmada="false"]') ??
+        raiz?.querySelector('[data-decision-ventana="pendiente"]') ??
+        raiz?.querySelector('[data-guia-necesaria]')
+      destino?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
+    return (
+      <div className="flex flex-1 flex-col">
+        {cabecera}
+        <div
+          ref={cuerpoTelefono}
+          data-accion-telefono
+          className="flex flex-col gap-[18px] pb-6 pt-6 max-[349px]:-mx-0.5 max-[349px]:pt-[18px]"
+        >
+          <LineaDonde lugar={paso.lugar ?? ''} />
+
+          {/* EL RIESGO REAL, ANTES DE LA INSTRUCCIÓN Y CON SU TEXTO COMPLETO
+              (reglas 27 g y 31 a): la precaución se lee y no pide nada; la
+              crítica pide «Confirmo que la leí» y, mientras no se confirme,
+              «Listo» no está disponible. Nunca se pliega. */}
+          {alertas.map((alerta) => (
+            <AvisoVentana
+              key={alerta.id}
+              nivel={alerta.tono === 'importante' ? 'critica' : 'precaucion'}
+              texto={alerta.texto}
+              confirmada={confirmadas.has(alerta.id)}
+              onConfirmar={pideConfirmar && alerta.tono === 'importante' ? () => onAlternarCritica?.(alerta.id) : undefined}
+            />
+          ))}
+
+          {/* LA INSTRUCCIÓN, LA PIEZA DOMINANTE (regla 27 a): su tamaño según
+              su largo y nunca recortada. Una acción hecha se dice sin palabras:
+              la marca y la instrucción atenuada. Debajo, pegado a ella,
+              «Cómo hacerlo» (regla 27 c). */}
+          <div className="flex flex-col gap-2.5">
+            {(esComprobacion || hecha) && (
+              <p className="flex items-center gap-2">
+                {esComprobacion && (
+                  <span className="flex items-center gap-1.5 text-[13px] font-extrabold uppercase leading-snug tracking-[.04em] text-noct-exito">
+                    <IconoVentana nombre="comprobacion" tam={17} grosor={2.4} className="shrink-0" />
+                    Comprueba
+                  </span>
+                )}
+                {hecha && (
+                  <span role="img" aria-label="Completada" className="inline-flex shrink-0 text-noct-exito">
+                    <IconoVentana nombre="hecho" tam={16} grosor={3} />
+                  </span>
+                )}
+              </p>
+            )}
+            <h2
+              ref={encabezado}
+              id={conOpciones ? idPregunta : undefined}
+              tabIndex={-1}
+              data-foco-lectura
+              data-instruccion-telefono
+              className={`${claseTamanoInstruccion(textoInstruccion)} min-w-0 font-semibold leading-[1.2] tracking-[-0.01em] text-pretty outline-none [overflow-wrap:anywhere] ${
+                hecha ? 'text-noct-neutral-400' : 'text-noct-text'
+              }`}
+            >
+              {textoInstruccion}
+            </h2>
+            {conComoHacerlo && (
+              <div data-parte-accion="cómo hacerlo">
+                <ComoHacerlo microPasos={tarea.comoHacer} className="mt-0.5" />
+              </div>
+            )}
+          </div>
+
+          {avisos.datos.map((aviso) => (
+            <div key={aviso.id} data-parte-accion="dato técnico">
+              <DatoTecnico texto={aviso.texto} />
+            </div>
+          ))}
+
+          {atajosYComandos.map((bloque) => (
+            <div key={bloque.id} data-parte-accion="comando">
+              <TarjetaComando referencia={referenciasVivas.get(bloque.referenciaId as string)} tituloRespaldo={bloque.referenciaTitulo} />
+            </div>
+          ))}
+
+          {/* LA CREDENCIAL, EN LÍNEA (regla 29): mostrar y desbloquear sin
+              salir de la acción. */}
+          {credencialDelFlujo && (
+            <div data-parte-accion="credencial">
+              <CredencialEnPaso vinculo={credencialDelFlujo} variante="bloque" />
+            </div>
+          )}
+          {credencial && (
+            <div data-parte-accion="credencial">
+              <CredencialEnPaso vinculo={credencial} variante="bloque" />
+            </div>
+          )}
+
+          {/* LO QUE SE HACE EN EL SITIO, PARA LEERLO (al consultarlo o ya
+              hecho), y LA GUÍA NECESARIA QUE AQUÍ NO SE PUEDE HACER: es lo que
+              falta para la acción, así que se queda en la pantalla. */}
+          {guiaParaLeer && <PasosEnLectura guiaId={guiaParaLeer} />}
+          {guiaDelPasoAparte.map((g) => (
+            <div key={g.id} data-guia-necesaria data-parte-accion="guía necesaria">
+              {renderTarjetaGuia({ guiaId: g.id, tituloReferencia: g.titulo, obligatoria: true, kicker: ROTULO_DEL_PASO })}
+            </div>
+          ))}
+          {guiasDeLaTarea.map((g) => (
+            <div key={g.clave} data-guia-necesaria data-parte-accion="guía necesaria">
+              {renderTarjetaGuia({
+                guiaId: g.id,
+                tituloReferencia: g.titulo,
+                obligatoria: true,
+                kicker: ROTULO_NECESARIO,
+                onAbrir: consulta
+                  ? undefined
+                  : () => setVinculoAbierto({ guiaId: g.id, titulo: g.titulo, obligatoria: true, rotulo: ROTULO_NECESARIO }),
+              })}
+            </div>
+          ))}
+
+          {/* DEBES VER Y NO SE CUMPLE, SOLO EN UNA COMPROBACIÓN (filas 13 y 14):
+              la imagen, plegada; y la salida si no se cumple, a la vista. En
+              una acción, «Debes ver» va a la ayuda como «Así sabes que
+              funcionó». */}
+          {esComprobacion && tarea.resultadoVisual && (
+            <div data-parte-accion="debes ver">
+              <DebesVer key={tarea.id} resultado={tarea.resultadoVisual} />
+            </div>
+          )}
+          {esComprobacion && consulta === null && (
+            <button
+              type="button"
+              onClick={tengoUnProblema}
+              aria-haspopup="dialog"
+              className="inline-flex min-h-11 w-fit cursor-pointer items-center rounded-xl border-[1.5px] border-noct-error-linea px-3.5 text-[15px] font-bold text-noct-error outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-noct-accent active:bg-noct-error-tinte"
+            >
+              No se cumple
+            </button>
+          )}
+
+          {/* LAS RESPUESTAS QUE NO VAN EN EL PIE: más de tres, o ya dadas (se
+              cambian tocando otra). */}
+          {conOpciones && !respuestasEnElPie && (
+            <div data-decision-ventana={hecha ? 'respondida' : 'pendiente'} className="flex flex-col gap-2.5">
+              <RespuestasDecision
+                variante="foco"
+                opciones={tarea.opciones}
+                elegida={respuestaElegida}
+                inactivas={consulta !== null || respondiendo !== null || motivoDeLasRespuestas !== null}
+                onElegir={elegirOpcion}
+                idPregunta={idPregunta}
+              />
+              {hecha && avanceTrasLaDecision && !consulta && (
+                <p className="text-[14px] leading-snug text-pretty text-noct-neutral-300">
+                  Si eliges otra respuesta, se reinicia lo que hiciste después de esta pregunta.
+                </p>
+              )}
+            </div>
+          )}
+
+          {secciones.length > 0 && (
+            <div data-parte-accion="ayuda con este paso">
+              <BotonAyudaPaso etiqueta={etiquetaAyuda} onAbrir={() => setAyudaAbierta(true)} />
+            </div>
+          )}
+        </div>
+
+        {!pieCedidoAlVinculo && (
+          <PieVentana
+            indicador={
+              <MasAbajoDeLaVentana
+                contenedor={cuerpoTelefono}
+                clave={`${tarea.id}|${hecha}|${criticaPendiente}|${secciones.length}`}
+              />
+            }
+          >
+            <div ref={huecoAvisoActualizacion} className="mb-2 empty:hidden" />
+            {!consulta && renderEnvioAEquipo && (
+              <div className="mb-2 empty:hidden">{renderEnvioAEquipo(tarea.clase === 'tarea' ? tarea.id : null)}</div>
+            )}
+            {respuestasEnElPie ? (
+              <RespuestasDelPie
+                idEtiqueta={conOpciones ? idPregunta : undefined}
+                respuestas={
+                  conOpciones
+                    ? tarea.opciones.map((opcion) => ({ id: opcion.id, titulo: opcion.titulo, descripcion: opcion.descripcion }))
+                    : [
+                        { id: 'si', titulo: 'Sí', descripcion: '' },
+                        {
+                          id: 'no',
+                          titulo: 'No',
+                          descripcion: destinoDelNo ? `Sigues con «${tarea.decisionGuiaTitulo || 'la salida'}»` : '',
+                        },
+                      ]
+                }
+                elegida={conOpciones ? respuestaElegida : null}
+                motivoBloqueo={motivoDeLasRespuestas}
+                onElegir={(respuesta) => {
+                  if (conOpciones) elegirOpcion(respuesta)
+                  else if (respuesta === 'si') responderSi()
+                  else responderNo()
+                }}
+                etiquetaVolver={etiquetaVolver}
+                puedeVolver={puedeRetroceder}
+                onVolver={retroceder}
+              />
+            ) : (
+              <BotonesDelPie
+                etiquetaVolver={etiquetaVolver}
+                puedeVolver={consulta ? consultaPuedeVolver : puedeRetroceder}
+                onVolver={consulta ? consultaAnterior : retroceder}
+                accion={pie.accion}
+                etiqueta={pie.etiqueta}
+                etiquetaCompleta={pie.etiquetaCompleta}
+                motivo={pie.motivo}
+                onPrincipal={alPrincipal}
+                onNoDisponible={irALoQueFalta}
+              />
+            )}
+            {/* En la consulta, el paso consultado se recorre entero sin marcar
+                nada: volver es la acción anterior y esto, la siguiente. */}
+            {consulta && consultaPuedeSeguir && (
+              <button
+                type="button"
+                onClick={consultaSiguiente}
+                className="mx-auto mt-1.5 flex min-h-11 cursor-pointer items-center gap-1 rounded-xl px-3 text-[14px] font-bold text-noct-neutral-300 active:bg-noct-presionado"
+              >
+                Ver la acción siguiente
+                <IconoVentana nombre="adelante" tam={15} grosor={2.6} className="shrink-0" />
+              </button>
+            )}
+          </PieVentana>
+        )}
+
+        <HojaAyudaPaso
+          abierta={ayudaAbierta}
+          onCerrar={() => setAyudaAbierta(false)}
+          instruccion={textoInstruccion}
+          secciones={secciones}
+          referencias={referenciasVivas}
+          tituloPaso={paso.titulo || tituloPaso}
+          onTengoUnProblema={() => {
+            setAyudaAbierta(false)
+            tengoUnProblema()
+          }}
+        />
+      </div>
     )
   }
 

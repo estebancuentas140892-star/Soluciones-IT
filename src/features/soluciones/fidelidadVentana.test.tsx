@@ -24,7 +24,8 @@ import { GuiaPage } from './GuiaPage'
 //
 //   - sin pantallas previas (propuesta B, aprobada el 2026-10-23): la guía se
 //     abre en la ventana 1 con «Antes de empezar» encima, y la orientación
-//     se lee en «Detalles»; la acción a la vez conserva sus dos pantallas;
+//     se lee en «Detalles»; desde la tarea 355 la acción a la vez del
+//     teléfono tampoco las tiene (la tableta y el escritorio, sí);
 //   - la línea bajo el título («Ventana 1 de 2», «Antes de empezar») va DENTRO
 //     de la fila de la cabecera, junto al título, no en una fila aparte;
 //   - con caminos de distinto largo, cuántas ventanas como poco y como mucho;
@@ -75,7 +76,7 @@ async function sembrarGuiaDos(): Promise<void> {
 describe('sin pantallas previas en la ventana del teléfono (propuesta B, tarea 351)', () => {
   it('abrir la guía es estar en la ventana 1, con «Antes de empezar» encima y sin orientación', async () => {
     await sembrarGuiaDos()
-    await montar(RUTAS, '/soluciones/cat-pruebas/guia-dos', { ventanaPorDefecto: true })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-dos', { modo: 'ventana' })
 
     await esperar(() => (textoPantalla().includes('Abrir el programa de prueba') ? true : null), 'la ventana 1')
     expect(lineaEnElTitulo()).toBe('Ventana 1 de 2')
@@ -99,12 +100,27 @@ describe('sin pantallas previas en la ventana del teléfono (propuesta B, tarea 
     expect(document.body.querySelector('[data-antes-de-empezar]')).toBeNull()
   })
 
-  it('la acción a la vez del teléfono conserva sus dos pantallas', async () => {
+  // Desde la tarea 355 la acción a la vez del teléfono tampoco tiene pantallas
+  // previas (regla 31 g): abre en la primera acción y sus requisitos, sin
+  // repetidos, se leen en «Ayuda con este paso». La tableta y el escritorio
+  // conservan las dos pantallas.
+  it('la acción a la vez del teléfono tampoco tiene pantallas previas (tarea 355)', async () => {
     await sembrarGuiaDos()
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-dos')
 
+    await esperar(() => (textoPantalla().includes('Abrir el programa de prueba') ? true : null), 'la primera acción')
+    expect(textoPantalla()).not.toContain('Qué vas a hacer')
+    expect(control('Ver lo que necesitas')).toBeNull()
+    expect(document.body.querySelector('[data-antes-de-empezar]')).toBeNull()
+    expect(document.body.querySelector('[data-ten-a-mano]')?.textContent).toBe('Ten a mano 1 cosa')
+  })
+
+  it('en tableta y escritorio, la acción a la vez conserva sus dos pantallas', async () => {
+    await sembrarGuiaDos()
+    ponerAncho('tableta')
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-dos')
+
     await esperar(() => (textoPantalla().includes('Qué vas a hacer') ? true : null), 'la orientación')
-    expect(lineaEnElTitulo()).toBe('Antes de empezar')
     await tocar(await esperarControl('Ver lo que necesitas'))
     expect(textoPantalla()).toContain('Ten esto listo antes de la primera acción.')
   })
@@ -141,7 +157,7 @@ describe('la cabecera de la guía en el teléfono (tarea 351)', () => {
         pasoPrueba('c-p3', 'Paso común de prueba', ['Hacer lo común']),
       ],
     })
-    await montar(RUTAS, '/soluciones/cat-pruebas/guia-caminos', { ventanaPorDefecto: true })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-caminos', { modo: 'ventana' })
 
     await esperar(() => (textoPantalla().includes('Mirar el equipo de prueba') ? true : null), 'la ventana 1')
     // Corto: 1 y 3; largo: 1, 2 y 3.
@@ -155,7 +171,7 @@ describe('la cabecera de la guía en el teléfono (tarea 351)', () => {
       pasos: [pasoPrueba('f-p1', 'Única ventana de prueba', ['Hacer lo único'])],
       procedimiento: { verificacionFinal: ['El equipo de prueba quedó bien'] },
     })
-    await montar(RUTAS, '/soluciones/cat-pruebas/guia-cierre', { ventanaPorDefecto: true })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-cierre', { modo: 'ventana' })
 
     await tocar(await esperarControl(/^Listo/))
     await esperar(() => (textoPantalla().includes('¿El problema quedó resuelto?') ? true : null), 'el cierre')
@@ -175,7 +191,7 @@ describe('la cabecera de la guía en el teléfono (tarea 351)', () => {
       titulo: 'Guía de tableta de prueba',
       pasos: [pasoPrueba('t-p1', 'Ventana de tableta', ['Hacer lo de tableta']), pasoPrueba('t-p2', 'Otra de tableta', ['Hacer lo otro'])],
     })
-    await montar(RUTAS, '/soluciones/cat-pruebas/guia-tableta', { ventanaPorDefecto: true })
+    await montar(RUTAS, '/soluciones/cat-pruebas/guia-tableta', { modo: 'ventana' })
     await esperar(() => (textoPantalla().includes('Hacer lo de tableta') ? true : null), 'el paso 1')
     expect(lineaEnElTitulo()).toBeNull()
   })

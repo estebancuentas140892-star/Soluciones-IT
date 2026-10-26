@@ -211,7 +211,13 @@ async function lineaHastaLaComprobacion(): Promise<void> {
   await enLaComprobacion()
 }
 
+// DESDE LA TAREA 355, TABLETA Y ESCRITORIO: en el teléfono la acción a la vez
+// es la de «Equilibrada esencial» (el riesgo en la pantalla de su acción, sin
+// pantallas previas y lo que acompaña en «Ayuda con este paso»), y la prueba
+// accionTelefono.test.tsx. Estas pruebas describen la pantalla de tableta y
+// escritorio, que no cambia, así que miran una tableta.
 beforeEach(async () => {
+  ponerAncho('tableta')
   await limpiarBase()
   await sembrarPerfil(false)
 })
@@ -358,7 +364,7 @@ describe('solo "Terminar" termina la ejecución', () => {
     expect(await fila('guia-lineal')).toEqual(antes)
 
     await tocar(await esperar(() => principal('Terminar'), '"Terminar"'))
-    await esperar(() => textoPantalla().includes('Guía completada'), 'la guía terminada')
+    await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía terminada')
     await esperarQue(async () => (await fila('guia-lineal'))?.cierrePendiente === false, 'la comprobación cerrada')
     expect(await terminada('guia-lineal')).toBe(true)
   })

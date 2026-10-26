@@ -30,13 +30,17 @@ export const ID_PREFERENCIAS_TECNICO = 'tecnico'
 // vez de pedirle una decision de pie frente a un rack.
 export const MODO_EJECUCION_POR_DEFECTO: ModoEjecucion = 'foco'
 
-// EN EL TELEFONO, LA VENTANA (tarea 348, rediseño movil por ventanas). Quien
-// no ha elegido nada y trabaja desde el telefono recibe el paso entero con
-// un solo "Listo" por ventana: en el prototipo aprobado las mismas guias se
-// resolvian con 35 toques en vez de 77. Es solo el DEFECTO: la eleccion del
-// tecnico, una vez guardada, manda siempre (una fila con 'foco' o con
-// 'pasoEntero' no se toca).
-export const MODO_EJECUCION_POR_DEFECTO_MOVIL: ModoEjecucion = 'ventana'
+// EN EL TELEFONO, UNA ACCION POR PANTALLA (tarea 355, «Equilibrada esencial»
+// de Claude Design, elegida por el usuario el 2026-10-26; AD-098). Quien no
+// ha elegido nada y trabaja desde el telefono ejecuta una accion a la vez, y
+// la pantalla enseña solo lo necesario para hacerla: lo que acompaña se abre
+// a pedido en «Ayuda con este paso». Cuesta un toque por accion (la ventana
+// de la tarea 348 cerraba el paso entero con un solo "Listo": 35 toques en
+// vez de 77 en su prototipo); a cambio, menos lectura por pantalla. La
+// ventana sigue como opcion en el indice ("Ver el paso entero"). Es solo el
+// DEFECTO: la eleccion del tecnico, una vez guardada, manda siempre (una
+// fila con 'ventana', 'foco' o 'pasoEntero' no se toca).
+export const MODO_EJECUCION_POR_DEFECTO_MOVIL: ModoEjecucion = 'foco'
 
 /** El modo con el que arranca quien no ha elegido ninguno, segun el ancho. */
 export function modoPorDefecto(esAncho: boolean): ModoEjecucion {

@@ -13,7 +13,7 @@ import {
 import { AuthContext, type AuthContextValue } from '../features/autenticacion/authContext'
 import { bloquear, cifrarCredencial, desbloquear, TEXTO_VERIFICADOR } from '../features/boveda/sesionBoveda'
 import { cifrarTexto, derivarClave, nuevaSal } from '../lib/crypto'
-import { guardarModoEjecucion, ID_PREFERENCIAS_TECNICO } from '../lib/preferenciasEjecucion'
+import { guardarModoEjecucion, ID_PREFERENCIAS_TECNICO, type ModoEjecucion } from '../lib/preferenciasEjecucion'
 import {
   db,
   ID_VERIFICADOR,
@@ -112,8 +112,14 @@ export interface Montaje {
 }
 
 export interface OpcionesMontaje {
-  /** No sembrar el modo: la guia abre como abre en un telefono real (en ventana). */
-  ventanaPorDefecto?: boolean
+  /**
+   * El modo de ejecucion con que abren las guias. Sin el, 'foco' (una accion
+   * a la vez) salvo que la prueba ya haya guardado uno. 'defecto' no guarda
+   * nada: la guia abre como en un dispositivo donde nadie eligio (desde la
+   * tarea 355, una accion a la vez tambien en el telefono). 'ventana' es la
+   * ventana por paso del telefono, que queda como opcion del indice.
+   */
+  modo?: ModoEjecucion | 'defecto'
 }
 
 const raices = new Set<Root>()
@@ -127,13 +133,13 @@ export async function montar(
   entrada: string | { pathname: string; state?: unknown },
   opciones: OpcionesMontaje = {},
 ): Promise<Montaje> {
-  // EL MODO DE EJECUCION DE LAS PRUEBAS (tarea 348). En el telefono, y las
-  // pruebas viven a 375 px, quien no ha elegido nada abre cada guia en
-  // ventana. Los recorridos escritos antes de esa tarea describen la
-  // ejecucion de una accion a la vez, que sigue siendo la del escritorio y la
-  // de quien la elige, asi que se siembra 'foco' salvo que la prueba ya haya
-  // guardado un modo o pida el defecto real con `ventanaPorDefecto`.
-  if (!opciones.ventanaPorDefecto && !(await db.preferenciasTecnico.get(ID_PREFERENCIAS_TECNICO))) {
+  // EL MODO DE EJECUCION DE LAS PRUEBAS (tareas 348 y 355). Se siembra 'foco'
+  // (una accion a la vez, el defecto del telefono desde la tarea 355 y el de
+  // tableta y escritorio) salvo que la prueba ya haya guardado un modo, pida
+  // otro con `modo` o pida el defecto real con `modo: 'defecto'`.
+  if (opciones.modo && opciones.modo !== 'defecto') {
+    await guardarModoEjecucion(opciones.modo)
+  } else if (!opciones.modo && !(await db.preferenciasTecnico.get(ID_PREFERENCIAS_TECNICO))) {
     await guardarModoEjecucion('foco')
   }
   const contenedor = document.createElement('div')
@@ -225,12 +231,13 @@ export async function esperarQue(condicion: () => Promise<boolean>, que: string,
 
 /**
  * El botón que completa la acción en curso. Desde 768 dice "Completar y
- * seguir"; en el teléfono dice a dónde lleva (tarea 345, DESPUÉS de Claude
- * Design): "Hecho, siguiente acción" dentro del paso y, en su última acción,
- * "Hecho, ir al paso 3" o "Hecho, comprobar el resultado". Hace lo mismo.
+ * seguir"; en la acción a la vez del teléfono (tarea 355), "Listo · Siguiente"
+ * o, en la última acción antes de la comprobación final, "Listo · Comprobar el
+ * resultado"; dentro del paso entero de la ventana, "Hecho, siguiente acción"
+ * (tarea 345). Hace lo mismo.
  */
 export const COMPLETAR_Y_SEGUIR =
-  /^(Completar y seguir|Hecho, siguiente acción|Hecho, ir al paso \d+|Hecho, comprobar el resultado)$/
+  /^(Completar y seguir|Listo · Siguiente|Listo · Comprobar el resultado|Hecho, siguiente acción)$/
 
 /** Nombre accesible simple: el aria-label o, si no hay, el texto visible. */
 function nombreDe(elemento: Element): string {
@@ -261,12 +268,20 @@ export async function tocar(elemento: HTMLElement): Promise<void> {
 }
 
 /**
- * Abre la hoja de la credencial de una acción (tarea 328): en la ejecución,
- * la credencial es una fila "Ver la credencial: X" que abre el bloque
- * protegido en una hoja. Sin nombre, la primera que haya.
+ * Abre la hoja de la credencial de una acción (tarea 328): en la ejecución de
+ * tableta y escritorio, la credencial es una fila "Ver la credencial: X" que
+ * abre el bloque protegido en una hoja. En la acción a la vez del teléfono
+ * (tarea 355) el bloque va en línea, en la pantalla de la acción, y no hay
+ * nada que abrir: basta con que esté. Sin nombre, la primera que haya.
  */
 export async function abrirCredencial(nombre?: string): Promise<void> {
-  await tocar(await esperarControl(nombre === undefined ? /^Ver la credencial: / : `Ver la credencial: ${nombre}`))
+  const fila = nombre === undefined ? /^Ver la credencial: / : `Ver la credencial: ${nombre}`
+  const enLinea = nombre === undefined ? /^Dato protegido: / : `Dato protegido: ${nombre}`
+  const encontrada = await esperar(
+    () => control(fila) ?? control(enLinea),
+    `la credencial ${nombre ?? ''} en una fila o en línea`,
+  )
+  if (control(fila) === encontrada) await tocar(encontrada)
 }
 
 /** Escribe en un campo como lo haría el teclado (React escucha `input`). */

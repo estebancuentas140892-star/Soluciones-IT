@@ -1665,7 +1665,8 @@ export function AdjuntosPaso({ adjuntos, titulo }: { adjuntos: PasoAdjunto[]; ti
   )
 }
 
-function AdjuntoPaso({
+// Exportado: lo reutiliza la hoja «Ayuda con este paso» del teléfono (tarea 355).
+export function AdjuntoPaso({
   adjunto,
   titulo,
   pie = null,
@@ -1718,7 +1719,9 @@ function AdjuntoPaso({
 // dice para qué sirve el vínculo (necesaria, consulta o contingencia),
 // que es la distinción que pide la sección 5 del encargo: una consulta
 // opcional no puede leerse como un requisito.
-function GuiaVinculadaEnBloque({
+// Exportado: las guías de consulta de la ayuda del teléfono y las de
+// contingencia de `HojaFalla` se ofrecen así (tarea 355).
+export function GuiaVinculadaEnBloque({
   articuloId,
   tituloReferencia,
   intencion,

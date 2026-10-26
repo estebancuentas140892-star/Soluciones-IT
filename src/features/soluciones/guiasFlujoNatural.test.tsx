@@ -289,7 +289,13 @@ async function empezarGuia(): Promise<void> {
   if (siguiente) await tocar(siguiente)
 }
 
+// ORIENTAR, PREPARAR Y EL FLUJO CON SUS TARJETAS SON DE TABLETA Y ESCRITORIO
+// DESDE LA TAREA 355: en el teléfono la guía abre en su primera acción (sin
+// pantallas previas, regla 31 g) y lo que acompaña se lee en «Ayuda con este
+// paso». La lógica del flujo es la misma; lo que el teléfono hace distinto lo
+// prueba accionTelefono.test.tsx. Estas pruebas miran una tableta.
 beforeEach(async () => {
+  ponerAncho('tableta')
   await limpiarBase()
   await sembrarPerfil(false)
 })
@@ -709,8 +715,9 @@ describe('un solo flujo: varias guías seguidas (el computador nuevo, fase 3)', 
     sinArquitectura()
     // Con esto termina de verdad la guía que se abrió.
     await tocar(await esperarControl('Completar y terminar'))
-    await esperar(() => textoPantalla().includes('Guía completada'), 'la guía terminada')
-    await esperar(() => document.activeElement?.textContent === 'Guía completada', 'el foco en el cierre')
+    // Desde 768, «Guía terminada» (el cierre del teléfono es «Guía completada»).
+    await esperar(() => textoPantalla().includes('Guía terminada'), 'la guía terminada')
+    await esperar(() => document.activeElement?.textContent === 'Guía terminada', 'el foco en el cierre')
 
     // Por el camino no apareció ningún requisito de dentro ni su numeración.
     for (const texto of vistos) {

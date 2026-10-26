@@ -261,7 +261,8 @@ describe('con una guía en curso, el aviso no tapa sus controles', () => {
     )
   }
 
-  it('una tarea a la vez: va dentro de la barra, antes de sus botones, y no flota', async () => {
+  it('una tarea a la vez (tableta y escritorio): va dentro de la barra, antes de sus botones, y no flota', async () => {
+    ponerAncho('tableta')
     await montar(RUTAS_GUIA, RUTA_GUIA)
     await montarAviso()
 
@@ -271,6 +272,23 @@ describe('con una guía en curso, el aviso no tapa sus controles', () => {
     expect(aviso.closest('.fixed')).toBeNull()
     for (const nombre of [ANTERIOR_FOCO, COMPLETAR_Y_SEGUIR, /^Tengo un problema con esta acción/]) {
       const boton = botonDeLaBarra(barra, nombre)
+      expect(boton, String(nombre)).not.toBeNull()
+      expect(vaAntesQue(aviso, boton!)).toBe(true)
+    }
+  })
+
+  // Tarea 355: la acción a la vez del teléfono lleva el pie de la ventana;
+  // «Tengo un problema» subió a la cabecera.
+  it('una acción a la vez del teléfono: dentro del pie fijo, antes de volver y de Listo', async () => {
+    await montar(RUTAS_GUIA, RUTA_GUIA)
+    await montarAviso()
+
+    const pie = await esperar(() => document.querySelector<HTMLElement>('[data-pie-ventana]'), 'el pie de la acción')
+    const aviso = await esperar(textoAviso, 'el aviso')
+    expect(pie.contains(aviso)).toBe(true)
+    expect(aviso.closest('.fixed')).toBeNull()
+    for (const nombre of [/^No hay acción anterior|^Anterior\. Solo mueve la vista/, COMPLETAR_Y_SEGUIR]) {
+      const boton = botonDeLaBarra(pie, nombre)
       expect(boton, String(nombre)).not.toBeNull()
       expect(vaAntesQue(aviso, boton!)).toBe(true)
     }
@@ -326,6 +344,7 @@ describe('con una guía en curso, el aviso no tapa sus controles', () => {
   })
 
   it('sin aviso, el hueco no pinta nada y la barra queda como siempre', async () => {
+    ponerAncho('tableta')
     await montar(RUTAS_GUIA, RUTA_GUIA)
 
     const barra = await esperar(() => barraDeLaGuia(ANTERIOR_FOCO), 'la barra de la guía')
@@ -438,10 +457,7 @@ describe('fuera de una guía, el aviso va en la franja del chasis', () => {
     // La guía se monta ANTES que la franja: gana por rango, no por llegar
     // la última.
     await montar([{ ruta: '/soluciones/:categoriaId/:articuloId', elemento: <GuiaPage /> }], '/soluciones/cat-pruebas/guia-franja')
-    const barraGuia = await esperar(
-      () => control(/^Anterior\. Solo mueve la vista/)?.closest<HTMLElement>('.sticky'),
-      'la barra de la guía',
-    )
+    const barraGuia = await esperar(() => document.querySelector<HTMLElement>('[data-pie-ventana]'), 'la barra de la guía')
     await montar([{ ruta: '/prueba', elemento: <PantallaNormal /> }], '/prueba')
     await esperar(franja, 'la franja del chasis')
     await montarAviso()

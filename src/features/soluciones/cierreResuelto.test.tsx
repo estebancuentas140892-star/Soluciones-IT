@@ -57,7 +57,7 @@ function casillas(): HTMLElement[] {
 }
 
 async function alCierre(): Promise<void> {
-  await montar(RUTAS, '/soluciones/cat-pruebas/guia-cierre', { ventanaPorDefecto: true })
+  await montar(RUTAS, '/soluciones/cat-pruebas/guia-cierre', { modo: 'ventana' })
   await esperar(() => document.body.querySelector('[data-accion-pie]'), 'la ventana 1')
   await tocar(document.body.querySelector<HTMLElement>('[data-accion-pie]') as HTMLElement)
   await esperar(() => (textoPantalla().includes('¿El problema quedó resuelto?') ? true : null), 'el cierre')

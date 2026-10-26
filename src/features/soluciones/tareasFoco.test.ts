@@ -153,7 +153,7 @@ describe('los avisos acompañan a su acción, sin detener el recorrido', () => {
     expect(primero.texto).toBe('Corta la energia antes de abrir')
   })
 
-  it('el tono decide el trato: riesgo como alerta y dato a la vista; informacion y consejo heredados no van a ningun sitio', () => {
+  it('el tono decide el trato: riesgo como alerta, dato a la vista e informacion y consejo como notas (las de la ayuda del telefono)', () => {
     const variado = paso({
       bloques: [
         bloque({ id: 't1', tipo: 'tarea', texto: 'Guardar la configuracion' }),
@@ -168,9 +168,14 @@ describe('los avisos acompañan a su acción, sin detener el recorrido', () => {
     const avisos = avisosDeTareaFoco(variado, recorrido, 0)
     expect(avisos.alertas.map((a) => a.id)).toEqual(['imp', 'pre'])
     expect(avisos.datos.map((a) => a.id)).toEqual(['dat'])
-    // La ejecucion minima (tarea 307) no tiene "Mas informacion": ni se
-    // pliegan ni se reparten a otro grupo.
-    expect(Object.keys(avisos).sort()).toEqual(['alertas', 'datos'])
+    // La ejecucion minima (tarea 307) no tiene "Mas informacion": no se
+    // pliegan en la accion. Desde la tarea 355 se apartan como notas, en el
+    // orden del autor, para «Ayuda con este paso» del telefono.
+    expect(Object.keys(avisos).sort()).toEqual(['alertas', 'datos', 'notas'])
+    expect(avisos.notas).toEqual([
+      { id: 'inf', tono: 'info', texto: 'Por que se hace esto' },
+      { id: 'con', tono: 'consejo', texto: 'Truco del equipo' },
+    ])
   })
 
   it('dos avisos con el MISMO texto siguen siendo dos, cada uno con su tarea', () => {

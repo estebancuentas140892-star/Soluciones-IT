@@ -256,7 +256,7 @@ describe('ejemplo C: las respuestas cambian el camino', () => {
 
     await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('Agregar la impresora compartida de prueba'), 'la segunda acción')
-    await tocar(await esperar(() => principal('Completar y terminar'), 'Completar y terminar'))
+    await tocar(await esperar(() => principal('Listo · Terminar guía'), 'Listo · Terminar guía'))
 
     // Regreso automático al punto exacto del recorrido.
     await esperar(() => textoPantalla().includes('¿Ahora imprime una página de prueba?'), 'la pregunta siguiente')
@@ -328,20 +328,23 @@ describe('la comprobación final del procedimiento del recorrido (tarea 308)', (
     await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('Agregar la impresora compartida de prueba'), 'la segunda acción')
     // Con comprobaciones, la última acción lleva a ellas: no promete terminar.
-    expect(principal('Completar y terminar')).toBeNull()
-    await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
-    await esperar(() => textoPantalla().includes('¿Quedó resuelto?'), 'la comprobación final')
+    // En el teléfono (tarea 355), «Listo · Comprobar el resultado», y el
+    // cierre es el del teléfono: «¿El problema quedó resuelto?».
+    expect(principal('Listo · Terminar guía')).toBeNull()
+    await tocar(await esperar(() => principal('Listo · Comprobar el resultado'), 'Listo · Comprobar el resultado'))
+    await esperar(() => textoPantalla().includes('¿El problema quedó resuelto?'), 'la comprobación final')
     expect(textoPantalla()).not.toContain('¿Ahora imprime una página de prueba?')
 
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('Agregar la impresora compartida de prueba'), 'de vuelta en la última acción')
     expect(ubicacionActual().pathname).toBe('/diagnostico/rec-impresora')
     await tocar(await esperarControl('Seguir'))
-    await esperar(() => textoPantalla().includes('¿Quedó resuelto?'), 'otra vez la comprobación')
+    await esperar(() => textoPantalla().includes('¿El problema quedó resuelto?'), 'otra vez la comprobación')
 
     await tocar(await esperar(() => document.body.querySelector<HTMLElement>('[role="checkbox"]'), 'la casilla'))
-    const finalizar = await esperar(() => principal('Terminar'), '"Terminar"')
-    // Todo marcado y el recorrido todavía espera: lo que cierra es "Terminar".
+    const finalizar = await esperar(() => principal('Sí, quedó resuelto'), '"Sí, quedó resuelto"')
+    // Todo marcado y el recorrido todavía espera: lo que cierra es «Sí, quedó
+    // resuelto» (regla 31 h).
     expect(textoPantalla()).not.toContain('¿Ahora imprime una página de prueba?')
     await tocar(finalizar)
     await esperar(() => textoPantalla().includes('¿Ahora imprime una página de prueba?'), 'la pregunta siguiente')
@@ -350,7 +353,9 @@ describe('la comprobación final del procedimiento del recorrido (tarea 308)', (
 })
 
 describe('antes del procedimiento del recorrido (tarea 289)', () => {
-  it('sus requisitos salen juntos antes de la primera acción, sin orientación: las respuestas ya eligieron la guía', async () => {
+  // En el teléfono (tarea 355) no hay pantallas previas: sus requisitos se leen
+  // en «Ayuda con este paso» de la primera acción, y el botón lo avisa.
+  it('sus requisitos, sin orientación, en la ayuda de la primera acción: las respuestas ya eligieron la guía', async () => {
     await sembrarImpresora()
     const guia = await db.articulos.get('guia-conectar')
     await db.articulos.put({
@@ -364,14 +369,15 @@ describe('antes del procedimiento del recorrido (tarea 289)', () => {
     await montar(RUTAS, '/diagnostico/rec-impresora')
 
     await tocar(await esperar(() => respuesta('No'), 'la respuesta No'))
-    await esperar(() => textoPantalla().includes('Antes de empezar'), 'los requisitos del procedimiento')
-    expect(textoPantalla()).toContain('Nombre de la impresora compartida de prueba.')
-    expect(textoPantalla()).not.toContain('Cuándo usarla')
-    expect(textoPantalla()).not.toContain('Abrir Impresoras y escáneres')
-
-    await tocar(await esperarControl('Todo listo, empezar'))
     await esperar(() => textoPantalla().includes('Abrir Impresoras y escáneres'), 'la primera acción')
+    expect(document.body.querySelector('[data-ten-a-mano]')?.textContent).toBe('Ten a mano 1 cosa')
     expect(textoPantalla()).not.toContain('Nombre de la impresora compartida de prueba.')
+    expect(textoPantalla()).not.toContain('Cuándo usarla')
+
+    await tocar(await esperar(() => document.body.querySelector<HTMLElement>('[data-ayuda-paso]'), 'la ayuda'))
+    const ayuda = await esperar(() => document.body.querySelector<HTMLElement>('[data-hoja-ayuda]'), 'la hoja de ayuda')
+    expect(ayuda.textContent).toContain('Antes de empezar, ten a mano')
+    expect(ayuda.textContent).toContain('Nombre de la impresora compartida de prueba.')
   })
 })
 
@@ -491,7 +497,7 @@ describe('ejemplo D: distinguir la causa lleva al procedimiento que corresponde'
     await tocar(await esperar(() => respuesta('Contraseña vencida'), 'la causa'))
     await esperar(() => textoPantalla().includes('Asignar una clave temporal de prueba'), 'el procedimiento de la clave')
     expect(textoPantalla()).not.toContain('Marcar Desbloquear cuenta de prueba')
-    await tocar(await esperar(() => principal('Completar y terminar'), 'Completar y terminar'))
+    await tocar(await esperar(() => principal('Listo · Terminar guía'), 'Listo · Terminar guía'))
 
     await esperar(() => textoPantalla().includes('Entregar la clave temporal.'), 'el final de esa rama')
     expect(textoPantalla()).toContain('¿Quedó resuelto el problema?')
@@ -531,7 +537,17 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
     await tocar(await esperar(() => control(COMPLETAR_Y_SEGUIR), 'Completar y seguir'))
     await esperar(() => textoPantalla().includes('¿Encontraste el número de resolución?'), 'la decisión')
 
-    await tocar(await esperarControl('No: seguir con «Localizar la resolución de prueba»'))
+    // En el teléfono (tarea 355), el Sí y el No van en el pie; el No dice a
+    // dónde lleva.
+    await tocar(
+      await esperar(
+        () =>
+          Array.from(document.body.querySelectorAll<HTMLElement>('[data-pie-ventana] [data-respuesta-ventana]')).find(
+            (boton) => boton.textContent === 'NoSigues con «Localizar la resolución de prueba»',
+          ) ?? null,
+        'el No con su camino',
+      ),
+    )
     await esperar(() => textoPantalla().includes('Buscar el PDF de la resolución de prueba'), 'la rama')
     // UN SOLO FLUJO (tarea 289): la rama sigue en el sitio de la decisión,
     // sin cabecera de otra guía, y no dice "terminar" a mitad del camino.
@@ -545,9 +561,8 @@ describe('ejemplo E: un incidente en medio de una guía', () => {
     // Y la decisión quedó respondida: "Anterior" la enseña cumplida.
     await tocar(await esperarControl(/^Anterior/))
     await esperar(() => textoPantalla().includes('¿Encontraste el número de resolución?'), 'la decisión respondida')
-    // Su rótulo sigue diciendo qué es ("Decide"); lo hecho, solo con la marca
-    // a su lado, sin palabras (tarea 307).
-    expect(textoPantalla()).toContain('Decide')
+    // Lo hecho, solo con la marca a su lado, sin palabras (tarea 307). En el
+    // teléfono no hay rótulo «Decide» (tarea 355).
     expect(document.body.querySelector('[role="img"][aria-label="Completada"]')).not.toBeNull()
     expect(textoPantalla()).not.toContain('respondida')
     const avance = await db.progresoPasos.get('guia-dian')

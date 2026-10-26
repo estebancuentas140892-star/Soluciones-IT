@@ -365,7 +365,17 @@ describe('el equipo con el que se trabaja', () => {
     })
     await montar(RUTAS, '/soluciones/cat-pruebas/guia-dos?equipo=imp-a')
     await esperar(() => textoPantalla().includes('Comprueba que la impresora enciende'), 'el paso 1')
-    await tocar(await esperarControl(/^Paso 2 de 2: Entrar al panel/))
+    // En el teléfono se consulta desde el índice (la ruta es de 768 en adelante).
+    await tocar(await esperarControl(/^Paso 1 de 2\. Abrir el índice de pasos$/))
+    await tocar(
+      await esperar(
+        () =>
+          Array.from(document.body.querySelectorAll<HTMLElement>('[role="dialog"] ol button')).find((fila) =>
+            fila.textContent?.includes('Entrar al panel'),
+          ) ?? null,
+        'el paso 2 en el índice',
+      ),
+    )
     await esperar(() => textoPantalla().includes('Solo consulta'), 'la consulta del paso 2')
     await datoProtegido('Acceso de prueba A')
     expect(await db.progresoPasos.get('guia-dos')).toBeUndefined()
