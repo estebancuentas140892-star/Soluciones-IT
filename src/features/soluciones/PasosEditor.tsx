@@ -95,7 +95,7 @@ import {
   X,
 } from '../../components/iconos'
 import { TONOS_AVISO, tonoDelEditor, tonoVigente } from './tonos'
-import { Campo, CampoConSugerencias, CLASE_CAMPO_SIN_ANCHO } from '../../components/campos'
+import { Campo, CampoConSugerencias, CLASE_CAMPO_SIN_ANCHO, CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 import { tituloVinculoDelEquipo } from '../../lib/vinculoProtegido'
 import { finalidadesConocidas } from '../boveda/credencialDelEquipo'
 import { HojaTipoBloque, type OpcionTipoBloque } from './HojaTipoBloque'
@@ -1014,13 +1014,31 @@ export function PasosEditor({
               que se viera uno. */}
           {desplegado && (
           <>
-          {/* Bajo el título ya no van "Para qué", "Dónde se hace" ni
-              "Debes ver" de texto (tarea 307): la ejecución mínima no los
-              muestra, así que el editor no los ofrece. Lo que una guía
-              anterior tenga en ellos se conserva al guardar (no se borra
-              nada) y lo decide quien escribe el contenido. "Debes ver" es
-              ahora la imagen de cada acción, en su tarjeta. */}
-          <div className="mb-2.5" />
+          {/* Bajo el título ya no van "Para qué" ni "Debes ver" de texto
+              (tarea 307): la ejecución mínima no los muestra, así que el
+              editor no los ofrece. Lo que una guía anterior tenga en ellos se
+              conserva al guardar (no se borra nada) y lo decide quien escribe
+              el contenido. "Debes ver" es ahora la imagen de cada acción, en
+              su tarjeta.
+
+              "DÓNDE" VUELVE (tarea 355, regla 27 b): con una acción por
+              pantalla en el teléfono se pierde el contexto del paso, y una
+              línea corta lo devuelve sobre cada acción. Texto corto y
+              opcional; vacío, no se guarda ni se dibuja. */}
+          <Campo
+            etiqueta="Dónde se hace (opcional)"
+            ayuda="El programa o la ventana donde se hacen las acciones de este paso, por ejemplo «Outlook» o «Ficha del cliente». En el teléfono se lee en una línea sobre cada acción."
+            className="mb-3 mt-1.5 pl-[38px]"
+          >
+            <input
+              type="text"
+              value={paso.lugar ?? ''}
+              onChange={(e) => actualizarPaso(indice, { lugar: e.target.value })}
+              maxLength={80}
+              placeholder="Dónde se hace, en pocas palabras"
+              className={CLASE_CAMPO_SOBRE_SUPERFICIE}
+            />
+          </Campo>
 
           {/* Cuerpo del paso: tareas, advertencias e imagenes. Los cuatro
               botones de añadir ya no viven aquí: se fueron a la barra

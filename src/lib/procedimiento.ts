@@ -324,11 +324,11 @@ function normalizarPaso(origen: Record<string, unknown>): PasoProcedimiento {
   }
 }
 
-// LOS TEXTOS HEREDADOS DEL PASO (`objetivo`, `lugar` y `resultado`,
-// obsoletos desde la tarea 307): se conservan tal como llegaron cuando
-// dicen algo, para que ninguna guía pierda su contenido al leerse o al
-// guardarse, y no se escriben cuando están vacíos. Nadie los muestra ni los
-// crea; recortarlos es lo único que hace el guardado (`recortar`).
+// LOS TEXTOS OPCIONALES DEL PASO (`objetivo`, `lugar` y `resultado`; la
+// ejecución mínima los retiró en la tarea 307 y `lugar` volvió al editor en
+// la 355): se conservan tal como llegaron cuando dicen algo, para que ninguna
+// guía pierda su contenido al leerse o al guardarse, y no se escriben cuando
+// están vacíos. Recortarlos es lo único que hace el guardado (`recortar`).
 const CLAVES_HEREDADAS = ['objetivo', 'lugar', 'resultado'] as const
 type TextosHeredados = Pick<PasoProcedimiento, (typeof CLAVES_HEREDADAS)[number]>
 

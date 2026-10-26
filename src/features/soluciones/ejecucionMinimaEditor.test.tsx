@@ -129,15 +129,20 @@ afterEach(async () => {
 })
 
 describe('lo que la ejecución ya no muestra, el editor ya no lo ofrece', () => {
-  it('el paso no ofrece "Para qué", "Dónde" ni "Debes ver" de texto, y lo que la guía tenía se conserva al guardar', async () => {
+  // «Dónde» volvió al editor en la tarea 355 (regla 27 b): con una acción por
+  // pantalla en el teléfono, una línea corta devuelve el contexto del paso.
+  it('el paso no ofrece "Para qué" ni "Debes ver" de texto, ofrece "Dónde", y lo que la guía tenía se conserva al guardar', async () => {
     await sembrar({ lugar: DONDE, objetivo: PARA_QUE, resultado: DEBES_VER_TEXTO })
     await abrirElEditor()
 
     const retirados = Array.from(document.body.querySelectorAll<HTMLInputElement>('input')).filter((i) =>
-      /Para qué|Dónde se hace|Qué debe verse al terminar/.test(`${i.getAttribute('aria-label') ?? ''} ${i.placeholder}`),
+      /Para qué|Qué debe verse al terminar/.test(`${i.getAttribute('aria-label') ?? ''} ${i.placeholder}`),
     )
     expect(retirados).toEqual([])
-    expect(textoPantalla()).not.toContain(DONDE)
+    const donde = Array.from(document.body.querySelectorAll<HTMLInputElement>('input')).find(
+      (i) => i.closest('label')?.textContent?.includes('Dónde se hace (opcional)'),
+    )
+    expect(donde?.value).toBe(DONDE)
 
     // Se edita otra cosa y se guarda: lo heredado sigue en el JSON, intacto.
     await escribir(campoConValor(ACCION) as HTMLInputElement, `${ACCION} de prueba`)

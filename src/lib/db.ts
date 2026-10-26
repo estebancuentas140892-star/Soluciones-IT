@@ -371,23 +371,27 @@ export interface BloquePaso {
 export interface PasoProcedimiento {
   id: string
   titulo: string
-  // TRES TEXTOS HEREDADOS DEL PASO (obsoletos desde la tarea 307, AD-068).
-  // La ejecución mínima ya no los enseña y el editor ya no los ofrece:
+  // TRES TEXTOS DEL PASO QUE LA EJECUCIÓN MÍNIMA RETIRÓ (tarea 307, AD-068),
+  // y lo que volvió en el teléfono con una acción por pantalla (tarea 355,
+  // AD-098):
   //   - `objetivo`: el "Para qué" del paso, que iba plegado en "Más
-  //     información". Lo que la guía consigue lo dice su objetivo general.
-  //   - `lugar`: el "Dónde" del paso ("Nuevo Outlook"). La guía ya lleva
-  //     hasta ahí, y lo que cuesta encontrar es la ubicación de una
-  //     microacción de "Cómo hacerlo" (`MicroPasoComoHacer.ubicacion`).
+  //     información". El editor no lo ofrece; en el teléfono se lee a pedido,
+  //     en «Ayuda con este paso» de su primera acción.
+  //   - `lugar`: el "Dónde" del paso ("Nuevo Outlook"). Retirado en la 307;
+  //     desde la 355 el editor vuelve a ofrecerlo (texto corto y opcional) y
+  //     el teléfono lo enseña en una línea sobre cada acción del paso, porque
+  //     con una acción por pantalla se pierde el contexto del paso. Tableta y
+  //     escritorio no lo enseñan.
   //   - `resultado`: el "Debes ver" de texto. "Debes ver" es ahora una
   //     imagen por acción (`BloquePaso.resultadoVisual`).
-  // Se siguen LEYENDO y GUARDANDO tal cual (una guía que los tenga no se
-  // rompe ni pierde nada al editarse; el buscador y el historial los
-  // siguen viendo), pero ausentes cuando están vacíos: un paso nuevo no los
-  // trae. Ningún dato se convierte solo: qué hacer con los textos reales lo
-  // decide quien escribe el contenido (regla 26).
-  /** @deprecated Tarea 307: ya no se muestra ni se ofrece; se conserva al leer y guardar. */
+  // Se LEEN y se GUARDAN tal cual (una guía que los tenga no se rompe ni
+  // pierde nada al editarse; el buscador y el historial los siguen viendo),
+  // pero ausentes cuando están vacíos: un paso nuevo no los trae. Ningún dato
+  // se convierte solo: qué hacer con los textos reales lo decide quien
+  // escribe el contenido (regla 26).
+  /** @deprecated Tarea 307: el editor ya no lo ofrece; se conserva al leer y guardar (y el teléfono lo lee en la ayuda). */
   objetivo?: string
-  /** @deprecated Tarea 307: ya no se muestra ni se ofrece; se conserva al leer y guardar. */
+  /** El «Dónde» del paso (tarea 355): opcional, se enseña en el teléfono sobre cada acción. */
   lugar?: string
   /** @deprecated Tarea 307: ya no se muestra ni se ofrece; se conserva al leer y guardar. */
   resultado?: string
