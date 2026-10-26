@@ -79,6 +79,13 @@ export interface ApoyosDelFlujo {
    */
   notas?: NotaDeGuia[]
   paraQue?: string
+  /**
+   * Los requisitos de la guía que se abrió, cuando su primer paso es esta guía
+   * hecha en el sitio (tarea 355): en el teléfono se leen en la ayuda de la
+   * primera acción reutilizada, que es la primera de la guía. No son los de
+   * esta guía, que no pasan solos (regla 25 f).
+   */
+  requisitos?: string[]
 }
 
 /** ¿Hay algo que prestar? Sin nada, no se pasa nada. */
@@ -91,7 +98,8 @@ export function hayApoyosDelFlujo(apoyos: ApoyosDelFlujo): boolean {
     apoyos.referencias.length > 0 ||
     apoyos.vinculoProtegido !== null ||
     (apoyos.notas?.length ?? 0) > 0 ||
-    (apoyos.paraQue ?? '').trim() !== ''
+    (apoyos.paraQue ?? '').trim() !== '' ||
+    (apoyos.requisitos?.length ?? 0) > 0
   )
 }
 

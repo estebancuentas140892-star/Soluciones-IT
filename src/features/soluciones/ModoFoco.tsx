@@ -1077,8 +1077,9 @@ export function ModoFoco({
     // Lo que esta entrada enseñaría con la primera acción del paso viaja a
     // la primera acción reutilizada: sus avisos, sus imágenes y su
     // credencial.
-    // En el teléfono viajan además sus notas y su «Para qué», que allí se leen
-    // en «Ayuda con este paso» (tarea 355).
+    // En el teléfono viajan además sus notas, su «Para qué» y, si este es el
+    // primer paso de la guía, sus requisitos: allí se leen en «Ayuda con este
+    // paso» de la primera acción reutilizada (tarea 355).
     const apoyos: ApoyosDelFlujo | null = esPrimeraDelPaso
       ? {
           alertas: avisos.alertas,
@@ -1089,6 +1090,7 @@ export function ModoFoco({
           vinculoProtegido,
           notas: [...(prestados?.notas ?? []), ...avisosPropios.notas],
           paraQue: textosParaQue(prestados?.paraQue, paso.objetivo),
+          requisitos: [...(prestados?.requisitos ?? []), ...requisitos],
         }
       : null
     return (
@@ -1278,8 +1280,11 @@ export function ModoFoco({
           ).filter((referencia) => !fichasEnlazadasDelPaso(paso.bloques).has(referencia.id))
         : []
     const siguienteEntrada = tareas[indice + 1]
+    // Los de la guía que se abrió llegan prestados cuando su primer paso es
+    // esta guía, hecha en el sitio.
+    const requisitosDeLaAccion = esPrimeraDelPaso ? [...(prestados?.requisitos ?? []), ...requisitos] : []
     const secciones = seccionesDeAyuda({
-      requisitos: esPrimeraDelPaso ? requisitos : [],
+      requisitos: requisitosDeLaAccion,
       resultadoVisual: esComprobacion ? null : tarea.resultadoVisual,
       imagenes: imagenesAyuda,
       terminos,
@@ -1292,7 +1297,7 @@ export function ModoFoco({
         ? instruccionDeEntrada(paso, siguienteEntrada, guiaDelPasoDisponible)
         : loQueSigueTrasElPaso,
     })
-    const etiquetaAyuda = esPrimeraDelPaso ? etiquetaTenAMano(requisitos) : null
+    const etiquetaAyuda = etiquetaTenAMano(requisitosDeLaAccion)
 
     // EL PIE: la misma gramática que la ventana (`pieDeLaAccion`).
     const destinoListo: DestinoListo = quedaTrabajoEnElPaso

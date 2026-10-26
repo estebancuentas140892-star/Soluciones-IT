@@ -260,6 +260,32 @@ describe('«Ayuda con este paso»', () => {
     expect(await db.progresoPasos.get('guia-una')).toBeUndefined()
   })
 
+  it('si el primer paso hace otra guía en el sitio, los requisitos de la guía que se abrió llegan a su primera acción', async () => {
+    await sembrarGuia({
+      id: 'guia-acceso',
+      titulo: 'Entrar al programa de prueba',
+      pasos: [pasoPrueba('ac-p1', 'Entrar', ['Entra al programa de prueba'])],
+      procedimiento: { requisitos: ['Red de prueba de la guía reutilizada'] },
+    })
+    await sembrarGuia({
+      id: 'guia-con-acceso',
+      titulo: 'Registrar a una persona de prueba',
+      pasos: [
+        { ...pasoPrueba('ca-p1', 'Entrar al programa', []), subArticuloId: 'guia-acceso', subArticuloTitulo: 'Entrar al programa de prueba' },
+        pasoPrueba('ca-p2', 'Guardar', ['Selecciona Guardar']),
+      ],
+      procedimiento: { requisitos: ['Datos de la persona de prueba'] },
+    })
+    await montar(RUTAS, ruta('guia-con-acceso'))
+    await enLaAccion('Entra al programa de prueba')
+
+    expect(document.body.querySelector('[data-ten-a-mano]')?.textContent).toBe('Ten a mano 1 cosa')
+    const hoja = await abrirAyuda()
+    expect(hoja.textContent).toContain('Datos de la persona de prueba')
+    // Lo que pide la guía reutilizada no pasa solo (regla 25 f).
+    expect(hoja.textContent).not.toContain('Red de prueba de la guía reutilizada')
+  })
+
   it('«No sale como dice» abre las salidas de siempre, sin cerrar ni marcar nada', async () => {
     await sembrarCaso()
     await montar(RUTAS, ruta('guia-una'))

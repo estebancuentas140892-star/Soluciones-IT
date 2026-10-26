@@ -13,7 +13,7 @@
 //      red: lo reutilizado en el sitio, su "Como hacerlo" (tarea 303) y la
 //      imagen de "Debes ver" desde la copia sin conexion (tarea 307);
 //      la comprobacion final (tarea 308) y la credencial del equipo, que
-//      se resuelve en la hoja que abre su fila (tareas 290 y 328);
+//      se resuelve en linea en su accion (tareas 290 y 355);
 //      y un mantenimiento atrasado sale en la Agenda y se cierra sin red,
 //      dejando la intervencion y el cambio en la cola (tarea 320); y una
 //      autorizacion de facturacion confirmada avisa de su vencimiento en
@@ -75,14 +75,14 @@ const TIPOS = {
   '.woff2': 'font/woff2',
 }
 const SIN_CACHE = /^\/(sw\.js|registerSW\.js|version\.json|manifest\.webmanifest)$/
-// Desde la tarea 345, en el telefono (esta prueba corre a 390 px) el boton
-// relleno de la ejecucion dice a donde lleva: "Hecho, siguiente accion",
-// "Hecho, ir al paso N" o "Hecho, comprobar el resultado"; desde 768 sigue
-// siendo "Completar y seguir". Hace lo mismo. El mismo criterio que
+// En la accion a la vez del telefono (esta prueba corre a 390 px), desde la
+// tarea 355, el boton relleno dice "Listo · Siguiente" o, en la ultima accion
+// antes de la comprobacion final, "Listo · Comprobar el resultado"; dentro del
+// paso entero de la ventana, "Hecho, siguiente accion" (tarea 345); desde 768
+// sigue siendo "Completar y seguir". Hace lo mismo. El mismo criterio que
 // COMPLETAR_Y_SEGUIR de src/pruebas/montaje.ts.
-const COMPLETAR_Y_SEGUIR = /^(Completar y seguir|Hecho, siguiente acción|Hecho, ir al paso \d+|Hecho, comprobar el resultado)$/
+const COMPLETAR_Y_SEGUIR = /^(Completar y seguir|Listo · Siguiente|Listo · Comprobar el resultado|Hecho, siguiente acción)$/
 const ES_COMPLETAR_Y_SEGUIR = `((e) => new RegExp(${JSON.stringify(COMPLETAR_Y_SEGUIR.source)}).test(e.textContent.replace(/\\s+/g, ' ').trim()))`
-const HAY_COMPLETAR_Y_SEGUIR = `[...document.querySelectorAll('button')].some(${ES_COMPLETAR_Y_SEGUIR})`
 
 function compilar() {
   paso(`0. Compilando como en produccion en ${SALIDA}, contra ${URL_SUPABASE}`)
@@ -361,9 +361,9 @@ const SEMBRAR_GUIAS_PRUEBA = `
     const t = base.transaction(['articulos', 'categorias', 'preferenciasTecnico'], 'readwrite')
     t.objectStore('categorias').put(${JSON.stringify(CATEGORIA_PRUEBA)})
     for (const guia of ${JSON.stringify(GUIAS_PRUEBA)}) t.objectStore('articulos').put(guia)
-    // Desde la tarea 348 el telefono (esta prueba corre a 390 px) abre cada
-    // guia en ventana. Las secciones 4b a 4c describen la ejecucion de una
-    // accion a la vez, asi que la piden; la 4b3 prueba la ventana.
+    // Desde la tarea 355 el telefono (esta prueba corre a 390 px) abre cada
+    // guia una accion a la vez, como piden las secciones 4b a 4c; se guarda
+    // igual por si el perfil trae otra preferencia. La 4b3 prueba la ventana.
     t.objectStore('preferenciasTecnico').put({ id: 'tecnico', modoEjecucion: 'foco', actualizadoEn: new Date().toISOString() })
     t.oncomplete = () => ok()
     t.onerror = () => mal(t.error)
@@ -598,31 +598,60 @@ async function main() {
       comprobar(pagina.app && pagina.ruta === ruta && !PANTALLA_ROTA.test(pagina.texto), `${ruta} (${pagina.ruta}, ${pagina.ms} ms)`)
     }
 
-    // Tarea 289: la ejecución de una guía no pide nada a la red. Orientar,
-    // preparar (solo con los requisitos que escribió su autor: los de la
-    // guía que reutiliza su paso 1 no pasan solos) y hacer en el sitio lo
-    // reutilizado sale todo de la base local.
-    paso('4b. Una guía que reutiliza otra, sin red: orientar, preparar y la primera acción reutilizada (tarea 289)')
+    // Tarea 289: la ejecución de una guía no pide nada a la red. Hacer en el
+    // sitio lo reutilizado sale todo de la base local. Desde la tarea 355 el
+    // teléfono no orienta ni prepara antes: abre en la primera acción, y los
+    // requisitos (solo los que escribió su autor: los de la guía que
+    // reutiliza su paso 1 no pasan solos) se leen en «Ayuda con este paso».
+    paso('4b. Una guía que reutiliza otra, sin red: la primera acción reutilizada y su ayuda (tareas 289 y 355)')
     comprobar(Boolean(await s.evaluar(SEMBRAR_GUIAS_PRUEBA)), 'guías inventadas escritas en la base local, con la red cortada')
     await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-sin-conexion' })
     comprobar(
+      Boolean(
+        await s.hasta(
+          `document.querySelector('[data-accion-telefono]') != null && document.body.innerText.includes('Abre el programa de prueba sin red')`,
+          'la primera acción',
+          45000,
+        ),
+      ),
+      'la primera acción reutilizada, en el sitio y sin pantallas previas',
+    )
+    comprobar(
       // `innerText` devuelve los rótulos como los pinta el CSS (en mayúsculas).
-      Boolean(await s.hasta(`/qué vas a hacer/i.test(document.body.innerText) && document.body.innerText.includes('Cuando necesites registrar a una persona sin red.')`, 'la orientación', 45000)),
-      'la orientación se ve sin red',
-    )
-    await s.tocar('Ver lo que necesitas')
-    comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes('Datos de la persona de prueba.')`, 'los requisitos')),
-      'los requisitos de la guía',
+      !(await s.evaluar(`return /qué vas a hacer/i.test(document.body.innerText) || document.body.innerText.includes('Datos de la persona de prueba.')`)),
+      'ni la orientación ni los requisitos a la vista',
     )
     comprobar(
-      !(await s.evaluar(`return document.body.innerText.includes('Red de prueba sin conexión.')`)),
-      'sin los de la guía del paso 1: no pasan solos',
+      Boolean(await s.evaluar(`return document.querySelector('[data-ten-a-mano]')?.textContent === 'Ten a mano 1 cosa'`)),
+      'el botón de la ayuda avisa «Ten a mano 1 cosa»',
     )
-    await s.tocar('Todo listo, empezar')
+    // La ayuda, sin red: los requisitos de la guía y «Así sabes que funcionó»,
+    // la imagen del resultado de esta acción, que sale de la copia sin conexión.
+    const IMAGEN_DEBES_VER = `document.querySelector('img[alt="${DESCRIPCION_SIN_RED}"]')`
     comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes('Abre el programa de prueba sin red')`, 'la primera acción')),
-      'la primera acción reutilizada, en el sitio',
+      Boolean(await s.evaluar(`return !document.body.innerText.includes('Debes ver') && ${IMAGEN_DEBES_VER} == null`)),
+      'la imagen del resultado de una acción no está en la pantalla (tarea 355)',
+    )
+    await s.evaluar(`document.querySelector('[data-ayuda-paso]').click(); await new Promise((r) => setTimeout(r, 600)); return true`)
+    comprobar(
+      Boolean(
+        await s.hasta(
+          `(() => { const h = document.querySelector('[data-hoja-ayuda]'); return h != null && h.textContent.includes('Datos de la persona de prueba.') && !h.textContent.includes('Red de prueba sin conexión.') })()`,
+          'la ayuda con los requisitos',
+        ),
+      ),
+      'la ayuda, sin red: los requisitos de la guía, sin los de la guía del paso 1',
+    )
+    comprobar(
+      Boolean(await s.hasta(`(() => { const i = ${IMAGEN_DEBES_VER}; return i != null && i.complete && i.naturalWidth > 0 })()`, 'la imagen del resultado')),
+      'y «Así sabes que funcionó», con la imagen de la copia sin conexión, sin red',
+    )
+    await s.evaluar(
+      `[...document.querySelectorAll('button')].find((b) => b.getAttribute('aria-label') === 'Cerrar la ayuda y volver a la acción')?.click(); await new Promise((r) => setTimeout(r, 600)); return true`,
+    )
+    comprobar(
+      Boolean(await s.hasta(`document.querySelector('[data-hoja-ayuda]') == null`, 'la ayuda cerrada')),
+      'la ayuda se cierra y la acción sigue donde estaba',
     )
     // Tarea 310: "Cómo hacerlo" es una lista numerada a la vista, sin nada
     // que desplegar; la ubicación va bajo su microacción. Desde el rediseño
@@ -657,23 +686,10 @@ async function main() {
       !(await s.evaluar(`return /Ruta rápida|Ver paso a paso/.test(document.body.innerText)`)),
       'sin "Ruta rápida" ni "Ver paso a paso"',
     )
-    const IMAGEN_DEBES_VER = `document.querySelector('img[alt="${DESCRIPCION_SIN_RED}"]')`
     comprobar(
-      Boolean(
-        await s.evaluar(
-          `return [...document.querySelectorAll('button[aria-expanded="false"]')].some((b) => b.textContent.trim() === 'Debes ver') && ${IMAGEN_DEBES_VER} == null`,
-        ),
-      ),
-      '"Debes ver" llega plegado y sin cargar la imagen (tarea 307)',
-    )
-    await s.tocar('Debes ver')
-    comprobar(
-      Boolean(await s.hasta(`(() => { const i = ${IMAGEN_DEBES_VER}; return i != null && i.complete && i.naturalWidth > 0 })()`, 'la imagen de Debes ver')),
-      'y al abrirlo, la imagen sale de la copia sin conexión, sin red',
-    )
-    comprobar(
-      !(await s.evaluar(`return /Dónde:|Más información|Para qué:/.test(document.body.innerText)`)),
-      'sin "Dónde", "Más información" ni "Para qué" (tarea 307)',
+      // Esta guía no tiene «Dónde»: sin texto, no se dibuja (tarea 355).
+      !(await s.evaluar(`return /Dónde:|Más información|Para qué/.test(document.body.innerText)`)),
+      'sin "Dónde" vacío, "Más información" ni "Para qué" a la vista (tareas 307 y 355)',
     )
     comprobar(
       !(await s.evaluar(`return /Guía necesaria|Estás realizando|Abrir guía|Volver a la guía principal|No se pudo cargar/.test(document.body.innerText)`)),
@@ -682,58 +698,52 @@ async function main() {
 
     // Tarea 308: la comprobación final es un estado de la ejecución, no su
     // fin. Todo sale de la base local: volver, seguir y terminar sin red.
-    // Desde la tarea 328 (AD-078) pregunta "¿Quedó resuelto?" (antes "Antes
-    // de terminar, comprueba") y su control dice "Marca N comprobaciones" y
-    // "Terminar" (antes "Faltan N comprobaciones" y "Finalizar").
-    const COMPROBACION_FINAL = '¿Quedó resuelto?'
-    paso('4b2. La comprobación final sin red: "Anterior" vuelve a la última acción y solo "Terminar" termina (tarea 308)')
+    // Desde la tarea 355 la acción a la vez del teléfono (esta prueba corre a
+    // 390 px) lleva el riesgo en la pantalla de su acción, antes de la
+    // instrucción, y termina con el cierre del teléfono: «Comprueba el
+    // resultado» y, en el pie, «¿El problema quedó resuelto?» (regla 31 h).
+    const COMPROBACION_FINAL = '¿El problema quedó resuelto?'
+    paso('4b2. El riesgo en su acción y la comprobación final sin red: "Anterior" vuelve a la última acción (tareas 308 y 355)')
     await s.tocarCompletar()
     comprobar(
       Boolean(await s.hasta(`document.body.innerText.includes('Selecciona Guardar')`, 'el paso 2')),
       'lo reutilizado se completa y sigue en el paso 2',
     )
-    // Tarea 311: "Selecciona Guardar" tiene un riesgo real, que se lee antes
-    // de la acción, en su propia pantalla, y sale de la base local.
+    // Tarea 311 en el teléfono (tarea 355): la precaución se lee en la
+    // pantalla de su acción, antes de la instrucción, sin pantalla aparte ni
+    // «Entiendo, continuar», y no pide ningún toque.
     comprobar(
       Boolean(
         await s.hasta(
-          `document.body.innerText.includes('Antes de continuar') && document.body.innerText.includes('Guardar reemplaza el registro de prueba anterior.')`,
-          'la advertencia previa',
+          `(() => { const a = document.querySelector('[data-aviso-ventana="precaucion"]'); const i = document.querySelector('[data-instruccion-telefono]'); return a != null && i != null && a.textContent.includes('Guardar reemplaza el registro de prueba anterior.') && Boolean(a.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING) })()`,
+          'la precaución antes de la acción',
         ),
       ),
-      'la acción de riesgo llega por su advertencia previa, sin red (tarea 311)',
+      'la precaución va antes de la instrucción, en la misma pantalla, sin red',
     )
     comprobar(
-      !(await s.evaluar(`return ${HAY_COMPLETAR_Y_SEGUIR}`)),
-      'la advertencia no se completa: solo lleva a la acción',
+      !(await s.evaluar(
+        `return document.body.innerText.includes('Antes de continuar') || [...document.querySelectorAll('button')].some((e) => e.textContent.trim() === 'Entiendo, continuar' || e.textContent.trim() === 'Confirmo que la leí')`,
+      )),
+      'sin pantalla "Antes de continuar" ni nada que confirmar',
     )
-    await s.tocar('Entiendo, continuar')
     comprobar(
-      Boolean(
-        await s.hasta(
-          `${HAY_COMPLETAR_Y_SEGUIR} && !document.body.innerText.includes('Guardar reemplaza el registro de prueba anterior.')`,
-          'la acción',
-        ),
-      ),
-      'y "Entiendo, continuar" lleva a la acción, que no repite el riesgo',
+      Boolean(await s.evaluar(`return ${PIE_PRINCIPAL}?.textContent.replace(/ +/g, ' ').trim() === 'Listo · Comprobar el resultado'`)),
+      'la última acción dice a dónde lleva: «Listo · Comprobar el resultado»',
     )
     await s.tocarCompletar()
     comprobar(
-      Boolean(await s.hasta(`document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)})`, 'la comprobación final')),
-      'la última acción lleva a la comprobación final',
-    )
-    // Sin marcar, el control dice lo que falta y no termina (regla 28).
-    comprobar(
       Boolean(
-        await s.evaluar(
-          `const b = [...document.querySelectorAll('button')].find((e) => e.textContent.trim() === 'Marca 1 comprobación'); return b != null && b.disabled && ![...document.querySelectorAll('button')].some((e) => e.textContent.trim() === 'Terminar')`,
+        await s.hasta(
+          `document.body.innerText.includes('Comprueba el resultado') && document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)})`,
+          'la comprobación final',
         ),
       ),
-      'sin marcar, el control dice "Marca 1 comprobación", inactivo, y no ofrece "Terminar"',
+      'la última acción lleva a la comprobación final del teléfono',
     )
     const TOCAR_ANTERIOR = `
       const b = [...document.querySelectorAll('button')].find((e) => (e.getAttribute('aria-label') || '').startsWith('Anterior'))
-      if (!b || b.disabled) return false
+      if (!b || b.disabled || b.getAttribute('aria-disabled') === 'true') return false
       b.click()
       await new Promise((r) => setTimeout(r, 600))
       return true
@@ -753,26 +763,18 @@ async function main() {
       Boolean(await s.hasta(`document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)})`, 'otra vez la comprobación')),
       '"Seguir" vuelve a la comprobación',
     )
-    // Desde la tarea 341, en el teléfono (esta prueba corre a 390 px) la
-    // pantalla final dice "Guía completada", con su marca; desde 768 sigue
-    // siendo "Guía terminada". Las dos comprobaciones miran el estado real
-    // y no la ausencia de un texto: marcar deja la comprobación final a la
-    // vista con "Terminar" activo y sin el cierre; solo "Terminar" lleva a
-    // "Guía completada".
+    // Marcar no termina: «Sí, quedó resuelto» es el gesto que termina (regla
+    // 31 h), y sin red lleva a «Guía completada», con su marca.
     const GUIA_COMPLETADA = `innerWidth < 768 && document.body.innerText.includes('Guía completada') && document.querySelector('[data-marca-completada]') != null`
     await s.evaluar(`document.querySelector('[role="checkbox"]').click(); await new Promise((r) => setTimeout(r, 600)); return true`)
     comprobar(
-      Boolean(
-        await s.evaluar(
-          `return document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)}) && [...document.querySelectorAll('button')].some((e) => e.textContent.trim() === 'Terminar' && !e.disabled) && !(${GUIA_COMPLETADA})`,
-        ),
-      ),
-      'marcar la última comprobación no termina la guía: sigue "¿Quedó resuelto?" con "Terminar" activo',
+      Boolean(await s.evaluar(`return document.body.innerText.includes(${JSON.stringify(COMPROBACION_FINAL)}) && !(${GUIA_COMPLETADA})`)),
+      'marcar la comprobación no termina la guía: sigue la pregunta del cierre',
     )
-    await s.tocar('Terminar')
+    await s.tocar('Sí, quedó resuelto')
     comprobar(
       Boolean(await s.hasta(GUIA_COMPLETADA, '"Guía completada"')),
-      'solo "Terminar" la termina, sin red: "Guía completada" en el teléfono',
+      'solo «Sí, quedó resuelto» la termina, sin red: "Guía completada" en el teléfono',
     )
 
     // Tarea 348: la ventana del teléfono, sin red. Un paso que reutiliza otra
@@ -862,24 +864,15 @@ async function main() {
     comprobar(Boolean(await s.evaluar(PONER_MODO_Y_LIMPIAR_AVANCE('foco'))), 'se devuelve la ejecución de una acción a la vez para las secciones que siguen')
 
     // Tarea 290: la relación equipo y credencial se lee del teléfono, sin
-    // red; los datos siguen detrás de la contraseña maestra. Desde la tarea
-    // 328 (AD-078) la acción a la vez no lleva el bloque protegido en su
-    // cuerpo: una fila ("Ver la credencial: …") abre una hoja con el bloque
-    // de siempre, y es ahí donde se resuelve la credencial del equipo.
-    paso('4c. La credencial del equipo actual, sin red: se resuelve en su hoja y sigue protegida (tareas 290 y 328)')
+    // red; los datos siguen detrás de la contraseña maestra.
+    paso('4c. La credencial del equipo actual, sin red: se resuelve en línea en su acción y sigue protegida (tareas 290 y 355)')
     comprobar(Boolean(await s.evaluar(SEMBRAR_EQUIPO_PRUEBA)), 'equipos, credencial y guía inventados escritos en la base local, con la red cortada')
-    const FILA_CREDENCIAL = `document.querySelector('button[aria-label^="Ver la credencial"]')`
-    const HOJA_CREDENCIAL = `document.querySelector('[role="dialog"]')`
-    // Abre la hoja desde la fila y, dentro, la consulta del dato protegido.
-    const ABRIR_HOJA = `
-      const fila = ${FILA_CREDENCIAL}
-      if (!fila) return false
-      fila.click()
-      await new Promise((r) => setTimeout(r, 600))
-      return ${HOJA_CREDENCIAL} != null
-    `
-    const MOSTRAR_EN_HOJA = `
-      const b = ${HOJA_CREDENCIAL}?.querySelector('button[aria-label^="Dato protegido"]')
+    // Desde la tarea 355 la acción a la vez del teléfono lleva el bloque
+    // protegido en línea, en la pantalla de su acción (regla 29): sin fila ni
+    // hoja que abrir. Es ahí donde se resuelve la credencial del equipo.
+    const BLOQUE_CREDENCIAL = `document.querySelector('[data-accion-telefono] [data-parte-accion="credencial"]')`
+    const MOSTRAR_EN_LINEA = `
+      const b = ${BLOQUE_CREDENCIAL}?.querySelector('button[aria-label^="Dato protegido"]')
       if (!b) return false
       b.click()
       await new Promise((r) => setTimeout(r, 600))
@@ -888,23 +881,21 @@ async function main() {
     await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-equipo-sin-red?equipo=eq-sin-red-a' })
     comprobar(
       Boolean(
-        await s.hasta(`${FILA_CREDENCIAL} != null && document.body.innerText.includes('Impresora de prueba sin red A')`, 'la fila de la credencial', 45000),
-      ),
-      'la acción del equipo A ofrece su credencial en una fila, sin red',
-    )
-    comprobar(Boolean(await s.evaluar(ABRIR_HOJA)), 'la fila abre su hoja')
-    comprobar(
-      Boolean(
         await s.hasta(
-          `(() => { const h = ${HOJA_CREDENCIAL}; return h != null && h.innerText.includes('Acceso de prueba sin red') && h.innerText.includes('Impresora de prueba sin red A') })()`,
-          'la credencial del equipo en la hoja',
+          `(() => { const c = ${BLOQUE_CREDENCIAL}; return c != null && c.innerText.includes('Acceso de prueba sin red') && c.innerText.includes('Impresora de prueba sin red A') })()`,
+          'la credencial en línea',
+          45000,
         ),
       ),
-      'la hoja resuelve la credencial de ese equipo sin red',
+      'la acción del equipo A resuelve su credencial en línea, sin red',
     )
-    comprobar(Boolean(await s.evaluar(MOSTRAR_EN_HOJA)), 'su "Mostrar", dentro de la hoja')
     comprobar(
-      Boolean(await s.hasta(`${HOJA_CREDENCIAL}?.innerText.includes('La bóveda está bloqueada')`, 'el desbloqueo')),
+      Boolean(await s.evaluar(`return document.querySelector('button[aria-label^="Ver la credencial"]') == null && document.querySelector('[role="dialog"]') == null`)),
+      'sin fila ni hoja que abrir',
+    )
+    comprobar(Boolean(await s.evaluar(MOSTRAR_EN_LINEA)), 'su "Mostrar", en la pantalla de la acción')
+    comprobar(
+      Boolean(await s.hasta(`${BLOQUE_CREDENCIAL}?.innerText.includes('La bóveda está bloqueada')`, 'el desbloqueo')),
       'para ver sus datos sigue pidiendo la contraseña maestra',
     )
     comprobar(
@@ -912,13 +903,12 @@ async function main() {
       'nada de la Bóveda en la página',
     )
     await s.enviar('Page.navigate', { url: BASE + '/soluciones/cat-sin-conexion/guia-equipo-sin-red?equipo=eq-sin-red-b' })
-    await s.hasta(`${FILA_CREDENCIAL} != null && document.body.innerText.includes('Impresora de prueba sin red B')`, 'el otro equipo', 45000)
-    await s.evaluar(ABRIR_HOJA)
-    await s.evaluar(MOSTRAR_EN_HOJA)
+    await s.hasta(`${BLOQUE_CREDENCIAL} != null && document.body.innerText.includes('Impresora de prueba sin red B')`, 'el otro equipo', 45000)
+    await s.evaluar(MOSTRAR_EN_LINEA)
     comprobar(
       Boolean(
         await s.hasta(
-          `(() => { const h = ${HOJA_CREDENCIAL}; return h != null && h.innerText.includes('No hay una credencial configurada para este equipo.') && !h.innerText.includes('Acceso de prueba sin red') })()`,
+          `(() => { const c = ${BLOQUE_CREDENCIAL}; return c != null && c.innerText.includes('No hay una credencial configurada para este equipo.') && !c.innerText.includes('Acceso de prueba sin red') })()`,
           'sin credencial',
         ),
       ),
