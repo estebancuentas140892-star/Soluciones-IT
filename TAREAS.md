@@ -205,6 +205,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Pendiente (anotado, no hecho, para decisión del usuario):** la D de AD-093 («Todas las guías» y la Agenda en Más, que contradice la tarea 265, y la hoja rápida del equipo); la revisión en un teléfono real, que decide la integración.
 - **Dependencias:** la 348 a la 351 (misma rama). No toca la 279, la 322 ni la 337.
 
+### 355. En el teléfono, una acción por pantalla con «Ayuda con este paso» («Equilibrada esencial»)
+
+- **Título:** implementar el diseño final de la ejecución de guías en el teléfono, elegido en Claude Design el 2026-10-26.
+- **Descripción:** handoff «Diseño final guías móvil» (`ESPECIFICACION.md`, fuente de verdad). Por debajo de 768 px la guía se ejecuta una acción por pantalla y la pantalla enseña solo lo necesario para hacer esa acción; lo que acompaña se abre a pedido en la hoja «Ayuda con este paso». Antes de empezar, el usuario confirmó (2026-10-26): el costo en toques se acepta y la ventana por paso queda como opción del índice, «tal cual como propone el archivo adjunto»; el formato de campos del escenario D se escribe con «Cómo hacerlo» o con datos técnicos (tarea 356 para diseñarlo); todo se integra junto al final. Fases: (1) una acción por pantalla como defecto, con las piezas de Ventana; (2) la hoja de ayuda; (3) «Dónde» y el campo `lugar` en el editor; (4) QA, documentación, CI y despliegue.
+- **Motivo:** encargo del usuario del 2026-10-26.
+- **Impacto:** alto en el teléfono (cambia cómo se ejecuta cada guía); ninguno en tableta y escritorio. Sin cambios de datos ni de Supabase.
+- **Prioridad:** Alta. **Estado:** implementada e integrada en `main`; falta que el usuario la vea en su teléfono y observarla con técnicos reales (tarea 357). Verificación: suite completa en verde (3.700 pruebas), con `accionTelefono.test.ts` (19) y `accionTelefonoFlujo.test.tsx` (14) nuevas y 25 archivos actualizados (los que describían la acción a la vez del teléfono anterior pasan a mirar una tableta, donde sigue igual); `tsc -b`, `oxlint` y build; `scripts/prueba-sin-conexion.mjs` en verde con la compilación de producción y sin red (secciones 4b, 4b2 y 4c rehechas para el teléfono nuevo; encontró que los requisitos no llegaban a la ayuda cuando el paso 1 es otra guía hecha en el sitio, corregido); capturas por CDP a 320, 360, 390 y 430 en los dos temas sin desbordamiento, texto recortado ni áreas de menos de 44 px, y contraste de 4.5:1 a 390 y 360 en los dos temas; medida a 390 × 844: la instrucción a 103 px (277 con una crítica), de 17 a 22 palabras, sin desplazamiento a 360, 390 y 430; escritorio y tableta comparados con `main` a 1366 × 768 y 1920 × 1080 en 39 paradas de guía: 155 de 156 imágenes idénticas píxel a píxel y la otra solo por el cursor del buscador; la ventana del teléfono, idéntica salvo la hora del cierre.
+- **Área afectada:** `src/lib/preferenciasEjecucion.ts`; `src/features/soluciones/ModoFoco.tsx`, `AsistenteVista.tsx`, `accionTelefono.ts`, `AccionEnTelefono.tsx`, `LineaBajoElTitulo.tsx`, `tareasFoco.ts`, `notasGuia.ts`, `flujoContinuo.ts`, `ventana.ts`, `HojaFalla.tsx`, `guiaCompletada.ts`, `ProcedimientoVista.tsx`, `SenalesDePaso.tsx`, `PasosEditor.tsx`; `src/components/ventana/PieVentana.tsx` y `useFueraDeVista.ts`; `src/lib/db.ts` y `procedimiento.ts` (comentarios); `src/pruebas/montaje.ts`; `scripts/capturas-moviles.mjs` (paradas `guia-accion-*`) y `scripts/prueba-sin-conexion.mjs`.
+- **Dependencias:** las 348 a 354.
+
 ### 354. Lo que faltaba de las recomendaciones del prototipo: la pantalla encendida en la guía y las notas en Detalles
 
 - **Título:** aplicar solo los cambios que recomienda el HTML de Claude Design y que la app aún no tenía.
@@ -671,6 +681,26 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 356. Diseñar un formato de «campos» para las guías (escenario D)
+
+- **Título:** decidir cómo se escriben los campos de un formulario (nombres a la vista y qué poner en cada uno) en una guía.
+- **Descripción:** el prototipo de «Equilibrada esencial» mostraba, en el escenario D (crear un cliente en ICG), los nombres de los campos como fichas en pantalla y qué poner en cada uno en la ayuda. El modelo no tiene un tipo de bloque para eso; mientras tanto se escribe con «Cómo hacerlo» o con datos técnicos (decisión del usuario del 2026-10-26, tarea 355). Hace falta una propuesta de Claude Design antes de cualquier código (regla 26).
+- **Motivo:** pregunta 2 de la especificación de la tarea 355.
+- **Impacto:** medio para las guías de ICG y formularios largos.
+- **Prioridad:** Media. **Estado:** Pendiente (espera la propuesta de Claude Design).
+- **Área afectada:** el modelo del paso (`src/lib/db.ts`, `BloquePaso`), el editor (`PasosEditor.tsx`) y la acción a la vez del teléfono (`ModoFoco.tsx`, `AccionEnTelefono.tsx`), si se aprueba.
+- **Dependencias:** la 355.
+
+### 357. Observar la acción a la vez del teléfono con técnicos reales
+
+- **Título:** comprobar en el trabajo real lo que el prototipo solo estimó (palabras por pantalla, toques, uso de la ayuda).
+- **Descripción:** la tarea 355 cambia el defecto del teléfono a una acción por pantalla: más toques (uno por acción) a cambio de menos lectura. Las medidas son del prototipo y del banco local, no de técnicos. El protocolo está en el tablero «5 · Evaluación» del lienzo «Rediseño móvil · Guías de Soluciones IT» de Claude Design. Con lo observado se decide si se ajusta algo (por ejemplo, qué va a la vista y qué a la ayuda).
+- **Motivo:** «Pendiente» de la sección 2 de la especificación de la tarea 355.
+- **Impacto:** alto si lo observado contradice el diseño.
+- **Prioridad:** Alta. **Estado:** Pendiente (lo hace el usuario con el equipo).
+- **Área afectada:** ninguna de código hasta tener resultados.
+- **Dependencias:** la 355 desplegada.
 
 ### 319. Casos de datos y conflictos de la conciliación que no se resuelven por código (usuario y ChatGPT)
 

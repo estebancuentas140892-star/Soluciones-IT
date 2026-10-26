@@ -6,6 +6,17 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-26
+
+### Cambiado (tarea 355): en el teléfono, la guía se ejecuta una acción por pantalla, con «Ayuda con este paso»
+
+**Área modificada:** `src/lib/preferenciasEjecucion.ts` (defecto del teléfono), `src/features/soluciones/ModoFoco.tsx` (la presentación del teléfono), `AsistenteVista.tsx` (sin pantallas previas en el teléfono, la cabecera, el cierre del teléfono también tras la acción a la vez), `accionTelefono.ts`, `AccionEnTelefono.tsx` y `LineaBajoElTitulo.tsx` (nuevos), `tareasFoco.ts`, `notasGuia.ts`, `flujoContinuo.ts`, `ventana.ts`, `HojaFalla.tsx`, `guiaCompletada.ts`, `ProcedimientoVista.tsx` y `SenalesDePaso.tsx` (exportaciones), `src/components/ventana/PieVentana.tsx` y `useFueraDeVista.ts`; `PasosEditor.tsx` (campo «Dónde se hace»); `src/lib/db.ts` y `procedimiento.ts` (comentarios); `scripts/capturas-moviles.mjs` y `scripts/prueba-sin-conexion.mjs`; pruebas nuevas `accionTelefono.test.ts` y `accionTelefonoFlujo.test.tsx` y 25 archivos de prueba actualizados.
+**Tipo:** Cambiado.
+**Motivo:** el usuario eligió el 2026-10-26 la presentación «Equilibrada esencial» de Claude Design: «la información debería estar para acompañar cuando te sientes perdido, no hacerte confundir en el proceso».
+**Qué cambia (solo por debajo de 768 px):** quien nunca eligió modo abre la guía en su primera acción, sin pantallas previas, y ve una acción por pantalla con solo lo necesario para hacerla: «Dónde», el riesgo real entero antes de la instrucción (la crítica pide «Confirmo que la leí» y, mientras falte, «Listo» dice qué falta), la instrucción con su tamaño según su largo, «Cómo hacerlo», el dato técnico, el comando, la credencial en línea y, en una comprobación, «Debes ver» y «No se cumple». Lo que acompaña (requisitos, la imagen del resultado, imágenes, qué significa, para qué, notas, archivos, guías de consulta y lo que sigue) se abre a pedido en «Ayuda con este paso». El pie dice «Listo · Siguiente», «Listo · Comprobar el resultado» o «Listo · Terminar guía»; las preguntas se responden en el pie. La cabecera lleva «Tengo un problema» y «Paso X de Y · acción a de b · equipo». La ventana por paso queda como opción del índice. El editor vuelve a ofrecer «Dónde se hace». Tableta y escritorio no cambian.
+**Impacto esperado:** un toque por acción en vez de uno por paso, y menos lectura en cada pantalla (de 17 a 22 palabras en el banco local). Una guía a medias retoma igual.
+**Estructura de datos:** sin cambios (ni Supabase, ni RLS, ni Dexie): `lugar` ya vivía en el JSON del paso y las versiones anteriores lo conservaban al guardar.
+
 ## 2026-10-23
 
 ### Agregado (tarea 354): la pantalla no se apaga en la guía y las notas de la guía en Detalles, en el teléfono
