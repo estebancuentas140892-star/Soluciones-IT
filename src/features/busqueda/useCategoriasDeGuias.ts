@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
-import { db } from '../../lib/db'
+import { db, type Articulo } from '../../lib/db'
 
 /**
  * El nombre de la categoría de cada guía (con pasos o con preguntas), por su
@@ -20,4 +20,16 @@ export function useCategoriasDeGuias(): ReadonlyMap<string, string> {
       ...diagnosticos.map((d) => [d.id, nombre.get(d.categoriaId) ?? ''] as const),
     ])
   }, [articulos, diagnosticos, categorias])
+}
+
+/**
+ * Cada guía con pasos por su id (tarea 358): en el teléfono, su tarjeta en los
+ * resultados es la del catálogo (`TarjetaGuiaTelefono`), que necesita el tipo,
+ * la situación, «Aplica a» y la medida. Se lee de la copia local, sin tocar el
+ * índice ni el orden. Solo se lee con `activa` (el teléfono): desde 768 la
+ * fila de siempre no la necesita.
+ */
+export function useArticulosDeGuias(activa = true): ReadonlyMap<string, Articulo> {
+  const articulos = useLiveQuery(() => (activa ? db.articulos.toArray() : []), [activa], [])
+  return useMemo(() => new Map(articulos.map((articulo) => [articulo.id, articulo])), [articulos])
 }

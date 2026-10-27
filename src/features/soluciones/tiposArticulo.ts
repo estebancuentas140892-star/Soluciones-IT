@@ -25,6 +25,13 @@ const SINGULAR_POR_TIPO: Record<TipoArticulo, { nombre: string; genero: 'm' | 'f
   manual: { nombre: 'manual', genero: 'm' },
 }
 
+/** El tipo en singular y con mayúscula, para la medida de una guía: «Problema frecuente», «Manual». */
+export function tipoEnSingular(tipo: TipoArticulo): string {
+  const singular = SINGULAR_POR_TIPO[tipo]
+  if (!singular) return tipo
+  return singular.nombre.charAt(0).toUpperCase() + singular.nombre.slice(1)
+}
+
 export function tituloNuevo(tipo: TipoArticulo): string {
   const singular = SINGULAR_POR_TIPO[tipo]
   if (!singular) return 'Nuevo artículo'

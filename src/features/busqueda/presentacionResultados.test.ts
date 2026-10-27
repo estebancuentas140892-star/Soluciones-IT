@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
+  categoriaComun,
   cuentaDeTipo,
+  filasConPalabraComun,
   filasConPrefijoComun,
   lecturaParaTelefono,
   MINIMO_FILAS_PREFIJO,
   partesSubtituloConTipo,
+  partirPorPalabra,
   partirPorPrefijo,
   tipoComun,
+  tramosDeTitulo,
 } from './presentacionResultados'
 import type { ResultadoBusqueda, TipoResultado } from './useIndiceBusqueda'
 
@@ -131,5 +135,112 @@ describe('partesSubtituloConTipo', () => {
       tipo: 'Herramienta',
       detalle: 'Monitoreo',
     })
+  })
+})
+
+// ATENUAR LO REPETIDO EN CUALQUIER POSICIÓN (tarea 358, D12): los títulos de
+// las guías empiezan por el verbo, así que la palabra común va en medio.
+describe('partirPorPalabra', () => {
+  const texto = (tramos: { texto: string; atenuado: boolean }[] | null) =>
+    tramos?.map((t) => (t.atenuado ? `[${t.texto}]` : t.texto)).join('')
+
+  it('en medio del título, con el texto original', () => {
+    expect(texto(partirPorPalabra('Configurar impresora de red', 'impresora'))).toBe('Configurar [impresora] de red')
+  })
+
+  it('el plural se atenúa entero, sin partir la palabra', () => {
+    expect(texto(partirPorPalabra('Códigos de error de las impresoras', 'impresora'))).toBe('Códigos de error de las [impresoras]')
+  })
+
+  it('sin tildes ni mayúsculas, y varias palabras buscadas', () => {
+    expect(texto(partirPorPalabra('Cámara IP sin imagen', 'camara imagen'))).toBe('[Cámara] IP sin [imagen]')
+  })
+
+  it('un título en NFD (la tilde aparte) se atenúa entero', () => {
+    const nfd = 'Configurar la impresión de red'.normalize('NFD')
+    expect(texto(partirPorPalabra(nfd, 'impresion'))).toBe('Configurar la [impresión] de red'.normalize('NFD'))
+  })
+
+  it('las palabras vacías de la consulta no se atenúan', () => {
+    expect(texto(partirPorPalabra('Impresora de la caja', 'impresora de la'))).toBe('[Impresora] de la caja')
+  })
+
+  it('una letra suelta que acompaña a otras palabras solo cuenta entera', () => {
+    expect(texto(partirPorPalabra('Windows r abre ejecutar', 'windows r'))).toBe('[Windows] [r] abre ejecutar')
+    expect(texto(partirPorPalabra('Reiniciar el router', 'windows r'))).toBeUndefined()
+  })
+
+  it('null si ninguna palabra del título empieza por lo buscado', () => {
+    expect(partirPorPalabra('Cerrar la caja del día', 'impresora')).toBeNull()
+    expect(partirPorPalabra('Cerrar la caja del día', '')).toBeNull()
+  })
+})
+
+describe('filasConPalabraComun', () => {
+  const guias = [
+    resultado('g1', 'articulo', 'Instalar impresora por IP'),
+    resultado('g2', 'articulo', 'Configurar impresora de red'),
+    resultado('g3', 'articulo', 'Atasco en las impresoras'),
+    // Coincidió por su categoría (Impresoras): no tiene la palabra.
+    resultado('g4', 'articulo', 'Cambiar el tóner'),
+  ]
+
+  it(`con ${MINIMO_FILAS_PREFIJO} o más filas que contienen la palabra, esas filas; la que coincidió por la categoría, no`, () => {
+    expect([...filasConPalabraComun(guias, 'impresora')].sort()).toEqual(['g1', 'g2', 'g3'])
+  })
+
+  it(`con menos de ${MINIMO_FILAS_PREFIJO}, ninguna`, () => {
+    expect(filasConPalabraComun(guias.slice(0, 2), 'impresora').size).toBe(0)
+  })
+
+  it('las palabras vacías no hacen una lista homogénea', () => {
+    const conDe = [
+      resultado('a', 'articulo', 'Copia de seguridad'),
+      resultado('b', 'articulo', 'Cambio de clave'),
+      resultado('c', 'articulo', 'Alta de usuario'),
+    ]
+    expect(filasConPalabraComun(conDe, 'clave de').size).toBe(0)
+  })
+})
+
+describe('tramosDeTitulo', () => {
+  it('en una lista homogénea, la palabra atenuada y nada en acento', () => {
+    const comun = new Set(['g1', 'g2', 'g3'])
+    expect(tramosDeTitulo('Configurar impresora de red', 'impresora', { palabraComun: comun, id: 'g1' })).toEqual([
+      { texto: 'Configurar ', atenuado: false },
+      { texto: 'impresora', atenuado: true },
+      { texto: ' de red', atenuado: false },
+    ])
+    // La fila de esa lista que no tiene la palabra va en claro, sin resaltar.
+    expect(tramosDeTitulo('Cambiar el tóner', 'impresora', { palabraComun: comun, id: 'g4' })).toEqual([
+      { texto: 'Cambiar el tóner' },
+    ])
+  })
+
+  it('sin lista homogénea, el comienzo común atenuado o lo buscado resaltado, como antes', () => {
+    const vacio = new Set<string>()
+    expect(
+      tramosDeTitulo('Impresora Mercadeo', 'impresora', { palabraComun: vacio, prefijoComun: new Set(['i1']), id: 'i1' }),
+    ).toEqual([{ texto: 'Impresora', atenuado: true }, { texto: ' Mercadeo' }])
+    expect(tramosDeTitulo('Configurar impresora de red', 'impresora', { palabraComun: vacio, id: 'g1' })).toEqual([
+      { texto: 'Configurar ' },
+      { texto: 'impresora', resaltado: true },
+      { texto: ' de red' },
+    ])
+  })
+
+  it('sin consulta, el título en un solo tramo', () => {
+    expect(tramosDeTitulo('Configurar impresora', '', { palabraComun: new Set(), id: 'g1' })).toEqual([
+      { texto: 'Configurar impresora' },
+    ])
+  })
+})
+
+describe('categoriaComun (D13)', () => {
+  it('la que comparten todas, o null', () => {
+    expect(categoriaComun(['Impresoras', 'Impresoras', 'Impresoras'])).toBe('Impresoras')
+    expect(categoriaComun(['Impresoras', 'POS'])).toBeNull()
+    expect(categoriaComun(['Impresoras'])).toBeNull()
+    expect(categoriaComun(['', ''])).toBeNull()
   })
 })

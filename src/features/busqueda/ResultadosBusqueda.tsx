@@ -23,12 +23,16 @@ import { eventoDeResolucion, registrarResolucion } from './medicion'
 import { filaNavega, vistaRapidaDe, type ModoBuscador } from './modoConsulta'
 import { PuenteBoveda } from './PuenteBoveda'
 import {
+  categoriaComun,
   cuentaDeTipo,
+  filasConPalabraComun,
   filasConPrefijoComun,
   lecturaParaTelefono,
   partesSubtituloConTipo,
   partirPorPrefijo,
   tipoComun,
+  tramosDeTitulo,
+  type TramoTitulo,
 } from './presentacionResultados'
 import { prominenciaPuenteBoveda } from './reglasPuenteBoveda'
 import { agruparResultados, partirTitulo, VISUAL_POR_TIPO } from './resultados'
@@ -36,7 +40,9 @@ import type { ResultadoBusqueda } from './useIndiceBusqueda'
 import { VistaRapidaResultado } from './VistaRapida'
 import { useRanuraVistaRapida } from './ranuraVistaRapida'
 import { useDatosDeEquipos } from './useDatosDeEquipos'
-import { useCategoriasDeGuias } from './useCategoriasDeGuias'
+import { useArticulosDeGuias, useCategoriasDeGuias } from './useCategoriasDeGuias'
+import { TarjetaGuiaTelefono } from '../soluciones/TarjetaGuiaTelefono'
+import type { Articulo } from '../../lib/db'
 
 // Presentacion compartida de los resultados del buscador global. El
 // catalogo y el agrupado viven en resultados.ts; el ranking global, en
@@ -494,6 +500,45 @@ function GuiaQueMejorCoincide({
   )
 }
 
+// UNA GUÍA EN LOS RESULTADOS DEL TELÉFONO (tarea 358, D13): la tarjeta del
+// catálogo (`TarjetaGuiaTelefono`), que abre con la forma de su tipo en vez de
+// con el icono de su categoría (ocho impresoras rosas no distinguían nada). La
+// categoría va en la línea pequeña, o en el encabezado si la comparten todas.
+// Abre lo mismo y cuenta lo mismo que la tarjeta de siempre
+// (`useAbrirResultado`); una guía no tiene acciones directas ni vista rápida.
+function TarjetaGuiaResultado({
+  resultado,
+  articulo,
+  tramos,
+  desdeMejores,
+  conCategoria,
+  categoriaNombre,
+}: {
+  resultado: ResultadoBusqueda
+  articulo: Articulo
+  tramos: TramoTitulo[]
+  desdeMejores: boolean
+  conCategoria: boolean
+  categoriaNombre: string
+}) {
+  const { accionesGuia } = useContextoResultados()
+  const abrir = useAbrirResultado(resultado, desdeMejores)
+  return (
+    <TarjetaGuiaTelefono
+      articulo={articulo}
+      to={abrir.to}
+      state={abrir.state}
+      onClick={abrir.onClick}
+      tramos={tramos}
+      accion={accionesGuia.get(articulo.id) ?? null}
+      conCategoria={conCategoria}
+      categoriaNombre={categoriaNombre}
+      posibleCoincidencia={resultado.aproximado}
+      datos={{ 'data-tarjeta-resultado': 'articulo' }}
+    />
+  )
+}
+
 // UN RESULTADO EN EL TELÉFONO (tarea 350, prototipo de Claude Design): su
 // propia tarjeta, con el icono de su categoría (una guía) o de su clase (un
 // equipo), el título entero a 16 y lo que lo sitúa debajo. Un equipo dice su
@@ -722,6 +767,7 @@ export function ResultadosBusqueda({
   const enTelefono = !ancho && filaNavega(modo)
   const telefono = useMemo(() => lecturaParaTelefono(resultados, mejores), [resultados, mejores])
   const categoriasDeGuias = useCategoriasDeGuias()
+  const articulosDeGuias = useArticulosDeGuias(enTelefono)
 
   // UNA VISTA RÁPIDA A LA VEZ, y atada a la consulta que la abrió: si el
   // técnico cambia lo escrito, la vista se recoge sola (su fila puede ni
@@ -809,23 +855,69 @@ export function ResultadosBusqueda({
           )}
           {telefono.grupos.map((grupo, indice) => {
             const conPrefijo = filasConPrefijoComun(grupo.items, consulta)
+            // CADA GUÍA CON SU IDENTIDAD (tarea 358, D12 y D13): la palabra que
+            // comparten 3 o más guías se atenúa, y la categoría que comparten
+            // todas sube al encabezado («Guías de Impresoras»), como el tipo
+            // común sube en «Mejores resultados · 5 equipos».
+            const guias = grupo.items.filter((item) => item.tipo === 'articulo')
+            const conPalabra = filasConPalabraComun(guias, consulta)
+            const comun =
+              grupo.id === 'soluciones'
+                ? categoriaComun(
+                    grupo.items
+                      .filter((item) => item.tipo === 'articulo' || item.tipo === 'diagnostico')
+                      .map((item) => categoriasDeGuias.get(idDeEntidad(item.id)) ?? ''),
+                  )
+                : null
+            // Solo si nada del grupo es de otra parte: un adjunto (no se sabe
+            // de qué categoría) u otra categoría quedarían bajo un rótulo ajeno.
+            const categoriaDelGrupo =
+              comun &&
+              !grupo.items.some((item) => item.tipo === 'adjunto' || (item.tipo === 'categoria' && item.titulo !== comun))
+                ? comun
+                : null
+            const nombreGrupo = grupo.id === 'soluciones' && telefono.destacada ? 'Otras guías' : grupo.nombre
             return (
               <Fragment key={grupo.id}>
                 <section className="flex flex-col gap-2" data-grupo-resultados={grupo.id}>
-                  <h2 className={TITULO_GRUPO}>
-                    {grupo.id === 'soluciones' && telefono.destacada ? 'Otras guías' : grupo.nombre}
-                  </h2>
-                  {grupo.items.map((item) => (
-                    <TarjetaResultado
-                      key={item.id}
-                      resultado={item}
-                      consulta={consulta}
-                      prefijoAtenuado={conPrefijo.has(item.id)}
-                      conAcciones={!separar || entreLosMejores.has(item.id)}
-                      desdeMejores={separar && entreLosMejores.has(item.id)}
-                      categoriaNombre={categoriasDeGuias.get(idDeEntidad(item.id)) ?? ''}
-                    />
-                  ))}
+                  {categoriaDelGrupo ? (
+                    <h2 className={`${TITULO_GRUPO} flex items-center gap-2`}>
+                      <IconoCategoria nombre={categoriaDelGrupo} tam={22} />
+                      <span className="min-w-0">
+                        {nombreGrupo} de {categoriaDelGrupo}
+                      </span>
+                    </h2>
+                  ) : (
+                    <h2 className={TITULO_GRUPO}>{nombreGrupo}</h2>
+                  )}
+                  {grupo.items.map((item) => {
+                    const articulo = item.tipo === 'articulo' ? articulosDeGuias.get(idDeEntidad(item.id)) : undefined
+                    return articulo ? (
+                      <TarjetaGuiaResultado
+                        key={item.id}
+                        resultado={item}
+                        articulo={articulo}
+                        tramos={tramosDeTitulo(item.titulo, consulta, {
+                          palabraComun: conPalabra,
+                          prefijoComun: conPrefijo,
+                          id: item.id,
+                        })}
+                        desdeMejores={separar && entreLosMejores.has(item.id)}
+                        conCategoria={categoriaDelGrupo === null}
+                        categoriaNombre={categoriasDeGuias.get(articulo.id) ?? ''}
+                      />
+                    ) : (
+                      <TarjetaResultado
+                        key={item.id}
+                        resultado={item}
+                        consulta={consulta}
+                        prefijoAtenuado={conPrefijo.has(item.id)}
+                        conAcciones={!separar || entreLosMejores.has(item.id)}
+                        desdeMejores={separar && entreLosMejores.has(item.id)}
+                        categoriaNombre={categoriasDeGuias.get(idDeEntidad(item.id)) ?? ''}
+                      />
+                    )
+                  })}
                 </section>
                 {/* El puente, detrás del primer bloque de lo encontrado: ni
                     encima de lo que ya responde ni enterrado al final. */}

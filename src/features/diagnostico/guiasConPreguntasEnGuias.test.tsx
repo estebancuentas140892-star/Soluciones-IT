@@ -133,13 +133,12 @@ function primerResultado(): HTMLAnchorElement | null {
   return document.body.querySelector<HTMLAnchorElement>('main a[href^="/soluciones/"], main a[href^="/diagnostico/"]')
 }
 
-/** La fila "Guías con preguntas" de Guías. */
+/**
+ * La fila "Guías con preguntas" de Guías. A 375 px, el ancho de estas pruebas,
+ * es la fila propia del final del catálogo del teléfono (tarea 358, D6).
+ */
 function puertaGuiasConPreguntas(): HTMLAnchorElement | null {
-  return (
-    Array.from(document.body.querySelectorAll<HTMLAnchorElement>('main a')).find(
-      (a) => (a.querySelector('.text-\\[15px\\]')?.textContent ?? '').trim() === 'Guías con preguntas',
-    ) ?? null
-  )
+  return document.body.querySelector<HTMLAnchorElement>('main a[data-puerta-guias-con-preguntas]')
 }
 
 beforeEach(async () => {

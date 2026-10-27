@@ -18,6 +18,7 @@ import {
 } from '../../pruebas/montaje'
 import { bloquear } from '../boveda/sesionBoveda'
 import { ResolverPage } from '../inicio/ResolverPage'
+import { SolucionesPage } from '../soluciones/SolucionesPage'
 import { BuscadorGlobal } from './BuscadorGlobal'
 
 // EL NOMBRE PRINCIPAL DE UN RESULTADO NO SE RECORTA (regla 23, tarea 288).
@@ -319,5 +320,34 @@ describe('Resolver sin escribir: Recientes y Atención', () => {
     const fila = await esperar(() => nombre(acceso), 'el acceso vencido en Atención')
     expect(seccionDe(fila)).toBe('Tu trabajo de hoy')
     esperarEntero(fila)
+  })
+})
+
+// EL CATÁLOGO DE GUÍAS EN EL TELÉFONO (tarea 358): la tarjeta de cada guía
+// y «Para empezar» abierto tampoco recortan el título (antes, `truncate`).
+describe('el catálogo de Guías en el teléfono: el título de una guía se lee entero', () => {
+  const RUTAS_GUIAS = [{ ruta: '/soluciones', elemento: <SolucionesPage /> }]
+
+  it('`TarjetaGuiaTelefono` no corta el título largo', async () => {
+    await sembrarGuiaLarga()
+    await montar(RUTAS_GUIAS, '/soluciones')
+    const guia = await esperar(() => nombre(LARGO), 'la tarjeta con su título completo')
+    expect(guia.closest('a')?.hasAttribute('data-tarjeta-guia')).toBe(true)
+    esperarEntero(guia)
+  })
+
+  it('«Para empezar», abierto, no corta el título', async () => {
+    await sembrarGuiaLarga()
+    await db.articulos.update('guia-ip', { esRutaInicio: true })
+    await montar(RUTAS_GUIAS, '/soluciones')
+    const boton = await esperar(() => document.body.querySelector<HTMLButtonElement>('[data-para-empezar] button'), 'Para empezar')
+    await act(async () => {
+      boton.click()
+    })
+    const enLaRuta = await esperar(
+      () => nombres().find((n) => n.textContent === LARGO && n.closest('[data-para-empezar]')),
+      'la guía en la ruta',
+    )
+    esperarEntero(enLaRuta)
   })
 })

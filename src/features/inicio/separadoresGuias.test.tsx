@@ -74,6 +74,9 @@ describe('las guías se distinguen una de otra en el teléfono (tarea 347)', () 
       expect(fila.hasAttribute('data-abierta-hace-poco')).toBe(true)
     }
     expect(seccion.className).toContain('gap-2.5')
+    // Con algo reciente, «Puedes escribir» no se dibuja (tarea 358, D2): solo
+    // ayuda en el primer uso o con el registro vacío.
+    expect(document.body.querySelector('#busqueda-puedes-escribir')).toBeNull()
     // El título manda.
     const titulo = filas[0].querySelector('[data-nombre-principal]')
     expect(titulo?.className).toContain('font-bold')

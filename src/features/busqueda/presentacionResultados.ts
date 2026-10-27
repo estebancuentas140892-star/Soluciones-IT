@@ -1,6 +1,7 @@
 import { normalizarTexto } from '../soluciones/iconosSoluciones'
+import { palabrasDeContenido, usaPrefijo } from './consultaNatural'
 import { ETIQUETA_TIPO, subtituloConTipo } from './mejores'
-import { agruparResultados, type GrupoResultados } from './resultados'
+import { agruparResultados, partirTitulo, type GrupoResultados } from './resultados'
 import type { ResultadoBusqueda, TipoResultado } from './useIndiceBusqueda'
 
 // CÓMO SE LEE UNA LISTA DE RESULTADOS (propuesta final de Claude Design,
@@ -76,6 +77,106 @@ export function partirPorPrefijo(titulo: string, consulta: string): { prefijo: s
 export function filasConPrefijoComun(resultados: ResultadoBusqueda[], consulta: string): Set<string> {
   const ids = resultados.filter((r) => partirPorPrefijo(r.titulo, consulta) !== null).map((r) => r.id)
   return new Set(ids.length >= MINIMO_FILAS_PREFIJO ? ids : [])
+}
+
+// ATENUAR LO REPETIDO EN CUALQUIER POSICIÓN (tarea 358, D12, segunda ronda de
+// Claude Design). La lista homogénea de arriba solo mira el COMIENZO del
+// título: sirve para equipos («Impresora Mercadeo»), pero los títulos de las
+// guías empiezan por el verbo («Configurar impresora de red»), así que casi
+// nunca se activaba, y la palabra que todas comparten se pintaba en acento en
+// cada tarjeta. Aquí cuenta la palabra buscada en cualquier sitio del título,
+// también en plural, y se atenúa ENTERA: «impresoras» buscando «impresora» no
+// se parte en «[impresora]s».
+
+// Con las marcas combinantes (`\p{M}`): un título guardado en NFD («Impresión»
+// con la tilde aparte) es una sola palabra, no «Impresio» y «n».
+const PALABRA = /[\p{L}\p{N}\p{M}]+/gu
+
+/**
+ * Los tramos del título con cada palabra que EMPIEZA por una palabra buscada
+ * marcada como atenuada, o null si ninguna. Las palabras buscadas son las de
+ * contenido de la consulta (sin las vacías, como el buscador); se devuelve el
+ * texto original del título, con sus tildes y mayúsculas.
+ */
+export function partirPorPalabra(titulo: string, consulta: string): { texto: string; atenuado: boolean }[] | null {
+  const buscadas = palabrasDeContenido(consulta)
+  if (buscadas.length === 0) return null
+  const tramos: { texto: string; atenuado: boolean }[] = []
+  const agregar = (texto: string, atenuado: boolean) => {
+    if (!texto) return
+    const anterior = tramos[tramos.length - 1]
+    if (anterior && anterior.atenuado === atenuado) anterior.texto += texto
+    else tramos.push({ texto, atenuado })
+  }
+  let hayAtenuada = false
+  let desde = 0
+  for (const palabra of titulo.matchAll(PALABRA)) {
+    const inicio = palabra.index ?? 0
+    const normal = normalizarTexto(palabra[0])
+    // Por su comienzo, con la misma regla del índice: una letra suelta que
+    // acompaña a otras palabras («windows r») solo cuenta entera.
+    const atenuada = buscadas.some(
+      (buscada) => normal === buscada || (usaPrefijo(buscada, buscadas) && normal.startsWith(buscada)),
+    )
+    agregar(titulo.slice(desde, inicio), false)
+    agregar(palabra[0], atenuada)
+    hayAtenuada ||= atenuada
+    desde = inicio + palabra[0].length
+  }
+  agregar(titulo.slice(desde), false)
+  return hayAtenuada ? tramos : null
+}
+
+/**
+ * Los ids de las filas con alguna palabra atenuable, si son al menos
+ * `MINIMO_FILAS_PREFIJO`; si no, ninguna (dos filas no son una lista que
+ * comparar). Una fila que coincidió por otra cosa (la categoría, el tipo) no
+ * entra: va sin resaltado.
+ */
+export function filasConPalabraComun(resultados: { id: string; titulo: string }[], consulta: string): Set<string> {
+  const ids = resultados.filter((r) => partirPorPalabra(r.titulo, consulta) !== null).map((r) => r.id)
+  return new Set(ids.length >= MINIMO_FILAS_PREFIJO ? ids : [])
+}
+
+/**
+ * La categoría que comparten TODAS las guías de la lista, o null si hay más de
+ * una, alguna sin categoría o menos de dos guías (D13). Es el criterio de
+ * `tipoComun`: lo común sube al encabezado y deja de repetirse en cada tarjeta.
+ */
+export function categoriaComun(categoriasDeGuias: string[]): string | null {
+  if (categoriasDeGuias.length < 2) return null
+  const primera = categoriasDeGuias[0]
+  if (!primera) return null
+  return categoriasDeGuias.every((categoria) => categoria === primera) ? primera : null
+}
+
+/** Un tramo del título de una guía: en claro, atenuado (lo repetido) o resaltado (lo buscado). */
+export interface TramoTitulo {
+  texto: string
+  atenuado?: boolean
+  resaltado?: boolean
+}
+
+/**
+ * Cómo se pinta el título de una guía en una lista del teléfono (D12). En una
+ * lista homogénea (`filasConPalabraComun` no vacío), la palabra repetida se
+ * atenúa y nada va en acento; una fila de esa lista sin la palabra va en
+ * claro. Si la lista no llega, lo de siempre: el comienzo común atenuado
+ * (`filasConPrefijoComun`) o lo buscado resaltado. Sin consulta, el título.
+ */
+export function tramosDeTitulo(
+  titulo: string,
+  consulta: string,
+  lista: { palabraComun: ReadonlySet<string>; prefijoComun?: ReadonlySet<string>; id: string },
+): TramoTitulo[] {
+  if (!consulta.trim()) return [{ texto: titulo }]
+  if (lista.palabraComun.size > 0) {
+    return (lista.palabraComun.has(lista.id) ? partirPorPalabra(titulo, consulta) : null) ?? [{ texto: titulo }]
+  }
+  const conPrefijo = lista.prefijoComun?.has(lista.id) ? partirPorPrefijo(titulo, consulta) : null
+  if (conPrefijo) return [{ texto: conPrefijo.prefijo, atenuado: true }, { texto: conPrefijo.resto }]
+  const { pre, match, post } = partirTitulo(titulo, consulta)
+  return [{ texto: pre }, { texto: match, resaltado: true }, { texto: post }].filter((tramo) => tramo.texto !== '')
 }
 
 /** El tipo que comparten TODAS las filas, o null si hay más de uno (o menos de dos filas). */

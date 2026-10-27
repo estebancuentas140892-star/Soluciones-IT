@@ -1,6 +1,8 @@
-import type { ComponentType } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import { Modal } from './Modal'
 import { Check, type IconoProps } from './iconos'
+import { IconoVentana } from './ventana/IconoVentana'
+import { FILAS_EN_TARJETA_TELEFONO } from './ventana/estilos'
 
 // Hoja inferior para elegir UNA opción de una lista corta: el segundo eje
 // de filtro de una pantalla de lista, o "dentro de qué categoría" al
@@ -30,6 +32,11 @@ export interface OpcionHoja<T extends string> {
   // Cuántos elementos caen en esta opción. Se omite cuando la hoja no
   // filtra una lista (elegir categoría al crear no tiene conteo útil).
   count?: number
+  // Solo en la variante `telefono` (tarea 358): un dibujo propio en lugar
+  // del glifo (el icono de la categoría, con su clase) y el número dicho en
+  // palabras («6 guías · 2 para leer») en lugar de `count`.
+  visual?: ReactNode
+  detalle?: string
 }
 
 interface Props<T extends string> {
@@ -45,6 +52,9 @@ interface Props<T extends string> {
   // las hojas donde no elegir nada no es un estado válido (elegir
   // categoría para crear).
   onLimpiar?: () => void
+  // `telefono` (tarea 358): las piezas de Ventana, para una rama que solo
+  // existe por debajo de 768 px. Sin ella, la hoja de siempre.
+  variante?: 'normal' | 'telefono'
 }
 
 const ID_TITULO = 'hoja-filtro-titulo'
@@ -57,7 +67,63 @@ export function HojaFiltro<T extends string>({
   seleccionada = null,
   onElegir,
   onLimpiar,
+  variante = 'normal',
 }: Props<T>) {
+  if (variante === 'telefono') {
+    return (
+      <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 id={ID_TITULO} className="text-[18px] font-extrabold leading-tight text-noct-text">
+            {titulo}
+          </h2>
+          {onLimpiar && seleccionada !== null && (
+            <button
+              type="button"
+              onClick={() => {
+                onLimpiar()
+                onCerrar()
+              }}
+              className="inline-flex min-h-11 shrink-0 items-center text-[14px] font-bold text-noct-accent-300"
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
+        {/* LA HOJA EN VENTANA (tarea 358): filas de 56 con divisor dentro de
+            una tarjeta, como los grupos de Más; el nombre entero a 16, su
+            número en palabras y la elegida con su marca en acento. */}
+        <div className="max-h-[62svh] overflow-y-auto">
+          <div className={`${FILAS_EN_TARJETA_TELEFONO} flex flex-col`}>
+            {opciones.map((opcion) => {
+              const activa = opcion.valor === seleccionada
+              const Icono = opcion.Icono
+              const detalle = opcion.detalle ?? (opcion.count != null ? String(opcion.count) : '')
+              return (
+                <button
+                  key={opcion.valor}
+                  type="button"
+                  aria-pressed={activa}
+                  onClick={() => {
+                    onElegir(opcion.valor)
+                    onCerrar()
+                  }}
+                  className="flex min-h-14 items-center gap-3 border-t-[1.5px] border-noct-divider py-2 text-left text-noct-text first:border-t-0 active:bg-noct-presionado"
+                >
+                  {opcion.visual ??
+                    (Icono && <Icono size={20} className={`shrink-0 ${opcion.claseIcono ?? ''}`} aria-hidden />)}
+                  <span className="min-w-0 flex-1 text-pretty text-[16px] font-bold leading-snug">{opcion.etiqueta}</span>
+                  {detalle && (
+                    <span className="shrink-0 text-[14px] font-semibold text-noct-neutral-300">{detalle}</span>
+                  )}
+                  {activa && <IconoVentana nombre="hecho" tam={20} className="shrink-0 text-noct-accent-300" />}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </Modal>
+    )
+  }
   return (
     <Modal abierto={abierto} onCerrar={onCerrar} tituloId={ID_TITULO}>
       <div className="mb-3 flex items-center justify-between gap-3">

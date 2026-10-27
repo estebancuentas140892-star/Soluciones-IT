@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { IconoProps } from '../iconos'
 
 // LOS ICONOS DE «VENTANA» (tarea 350). Los glifos del prototipo de Claude
 // Design, con su trazo de 2.2 a 2.6: el teléfono se lee de pie y con prisa,
@@ -195,4 +196,14 @@ export function IconoVentana({ nombre, tam = 20, grosor = 2.2, className }: Prop
       {TRAZOS[nombre]}
     </svg>
   )
+}
+
+/**
+ * El glifo «problema» con la forma de los iconos de `iconos.tsx` (`size`), para
+ * quien elige un icono por tipo (tarea 358): en el teléfono, un problema
+ * frecuente se dice con este salvavidas y no con el círculo de advertencia,
+ * que se confundía con un aviso.
+ */
+export function IconoProblema({ size = 20, className }: IconoProps) {
+  return <IconoVentana nombre="problema" tam={size} className={className} />
 }

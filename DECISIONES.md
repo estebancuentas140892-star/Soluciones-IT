@@ -152,6 +152,7 @@ Cada decisión indica su estado (Vigente / Revisada / Descartada), su contexto, 
 - **Contexto:** la tarea 145 (2026-07-23) evaluó crear `<FilaArticulo>` y lo **descartó** con motivo escrito: "la fila de Soluciones comparte el contenedor pero nada de su interior... forzar un componente común exigiría más props condicionales que líneas compartidas". Esa comparación era contra `FilaDispositivo` y la fila de Red, y sigue siendo correcta. La auditoría de diseño de 2026-07-27 pide `FilaArticulo` para otra cosa: unificar las **dos filas de artículo** (`SolucionesPage` y `CategoriaPage`), que sí comparten interior.
 - **Decisión:** `src/features/soluciones/FilaArticulo.tsx` es la fila de artículo compartida por las dos pantallas de Soluciones. **No** se unifica con `FilaDispositivo`: son dominios distintos y el motivo de la tarea 145 sigue en pie.
 - **Consecuencias:** el rediseño hace converger a propósito lo que antes divergía sin razón (mismo recuadro neutro, misma línea de metadatos, misma ranura de estado), así que el componente no necesita las props condicionales que la tarea 145 temía. Vive en `src/features/soluciones/` y no en `src/components/` porque sus dos consumidores están en esa feature (convención de la sección 6 de [COMPONENTES_UI.md](COMPONENTES_UI.md)).
+- **Corrección (2026-10-26, tarea 358, hallazgo G12):** hoy `FilaArticulo` solo la usa `SolucionesPage` desde 768 px. `CategoriaPage` tiene sus propias filas (con `truncate` en el título, registrado aparte), y en el teléfono el catálogo usa `TarjetaGuiaTelefono` (AD-099).
 
 ## AD-021. El rediseño de la sección Soluciones se resuelve primero a 448 px; escritorio se conserva
 
@@ -1098,3 +1099,26 @@ Cada decisión indica su estado (Vigente / Revisada / Descartada), su contexto, 
 - **Descartado:** retirar la ventana por paso (el usuario la quiere como opción, tal cual la especificación); crear un tipo de bloque «campos» en esta tarea; un token de color para «Dónde».
 - **Pendiente:** observarlo con técnicos reales (protocolo del tablero «5 · Evaluación» del lienzo de Claude Design).
 - **Cómo se comprobó:** ver la tarea 355.
+
+## AD-099. En el teléfono, Resolver y el catálogo de Guías reconocen cada guía por su forma y por lo que la distingue
+
+- **Estado:** Vigente (2026-10-26, tarea 358).
+- **Contexto:** paquete de Claude Design «Resolver y catálogo de Guías en el teléfono» (`Diseños/AUDITORIA.md` y `Diseños/ESPECIFICACION.md`, sobre `7b7492d`). La auditoría encontró que «Prueba con» empujaba las categorías entre 92 y 136 px; que los nombres de categoría se partían a mitad de palabra («Computadores» a 320, 360 y 390 px); que Resolver y Guías daban números distintos para la misma categoría y la pintaban de colores distintos; que el catálogo nunca pasó a Ventana; y que, al buscar «impresora», ocho tarjetas empezaban por la misma impresora rosa y resaltaban justo la palabra que compartían. El usuario pidió «aplicar los cambios propuestos»: se toman D1 a D13 y las opciones recomendadas de la sección 13 (la situación en una línea, el orden de `TIPOS_ARTICULO`, el catálogo A2 sin rótulos por tipo y G7 en tableta como tarea aparte).
+- **Decisiones (solo por debajo de 768 px):**
+  - **D1, D2.** Resolver retira «Prueba con»; «Puedes escribir» solo con «Abiertas hace poco» vacía. Revisa la tarea 350.
+  - **Mosaico apilado.** Icono y número arriba, nombre con todo el ancho, `hyphens-auto` y nunca `overflow-wrap:anywhere`; con un número impar, la última celda ocupa la fila.
+  - **D3.** En el catálogo del teléfono la categoría se pinta con su clase (`IconoCategoria`) en el chip activo, la hoja y la cabecera de grupo, como en Resolver. Revisa AD-093 (decisión 3) en el teléfono; el color de identidad (`cat-N`) sigue en tableta y escritorio.
+  - **D4.** El tipo se dice por la forma: el glifo en tinta en un recuadro neutro; el problema frecuente con el glifo «problema» de Ventana. Ningún tipo lleva color en el teléfono (el ámbar y el verde quedan para atención y comprobado). Revisa AD-019 (R1) en el teléfono.
+  - **D5.** Dentro de cada categoría, por tipo y por título, con las obsoletas al final.
+  - **D6.** «Para empezar» plegado y solo en «Todas» sin filtros; «Guías con preguntas» al final. Revisa las tareas 3 y 269.
+  - **D7.** «Crear» pasa a un «+» de 44 en la barra superior; la pastilla de frescura sale y los cambios sin subir se dicen solo cuando los hay. Revisa AD-019 (R3 y R7) en el teléfono.
+  - **D8.** Elegir una categoría en la hoja con texto buscado acota la búsqueda (hallazgo G7), como el rail de escritorio.
+  - **D9.** El número de una categoría es el mismo en Resolver, en la hoja y en el grupo: las guías publicadas con pasos (`esGuiaPublicadaEjecutable`), y las de leer aparte.
+  - **D10.** El catálogo del teléfono dice «guías», no «artículos» (adelanta la tarea 216 en esta pantalla).
+  - **D11.** Cada guía es su propia tarjeta, con su situación en una línea (o su primer síntoma) y «Aplica a» delante de su medida.
+  - **D12.** En una lista con 3 o más guías que contienen la palabra buscada, en cualquier posición y en plural, esa palabra se atenúa entera y nada va en acento. Extiende la «lista homogénea» de la propuesta del 2026-10-01, que solo miraba el comienzo del título.
+  - **D13.** En la búsqueda de Resolver, una guía usa la misma tarjeta; la categoría pasa a la línea pequeña o, si es común a todas, al encabezado. Revisa AD-093 (decisión 3) en la búsqueda.
+- **Por qué una rama del teléfono en `SolucionesPage` y no otra pantalla:** como `DispositivosPage`, la misma página decide con `useEsAncho`; el estado, la URL, los filtros, la búsqueda y las hojas son los mismos, y desde 768 se ejecuta el código de siempre sin tocarlo (regla 31 f).
+- **Descartado:** Resolver B (lista de una columna: la más alta, pierde el mosaico) y C (pastillas adaptables: reproduce el problema de partida); el catálogo A (filas continuas, más guías a la vista pero dos parecidas no se distinguen), B (tarjetas con el icono de categoría repetido) y A3 (rótulos por tipo: con pocas guías por tipo, casi un rótulo por guía).
+- **Pendiente:** G7 en tableta, los `truncate` de `CategoriaPage` y escribir «cuándo usarla» en las guías que no lo tienen (ChatGPT, regla 26), registradas aparte en [TAREAS.md](TAREAS.md); y observar con técnicos si la forma distingue mejor que el color (hipótesis G11 y S6 de la auditoría).
+- **Cómo se comprobó:** ver la tarea 358.

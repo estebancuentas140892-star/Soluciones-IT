@@ -136,6 +136,9 @@ const CODIGO_VENCIDO_EN_CONECTAR = `{ const r=await fetch('${SIMULADOR}/rpc/asis
 // Sin red, dentro de la pagina ya cargada (el servidor de desarrollo no
 // puede servir modulos sin red): la app escucha `offline` y lee onLine.
 const SIN_RED_EN_LA_PAGINA = `{ Object.defineProperty(Navigator.prototype,'onLine',{get:()=>false,configurable:true}); window.dispatchEvent(new Event('offline')); await new Promise(r=>setTimeout(r,300)); }`
+// Tarea 358: dos guías de la semilla en «Para empezar», o fuera otra vez.
+const RUTA_DE_INICIO = (marcar) =>
+  `{ const { db } = await import('/src/lib/db.ts'); await db.articulos.update('art-imp-1', { esRutaInicio: ${marcar}, ordenRutaInicio: 1 }); await db.articulos.update('art-recurso-compartido', { esRutaInicio: ${marcar}, ordenRutaInicio: 2 }); }`
 const buscarEnResolver = (texto) =>
   `{ const c=document.querySelector('input[type=search]'); const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set; set.call(c,${JSON.stringify(texto)}); c.dispatchEvent(new Event('input',{bubbles:true})); await new Promise(r=>setTimeout(r,700)); }`
 
@@ -161,6 +164,21 @@ const TODAS_LAS_PARADAS = [
     guion: `const el=[...document.querySelectorAll('a')].find(a=>a.textContent.includes('Configurar las paginas'));
             el?.scrollIntoView({block:'center'});`,
   },
+  // Tarea 358: el catálogo del teléfono con una categoría, buscando (la
+  // palabra repetida atenuada), la hoja de categorías y «Para empezar»
+  // abierto (la semilla no marca ninguna ruta: se marcan dos y se desmarcan);
+  // y la búsqueda de Resolver con varias guías de la misma categoría.
+  { nombre: 'catalogo-categoria', ruta: '/soluciones?categoria=cat-impresoras' },
+  { nombre: 'catalogo-buscando', ruta: '/soluciones', guion: buscarEnResolver('impresora') },
+  { nombre: 'catalogo-hoja', ruta: '/soluciones', guion: tocar('Elegir categoría') },
+  {
+    nombre: 'catalogo-para-empezar',
+    ruta: '/soluciones',
+    antes: RUTA_DE_INICIO(true),
+    despues: RUTA_DE_INICIO(false),
+    guion: tocar('Para empezar'),
+  },
+  { nombre: 'resolver-guias-impresora', ruta: '/', guion: buscarEnResolver('impresora') },
   { nombre: 'mas', ruta: '/mas' },
   // Tarea 257 (Fase 5): Mis favoritos como fila de Consulta, abierta, y
   // la Actividad del equipo al final de la Agenda, abierta. La semilla no

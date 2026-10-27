@@ -17,6 +17,7 @@ import {
   WarningCircle,
   Wrench,
 } from '../../components/iconos'
+import { IconoProblema } from '../../components/ventana/IconoVentana'
 
 // Minusculas sin acentos para comparar nombres de categoria escritos
 // por el equipo ("Cámaras", "Cómputo") con las palabras clave del mapa.
@@ -38,6 +39,20 @@ const ICONO_POR_TIPO: Record<TipoArticulo, ComponentType<IconoProps>> = {
 
 export function iconoDeTipo(tipo: TipoArticulo): ComponentType<IconoProps> {
   return ICONO_POR_TIPO[tipo] ?? BookOpen
+}
+
+// EL TIPO POR SU FORMA, EN EL TELÉFONO (tarea 358, D4). Los mismos glifos,
+// salvo el problema frecuente: el círculo de advertencia se leía como un aviso,
+// así que va el glifo «problema» de Ventana. En el teléfono el tipo no lleva
+// color (el ámbar y el verde quedan para atención y comprobado): se pinta en
+// tinta, y lo distingue la forma.
+const ICONO_TELEFONO_POR_TIPO: Record<TipoArticulo, ComponentType<IconoProps>> = {
+  ...ICONO_POR_TIPO,
+  problema_frecuente: IconoProblema,
+}
+
+export function iconoDeTipoEnTelefono(tipo: TipoArticulo): ComponentType<IconoProps> {
+  return ICONO_TELEFONO_POR_TIPO[tipo] ?? BookOpen
 }
 
 // Color de identidad de cada tipo: los tres tipos operativos (instalar,

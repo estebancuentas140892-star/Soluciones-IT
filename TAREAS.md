@@ -145,6 +145,18 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **QUINTA PARTE (2026-10-23, traspaso entre cuentas): continuar desde la propuesta B sin repetir nada.** Diagnóstico breve (rama en `b6ac32b`, worktree limpio), las propuestas A (finalización) y C (tema por defecto) estudiadas para decidir sin implementarlas, y Agenda, Mantenimiento y Facturación llevados a las piezas de «Ventana», sin tocar su lógica (tarea 352, AD-095). Las mismas restricciones. **El mismo día el usuario pidió que todo cambio llegue a la versión de Vercel** («quiero que salga el botón actualizar para poder aplicar los cambios en mi app»): la rama `feat/rediseno-movil-ventanas` (tareas 348 a 352) se integró en `main` por avance directo desde `e20cb62` y desde entonces cada cambio se sube a `main`. **Ese día, además, la tarea 353:** como la app no avisaba cuando la versión nueva se aplicaba sola, ahora dice «Soluciones IT se actualizó a la versión X» la primera vez que se abre (archivada: el usuario confirmó que los cambios llegaron a su teléfono).
 
+**ENCARGO DEL 2026-10-26: RESOLVER Y CATÁLOGO DE GUÍAS EN EL TELÉFONO** (paquete de Claude Design en `Diseños/`: `README.md`, `AUDITORIA.md` y `ESPECIFICACION.md`, fuente de verdad, preparada sobre `7b7492d`). El usuario pidió «aplicar los cambios propuestos»: se toman D1 a D13 y, en las preguntas abiertas de la sección 13, las opciones recomendadas (situación en una línea, orden por tipo de `TIPOS_ARTICULO`, catálogo A2 sin rótulos por tipo, G7 en tableta como tarea aparte). Solo por debajo de 768 px; tableta y escritorio, idénticos a `main`.
+
+### 358. Resolver y catálogo de Guías en el teléfono: mosaico, grupos por categoría y cada guía con su identidad
+
+- **Título:** implementar la «Propuesta recomendada» de Claude Design: Resolver A (mosaico apilado, sin «Prueba con»), catálogo A2 y la misma tarjeta de guía en la búsqueda de Resolver.
+- **Descripción:** (1) Resolver: retirar «Prueba con» (D1), «Puedes escribir» solo sin recientes (D2) y categorías en mosaico de celdas iguales que nunca parte un nombre. (2) Lógica pura: `catalogoTelefono.ts` (orden por tipo, grupos, cuenta, situación) y `partirPorPalabra`, `filasConPalabraComun` y `categoriaComun` en `presentacionResultados.ts`. (3) `TarjetaGuiaTelefono` (glifo del tipo en tinta, palabra repetida atenuada, situación en una línea, «Aplica a» y medida) y la búsqueda de Resolver con ella («Guías de {categoría}»). (4) Catálogo del teléfono con las piezas de Ventana: «+» en la barra, chips con el icono de la categoría, grupos por categoría con su cuenta, «guías» en vez de «artículos». (5) «Para empezar» plegado, «Guías con preguntas» al final y la hoja de categorías que acota la búsqueda (D8). (6) Documentación, auditoría por CDP, escritorio comparado con `main`, CI y Vercel.
+- **Motivo:** encargo del usuario del 2026-10-26 (auditoría R1 a R6, G1 a G12 y S1 a S6): los nombres de categoría se partían, el número de una categoría no coincidía entre Resolver y Guías, el catálogo seguía en el lenguaje anterior y las guías de una misma categoría no se distinguían sin abrirlas.
+- **Impacto:** alto en el teléfono (Resolver, búsqueda y catálogo de Guías); ninguno en tableta y escritorio. Sin cambios de datos ni de Supabase.
+- **Prioridad:** Alta. **Estado:** Implementada; integrada en `main` con esta entrega (ver el CHANGELOG del 2026-10-26); falta que el usuario la vea en su teléfono y observar con técnicos si la forma distingue mejor que el color (hipótesis G11 y S6). Verificación: suite completa en verde (3.744 pruebas, 249 archivos), con `catalogoTelefono.test.ts` (8), `catalogoTelefono.test.tsx` (10), `tarjetaGuiaTelefono.test.tsx` (6), `busquedaGuiasTelefono.test.tsx` (2) y `resolverCategoriasTelefono.test.tsx` (2) nuevas, y `presentacionResultados.test.ts`, `nombresSinRecorte.test.tsx`, `resolverYAgenda.test.tsx`, `separadoresGuias.test.tsx` y `guiasConPreguntasEnGuias.test.tsx` ajustadas; `tsc -b`, `oxlint` y build. Capturas por CDP del banco local (192 en el teléfono) a 320, 360, 390 y 430 en los dos temas: sin desbordamiento horizontal, texto recortado, controles tapados ni áreas de menos de 44 px, y contraste de 4.5:1 a 360 y 390 en los dos temas. Medido a 390 × 844 con «Impresoras»: 4 guías completas a la vista (antes 2); a 320 × 568, 2. Tableta y escritorio a 768 × 1024, 1366 × 768 y 1920 × 1080 en 12 paradas (72 imágenes, con y sin desplazar) comparados píxel a píxel con `main`: 64 idénticas y 8 con 7 a 31 píxeles sueltos de ruido de dibujo (el cursor del campo, el borde y la insignia del rail), ninguno en lo que cambia. Una revisión independiente del diff encontró dos fallos (una palabra guardada en NFD se partía y «N guías coinciden» contaba borradores) y seis riesgos; se corrigieron antes de integrar (marcas combinantes en `partirPorPalabra`, «N coinciden», las guías sin categoría en «Sin categoría», «Guías de X» solo sin adjuntos u otras categorías en el grupo, la lectura de las guías solo en el teléfono, el estado en el nombre accesible, «Elegir categorías» y la sugerencia de 44 px).
+- **Área afectada:** `src/features/inicio/ResolverPage.tsx`; `src/features/busqueda/EstadosBusquedaMovil.tsx`, `ResultadosBusqueda.tsx` y `presentacionResultados.ts`; `src/features/soluciones/SolucionesPage.tsx` y los nuevos `catalogoTelefono.ts`, `TarjetaGuiaTelefono.tsx` y `GrupoGuiasTelefono.tsx`; `src/components/HojaFiltro.tsx` y `ventana/estilos.ts`.
+- **Dependencias:** las 349 a 355 (piezas de «Ventana»).
+
 ### 348. Rediseño móvil por ventanas: la ejecución de la guía en el teléfono
 
 - **Título:** en el teléfono cada paso de la guía se lee entero, en una ventana, y se cierra con un solo «Listo».
@@ -681,6 +693,36 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 359. En la tableta, elegir una categoría con texto buscado tampoco acota la búsqueda (G7)
+
+- **Título:** llevar a la tableta lo que la tarea 358 (D8) corrigió en el teléfono.
+- **Descripción:** de 768 a 1279 px el catálogo de Guías usa la misma hoja de categorías que el teléfono (los controles son `xl:hidden`), y al elegir una categoría con texto escrito sigue llamando a `setSoloEnCategoria(false)`: la búsqueda sigue en todas y la cinta dice «El filtro X queda en pausa». En escritorio (`xl`) el rail sí acota (`setCategoria`).
+- **Motivo:** hallazgo G7 de la auditoría de Claude Design del 2026-10-26 (`Diseños/AUDITORIA.md`); la especificación lo dejó como tarea aparte para no tocar la tableta en la 358.
+- **Impacto:** medio en tableta: el control parece roto.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/SolucionesPage.tsx`, el `onElegir` de la hoja «Categorías» (`setSoloEnCategoria(!ancho && …)`, línea ~1147).
+- **Dependencias:** la 358.
+
+### 360. `CategoriaPage` recorta los títulos de sus filas
+
+- **Título:** que la ficha de una categoría lea entero el título de cada guía y equipo (regla 23).
+- **Descripción:** `CategoriaPage` no usa `FilaArticulo`: tiene sus propias filas, con `truncate` en el título de la guía (línea ~139 y ~206) y en el nombre y la ubicación del equipo (líneas ~178 y ~180).
+- **Motivo:** hallazgo G12 de la auditoría del 2026-10-26; corrige además lo que decía AD-020.
+- **Impacto:** bajo a medio: un título largo se lee cortado.
+- **Prioridad:** Media. **Estado:** Pendiente.
+- **Área afectada:** `src/features/soluciones/CategoriaPage.tsx`.
+- **Dependencias:** ninguna.
+
+### 361. Escribir «cuándo usarla» en las guías que no lo tienen (ChatGPT)
+
+- **Título:** completar el campo «¿Cuándo usar este procedimiento?» (`procedimiento.descripcion`) de las guías reales, empezando por las de títulos parecidos.
+- **Descripción:** desde la tarea 358 cada guía del teléfono se distingue por su situación en una línea, que sale de ese campo (o del primer síntoma). Sin él, la tarjeta queda con título y medida, que distinguen menos. Es contenido, no código (regla 26).
+- **Motivo:** sección 10 de la especificación de Claude Design del 2026-10-26.
+- **Impacto:** alto en cuánto se distinguen dos guías del mismo tipo y título parecido.
+- **Prioridad:** Media. **Estado:** Pendiente (ChatGPT).
+- **Área afectada:** el contenido de las guías en Supabase; ningún archivo de código.
+- **Dependencias:** la 358 desplegada.
 
 ### 356. Diseñar un formato de «campos» para las guías (escenario D)
 

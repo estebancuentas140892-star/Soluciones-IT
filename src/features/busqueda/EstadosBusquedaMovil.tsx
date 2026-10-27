@@ -11,19 +11,13 @@ import { EJEMPLOS_BUSCADOR } from './resultados'
 // Los ejemplos, como botones que escriben la consulta. `onMouseDown` evita
 // que el campo pierda el foco al tocarlos: el teclado sigue abierto y la
 // consulta cambia en el mismo gesto.
-export function EjemplosBusqueda({
-  onElegir,
-  conRotulo = false,
-}: {
-  onElegir: (ejemplo: string) => void
-  /** "Prueba con:" delante, en la misma línea (Resolver, bajo su campo). */
-  conRotulo?: boolean
-}) {
+// Desde la tarea 358 (D1) solo los usa «Puedes escribir»: Resolver ya no los
+// pone bajo su campo con el rótulo «Prueba con».
+export function EjemplosBusqueda({ onElegir }: { onElegir: (ejemplo: string) => void }) {
   return (
     // Chips de 36 del prototipo de Claude Design (tarea 350), con 44 de toque:
     // 8 px entre filas para que dos toques amplios no se pisen.
     <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Ejemplos de búsqueda">
-      {conRotulo && <span className="text-[14px] font-semibold text-noct-neutral-300">Prueba con</span>}
       {EJEMPLOS_BUSCADOR.map((ejemplo) => (
         <button
           key={ejemplo}

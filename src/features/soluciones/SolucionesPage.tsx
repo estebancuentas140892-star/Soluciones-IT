@@ -1,16 +1,29 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useEffect, useId, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Articulo, TipoArticulo } from '../../lib/db'
 import { db } from '../../lib/db'
+import { obtenerEstadoSync, suscribirSync } from '../../lib/sync'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
-import { CaretDown, FlagBanner, Info, Plus, Sliders, TreeStructure } from '../../components/iconos'
+import { CaretDown, CloudArrowUp, FlagBanner, Info, Plus, Sliders, TreeStructure } from '../../components/iconos'
 import { BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { HojaFiltro, type OpcionHoja } from '../../components/HojaFiltro'
+import { IconoCategoria } from '../../components/IconoCategoria'
 import { PastillaFrescura } from '../../components/PastillaFrescura'
+import { useEsAncho } from '../../components/useEsAncho'
+import { IconoVentana } from '../../components/ventana/IconoVentana'
+import {
+  CHIP,
+  CHIP_ACTIVO,
+  CHIP_REPOSO,
+  DELINEADO_EN_TELEFONO,
+  FILAS_EN_TARJETA_TELEFONO,
+  RELLENO_ACCION,
+  TITULO_GRUPO,
+} from '../../components/ventana/estilos'
 import { TIPOS_ARTICULO, etiquetaDeTipo } from './tiposArticulo'
-import { colorIconoDeTipo, iconoDeCategoria, iconoDeTipo, normalizarTexto } from './iconosSoluciones'
+import { colorIconoDeTipo, iconoDeCategoria, iconoDeTipo, iconoDeTipoEnTelefono, normalizarTexto } from './iconosSoluciones'
 import { claseActivaDeCategoria, claseTextoDeCategoria } from './coloresCategoria'
 import { accionesDeGuia } from './useAccionesDeGuia'
 import { FilaArticulo } from './FilaArticulo'
@@ -18,6 +31,10 @@ import { coincidenciaArticulo } from './coincidencia'
 import { sugerenciaBusqueda } from './sugerenciaBusqueda'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { FilaMas } from '../mas/FilasMas'
+import { filasConPalabraComun, tramosDeTitulo } from '../busqueda/presentacionResultados'
+import { agruparPorCategoria, cuentaDeCategoria, textoCuenta } from './catalogoTelefono'
+import { GrupoGuiasTelefono } from './GrupoGuiasTelefono'
+import { TarjetaGuiaTelefono } from './TarjetaGuiaTelefono'
 
 // Pantalla Soluciones en el sistema Nocturne. Rediseñada a partir de la
 // auditoría de la sección (handoff "Auditoría de Soluciones TI",
@@ -58,6 +75,27 @@ import { FilaMas } from '../mas/FilasMas'
 // rediseño de escritorio como pendiente explícito, así que el rail de
 // categorías y la rejilla de 2-3 columnas desde `xl` se conservan tal como
 // estaban (decisión del usuario al autorizar el handoff, 2026-07-27).
+//
+// EL TELÉFONO, CON LAS PIEZAS DE «VENTANA» (tarea 358, catálogo A2 de Claude
+// Design). Por debajo de 768 px (`useEsAncho` falso) la pantalla tiene su rama
+// propia, como Equipos; desde 768 se ejecuta el código de siempre sin tocarlo.
+// Lo que cambia en el teléfono, con la letra de la especificación:
+//
+//   - CABECERA DE DOS FILAS (D7): «Crear» pasa a un «+» de 44 en la barra
+//     superior, como en Equipos; debajo, el campo de 52 y los chips
+//     «Categorías ▾» y «Tipo ▾». La pastilla de frescura sale: los cambios
+//     sin subir se dicen en una línea sobre la lista solo cuando los hay.
+//   - LA CATEGORÍA CON SU CLASE (D3): el chip activo, la hoja y la cabecera de
+//     cada grupo usan `IconoCategoria`, el mismo icono y color de Resolver.
+//   - GRUPOS POR CATEGORÍA (D5, D9): también en «Todas» y al buscar, cada uno
+//     con su número contado como en Resolver y sus guías ordenadas por tipo.
+//   - CADA GUÍA CON SU IDENTIDAD (D4, D11, D12): `TarjetaGuiaTelefono`.
+//   - «PARA EMPEZAR» PLEGADO y solo en «Todas» sin filtros; «Guías con
+//     preguntas» al final (D6): ya no se interponen entre la categoría
+//     elegida y sus guías.
+//   - LA HOJA ACOTA (D8): elegir una categoría con texto buscado acota la
+//     búsqueda, como el rail de escritorio.
+//   - «GUÍAS», no «artículos» (D10).
 
 interface Chip {
   id: string | null
@@ -364,6 +402,47 @@ export function SolucionesPage() {
     return sugerenciaBusqueda(consultaCruda, textos)
   }, [articulos, buscando, categorias, consultaCruda, total])
 
+  // LA RAMA DEL TELÉFONO (tarea 358). Los mismos filtrados, leídos de otra
+  // forma: un grupo por categoría, la palabra repetida atenuada en toda la
+  // lista y la hoja de categorías con el número contado como en Resolver.
+  const ancho = useEsAncho()
+  const { pathname, search } = useLocation()
+  // VOLVER A LA MISMA LISTA (criterio A03), como `FilaArticulo`: la X de la
+  // guía deshace este salto con el filtro y el término que había.
+  const origenLista = conOrigen(`${pathname}${search}`, 'Guías')
+  const gruposTelefono = useMemo(() => agruparPorCategoria(filtrados, categorias), [filtrados, categorias])
+  const palabraComun = useMemo(
+    () => (buscando ? filasConPalabraComun(filtrados, consulta) : new Set<string>()),
+    [buscando, filtrados, consulta],
+  )
+  const opcionesCategoriaTelefono = useMemo<OpcionHoja<string>[]>(
+    () => [
+      { valor: '__todos', etiqueta: 'Todas las guías', detalle: textoCuenta(cuentaDeCategoria(alcanceChips)) },
+      ...categorias
+        .filter((c) => (conteos.get(c.id) ?? 0) > 0)
+        .map((c) => ({
+          valor: c.id,
+          etiqueta: c.nombre,
+          visual: <IconoCategoria nombre={c.nombre} tam={32} />,
+          detalle: textoCuenta(cuentaDeCategoria(alcanceChips.filter((a) => a.categoriaId === c.id))),
+        })),
+    ],
+    [alcanceChips, categorias, conteos],
+  )
+  const opcionesTipoTelefono = useMemo<OpcionHoja<TipoArticulo>[]>(
+    () =>
+      opcionesTipo.map((opcion) => ({
+        ...opcion,
+        Icono: iconoDeTipoEnTelefono(opcion.valor),
+        claseIcono: 'text-noct-neutral-300',
+      })),
+    [opcionesTipo],
+  )
+  const opcionesCrearTelefono = useMemo<OpcionHoja<string>[]>(
+    () => categorias.map((c) => ({ valor: c.id, etiqueta: c.nombre, visual: <IconoCategoria nombre={c.nombre} tam={32} /> })),
+    [categorias],
+  )
+
   // Los tres filtros de eje (categoría, tipo, etiqueta) viajan a la URL
   // con `replace` para no ensuciar el historial: cambiar de chip no es un
   // paso atrás que el técnico quiera deshacer, es la misma pantalla
@@ -471,6 +550,223 @@ export function SolucionesPage() {
     )
   }
 
+  // EL «+» DEL TELÉFONO (D7): 44 x 44 en la barra superior, como «Crear
+  // equipo». Con categoría va directo a su editor; sin ella, pregunta cuál.
+  const CLASE_MAS = 'flex h-11 w-11 items-center justify-center rounded-xl text-noct-accent-300 active:bg-noct-presionado'
+  const botonMasTelefono = categoriaSel ? (
+    <Link to={`/soluciones/${categoriaSel}/nuevo`} aria-label="Crear guía" title="Crear guía" className={CLASE_MAS}>
+      <Plus size={22} aria-hidden />
+    </Link>
+  ) : (
+    <button
+      type="button"
+      onClick={() => setHojaCrearAbierta(true)}
+      aria-label="Crear guía"
+      title="Crear guía"
+      className={CLASE_MAS}
+    >
+      <Plus size={22} aria-hidden />
+    </button>
+  )
+  const CLASE_CREAR_TELEFONO = `${RELLENO_ACCION} inline-flex min-h-12 items-center gap-2 rounded-2xl px-4 text-[15px]`
+  const CLASE_DELINEADO_TELEFONO = `${DELINEADO_EN_TELEFONO} inline-flex items-center justify-center text-noct-text`
+  const crearTelefono = (texto: string) =>
+    categoriaSel ? (
+      <Link to={`/soluciones/${categoriaSel}/nuevo`} className={CLASE_CREAR_TELEFONO}>
+        <Plus size={16} aria-hidden />
+        {texto}
+      </Link>
+    ) : (
+      <button type="button" onClick={() => setHojaCrearAbierta(true)} className={CLASE_CREAR_TELEFONO}>
+        <Plus size={16} aria-hidden />
+        {texto}
+      </button>
+    )
+
+  // CABECERA DEL TELÉFONO (D7): el campo de 52 de Ventana y una fila de chips.
+  // Ningún chip lleva número: el número de cada categoría se lee en la hoja y
+  // en la cabecera de su grupo.
+  const barraTelefono = (
+    <div className="flex flex-col gap-1.5 px-4 pb-1">
+      <CampoBusqueda
+        valor={query}
+        onCambiar={(v) => (v ? setQuery(v) : limpiarQuery())}
+        alcance="Guías"
+        variante="ventana"
+      />
+      <div className="flex flex-wrap items-center gap-2 py-1">
+        <button
+          type="button"
+          onClick={() => setHojaCategoriaAbierta(true)}
+          aria-haspopup="dialog"
+          aria-label={categoriaActiva ? `Categoría: ${categoriaActiva.nombre}` : 'Elegir categorías'}
+          data-chip-categoria
+          className={`${CHIP} gap-1.5 ${categoriaActiva ? `${CHIP_ACTIVO} pl-1` : CHIP_REPOSO}`}
+        >
+          {categoriaActiva && <IconoCategoria nombre={categoriaActiva.nombre} tam={26} />}
+          {categoriaActiva ? categoriaActiva.nombre : 'Categorías'}
+          <CaretDown size={12} aria-hidden />
+        </button>
+        {opcionesTipo.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setHojaTipoAbierta(true)}
+            aria-haspopup="dialog"
+            aria-label={tipoSel ? `Tipo: ${etiquetaDeTipo(tipoSel)}` : 'Elegir tipo'}
+            data-chip-tipo
+            className={`${CHIP} gap-1.5 ${tipoSel ? CHIP_ACTIVO : CHIP_REPOSO}`}
+          >
+            {tipoSel ? etiquetaDeTipo(tipoSel) : 'Tipo'}
+            <CaretDown size={12} aria-hidden />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+
+  // EL CUERPO DEL TELÉFONO, de arriba abajo (sección 5.2 de la
+  // especificación): los cambios sin subir, el alcance de la búsqueda, la
+  // etiqueta, «Para empezar» plegado, cuántas coinciden, los grupos y, al
+  // final, la puerta de las guías con preguntas.
+  const cuerpoTelefono = (
+    <main className="flex flex-1 flex-col gap-5 px-4 pb-6 pt-3">
+      <CambiosSinSubir />
+
+      {/* EL ALCANCE DE LA BÚSQUEDA, en una fila: sustituye a la cinta con
+          `Info`, con el mismo estado (`soloEnCategoria`). */}
+      {buscando && categoriaActiva && (
+        <div data-alcance-busqueda className="flex min-h-11 items-center justify-between gap-3">
+          <p className={`${TITULO_GRUPO} min-w-0`}>
+            {soloEnCategoria ? `Solo en ${categoriaActiva.nombre}` : 'En todas las categorías'}
+          </p>
+          <button
+            type="button"
+            onClick={() => setSoloEnCategoria((actual) => !actual)}
+            className="inline-flex min-h-11 shrink-0 items-center text-right text-[14px] font-extrabold text-noct-accent-300"
+          >
+            {soloEnCategoria ? 'Buscar en todas' : `Solo en ${categoriaActiva.nombre}`}
+          </button>
+        </div>
+      )}
+
+      {etiquetaSel && !buscando && (
+        <div className="flex min-h-11 items-center justify-between gap-3">
+          <p className={`${TITULO_GRUPO} min-w-0 [overflow-wrap:anywhere]`}>Etiqueta: {etiquetaSel}</p>
+          <Link
+            to="/soluciones"
+            onClick={() => setEtiquetaSel(null)}
+            className="inline-flex min-h-11 shrink-0 items-center text-[14px] font-extrabold text-noct-accent-300"
+          >
+            Ver todos
+          </Link>
+        </div>
+      )}
+
+      {rutaAprendizaje.length > 0 && !buscando && !categoriaSel && !tipoSel && !etiquetaSel && (
+        <ParaEmpezarPlegado guias={rutaAprendizaje} origen={origenLista} />
+      )}
+
+      {buscando && total > 0 && (
+        <h2 className={TITULO_GRUPO}>
+          {total} {total === 1 ? 'coincide' : 'coinciden'}
+        </h2>
+      )}
+
+      {total > 0 ? (
+        gruposTelefono.map(({ categoria, articulos: delGrupo }) => (
+          <GrupoGuiasTelefono
+            key={categoria.id}
+            categoria={categoria}
+            cuenta={textoCuenta(cuentaDeCategoria(delGrupo))}
+          >
+            {delGrupo.map((articulo) => (
+              <TarjetaGuiaTelefono
+                key={articulo.id}
+                articulo={articulo}
+                to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+                state={origenLista}
+                tramos={tramosDeTitulo(articulo.titulo, consulta, { palabraComun, id: articulo.id })}
+                accion={accionPorArticulo.get(articulo.id) ?? null}
+              />
+            ))}
+          </GrupoGuiasTelefono>
+        ))
+      ) : primeraVez ? (
+        <VacioTelefono
+          titulo="Aquí va a vivir lo que el equipo sabe"
+          texto="Nada todavía. La primera guía suele ser el procedimiento que más repites en la semana."
+        >
+          {crearTelefono('Crear la primera')}
+        </VacioTelefono>
+      ) : buscando ? (
+        <VacioTelefono
+          titulo={`Nada coincide con «${consultaCruda}»`}
+          texto={
+            sugerencia ? (
+              <>
+                Quizá quisiste decir{' '}
+                <button
+                  type="button"
+                  onClick={() => setQuery(sugerencia)}
+                  className="inline-flex min-h-11 items-center font-bold text-noct-accent-300 underline underline-offset-[3px]"
+                >
+                  {sugerencia}
+                </button>
+                . También puedes buscar por el equipo o por la sede.
+              </>
+            ) : (
+              'Prueba con el nombre del equipo, el síntoma o la sede.'
+            )
+          }
+        >
+          <button type="button" onClick={limpiarTodo} className={CLASE_DELINEADO_TELEFONO}>
+            Limpiar la búsqueda
+          </button>
+          {crearTelefono('Documentarlo')}
+        </VacioTelefono>
+      ) : (
+        <VacioTelefono
+          titulo="No hay guías con estos filtros"
+          texto={
+            tipoSel
+              ? `Ninguna es del tipo «${etiquetaDeTipo(tipoSel)}» aquí.`
+              : 'Esta categoría todavía no tiene nada documentado.'
+          }
+        >
+          <button type="button" onClick={limpiarTodo} className={CLASE_DELINEADO_TELEFONO}>
+            Quitar los filtros
+          </button>
+          {crearTelefono('Crear')}
+        </VacioTelefono>
+      )}
+
+      {/* GUÍAS CON PREGUNTAS AL FINAL (D6): la puerta de su administración
+          ya no va antes de cualquier guía. Mismo destino y mismo regreso. */}
+      {!buscando && !etiquetaSel && (
+        <div className={FILAS_EN_TARJETA_TELEFONO}>
+          <Link
+            to={categoriaSel ? `/diagnostico?categoria=${categoriaSel}` : '/diagnostico'}
+            state={conOrigen(`/soluciones${consultaUrl ? `?${consultaUrl}` : ''}`, 'Guías')}
+            data-puerta-guias-con-preguntas
+            className="flex min-h-[60px] items-center gap-3 py-2 text-noct-text"
+          >
+            <TreeStructure size={20} className="shrink-0 text-noct-neutral-300" aria-hidden />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-[16px] font-bold leading-snug">Guías con preguntas</span>
+              <span className="text-[14px] font-medium leading-snug text-noct-neutral-300">
+                Diagnósticos: crear, editar, estadísticas y sugerencias
+              </span>
+            </span>
+            {guiasConPreguntas > 0 && (
+              <span className="shrink-0 text-[14px] font-semibold text-noct-neutral-300">{guiasConPreguntas}</span>
+            )}
+            <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
+          </Link>
+        </div>
+      )}
+    </main>
+  )
+
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila, con la barra
     // superior de tres ranuras y las pestañas. El título, el estado del
@@ -484,7 +780,12 @@ export function SolucionesPage() {
     // buscador de la misma pantalla y con otro alcance. La duda que
     // midió la auditoría era exactamente esa: "¿esto busca en todo o
     // solo aquí?". Buscar en todo sigue a un toque, desde Inicio.
-    <Chasis titulo="Guías" conLupa={false} barra={
+    <Chasis
+      titulo="Guías"
+      conLupa={false}
+      soloTituloEnTelefono
+      accionTelefono={botonMasTelefono}
+      barra={!ancho ? barraTelefono : (
       <>
         <header className="flex items-center justify-between gap-2.5 px-4 pb-2 pt-1">
           <PastillaFrescura total={articulos.length} singular="artículo" plural="artículos" />
@@ -553,7 +854,8 @@ export function SolucionesPage() {
           )}
         </div>
       </>
-    }>
+    )}>
+      {!ancho ? cuerpoTelefono : (
       <main className="flex-1 px-4 pb-16 pt-3.5">
         {/* EL RAIL DE CATEGORÍAS NO SE VA AL BUSCAR (2026-09-09, cambio
             1 del encargo). Tanto la rejilla como el `aside` colgaban de
@@ -822,6 +1124,7 @@ export function SolucionesPage() {
           </div>
         </div>
       </main>
+      )}
 
       {/* Todas las categorías con su nombre completo y su conteo. Es lo
           que sustituye al carrusel que escondía la mitad. */}
@@ -829,13 +1132,19 @@ export function SolucionesPage() {
         abierto={hojaCategoriaAbierta}
         onCerrar={() => setHojaCategoriaAbierta(false)}
         titulo="Categorías"
-        opciones={opcionesCategoria}
+        opciones={ancho ? opcionesCategoria : opcionesCategoriaTelefono}
         seleccionada={categoriaSel ?? '__todos'}
+        variante={ancho ? 'normal' : 'telefono'}
         onElegir={(valor) => {
-          setCategoriaSel(valor === '__todos' ? null : valor)
+          const id = valor === '__todos' ? null : valor
+          setCategoriaSel(id)
           setTipoSel(null)
           setEtiquetaSel(null)
-          setSoloEnCategoria(false)
+          // EN EL TELÉFONO, ELEGIR CON TEXTO BUSCADO ACOTA (D8, hallazgo G7),
+          // como el rail de escritorio (`setCategoria`): antes la búsqueda
+          // seguía en todas y el control parecía roto. En la tableta, que
+          // usa la misma hoja, queda como estaba (tarea aparte).
+          setSoloEnCategoria(!ancho && buscando && id !== null)
           setHojaCategoriaAbierta(false)
         }}
       />
@@ -844,9 +1153,10 @@ export function SolucionesPage() {
       <HojaFiltro
         abierto={hojaTipoAbierta}
         onCerrar={() => setHojaTipoAbierta(false)}
-        titulo="Tipo de documento"
-        opciones={opcionesTipo}
+        titulo={ancho ? 'Tipo de documento' : 'Tipo de guía'}
+        opciones={ancho ? opcionesTipo : opcionesTipoTelefono}
         seleccionada={tipoSel}
+        variante={ancho ? 'normal' : 'telefono'}
         onElegir={(valor) => setTipoSel((actual) => (actual === valor ? null : valor))}
         onLimpiar={() => setTipoSel(null)}
       />
@@ -857,9 +1167,86 @@ export function SolucionesPage() {
         abierto={hojaCrearAbierta}
         onCerrar={() => setHojaCrearAbierta(false)}
         titulo="¿En qué categoría?"
-        opciones={opcionesCrear}
+        opciones={ancho ? opcionesCrear : opcionesCrearTelefono}
+        variante={ancho ? 'normal' : 'telefono'}
         onElegir={(id) => navigate(`/soluciones/${id}/nuevo`)}
       />
     </Chasis>
+  )
+}
+
+// LOS CAMBIOS SIN SUBIR, solo cuando los hay (D7). Con la barra superior en
+// «solo título», la pastilla de frescura ya no está; al día no se dibuja
+// nada (tarea 187: un «todo al día» permanente es un adorno).
+function CambiosSinSubir() {
+  const { cambiosPendientes } = useSyncExternalStore(suscribirSync, obtenerEstadoSync)
+  if (cambiosPendientes <= 0) return null
+  return (
+    <p data-cambios-sin-subir className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-noct-precaucion">
+      <CloudArrowUp size={16} aria-hidden />
+      {cambiosPendientes} {cambiosPendientes === 1 ? 'cambio' : 'cambios'} sin subir
+    </p>
+  )
+}
+
+// «PARA EMPEZAR» PLEGADO (D6, hallazgo G3). La ruta del equipo para quien
+// llega, en una fila que se abre a pedido: desplegada se interponía entre
+// la lista y sus guías. Abierta, cada guía con su título entero (antes se
+// recortaba, contra la regla 23). Plegada por defecto y sin recordarlo.
+function ParaEmpezarPlegado({ guias, origen }: { guias: Articulo[]; origen: unknown }) {
+  const [abierto, setAbierto] = useState(false)
+  const idLista = useId()
+  return (
+    <section data-para-empezar className={FILAS_EN_TARJETA_TELEFONO}>
+      <button
+        type="button"
+        aria-expanded={abierto}
+        aria-controls={idLista}
+        onClick={() => setAbierto((actual) => !actual)}
+        className="flex min-h-[60px] w-full items-center gap-3 py-2 text-left text-noct-text"
+      >
+        <FlagBanner size={18} className="shrink-0 text-noct-neutral-300" aria-hidden />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-[16px] font-bold leading-snug">Para empezar</span>
+          <span className="text-[14px] font-medium leading-snug text-noct-neutral-300">
+            Ruta del equipo · {guias.length} {guias.length === 1 ? 'guía' : 'guías'}
+          </span>
+        </span>
+        <CaretDown size={14} className={`shrink-0 text-noct-neutral-300 ${abierto ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {abierto && (
+        <ol id={idLista} className="flex flex-col">
+          {guias.map((articulo, indice) => (
+            <li key={articulo.id} className="border-t-[1.5px] border-noct-divider">
+              <Link
+                to={`/soluciones/${articulo.categoriaId}/${articulo.id}`}
+                state={origen}
+                className="flex min-h-[52px] items-center gap-3 py-2.5 text-noct-text"
+              >
+                <span className="w-5 shrink-0 text-center text-[14px] font-bold text-noct-neutral-300">{indice + 1}</span>
+                <span
+                  data-nombre-principal
+                  className="min-w-0 flex-1 text-[16px] font-semibold leading-[21px] text-pretty [overflow-wrap:anywhere]"
+                >
+                  {articulo.titulo}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  )
+}
+
+// Un estado vacío del catálogo en el teléfono, en la forma de `NadaCoincide`
+// (el título a 18 y la ayuda a 15 en tinta 2), con los textos de siempre.
+function VacioTelefono({ titulo, texto, children }: { titulo: string; texto: ReactNode; children?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 px-3 pb-3 pt-8 text-center">
+      <p className="text-[18px] font-extrabold leading-snug [overflow-wrap:anywhere]">{titulo}</p>
+      <p className="max-w-[300px] text-[15px] leading-[1.45] text-noct-neutral-300">{texto}</p>
+      {children && <div className="mt-1.5 flex flex-wrap justify-center gap-2">{children}</div>}
+    </div>
   )
 }

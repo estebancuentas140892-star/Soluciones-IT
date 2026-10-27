@@ -66,6 +66,14 @@ export const FILAS_EN_TARJETA =
   'max-md:overflow-hidden max-md:rounded-[18px] max-md:border-[1.5px] max-md:border-noct-divider max-md:bg-noct-surface max-md:px-3.5'
 
 /**
+ * `FILAS_EN_TARJETA` sin `max-md:`, para una rama que ya solo existe en el
+ * teléfono (`useEsAncho` falso): «Para empezar», «Guías con preguntas» y la
+ * hoja de categorías del catálogo de Guías (tarea 358).
+ */
+export const FILAS_EN_TARJETA_TELEFONO =
+  'overflow-hidden rounded-[18px] border-[1.5px] border-noct-divider bg-noct-surface px-3.5'
+
+/**
  * Un control delineado que no hace avanzar («Registrar lectura», «Volver al
  * equipo»): el borde de 2, el radio 16 y el relieve fuerte que baja con el dedo,
  * como «No, sigue igual» (`RELIEVE_BORDE_FUERTE`).

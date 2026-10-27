@@ -330,6 +330,15 @@ Solo presentación por debajo de 768 px y donde las filas navegan (en modo consu
 - **El puente de la Bóveda**, detrás del primer grupo (o de la guía destacada si no hay grupos).
 - **La capa del buscador global** lleva el campo arriba también en el teléfono, junto al regreso, y comparte con Resolver "Puedes escribir" y "Nada coincide con «…»" (`EstadosBusquedaMovil.tsx`).
 
+### 7.13 bis Cada guía con su identidad en la lista del teléfono (2026-10-26, tarea 358)
+
+Solo presentación por debajo de 768 px; el índice, el ranking, los sinónimos, el difuso, la agrupación, «La guía que mejor coincide» y las tarjetas de los demás tipos no cambian.
+
+- **La tarjeta de una guía** es la del catálogo (`TarjetaGuiaTelefono`, ver [COMPONENTES_UI.md](COMPONENTES_UI.md) 3.8zn): abre con el glifo de su tipo, no con el icono de su categoría (al buscar «impresora» salían ocho impresoras rosas iguales). Una guía con preguntas, una categoría o un adjunto conservan su tarjeta.
+- **Atenuar lo repetido en cualquier posición** (`partirPorPalabra`, `filasConPalabraComun`, `tramosDeTitulo` en `presentacionResultados.ts`): si 3 o más guías de una sección contienen una palabra buscada (las de contenido de la consulta, `palabrasDeContenido`, con la regla de prefijo del índice, `usaPrefijo`), cada palabra del título que EMPIEZA por ella se atenúa ENTERA («impresoras» buscando «impresora», sin partirla) y nada se resalta en acento; una guía de esa lista sin la palabra (coincidió por la categoría) va en claro. Si la sección no llega, lo de antes: el comienzo común atenuado (lista homogénea, 7.1) o lo buscado resaltado.
+- **La categoría común sube al encabezado** (`categoriaComun`): si todas las guías (con pasos o con preguntas) de la sección son de la misma categoría, el rótulo pasa a «Guías de Impresoras» (u «Otras guías de Impresoras» bajo la destacada), con su icono de 22, y la tarjeta no la repite; si no, va en la línea pequeña de cada tarjeta. No sube si el grupo trae algo de otra parte (un adjunto, del que no se sabe la categoría, u otra categoría). Es el mismo criterio que sube el tipo común («Mejores resultados · 5 equipos»).
+- **El catálogo de Guías** usa las mismas funciones sobre toda su lista (no por sección): ver [DOCUMENTACION_FUNCIONAL.md](DOCUMENTACION_FUNCIONAL.md) 5.2.
+
 ### 7.14 Coincidencia aproximada: lo exacto delante, lo posible dicho (2026-10-20, tarea 346)
 
 La regla común vive en `src/lib/coincidenciaAproximada.ts` y la comparten Resolver y Equipos (sección 10). En el índice global:

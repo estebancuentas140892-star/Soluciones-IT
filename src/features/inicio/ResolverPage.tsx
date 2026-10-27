@@ -19,7 +19,7 @@ import {
 import { ROTULO_RECORRIDO } from '../../lib/diagnostico'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { ANCHO_TABLETA, coincide, useEsAncho } from '../../components/useEsAncho'
-import { EjemplosBusqueda, NadaCoincide, PuedesEscribir } from '../busqueda/EstadosBusquedaMovil'
+import { NadaCoincide, PuedesEscribir } from '../busqueda/EstadosBusquedaMovil'
 import { buscar, sugerirConsulta, useIndiceBusqueda } from '../busqueda/useIndiceBusqueda'
 import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
@@ -504,24 +504,25 @@ export function ResolverPage() {
                 encontrado
               ) : (
                 // SIN NADA ESCRITO (prototipo, tarea 350): primero lo que este
-                // técnico abrió hace poco, a un toque, y debajo qué se puede
-                // escribir.
+                // técnico abrió hace poco, a un toque. Qué se puede escribir,
+                // con sus ejemplos, solo cuando no hay nada reciente (tarea
+                // 358, D2): el primer uso o un registro vacío; quien abre la
+                // app a diario ya sabe qué escribir.
                 <div className="flex flex-col gap-[18px] pt-1">
                   <AbiertasHacePoco recientes={recientes} />
-                  <PuedesEscribir onElegir={setQuery} />
+                  {recientes.length === 0 && <PuedesEscribir onElegir={setQuery} />}
                 </div>
               )}
             </div>
           ) : (
             // INICIO EN EL TELÉFONO, COMO EL PROTOTIPO (tarea 350). Bajo la
-            // pregunta y el campo, a 12 px, los ejemplos «Prueba con»; y a 22,
-            // la guía a medias en su tarjeta, las categorías en mosaico y el
-            // trabajo de hoy. Lo reciente se abre desde el campo («Abiertas hace
-            // poco»), donde el prototipo lo pone: tocarlo ya es buscar.
+            // pregunta y el campo, a 22 px, la guía a medias en su tarjeta, las
+            // categorías en mosaico y el trabajo de hoy. Lo reciente se abre
+            // desde el campo («Abiertas hace poco»), donde el prototipo lo pone:
+            // tocarlo ya es buscar. Sin «Prueba con» (tarea 358, D1): empujaba
+            // las categorías entre 92 y 136 px y repetía los ejemplos que la
+            // búsqueda abierta ya ofrece cuando hacen falta.
             <>
-              <div className="pt-3">
-                <EjemplosBusqueda conRotulo onElegir={setQuery} />
-              </div>
               <div className="flex flex-col gap-[22px] pt-[22px]">
                 {seguir && <SeguirEnTelefono guia={seguir} />}
                 <CategoriasEnTelefono accesos={accesos} totalGuias={totalGuias} />
@@ -864,6 +865,14 @@ function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
 // pantalla para cuatro enlaces; estos miden 64 de alto, con el icono que
 // reconoce la categoría antes de leerla, y caben seis en lo que ocupaban tres
 // filas de chips.
+//
+// MOSAICO APILADO (tarea 358, alternativa A de Claude Design). El icono y el
+// número arriba y el nombre debajo, con todo el ancho de la celda: con el icono
+// al lado, «Computadores» se partía a mitad de palabra a 320, 360 y 390 px, la
+// celda partida crecía y su vecina no. Ahora las celdas son iguales y el nombre
+// nunca se parte sin guion (`hyphens-auto`, la página es `lang="es"`; nunca
+// `overflow-wrap:anywhere`). Con un número impar, la última ocupa la fila
+// entera en forma horizontal, sin dejar un hueco.
 function CategoriasEnTelefono({ accesos, totalGuias }: { accesos: AccesoRapido[]; totalGuias: number }) {
   return (
     <section aria-labelledby="resolver-categorias" className="flex flex-col gap-2.5">
@@ -883,24 +892,41 @@ function CategoriasEnTelefono({ accesos, totalGuias }: { accesos: AccesoRapido[]
       </div>
       {accesos.length > 0 && (
         <div className="grid grid-cols-2 gap-2.5">
-          {accesos.map((acceso) => (
-            <Link
-              key={acceso.categoriaId}
-              to={`/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`}
-              state={ORIGEN_RESOLVER}
-              data-categoria-telefono
-              aria-label={`${acceso.nombre}: ${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`}
-              className={`${TARJETA_TOCABLE} flex min-h-16 min-w-0 items-center gap-2.5 p-2.5`}
-            >
-              <IconoCategoria nombre={acceso.nombre} tam={40} />
-              <span className="flex min-w-0 flex-col">
-                <span className="text-[15px] font-bold leading-5 [overflow-wrap:anywhere]">{acceso.nombre}</span>
-                <span className="text-[13.5px] font-semibold text-noct-neutral-300">
-                  {acceso.guias} {acceso.guias === 1 ? 'guía' : 'guías'}
+          {accesos.map((acceso, indice) => {
+            const ancha = accesos.length % 2 === 1 && indice === accesos.length - 1
+            const cuenta = `${acceso.guias} ${acceso.guias === 1 ? 'guía' : 'guías'}`
+            const comun = {
+              to: `/soluciones?categoria=${encodeURIComponent(acceso.categoriaId)}`,
+              state: ORIGEN_RESOLVER,
+              'data-categoria-telefono': true,
+              'aria-label': `${acceso.nombre}: ${cuenta}`,
+            }
+            return ancha ? (
+              <Link
+                key={acceso.categoriaId}
+                {...comun}
+                className={`${TARJETA_TOCABLE} col-span-2 flex min-h-[60px] min-w-0 items-center gap-3 p-3`}
+              >
+                <IconoCategoria nombre={acceso.nombre} tam={36} />
+                <span className="min-w-0 flex-1 text-balance text-[15px] font-bold leading-5 hyphens-auto">
+                  {acceso.nombre}
                 </span>
-              </span>
-            </Link>
-          ))}
+                <span className="shrink-0 text-[13.5px] font-semibold text-noct-neutral-300">{cuenta}</span>
+              </Link>
+            ) : (
+              <Link
+                key={acceso.categoriaId}
+                {...comun}
+                className={`${TARJETA_TOCABLE} flex min-w-0 flex-col gap-2 p-3`}
+              >
+                <span className="flex items-center justify-between gap-1.5">
+                  <IconoCategoria nombre={acceso.nombre} tam={36} />
+                  <span className="whitespace-nowrap text-[13.5px] font-semibold text-noct-neutral-300">{cuenta}</span>
+                </span>
+                <span className="text-balance text-[15px] font-bold leading-5 hyphens-auto">{acceso.nombre}</span>
+              </Link>
+            )
+          })}
         </div>
       )}
     </section>

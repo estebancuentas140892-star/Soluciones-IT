@@ -668,7 +668,10 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     // explicaba la sección ya no está: la pregunta ya lo dice.
     expect(document.body.querySelector('#resolver-pregunta')?.textContent).toBe('¿Qué necesitas resolver?')
     expect(texto).not.toContain('Encuentra qué hacer ante un problema técnico.')
-    expect(texto).toContain('Prueba con')
+    // Sin «Prueba con» bajo el campo (tarea 358, D1): los ejemplos viven en
+    // la búsqueda abierta, solo cuando no hay nada reciente.
+    expect(texto).not.toContain('Prueba con')
+    expect(document.body.querySelector('[aria-label="Ejemplos de búsqueda"]')).toBeNull()
     expect(texto).toContain('Guías por categoría')
     // La cabecera del prototipo (tarea 350): la marca y el estado con su
     // palabra; el nombre de la sección sigue siendo el encabezado.
