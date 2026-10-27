@@ -193,27 +193,26 @@ describe('La agenda completa (/agenda)', () => {
     await montar(RUTAS, '/agenda')
 
     const texto = await esperarTexto('Vencidos')
-    const orden = ['Vencidos', 'Para hoy', 'Próximos', 'Sin fecha'].map((rotulo) => texto.indexOf(rotulo))
+    const orden = ['Vencidos', 'Para hoy', 'Próximos', 'Del equipo, por revisar', 'Guías en preparación'].map((rotulo) =>
+      texto.indexOf(rotulo),
+    )
     expect(orden.every((posicion) => posicion >= 0)).toBe(true)
     expect([...orden].sort((a, b) => a - b)).toEqual(orden)
 
-    // Lo que no vence va al final y plegado (tarea 332): "Sin fecha" dice
-    // cuántos guarda y, al abrirlo, En curso y Por revisar del equipo.
-    expect(texto).not.toContain('En curso')
+    // Lo que no es pendiente propio va al final, cada uno plegado en su
+    // tarjeta (tareas 332 y 365, D7): lo del equipo y las guías en preparación.
     expect(texto).not.toContain('Cambiar el tóner')
-    const sinFecha = await esperar(() => control(/^Sin fecha/), 'la fila plegada')
-    expect(sinFecha.getAttribute('aria-expanded')).toBe('false')
-    expect(sinFecha.textContent).toContain('Por revisar y en curso. No vencen.')
-    expect(sinFecha.textContent).toContain('2')
-    await tocar(sinFecha)
+    expect(texto).not.toContain('La impresora no imprime')
+    const preparacion = await esperar(() => control(/^Guías en preparación/), 'el pliegue de los borradores')
+    expect(preparacion.getAttribute('aria-expanded')).toBe('false')
+    expect(preparacion.textContent).toContain('Tus borradores. No cuentan como pendientes.')
+    await tocar(preparacion)
     await esperar(() => textoPantalla().includes('Cambiar el tóner'), 'se despliega')
-    expect(sinFecha.getAttribute('aria-expanded')).toBe('true')
-    const desplegado = textoPantalla()
-    const sinFechaOrden = ['Sin fecha', 'En curso', 'Cambiar el tóner', 'Por revisar del equipo', 'La impresora no imprime'].map(
-      (rotulo) => desplegado.indexOf(rotulo),
-    )
-    expect(sinFechaOrden.every((posicion) => posicion >= 0)).toBe(true)
-    expect([...sinFechaOrden].sort((a, b) => a - b)).toEqual(sinFechaOrden)
+    expect(preparacion.getAttribute('aria-expanded')).toBe('true')
+    const delEquipo = control(/^Del equipo, por revisar/) as HTMLElement
+    expect(delEquipo.textContent).toContain('Equipos liberados y sugerencias. No vencen.')
+    await tocar(delEquipo)
+    await esperar(() => textoPantalla().includes('La impresora no imprime'), 'se despliega lo del equipo')
 
     // Vencidos: TODOS, y en orden global por fecha (lo más vencido primero).
     expect(texto.indexOf('Panel del router')).toBeLessThan(texto.indexOf('Correo de soporte'))
@@ -249,12 +248,14 @@ describe('La agenda completa (/agenda)', () => {
     expect(textoPantalla()).toContain('Acceso cuatro')
   })
 
-  it('no repite la guía a medias entre la tarjeta de reanudar y "En curso"', async () => {
+  it('la guía a medias ya no está en la Agenda: su borrador, en «Guías en preparación» (tarea 365, D7)', async () => {
     await sembrarBorradorPropio('b1', 'Configurar la impresora de prueba', true)
     await montar(RUTAS, '/agenda')
 
-    const texto = await esperarTexto('En curso')
+    await tocar(await esperar(() => control(/^Guías en preparación/), 'el pliegue'))
+    const texto = await esperarTexto('Configurar la impresora de prueba')
     expect(texto.split('Configurar la impresora de prueba')).toHaveLength(2)
+    expect(texto).not.toContain('Sigues en el paso')
     expect(control(/^Continuar Configurar la impresora/)).not.toBeNull()
   })
 
@@ -282,13 +283,13 @@ describe('La agenda completa (/agenda)', () => {
     expect(control(/abrir la Agenda/)).toBeNull()
   })
 
-  it('sin nada con fecha, "Sin fecha" ya viene abierto: es lo único que hay', async () => {
+  it('sin nada con fecha, lo primero es «Todo al día» y los borradores siguen plegados (tarea 365, D7)', async () => {
     await sembrarBorradorPropio('b1', 'Cambiar el tóner')
     await montar(RUTAS, '/agenda')
 
-    await esperarTexto('Cambiar el tóner')
-    expect(control(/^Sin fecha/)?.getAttribute('aria-expanded')).toBe('true')
-    expect(textoPantalla()).toContain('Todo al día por hoy')
+    await esperarTexto('Todo al día por hoy')
+    expect(control(/^Guías en preparación/)?.getAttribute('aria-expanded')).toBe('false')
+    expect(textoPantalla()).not.toContain('Cambiar el tóner')
   })
 
   it('con la agenda vacía no inventa filas ni secciones', async () => {
@@ -332,7 +333,7 @@ describe('La agenda completa (/agenda)', () => {
     expect(ubicacionActual().pathname).toBe('/personas/per-nora')
   })
 
-  it('un equipo liberado hace poco y Disponible espera dueño en "Por revisar del equipo"', async () => {
+  it('un equipo liberado hace poco y Disponible espera dueño en «Del equipo, por revisar»', async () => {
     await db.dispositivos.put({
       id: 'pc-44',
       categoriaId: 'cat-equipos',
@@ -369,9 +370,10 @@ describe('La agenda completa (/agenda)', () => {
     })
     await montar(RUTAS, '/agenda')
 
+    await tocar(await esperar(() => control(/^Del equipo, por revisar/), 'el pliegue del equipo'))
     const texto = await esperarTexto('PC-PRUEBA-44')
     expect(texto).toContain('Liberado hace 2 d · Disponible')
-    expect(texto.indexOf('Por revisar del equipo')).toBeLessThan(texto.indexOf('PC-PRUEBA-44'))
+    expect(texto.indexOf('Del equipo, por revisar')).toBeLessThan(texto.indexOf('PC-PRUEBA-44'))
     // No es urgente: la agenda sigue "al día".
     expect(texto).toContain('Todo al día por hoy')
     await tocar(await esperar(() => control(/^Revisar PC-PRUEBA-44/), 'la fila del equipo'))
@@ -395,9 +397,11 @@ describe('Resolver desde 768 px: la pregunta, el buscador y solo lo que ayuda (s
     // equipo o comando") y el nombre accesible sigue diciendo el alcance.
     expect(campoBuscador()?.placeholder).toBe('Describe qué necesitas resolver…')
     expect(campoBuscador()?.getAttribute('aria-label')).toBe('Buscar en Soluciones IT')
-    // Sin nada que atender no hay bloque "Atención" (ni un "todo al día"
-    // de adorno), pero el catálogo sigue a un toque.
-    expect(texto).not.toContain('Necesita atención')
+    // «Tu trabajo de hoy» está siempre (tarea 365: desde ahí se registra una
+    // tarea), y sin nada que atender lo dice en una línea. El catálogo sigue
+    // a un toque.
+    expect(texto).toContain('Tu trabajo de hoy')
+    expect(texto).toContain('Nada vencido ni para hoy')
     expect(control('Todas las guías')).not.toBeNull()
   })
 
@@ -409,27 +413,30 @@ describe('Resolver desde 768 px: la pregunta, el buscador y solo lo que ayuda (s
   })
 
 
-  it('"Atención" enseña hasta tres asuntos con fecha y lleva a la agenda completa', async () => {
+  it('«Tu trabajo de hoy» enseña lo urgente y lo próximo más cercano, y lleva a la agenda completa (tarea 365)', async () => {
     await sembrarAcceso('c1', 'Panel del router', -30)
     await sembrarAcceso('c2', 'Correo de soporte', -4)
     await sembrarAcceso('c3', 'Portal de nómina', 0)
     await sembrarAcceso('c4', 'Hosting', 3)
+    await sembrarAcceso('c5', 'Dominio', 9)
     await montar(RUTAS, '/')
 
-    const texto = await esperarTexto('Necesita atención')
+    const texto = await esperarTexto('Tu trabajo de hoy')
     expect(texto).toContain('Panel del router')
     expect(texto).toContain('Portal de nómina')
-    // El cuarto (un próximo) queda en la agenda completa, y el enlace lo dice.
-    expect(texto).not.toContain('Hosting')
-    await tocar(await esperar(() => control('Ver la agenda completa (4)'), 'el enlace a la agenda'))
+    // Hasta cuatro urgentes y el próximo más cercano; el resto, en la Agenda.
+    expect(texto).toContain('Hosting')
+    expect(texto).not.toContain('Dominio')
+    expect(control('Nueva tarea')).not.toBeNull()
+    await tocar(await esperar(() => control('Ver la agenda completa (5)'), 'el enlace a la agenda'))
     expect(ubicacionActual().pathname).toBe('/agenda')
-    expect(await esperarTexto('Hosting')).toContain('Vencidos')
+    expect(await esperarTexto('Dominio')).toContain('Vencidos')
   })
 
-  it('una clave próxima a vencer también es atención', async () => {
+  it('una clave próxima a vencer también es trabajo de hoy', async () => {
     await sembrarAcceso('c1', 'Resolución POS de prueba', 12)
     await montar(RUTAS, '/')
-    expect(await esperarTexto('Necesita atención')).toContain('Resolución POS de prueba')
+    expect(await esperarTexto('Tu trabajo de hoy')).toContain('Resolución POS de prueba')
   })
 
   it('los borradores propios y las sugerencias del equipo no salen en Resolver', async () => {
@@ -449,13 +456,13 @@ describe('Resolver desde 768 px: la pregunta, el buscador y solo lo que ayuda (s
     await sembrarBorradorPropio('b1', 'Cambiar el tóner')
     await sembrarSugerenciaDelEquipo('e1', 'La impresora no imprime')
     await montar(RUTAS, '/')
-    await esperarTexto('1 en curso · 1 por revisar')
-    const enlace = await esperar(() => control(/^Agenda · 1 en curso · 1 por revisar/), 'la línea de la agenda')
+    await esperarTexto('1 por revisar · 1 en preparación')
+    const enlace = await esperar(() => control(/^Agenda · 1 por revisar · 1 en preparación/), 'la línea de la agenda')
     expect(enlace.getAttribute('href')).toBe('/agenda')
     await tocar(enlace)
     expect(ubicacionActual().pathname).toBe('/agenda')
     // La cabecera dice el día, no "Resolver": el regreso ya lo nombra.
-    expect(await esperarTexto('Por revisar del equipo')).toContain(fechaDeHoy())
+    expect(await esperarTexto('Del equipo, por revisar')).toContain(fechaDeHoy())
   })
 
   it('con solo actividad del equipo, la línea lo dice', async () => {
@@ -477,11 +484,11 @@ describe('Resolver desde 768 px: la pregunta, el buscador y solo lo que ayuda (s
     expect(control(/^Agenda · actividad del equipo/)?.getAttribute('href')).toBe('/agenda')
   })
 
-  it('con la agenda vacía no hay puerta: nada que abrir', async () => {
+  it('con la agenda vacía no hay línea de la Agenda: nada más que abrir', async () => {
     await montar(RUTAS, '/')
     const texto = await esperarResolver()
-    expect(texto).not.toContain('Agenda')
-    expect(texto).not.toContain('Necesita atención')
+    expect(texto).toContain('Nada vencido ni para hoy')
+    expect(control(/^Agenda ·/)).toBeNull()
   })
 
   it('"Seguir donde ibas" lleva a la guía a medias y la continúa en su paso (tarea 330)', async () => {
@@ -553,7 +560,7 @@ describe('Resolver desde 768 px: el número de la pestaña', () => {
     await sembrarAcceso('c2', 'Portal de nómina', 0)
     await montar(RUTAS, '/')
 
-    await esperarTexto('Necesita atención')
+    await esperarTexto('Panel del router')
     expect(textoPantalla()).toContain('(2 asuntos urgentes)')
   })
 
@@ -563,7 +570,7 @@ describe('Resolver desde 768 px: el número de la pestaña', () => {
     await sembrarSugerenciaDelEquipo('e1', 'La impresora no imprime')
     await montar(RUTAS, '/')
 
-    const texto = await esperarTexto('Necesita atención')
+    const texto = await esperarTexto('Hosting')
     expect(texto).not.toContain('asuntos urgentes')
     expect(texto).not.toContain('asunto urgente')
   })
@@ -572,7 +579,7 @@ describe('Resolver desde 768 px: el número de la pestaña', () => {
     await sembrarAcceso('c1', 'Panel del router', -3)
     await montar(RUTAS, '/')
 
-    await esperarTexto('Necesita atención')
+    await esperarTexto('Panel del router')
     expect(textoPantalla()).toContain('(1 asunto urgente)')
   })
 })
@@ -621,7 +628,7 @@ describe('Resolver en móvil y en escritorio', () => {
     await sembrarAcceso('c1', 'Panel del router', -30)
     await montar(RUTAS, '/')
 
-    await esperarTexto('Necesita atención')
+    await esperarTexto('Panel del router')
     expect(document.activeElement).toBe(campoBuscador())
   })
 
@@ -720,30 +727,33 @@ describe('Resolver en el teléfono (tarea 344)', () => {
     expect(campoBuscador()?.value).toBe('')
   })
 
-  it('"Tu trabajo de hoy" enseña lo urgente con su fila y "Agenda (N)" abre la agenda entera', async () => {
+  it('"Tu trabajo de hoy" enseña lo urgente con su fila, lo que sigue y «Agenda completa» (tarea 365)', async () => {
     await sembrarAcceso('c1', 'Panel del router', -30)
     await sembrarAcceso('c2', 'Portal de nómina', 0)
     await sembrarAcceso('c3', 'Hosting', 3)
     await montar(RUTAS, '/')
     const texto = await esperarTexto('Tu trabajo de hoy')
+    expect(texto).toContain('1 vencido · 1 para hoy')
     expect(texto).toContain('Panel del router')
     expect(texto).toContain('Portal de nómina')
-    // Lo próximo no es de hoy: queda en la Agenda.
-    expect(texto).not.toContain('Hosting')
-    const agenda = await esperar(() => control('Abrir la Agenda: 3 asuntos'), 'el enlace a la agenda')
-    expect(agenda.textContent).toContain('Agenda (3)')
+    // Lo próximo no es de hoy: se dice en una línea, «Después: …».
+    expect(document.body.querySelector('[data-despues]')?.textContent).toMatch(/^Después: Hosting · /)
+    const agenda = await esperar(() => control('Agenda completa: 3 asuntos'), 'el enlace a la agenda')
+    expect(agenda.textContent).toContain('Agenda completa')
     await tocar(agenda)
     expect(ubicacionActual().pathname).toBe('/agenda')
   })
 
-  it('sin nada urgente lo dice en palabras y nombra lo que guarda la Agenda', async () => {
+  it('sin nada urgente lo dice y lo que sigue; los borradores no cuentan (tarea 365, D7)', async () => {
     await sembrarAcceso('c1', 'Hosting', 10)
     await sembrarBorradorPropio('b1', 'Cambiar el tóner')
     await sembrarSugerenciaDelEquipo('e1', 'La impresora no imprime')
     await montar(RUTAS, '/')
-    const texto = await esperarTexto('Nada atrasado ni para hoy.')
-    expect(texto).toContain('En la Agenda: 1 próximo, 1 en curso y 1 por revisar.')
+    const texto = await esperarTexto('Nada vencido ni para hoy')
+    expect(document.body.querySelector('[data-despues]')?.textContent).toMatch(/^Después: Hosting · /)
     expect(texto).not.toContain('Cambiar el tóner')
+    // «Agenda completa» cuenta lo que tiene fecha y las tareas: el próximo.
+    expect(control('Agenda completa: 1 asunto')).not.toBeNull()
   })
 
   it('"Sigue donde ibas" es una tarjeta que dice la ventana y la retoma (tareas 344, 346 y 350)', async () => {
@@ -828,7 +838,7 @@ describe('La agenda completa por ancho', () => {
     ventana.happyDOM.setViewport({ width: 375, height: 812 })
   })
 
-  it('a 1280 px "Sin fecha" va abierto en su columna, sin botón', async () => {
+  it('a 1280 px lo del equipo y las guías en preparación van abiertos en su columna, sin botón', async () => {
     ventana.happyDOM.setViewport({ width: 1280, height: 832 })
     await sembrarAcceso('c1', 'Panel del router', -3)
     await sembrarBorradorPropio('b1', 'Cambiar el tóner')
@@ -837,27 +847,28 @@ describe('La agenda completa por ancho', () => {
 
     const texto = await esperarTexto('Cambiar el tóner')
     expect(texto).toContain('La impresora no imprime')
-    expect(control(/^Sin fecha/)).toBeNull()
+    expect(control(/^Guías en preparación/)).toBeNull()
+    expect(control(/^Del equipo, por revisar/)).toBeNull()
     // La barra lateral del chasis también es un aside: la columna es la que
-    // lleva la cabecera "Sin fecha".
-    const columna = Array.from(document.body.querySelectorAll<HTMLElement>('main aside')).find(
-      (a) => a.querySelector('h2')?.textContent === 'Sin fecha',
+    // lleva «Guías en preparación».
+    const columna = Array.from(document.body.querySelectorAll<HTMLElement>('main aside')).find((a) =>
+      a.textContent?.includes('Guías en preparación'),
     )
     expect(columna).toBeDefined()
-    expect(columna?.textContent).toContain('Por revisar del equipo')
+    expect(columna?.textContent).toContain('Del equipo, por revisar')
     // Lo que tiene fecha sigue a la izquierda, fuera de esa columna.
     expect(columna?.textContent).not.toContain('Panel del router')
     expect(texto).toContain('Panel del router')
   })
 
-  it('a 768 px sigue en una columna, con "Sin fecha" plegado', async () => {
+  it('a 768 px sigue en una columna, con las guías en preparación plegadas', async () => {
     ventana.happyDOM.setViewport({ width: 768, height: 1024 })
     await sembrarAcceso('c1', 'Panel del router', -3)
     await sembrarBorradorPropio('b1', 'Cambiar el tóner')
     await montar(RUTAS, '/agenda')
 
     await esperarTexto('Panel del router')
-    const sinFecha = await esperar(() => control(/^Sin fecha/), 'la fila plegada')
+    const sinFecha = await esperar(() => control(/^Guías en preparación/), 'la fila plegada')
     expect(sinFecha.getAttribute('aria-expanded')).toBe('false')
     expect(textoPantalla()).not.toContain('Cambiar el tóner')
   })
@@ -886,8 +897,8 @@ describe('La agenda completa en el teléfono, con las piezas de «Ventana»', ()
     const vencidos = Array.from(document.body.querySelectorAll('main p')).find((p) => p.textContent === '1 vencido')
     expect(vencidos?.className).toContain('max-md:bg-noct-error-tinte')
     expect(vencidos?.className).toContain('max-md:border-noct-error-linea')
-    // «Sin fecha», una tarjeta con relieve que sigue plegada.
-    const sinFecha = await esperar(() => control(/^Sin fecha/), 'la fila plegada')
+    // «Guías en preparación», una tarjeta con relieve que sigue plegada.
+    const sinFecha = await esperar(() => control(/^Guías en preparación/), 'la fila plegada')
     expect(sinFecha.className).toContain('max-md:shadow-[0_3px_0_var(--color-noct-divider)]')
     expect(sinFecha.getAttribute('aria-expanded')).toBe('false')
   })

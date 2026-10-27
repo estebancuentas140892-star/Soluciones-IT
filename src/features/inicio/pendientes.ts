@@ -8,12 +8,14 @@ import type {
   HistorialEntrada,
   Mantenimiento,
   Persona,
+  Tarea,
 } from '../../lib/db'
 import { diasDeCalendario, estadoVencimiento, textoVencimiento } from '../../lib/vencimiento'
 import { autorizacionesEnAgenda } from '../facturacion/autorizacion'
 import { tiempoRelativo } from '../historial/actividadEquipo'
 import { mantenimientosEnAgenda } from '../mantenimientos/mantenimiento'
 import { equiposLiberadosRecientes, personasPorRecibir, personasRetiradasConEquipos } from './asuntosDePersonas'
+import { tareasEnAgenda } from './tareas'
 
 // Bloque "Pendientes" de Inicio (decisión D5 de PROPUESTA_JORNADA_TECNICO.md,
 // aprobada por el usuario el 2026-07-21 con el contenido recomendado):
@@ -58,6 +60,9 @@ export interface ItemPendiente {
     // una autorización de facturación confirmada (ver
     // src/features/facturacion/autorizacion.ts).
     | 'facturacion'
+    // Desde la tarea 365: una tarea propia (ver tareas.ts). Es la única que
+    // se marca hecha desde su fila.
+    | 'tarea'
   /** Fecha de vencimiento "YYYY-MM-DD", o null si el ítem no tiene una. */
   fecha: string | null
   /**
@@ -73,6 +78,8 @@ export interface ItemPendiente {
    * días") y no repite el origen dentro de la misma frase.
    */
   origen: string
+  /** Solo en una tarea propia (tarea 365): su id, para editarla o marcarla hecha. */
+  tareaId?: string
 }
 
 // Orden global de lo que TIENE fecha: el más vencido primero
@@ -238,6 +245,8 @@ export function calcularPendientes(datos: {
   >[]
   /** Tarea 321: las autorizaciones (la agenda solo avisa de las confirmadas, con un POS y un dato confiable). */
   autorizaciones?: AutorizacionFacturacion[]
+  /** Tarea 365: las tareas propias (la agenda se queda con las abiertas). */
+  tareas?: Tarea[]
   usuarioId: string
   puedeVerBoveda: boolean
   limite?: number
@@ -255,12 +264,14 @@ export function calcularPendientes(datos: {
     liberaciones = [],
     mantenimientos = [],
     autorizaciones = [],
+    tareas = [],
     usuarioId,
     puedeVerBoveda,
     limite = 6,
     hoy = new Date(),
   } = datos
   const retiradas = personasRetiradasConEquipos(personas, dispositivos, hoy)
+  const propias = tareasEnAgenda(tareas, dispositivos, hoy)
   // Sin permiso de bóveda no se filtra ni un título: ni de credenciales
   // ni de datos protegidos de equipo, que llevan la misma RLS.
   const conFecha = [
@@ -270,10 +281,14 @@ export function calcularPendientes(datos: {
     ...retiradas.filter((item) => item.fecha !== null),
     ...mantenimientosEnAgenda(mantenimientos, dispositivos, hoy),
     ...autorizacionesEnAgenda(autorizaciones, dispositivos, hoy),
+    ...propias.filter((item) => item.fecha !== null),
   ].sort(porFecha)
 
   const items = [
     ...conFecha,
+    // Las tareas sin fecha, por su título: no vencen, pero son trabajo
+    // propio por hacer (tarea 365).
+    ...propias.filter((item) => item.fecha === null).sort((a, b) => a.titulo.localeCompare(b.titulo, 'es')),
     ...borradoresPropios(articulos, usuarioId, hoy),
     ...retiradas.filter((item) => item.fecha === null),
     ...equiposLiberadosRecientes(liberaciones, dispositivos, hoy),

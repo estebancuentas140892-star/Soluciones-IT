@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from 'react'
-import { useAvisoFlotante, type IconoAviso } from './avisosFlotantes'
+import { retirarAviso, useAvisoFlotante, type IconoAviso } from './avisosFlotantes'
 import { Check, ClockCounterClockwise, Copy, LockSimple } from './iconos'
 import { useHuecoAvisoActualizacion } from './ranuraAvisoActualizacion'
 
@@ -21,6 +21,11 @@ const ICONOS: Record<IconoAviso, typeof Check> = {
 // para que el lector de pantalla anuncie cada aviso nuevo; no roba el foco
 // ni recibe toques. Desde 768 px no se ve (lo aprobado para tableta y
 // escritorio no lleva avisos), pero se sigue anunciando.
+//
+// CON «DESHACER» (tarea 365) es la excepción: el aviso lleva su botón (44 de
+// toque, en el acento invertido), recibe toques solo en él y se ve también
+// desde 768 px, abajo a la derecha, porque deshacer tiene que estar a mano
+// en todos los anchos.
 export function AvisoFlotante() {
   const aviso = useAvisoFlotante()
   const hueco = useHuecoAvisoActualizacion()
@@ -35,22 +40,39 @@ export function AvisoFlotante() {
   }, [aviso, hueco])
 
   const Icono = aviso ? ICONOS[aviso.icono] : null
+  const deshacer = aviso?.deshacer
   return (
     <div
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      className="nocturne pointer-events-none fixed inset-x-3 z-[70] flex justify-center font-inter md:sr-only"
+      className={`nocturne pointer-events-none fixed inset-x-3 z-[70] flex justify-center font-inter ${
+        deshacer ? 'md:inset-x-auto md:right-6' : 'md:sr-only'
+      }`}
       style={{ bottom: abajo === null ? 'calc(env(safe-area-inset-bottom) + 16px)' : `${abajo}px` }}
     >
       {aviso && Icono && (
         <div
           key={aviso.id}
           data-aviso-flotante
-          className="flex max-w-full items-center gap-2.5 rounded-[14px] bg-noct-text px-4 py-3 text-[14px] font-semibold leading-[1.3] text-noct-bg shadow-[0_10px_30px_rgb(0_0_0/0.35)]"
+          className={`flex max-w-full items-center gap-2.5 rounded-[14px] bg-noct-text py-3 text-[14px] font-semibold leading-[1.3] text-noct-bg shadow-[0_10px_30px_rgb(0_0_0/0.35)] ${
+            deshacer ? 'min-h-[50px] py-1 pl-4 pr-1.5 md:max-w-[420px]' : 'px-4'
+          }`}
         >
           <Icono size={17} aria-hidden className="shrink-0" />
           <span className="min-w-0 [overflow-wrap:anywhere]">{aviso.texto}</span>
+          {deshacer && (
+            <button
+              type="button"
+              onClick={() => {
+                deshacer()
+                retirarAviso()
+              }}
+              className="pointer-events-auto ml-auto min-h-11 shrink-0 rounded-[10px] px-3 text-[14.5px] font-extrabold text-noct-accent-700 hover:bg-noct-bg/10"
+            >
+              Deshacer
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -48,25 +48,26 @@ import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import { articulosSinTerminar, pasoDeTotal, ventanaDeTotal } from '../soluciones/sinTerminar'
 import { IconoCategoria } from '../../components/IconoCategoria'
 import { IconoVentana } from '../../components/ventana/IconoVentana'
-import { RELIEVE_BORDE, TARJETA_TOCABLE, TITULO_GRUPO, TITULO_SECCION } from '../../components/ventana/estilos'
+import { RELIEVE_BORDE, TARJETA, TARJETA_TOCABLE, TITULO_GRUPO, TITULO_SECCION } from '../../components/ventana/estilos'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { obtenerActividadReciente } from '../historial/actividadEquipo'
 import { BienvenidaPrimerDia } from './BienvenidaPrimerDia'
-import { agruparAgenda, type Agenda } from './agenda'
+import { agruparAgenda, totalDeAgenda, type Agenda } from './agenda'
+import { useHojaTarea } from './contextoHojaTarea'
+import { ProveedorHojaTarea } from './HojaTarea'
 import {
   accesosRapidos,
-  asuntosDeAtencion,
   ATENCION_VISIBLES,
   esGuiaPublicadaEjecutable,
   guiasRecientes,
   juntarRecientes,
   partesPuertaAgenda,
   recorridosRecientes,
-  textoSinUrgencias,
   type AccesoRapido,
   type GuiaReciente,
 } from './resolver'
 import { ContadoresAgenda, FilaAgenda } from './SeccionesAgenda'
+import { lineaDespues } from './tareas'
 import { usePendientes } from './usePendientes'
 
 // RESOLVER (encargo del 2026-09-22, secciones 1 y 2).
@@ -382,17 +383,20 @@ export function ResolverPage() {
   )
 
   return (
-    // Nivel 1 del chasis (tarea 185): raíz de su pila, el primero de los
-    // cuatro destinos. `conLupa={false}` (regla M-R8, "un buscador por
+    // LA HOJA DE LAS TAREAS (tarea 365): «Nueva» en «Tu trabajo de hoy» y
+    // tocar una tarea abren la misma hoja, montada una vez para la pantalla.
+    <ProveedorHojaTarea contexto="Tu trabajo de hoy">
+    {/* Nivel 1 del chasis (tarea 185): raíz de su pila, el primero de los
+    cuatro destinos. `conLupa={false}` (regla M-R8, "un buscador por
     // pantalla"): esta pantalla trae su propio buscador, así que la lupa
     // del chasis sería el segundo de la misma pantalla.
     //
     // EL BUSCADOR, EN LA BARRA DESDE 768 PX (tarea 339): el mismo de
     // siempre, montado por el chasis junto al título. EN EL TELÉFONO, ARRIBA
     // (tarea 344, DESPUÉS de Claude Design; antes, en el dock al pulgar de la
-    // tarea 330): lo monta esta pantalla bajo el título, y mientras busca la
-    // barra superior se retira para que la búsqueda tenga su regreso y su
-    // campo arriba. Un solo campo vivo en cada ancho (regla M-R8).
+    tarea 330): lo monta esta pantalla bajo el título, y mientras busca la
+    barra superior se retira para que la búsqueda tenga su regreso y su
+    campo arriba. Un solo campo vivo en cada ancho (regla M-R8). */}
     <Chasis
       titulo="Resolver"
       conLupa={false}
@@ -545,11 +549,15 @@ export function ResolverPage() {
             // tocarlo ya es buscar. Sin «Prueba con» (tarea 358, D1): empujaba
             // las categorías entre 92 y 136 px y repetía los ejemplos que la
             // búsqueda abierta ya ofrece cuando hacen falta.
+            //
+            // «TU TRABAJO DE HOY» SUBE SOBRE LAS CATEGORÍAS (tarea 365, D6 de la
+            // auditoría del 2026-10-27): lo urgente, a la vista y no al final
+            // con aspecto de secundario.
             <>
               <div className="flex flex-col gap-[22px] pt-[22px]">
                 {seguir && <SeguirEnTelefono guia={seguir} />}
+                {!agendaCargando && <TrabajoDeHoy agenda={agenda} />}
                 <CategoriasEnTelefono accesos={accesos} totalGuias={totalGuias} />
-                {!agendaCargando && <TrabajoDeHoy agenda={agenda} total={pendientes.length} />}
                 {consultasListas && (
                   <div className="empty:hidden">
                     <BienvenidaPrimerDia nombre={perfil?.nombre} hayBloquesReales={hayBloquesReales} />
@@ -561,46 +569,78 @@ export function ResolverPage() {
         </main>
       )}
     </Chasis>
+    </ProveedorHojaTarea>
   )
 }
 
-// ATENCIÓN: lo que tiene fecha y hay que atender, con la misma fila que la
-// agenda completa (`FilaAgenda`, que ya dice el estado con palabra y color
-// y la acción con un verbo). Si no hay nada con fecha, no hay bloque: un
-// "todo al día" aquí sería un adorno que empuja lo demás. Resolver es la
-// única puerta de la Agenda (tarea 265): sin nada con fecha, queda una sola
-// línea que la abre si guarda algo más, y nada si está vacía.
+// TU TRABAJO DE HOY, DESDE 768 PX (tarea 365, D6: «Necesita atención» se llama
+// como en el teléfono). Lo que tiene fecha y hay que atender, con la misma
+// fila que la agenda completa (`FilaAgenda`, que ya dice el estado con
+// palabra y color), y «Nueva tarea» junto a «Agenda»: el bloque está siempre,
+// porque desde aquí se registra. Sin nada con fecha, una línea lo dice y la
+// puerta a la Agenda nombra lo que guarda además (tarea 265).
 function BloqueAtencion({ agenda }: { agenda: Agenda }) {
-  const { visibles, total } = asuntosDeAtencion(agenda)
-  if (total === 0) return <PuertaAgendaSinFecha agenda={agenda} />
-  // NECESITA ATENCIÓN (tarea 330): tres contadores (vencidos, para hoy y
-  // próximos) que abren la Agenda, y debajo los asuntos con su fila. Los
-  // contadores son los mismos de la Agenda (`ContadoresAgenda`, tarea 332).
+  const hoja = useHojaTarea()
+  // Hasta cuatro urgentes (vencidos y de hoy) y lo próximo más cercano, como
+  // el prototipo de escritorio.
+  const urgentes = [
+    ...agenda.vencidos.map((item) => ({ item, estado: 'vencido' as const })),
+    ...agenda.hoy.map((item) => ({ item, estado: 'hoy' as const })),
+  ]
+  const visibles = [
+    ...urgentes.slice(0, 4),
+    ...agenda.proximos.slice(0, 1).map((item) => ({ item, estado: 'proximo' as const })),
+  ]
+  const total = totalDeAgenda(agenda)
+  const conFecha = agenda.vencidos.length + agenda.hoy.length + agenda.proximos.length
   return (
     <section aria-labelledby="resolver-atencion" className="flex flex-col gap-2.5">
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex items-center justify-between gap-2">
         <h2 id="resolver-atencion" className="text-[17px] font-semibold tracking-[-.01em]">
-          Necesita atención
+          Tu trabajo de hoy
         </h2>
-        <Link
-          to="/agenda"
-          // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe) y
-          // el origen taparía la fecha de hoy de su cabecera (tarea 265).
-          aria-label={total > visibles.length ? `Ver la agenda completa (${total})` : 'Ver la agenda completa'}
-          // 44 de alto mientras sea táctil; con puntero (desde 1280) no
-          // descuadra la cabecera de la zona de al lado.
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 text-[14px] font-semibold text-noct-accent-300 hover:underline xl:min-h-0"
-        >
-          Agenda
-          <CaretRight size={13} aria-hidden />
-        </Link>
+        <span className="flex shrink-0 items-center gap-1">
+          {hoja && (
+            <button
+              type="button"
+              onClick={hoja.nueva}
+              aria-haspopup="dialog"
+              className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-[14px] font-semibold text-noct-accent-300 hover:bg-noct-accent/10 xl:min-h-8"
+            >
+              <Plus size={14} aria-hidden />
+              Nueva tarea
+            </button>
+          )}
+          <Link
+            to="/agenda"
+            // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe) y
+            // el origen taparía la fecha de hoy de su cabecera (tarea 265).
+            aria-label={total > visibles.length ? `Ver la agenda completa (${total})` : 'Ver la agenda completa'}
+            // 44 de alto mientras sea táctil; con puntero (desde 1280) no
+            // descuadra la cabecera de la zona de al lado.
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 px-1 text-[14px] font-semibold text-noct-accent-300 hover:underline xl:min-h-8"
+          >
+            Agenda
+            <CaretRight size={13} aria-hidden />
+          </Link>
+        </span>
       </div>
-      <ContadoresAgenda agenda={agenda} enlace="/agenda" />
-      <div className="flex flex-col">
-        {visibles.map(({ item, estado }) => (
-          <FilaAgenda key={item.clave} item={item} estado={estado} />
-        ))}
-      </div>
+      {conFecha === 0 ? (
+        <>
+          <p className="text-[14px] font-semibold text-noct-exito">Nada vencido ni para hoy</p>
+          <PuertaAgendaSinFecha agenda={agenda} />
+        </>
+      ) : (
+        <>
+          {/* Los tres contadores (tarea 330), los mismos de la Agenda. */}
+          <ContadoresAgenda agenda={agenda} enlace="/agenda" />
+          <div className="flex flex-col">
+            {visibles.map(({ item, estado }) => (
+              <FilaAgenda key={item.clave} item={item} estado={estado} />
+            ))}
+          </div>
+        </>
+      )}
     </section>
   )
 }
@@ -811,69 +851,90 @@ function AbiertasHacePoco({ recientes }: { recientes: GuiaReciente[] }) {
   )
 }
 
-// TU TRABAJO DE HOY, EN EL TELÉFONO (tarea 344; en segundo plano desde la
-// tarea 346; la tarjeta punteada del prototipo desde la tarea 350). Una puerta
-// a la Agenda que dice, con palabras y su color, lo que urge: «2 atrasados ·
-// 1 para hoy», o que no hay nada atrasado. Si hay algo atrasado o para hoy,
-// sus filas siguen a la vista dentro de la misma tarjeta (con la fila de la
-// Agenda, que dice el estado con palabra y la acción con su verbo): atender
-// lo urgente no cuesta un toque más que antes.
-function TrabajoDeHoy({ agenda, total }: { agenda: Agenda; total: number }) {
+// TU TRABAJO DE HOY, EN EL TELÉFONO (tarea 344; la tarjeta punteada del
+// prototipo desde la tarea 350; DESDE LA TAREA 365, D5 y D6 de la auditoría
+// del 2026-10-27, la tarjeta sólida del prototipo, arriba). Abajo y punteada
+// se leía como secundaria, y sin nada con fecha abría la guía de ayer y los
+// borradores. Ahora dice, con palabras y su color, lo que urge («1 vencido ·
+// 2 para hoy») o que no hay nada («Nada vencido ni para hoy», en verde);
+// enseña hasta tres urgentes con su fila (una tarea, con el círculo que la
+// marca hecha); debajo, cuántos más hay o lo próximo («Después: …»); y
+// «Nueva» registra una tarea en la hoja de siempre. «Agenda completa» la abre
+// con su número: lo que tiene fecha y las tareas sin fecha.
+function TrabajoDeHoy({ agenda }: { agenda: Agenda }) {
+  const hoja = useHojaTarea()
   const urgentes = [
     ...agenda.vencidos.map((item) => ({ item, estado: 'vencido' as const })),
     ...agenda.hoy.map((item) => ({ item, estado: 'hoy' as const })),
   ]
   const visibles = urgentes.slice(0, ATENCION_VISIBLES)
-  const atrasados = agenda.vencidos.length
+  const vencidos = agenda.vencidos.length
   const paraHoy = agenda.hoy.length
+  const despues = lineaDespues(urgentes.length - visibles.length, agenda.proximos[0] ?? null)
+  const total = totalDeAgenda(agenda)
   return (
     <section
       aria-labelledby="resolver-hoy"
       data-trabajo-de-hoy
-      className="flex flex-col rounded-2xl border-[1.5px] border-dashed border-noct-divider-fuerte"
+      className={`${TARJETA} ${RELIEVE_BORDE} flex flex-col rounded-[20px]`}
     >
-      <Link
-        to="/agenda"
-        // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe).
-        aria-label={total > 0 ? `Abrir la Agenda: ${total} ${total === 1 ? 'asunto' : 'asuntos'}` : 'Abrir la Agenda'}
-        className="flex min-h-14 items-center gap-3 rounded-2xl px-3 py-2 text-noct-text active:bg-noct-presionado"
-      >
-        <IconoVentana nombre="calendario" tam={22} grosor={2} className="shrink-0 text-noct-neutral-300" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <h2 id="resolver-hoy" className="text-[15px] font-bold leading-snug">
+      <div className="flex min-h-[60px] items-center gap-2 pb-1 pl-3.5 pr-2 pt-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-px">
+          <h2 id="resolver-hoy" className="text-[16px] font-extrabold leading-[1.3]">
             Tu trabajo de hoy
           </h2>
-          <span className="text-[14px] leading-snug text-noct-neutral-300">
-            {atrasados === 0 && paraHoy === 0 ? (
-              textoSinUrgencias(agenda)
+          <span className="text-[14px] font-bold leading-[1.35]">
+            {vencidos === 0 && paraHoy === 0 ? (
+              <span className="text-noct-exito">Nada vencido ni para hoy</span>
             ) : (
               <>
-                {atrasados > 0 && (
-                  <span className="font-semibold text-noct-error">
-                    {atrasados} {atrasados === 1 ? 'atrasado' : 'atrasados'}
+                {vencidos > 0 && (
+                  <span className="text-noct-error">
+                    {vencidos} {vencidos === 1 ? 'vencido' : 'vencidos'}
                   </span>
                 )}
-                {atrasados > 0 && paraHoy > 0 && ' · '}
-                {paraHoy > 0 && <span className="font-semibold text-noct-precaucion">{paraHoy} para hoy</span>}
-                {total > atrasados + paraHoy && ` · Agenda (${total})`}
+                {vencidos > 0 && paraHoy > 0 && <span className="text-noct-neutral-300"> · </span>}
+                {paraHoy > 0 && <span className="text-noct-precaucion">{paraHoy} para hoy</span>}
               </>
             )}
           </span>
         </div>
-        <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />
-      </Link>
+        {hoja && (
+          <button
+            type="button"
+            onClick={hoja.nueva}
+            aria-haspopup="dialog"
+            aria-label="Nueva tarea"
+            className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-noct-accent-900 px-3.5 text-[15px] font-extrabold text-noct-accent-300 active:bg-noct-accent-800"
+          >
+            <Plus size={17} aria-hidden />
+            Nueva
+          </button>
+        )}
+      </div>
       {visibles.length > 0 && (
-        <div className="flex flex-col border-t border-dashed border-noct-divider-fuerte px-3 [&>a:last-child]:border-b-0">
+        <div className="flex flex-col border-t-[1.5px] border-noct-divider px-3.5">
           {visibles.map(({ item, estado }) => (
             <FilaAgenda key={item.clave} item={item} estado={estado} />
           ))}
         </div>
       )}
-      {urgentes.length > visibles.length && (
-        <p className="px-3 pb-2.5 text-[14px] text-noct-neutral-400">
-          Y {urgentes.length - visibles.length} más para hoy o atrasados en la Agenda.
+      {despues && (
+        <p data-despues className="border-t-[1.5px] border-noct-divider px-3.5 py-2.5 text-[14px] font-semibold leading-[1.4] text-noct-neutral-200">
+          {despues.prefijo && <span className="text-noct-neutral-300">{despues.prefijo}</span>}
+          {despues.texto}
         </p>
       )}
+      <Link
+        to="/agenda"
+        // Sin origen a propósito: la Agenda ya sube a Resolver (padreDe).
+        aria-label={total > 0 ? `Agenda completa: ${total} ${total === 1 ? 'asunto' : 'asuntos'}` : 'Agenda completa'}
+        className="flex min-h-[50px] items-center gap-2 rounded-b-[20px] border-t-[1.5px] border-noct-divider px-3.5 text-[15px] font-extrabold text-noct-accent-300 active:bg-noct-presionado"
+      >
+        <span className="flex-1">Agenda completa</span>
+        {total > 0 && <span className="font-mono text-[13px] font-semibold text-noct-neutral-300">{total}</span>}
+        <IconoVentana nombre="adelante" tam={16} grosor={2.4} className="shrink-0" />
+      </Link>
     </section>
   )
 }

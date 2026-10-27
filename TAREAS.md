@@ -159,13 +159,23 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Área afectada:** `src/features/busqueda/ResultadosBusqueda.tsx`, `alcanceBusqueda.ts`, `presentacionResultados.ts`, `resultados.ts`, `categoriasDeAlcance.ts`, `useCategoriaDeAlcance.ts`, `ChipsDeCategoria.tsx`, `useDatosDeEquipos.ts`, `contextoResultados.ts`, `BuscadorGlobal.tsx`; `src/features/inicio/ResolverPage.tsx`.
 - **Dependencias:** las 330 (chips de tipo) y 358 (lectura del teléfono).
 
+### 365. Tu trabajo de hoy: tareas propias con «Nueva», arriba en Resolver (D5 a D7)
+
+- **Título:** una entidad mínima «tarea» y «Tu trabajo de hoy» con lo urgente a la vista.
+- **Descripción:** tareas con qué, fecha opcional, equipo opcional, nota y hecha, sincronizadas y sin conexión. «Nueva» en la cabecera de «Tu trabajo de hoy» y en la Agenda, en la hoja de siempre; con un equipo y «Es un mantenimiento», se programa como mantenimiento. «Tu trabajo de hoy» sube sobre «Guías por categoría» en el teléfono y se llama igual en tableta y escritorio. La guía a medias sale de la Agenda; los borradores pasan a «Guías en preparación», fuera del conteo.
+- **Motivo:** auditoría del 2026-10-27, hallazgo 4: «Tu trabajo de hoy» abría la guía de ayer y los borradores, y no se podía registrar nada.
+- **Impacto:** alto: tabla nueva en Supabase (`tareas`). **Falta que el usuario ejecute `supabase/schema.sql` completo en el SQL Editor de Supabase** (idempotente); hasta entonces las tareas creadas en la app esperan en la cola de sincronización.
+- **Prioridad:** Alta. **Estado:** Implementada en la rama; falta integrarla en `main`, CI, Vercel y que el usuario aplique el esquema. Verificación: `tareas.test.ts` (10) y `tareasFlujo.test.tsx` (4) nuevas; `resolverYAgenda.test.tsx`, `agenda.test.ts`, `resolver.test.ts`, `esquema.test.ts` (la tabla en el esquema y en el respaldo) y `db.upgrade.test.ts` (versión 23) ajustadas; `tsc -b`, `oxlint`, build y la suite completa en verde salvo tres archivos de la ejecución de guías que solo fallan por tiempo bajo carga y pasan solos (54 de 54). En el banco local: la tarjeta, la hoja, la Agenda y marcar hecha con «Deshacer» a 375 px; «Tu trabajo de hoy» con «Nueva tarea», el aviso visible y el panel lateral a 1280 px. Auditoría por CDP a 360 y 390 (Resolver, búsqueda, Agenda, Equipos y buscador global): sin desbordamiento, texto recortado, controles tapados ni áreas de menos de 44 px.
+- **Área afectada:** `supabase/schema.sql`, `scripts/respaldo-supabase.sh`, `src/lib/db.ts`, `tablas.ts`, `repositorio.ts`; `src/features/inicio/tareas.ts`, `contextoHojaTarea.ts`, `HojaTarea.tsx`, `pendientes.ts`, `usePendientes.ts`, `agenda.ts`, `resolver.ts`, `SeccionesAgenda.tsx`, `AgendaPage.tsx`, `ResolverPage.tsx`; `src/components/avisosFlotantes.ts`, `AvisoFlotante.tsx`; `src/pruebas/semillaLocal.ts`.
+- **Dependencias:** ninguna. Relacionada con la 323 (compromisos operativos), que sigue aparte: un compromiso no es esta entidad.
+
 ### 364. Equipos: la persona primero (D4)
 
 - **Título:** con responsable vinculado, la persona es el título de la tarjeta del equipo.
 - **Descripción:** la persona arriba; debajo, el equipo con su IP; luego solo lo que falta decir (área y ubicación, sin repetir). La lista por lo que se lee primero. Al buscar, los equipos de una misma persona van juntos en una tarjeta con su cabecera. Sin responsable, anotado, de baja o de red: como hoy.
 - **Motivo:** auditoría del 2026-10-27, hallazgo 3: lo que se recuerda, la persona, era lo menos visible.
 - **Impacto:** medio, en la lista de Equipos. Sin cambios de datos.
-- **Prioridad:** Alta. **Estado:** Implementada en la rama; falta integrarla en `main`, CI y Vercel. Verificación: `listaPorPersona.test.ts` (5) nueva y `listaResponsableArea.test.tsx` (14) ajustada a la persona primero; la suite de Equipos, componentes, personas y búsqueda en verde; en el banco local, «ana de» a 375 px (una tarjeta con sus dos equipos, tras añadir un portátil de prueba que luego se retiró) y «de ejemplo» a 1280 px.
+- **Prioridad:** Alta. **Estado:** Integrada en `main` (`e15df51`): CI en verde (run 40521852298) y producción sirviendo `e15df51`, comprobado por contenido (el chunk de `busquedaEquipos` con «Sin área registrada»). Verificación: `listaPorPersona.test.ts` (5) nueva y `listaResponsableArea.test.tsx` (14) ajustada a la persona primero; la suite de Equipos, componentes, personas y búsqueda en verde; en el banco local, «ana de» a 375 px (una tarjeta con sus dos equipos, tras añadir un portátil de prueba que luego se retiró) y «de ejemplo» a 1280 px.
 - **Área afectada:** `src/components/FilaDispositivo.tsx`, `src/features/dispositivos/DispositivosPage.tsx`, `GrupoDePersona.tsx`, `listaPorPersona.ts`, `busquedaEquipos.ts`. La lista lateral de la ficha (`ZonaListaEquipos.tsx`) conserva sus filas compactas por nombre: es una lista para saltar de un equipo a otro, no para reconocer a la persona.
 - **Dependencias:** la 363.
 
@@ -725,16 +735,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 365. Tu trabajo de hoy: tareas propias con «Nueva», arriba en Resolver (D5 a D7)
-
-- **Título:** una entidad mínima «tarea» y «Tu trabajo de hoy» con lo urgente a la vista.
-- **Descripción:** tareas con qué, fecha opcional, equipo opcional, nota y hecha, sincronizadas y sin conexión. «Nueva» en la cabecera de «Tu trabajo de hoy» y en la Agenda, en la hoja de siempre; con un equipo y «Es un mantenimiento», se programa como mantenimiento. «Tu trabajo de hoy» sube sobre «Guías por categoría» en el teléfono y se llama igual en tableta y escritorio. La guía a medias sale de la Agenda; los borradores pasan a «Guías en preparación», fuera del conteo.
-- **Motivo:** auditoría del 2026-10-27, hallazgo 4: «Tu trabajo de hoy» abría la guía de ayer y los borradores, y no se podía registrar nada.
-- **Impacto:** alto: tabla nueva en Supabase (`tareas`), que el usuario aplica con `supabase/schema.sql`.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `supabase/schema.sql`, `src/lib/db.ts`, `src/lib/tablas.ts`, `src/features/inicio/` (Agenda, Resolver).
-- **Dependencias:** ninguna.
 
 ### 359. En la tableta, elegir una categoría con texto buscado tampoco acota la búsqueda (G7)
 

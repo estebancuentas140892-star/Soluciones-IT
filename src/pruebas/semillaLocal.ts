@@ -16,6 +16,7 @@ import {
   type PasoProcedimiento,
   type Persona,
   type Referencia,
+  type Tarea,
   type Ubicacion,
 } from '../lib/db'
 
@@ -1872,7 +1873,37 @@ const CONEXIONES: Conexion[] = [
 ]
 
 /** Solo lo que no existe todavia: lo editado desde la app no se pisa. */
+// TAREAS PROPIAS DE EJEMPLO (tarea 365): una para hoy con su equipo, una para
+// dentro de unos días y una sin fecha, para ver «Tu trabajo de hoy» y la
+// Agenda con las tres formas. Inventadas; las fechas, desde hoy.
+function tareasDeEjemplo(): Tarea[] {
+  const tarea = (id: string, titulo: string, fecha: string | null, dispositivoId: string | null): Tarea => ({
+    id,
+    titulo,
+    fecha,
+    dispositivoId,
+    nota: '',
+    hechaEn: null,
+    creadaPor: PERFIL_PRUEBA.id,
+    updatedAt: AHORA,
+    updatedBy: PERFIL_PRUEBA.id,
+    eliminadoEn: null,
+  })
+  return [
+    tarea('tarea-ejemplo-hoy', 'Instalar la impresora de ejemplo en Mercadeo', fechaEnDias(0), 'dis-impresora-ejemplo'),
+    tarea('tarea-ejemplo-proxima', 'Revisar el computador de ejemplo de Compras', fechaEnDias(3), null),
+    tarea('tarea-ejemplo-sin-fecha', 'Cambiar el cable de red de ejemplo de la taquilla 2', null, null),
+  ]
+}
+
 async function sembrarAgendaYEquipos(): Promise<void> {
+  // Las tareas de ejemplo, con el mismo criterio que lo demás: solo las que
+  // faltan, para no pisar lo que se pruebe (marcarlas hechas, editarlas).
+  await db.transaction('rw', db.tareas, async () => {
+    const ejemplos = tareasDeEjemplo()
+    const existentes = new Set((await db.tareas.bulkGet(ejemplos.map((t) => t.id))).flatMap((t) => (t ? [t.id] : [])))
+    await db.tareas.bulkAdd(ejemplos.filter((t) => !existentes.has(t.id)))
+  })
   await db.transaction('rw', [db.credenciales, db.dispositivos, db.conexiones, db.recientes, db.personas, db.historial, db.ubicaciones], async () => {
     // Ubicaciones (tarea 267), con el mismo criterio.
     const ubicacionesExistentes = new Set(

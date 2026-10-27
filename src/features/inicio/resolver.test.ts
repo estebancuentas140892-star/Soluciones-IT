@@ -5,14 +5,12 @@ import { AGENDA_VACIA, type Agenda } from './agenda'
 import type { ItemPendiente } from './pendientes'
 import {
   accesosRapidos,
-  asuntosDeAtencion,
   detallePuertaAgenda,
   dondeVaElRecorrido,
   esGuiaPublicadaEjecutable,
   guiasRecientes,
   juntarRecientes,
   recorridosRecientes,
-  textoSinUrgencias,
 } from './resolver'
 
 // Lo que acompaña al buscador de Resolver (encargo del 2026-09-22). Todo
@@ -94,71 +92,17 @@ function pendiente(clave: string, diasRestantes: number | null, categoria: ItemP
   }
 }
 
-// "Tu trabajo de hoy" sin nada urgente, en el teléfono (tarea 344): en
-// palabras, nombrando solo lo que la Agenda guarda de verdad.
-describe('textoSinUrgencias', () => {
-  it('con la Agenda vacía, solo que no hay nada atrasado ni para hoy', () => {
-    expect(textoSinUrgencias(AGENDA_VACIA)).toBe('Nada atrasado ni para hoy.')
-  })
-
-  it('nombra lo próximo, lo que está en curso y lo que espera revisión, con su número', () => {
-    const agenda: Agenda = {
-      ...AGENDA_VACIA,
-      proximos: [pendiente('p1', 5), pendiente('p2', 20)],
-      enCurso: [pendiente('b1', null, 'borrador')],
-      porRevisar: [pendiente('s1', null, 'sugerencia')],
-    }
-    expect(textoSinUrgencias(agenda)).toBe('Nada atrasado ni para hoy. En la Agenda: 2 próximos, 1 en curso y 1 por revisar.')
-  })
-
-  it('en singular y sin lo que no hay', () => {
-    expect(textoSinUrgencias({ ...AGENDA_VACIA, proximos: [pendiente('p1', 5)] })).toBe(
-      'Nada atrasado ni para hoy. En la Agenda: 1 próximo.',
-    )
-    expect(textoSinUrgencias({ ...AGENDA_VACIA, porRevisar: [pendiente('s1', null, 'sugerencia')], enCurso: [pendiente('b1', null, 'borrador')] })).toBe(
-      'Nada atrasado ni para hoy. En la Agenda: 1 en curso y 1 por revisar.',
-    )
-  })
-})
-
-describe('asuntosDeAtencion', () => {
-  it('junta vencidos, de hoy y próximos, en ese orden, y recorta a tres', () => {
-    const agenda: Agenda = {
-      ...AGENDA_VACIA,
-      vencidos: [pendiente('v1', -9), pendiente('v2', -1)],
-      hoy: [pendiente('h1', 0)],
-      proximos: [pendiente('p1', 4), pendiente('p2', 9)],
-    }
-    const { visibles, total } = asuntosDeAtencion(agenda)
-    expect(visibles.map((a) => `${a.estado}:${a.item.clave}`)).toEqual(['vencido:v1', 'vencido:v2', 'hoy:h1'])
-    expect(total).toBe(5)
-  })
-
-  it('los borradores y las sugerencias no tienen plazo: no son "Atención"', () => {
-    const agenda: Agenda = {
-      ...AGENDA_VACIA,
-      enCurso: [pendiente('b1', null, 'borrador')],
-      porRevisar: [pendiente('s1', null, 'sugerencia')],
-    }
-    expect(asuntosDeAtencion(agenda)).toEqual({ visibles: [], total: 0 })
-  })
-
-  it('un próximo solo también es atención: "próxima a vencer"', () => {
-    const agenda: Agenda = { ...AGENDA_VACIA, proximos: [pendiente('p1', 12)] }
-    expect(asuntosDeAtencion(agenda).visibles).toEqual([{ item: agenda.proximos[0], estado: 'proximo' }])
-  })
-})
-
 describe('detallePuertaAgenda', () => {
   // Resolver es la única puerta de la Agenda (tarea 265). Sin nada con
   // fecha, la línea que la abre dice qué hay, o no se dibuja.
-  it('cuenta lo que no tiene fecha: en curso y por revisar', () => {
+  it('cuenta lo que no tiene fecha: las tareas sin fecha, lo que espera revisión y las guías en preparación', () => {
     const agenda: Agenda = {
       ...AGENDA_VACIA,
+      sinFecha: [pendiente('t1', null, 'tarea')],
       enCurso: [pendiente('b1', null, 'borrador')],
       porRevisar: [pendiente('s1', null, 'sugerencia'), pendiente('s2', null, 'sugerencia')],
     }
-    expect(detallePuertaAgenda(agenda, true)).toBe('1 en curso · 2 por revisar')
+    expect(detallePuertaAgenda(agenda, true)).toBe('1 sin fecha · 2 por revisar · 1 en preparación')
     expect(detallePuertaAgenda({ ...AGENDA_VACIA, porRevisar: agenda.porRevisar }, false)).toBe('2 por revisar')
   })
 

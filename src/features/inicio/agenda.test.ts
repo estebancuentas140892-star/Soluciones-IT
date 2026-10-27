@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import type { Articulo, CampoProtegido, Credencial, EjecucionDiagnostico } from '../../lib/db'
 import {
   accionDeItem,
-  agendaSinGuiaEnCurso,
   agruparAgenda,
   asuntosUrgentes,
   ETIQUETA_ESTADO,
@@ -280,23 +279,6 @@ describe('reanudación de una guía en la agenda', () => {
 // Estado, acción y sin repetir la guía (encargo del 2026-09-20)
 // ----------------------------------------------------------------
 
-describe('agendaSinGuiaEnCurso', () => {
-  it('quita de "En curso" el borrador que ya lleva la tarjeta de reanudar', () => {
-    const agenda = agruparAgenda(pendientesDeEjemplo())
-    expect(agenda.enCurso.map((i) => i.clave)).toEqual(['borrador:a1'])
-    const vista = agendaSinGuiaEnCurso(agenda, 'a1')
-    expect(vista.enCurso).toEqual([])
-    // El resto de la agenda no se toca.
-    expect(vista.vencidos).toEqual(agenda.vencidos)
-    expect(vista.porRevisar).toEqual(agenda.porRevisar)
-  })
-
-  it('deja la agenda intacta si la guía a medias no es un borrador propio', () => {
-    const agenda = agruparAgenda(pendientesDeEjemplo())
-    expect(agendaSinGuiaEnCurso(agenda, 'otra-guia')).toBe(agenda)
-    expect(agendaSinGuiaEnCurso(agenda, null)).toBe(agenda)
-  })
-})
 
 describe('accionDeItem', () => {
   it('da el verbo de cada fila: continuar, revisar o abrir', () => {
@@ -309,11 +291,13 @@ describe('accionDeItem', () => {
 })
 
 describe('ETIQUETA_ESTADO', () => {
-  it('nombra los cuatro estados en singular', () => {
+  it('nombra los estados en singular', () => {
     expect(ETIQUETA_ESTADO.vencido).toBe('Vencido')
     expect(ETIQUETA_ESTADO.hoy).toBe('Hoy')
     expect(ETIQUETA_ESTADO.proximo).toBe('Próximo')
-    expect(ETIQUETA_ESTADO.enCurso).toBe('En curso')
+    expect(ETIQUETA_ESTADO.sinFecha).toBe('Sin fecha')
+    // Los borradores son guías en preparación desde la tarea 365 (D7).
+    expect(ETIQUETA_ESTADO.enCurso).toBe('En preparación')
   })
 })
 

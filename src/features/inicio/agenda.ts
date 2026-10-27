@@ -9,24 +9,29 @@ import type { ItemPendiente } from './pendientes'
 // a nadie). Al entrar no se podía responder la única pregunta que
 // importa a las 8 de la mañana: ¿qué tengo que hacer hoy?
 //
-// Esto NO es un gestor de tareas ni un calendario: no hay entidad
-// "tarea" ni tabla de recordatorios. Es una vista derivada de datos que
-// ya existen, agrupada por la única dimensión que el técnico usa para
-// decidir: la fecha.
+// Esto NO es un gestor de tareas ni un calendario. Es una vista derivada de
+// datos que ya existen, agrupada por la única dimensión que el técnico usa
+// para decidir: la fecha. Desde la tarea 365 (D5 de la auditoría del
+// 2026-10-27, AD-100) existe una entidad mínima «tarea» (qué, fecha y
+// equipo opcionales, nota y hecha): entra aquí por su fecha, como lo demás.
 //
-// Cinco grupos, y cada ítem cae en UNO SOLO (nada se duplica):
+// Seis grupos, y cada ítem cae en UNO SOLO (nada se duplica):
 //   - vencidos     fecha pasada
 //   - hoy          fecha de hoy
 //   - proximos     fecha futura dentro del periodo de aviso del sistema
-//   - enCurso      trabajo propio empezado: borradores (y, en la
-//                  pantalla, la guía a medias)
+//   - sinFecha     las tareas propias sin fecha (tarea 365)
+//   - enCurso      las guías en preparación: borradores propios. Desde la
+//                  tarea 365 (D7) no cuentan como pendientes ni llevan la
+//                  guía a medias, que se queda en «Sigue donde ibas».
 //   - porRevisar   asuntos del EQUIPO: sugerencias de diagnóstico sin
-//                  convertir en artículo
+//                  convertir en artículo, equipos liberados, personas
+//                  retiradas con equipos
 
 export interface Agenda {
   vencidos: ItemPendiente[]
   hoy: ItemPendiente[]
   proximos: ItemPendiente[]
+  sinFecha: ItemPendiente[]
   enCurso: ItemPendiente[]
   porRevisar: ItemPendiente[]
 }
@@ -35,6 +40,7 @@ export const AGENDA_VACIA: Agenda = {
   vencidos: [],
   hoy: [],
   proximos: [],
+  sinFecha: [],
   enCurso: [],
   porRevisar: [],
 }
@@ -46,7 +52,7 @@ export const AGENDA_VACIA: Agenda = {
  * agrupa por a quién pertenece el trabajo.
  */
 export function agruparAgenda(items: ItemPendiente[]): Agenda {
-  const agenda: Agenda = { vencidos: [], hoy: [], proximos: [], enCurso: [], porRevisar: [] }
+  const agenda: Agenda = { vencidos: [], hoy: [], proximos: [], sinFecha: [], enCurso: [], porRevisar: [] }
   for (const item of items) {
     if (item.diasRestantes !== null) {
       if (item.diasRestantes < 0) agenda.vencidos.push(item)
@@ -56,10 +62,20 @@ export function agruparAgenda(items: ItemPendiente[]): Agenda {
     }
     // Un borrador es trabajo propio a medias, no una obligación con
     // plazo: nunca cae en "Vencidos" ni en "Para hoy".
-    if (item.categoria === 'borrador') agenda.enCurso.push(item)
+    if (item.categoria === 'tarea') agenda.sinFecha.push(item)
+    else if (item.categoria === 'borrador') agenda.enCurso.push(item)
     else agenda.porRevisar.push(item)
   }
   return agenda
+}
+
+/**
+ * Lo que cuenta «Agenda completa» (tarea 365, D7): lo que tiene fecha y las
+ * tareas sin fecha. Las guías en preparación y lo que el equipo deja por
+ * revisar se ven en la Agenda, plegados, pero no son pendientes propios.
+ */
+export function totalDeAgenda(agenda: Agenda): number {
+  return agenda.vencidos.length + agenda.hoy.length + agenda.proximos.length + agenda.sinFecha.length
 }
 
 /**
@@ -129,14 +145,15 @@ export function fechaDeHoy(hoy: Date = new Date()): string {
 // su estado escrito con una palabra, y cada fila la acción que le
 // corresponde, para que "qué hago con esto" no haya que deducirlo.
 
-export type EstadoAgenda = 'vencido' | 'hoy' | 'proximo' | 'enCurso' | 'porRevisar'
+export type EstadoAgenda = 'vencido' | 'hoy' | 'proximo' | 'sinFecha' | 'enCurso' | 'porRevisar'
 
 /** La palabra que se pinta en la fila. Una sola, en singular: describe ESE ítem. */
 export const ETIQUETA_ESTADO: Record<EstadoAgenda, string> = {
   vencido: 'Vencido',
   hoy: 'Hoy',
   proximo: 'Próximo',
-  enCurso: 'En curso',
+  sinFecha: 'Sin fecha',
+  enCurso: 'En preparación',
   porRevisar: 'Por revisar',
 }
 
@@ -149,26 +166,13 @@ export const ETIQUETA_ESTADO: Record<EstadoAgenda, string> = {
  * "Continuar «Guía a medias»" se lee entero.
  */
 export function accionDeItem(item: ItemPendiente): string {
+  // Una tarea propia se abre para editarla (su fila además la marca hecha).
+  if (item.categoria === 'tarea') return 'Editar'
   if (item.categoria === 'borrador') return 'Continuar'
   if (item.categoria === 'sugerencia' || item.categoria === 'equipo_liberado' || item.categoria === 'persona_retirada') {
     return 'Revisar'
   }
   return 'Abrir'
-}
-
-/**
- * Quita de "En curso" la guía que ya asoma en la tarjeta de reanudar.
- *
- * Un artículo en borrador que además tiene avance guardado entra por dos
- * puertas: `borradoresPropios` lo mete en `enCurso` y `useReanudar` lo
- * saca en su tarjeta. Es la MISMA guía dos veces en la misma pantalla.
- * La tarjeta gana, porque lleva el paso donde iba.
- */
-export function agendaSinGuiaEnCurso(agenda: Agenda, articuloIdEnCurso: string | null): Agenda {
-  if (!articuloIdEnCurso) return agenda
-  const clave = `borrador:${articuloIdEnCurso}`
-  if (!agenda.enCurso.some((item) => item.clave === clave)) return agenda
-  return { ...agenda, enCurso: agenda.enCurso.filter((item) => item.clave !== clave) }
 }
 
 /** "Ver el otro" / "Ver los otros 4": el desplegable también concuerda. */

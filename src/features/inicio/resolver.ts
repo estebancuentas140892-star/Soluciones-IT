@@ -1,7 +1,6 @@
 import type { Articulo, Categoria, Diagnostico, ProgresoDiagnostico, Reciente } from '../../lib/db'
 import { normalizarProcedimiento, procedimientoEjecutable } from '../../lib/procedimiento'
-import type { Agenda, EstadoAgenda } from './agenda'
-import type { ItemPendiente } from './pendientes'
+import type { Agenda } from './agenda'
 
 // RESOLVER: LO QUE ACOMPAÑA AL BUSCADOR (encargo del 2026-09-22, sección 2).
 //
@@ -42,31 +41,6 @@ export const ACCESOS_MINIMOS = 2
 
 const MS_DIA = 24 * 60 * 60 * 1000
 
-export type EstadoAtencion = Extract<EstadoAgenda, 'vencido' | 'hoy' | 'proximo'>
-
-export interface AsuntoAtencion {
-  item: ItemPendiente
-  estado: EstadoAtencion
-}
-
-/**
- * Los asuntos con fecha, en el orden de la agenda (lo más vencido
- * primero, luego lo de hoy y luego lo más cercano), recortados a
- * `limite`. `total` dice cuántos hay de verdad, para el enlace a la agenda
- * completa.
- */
-export function asuntosDeAtencion(
-  agenda: Agenda,
-  limite: number = ATENCION_VISIBLES,
-): { visibles: AsuntoAtencion[]; total: number } {
-  const todos: AsuntoAtencion[] = [
-    ...agenda.vencidos.map((item) => ({ item, estado: 'vencido' as const })),
-    ...agenda.hoy.map((item) => ({ item, estado: 'hoy' as const })),
-    ...agenda.proximos.map((item) => ({ item, estado: 'proximo' as const })),
-  ]
-  return { visibles: todos.slice(0, limite), total: todos.length }
-}
-
 /**
  * LA AGENDA SIN NADA CON FECHA (tarea 265, encargo del 2026-09-29, fase 3).
  * Resolver es la única puerta de la Agenda: Atención la abre, y Más ya no
@@ -93,34 +67,15 @@ export function partesPuertaAgenda(
   agenda: Agenda,
   hayActividad: boolean,
 ): { texto: string; pideAccion: boolean }[] | null {
+  // Desde la tarea 365 (D5 y D7): las tareas sin fecha piden que se hagan; los
+  // borradores son «guías en preparación», no trabajo en curso de la Agenda.
   const partes = [
-    agenda.enCurso.length > 0 ? { texto: `${agenda.enCurso.length} en curso`, pideAccion: false } : null,
+    agenda.sinFecha.length > 0 ? { texto: `${agenda.sinFecha.length} sin fecha`, pideAccion: true } : null,
     agenda.porRevisar.length > 0 ? { texto: `${agenda.porRevisar.length} por revisar`, pideAccion: true } : null,
+    agenda.enCurso.length > 0 ? { texto: `${agenda.enCurso.length} en preparación`, pideAccion: false } : null,
   ].filter((parte): parte is { texto: string; pideAccion: boolean } => parte !== null)
   if (partes.length > 0) return partes
   return hayActividad ? [{ texto: 'actividad del equipo', pideAccion: false }] : null
-}
-
-/**
- * "TU TRABAJO DE HOY" SIN NADA URGENTE (rediseño móvil, fase 1, tarea 344;
- * DESPUÉS de Claude Design): dicho con palabras, no con tres contadores en
- * cero. Lo que la Agenda guarda además (lo próximo, lo que está en curso y
- * lo que espera revisión) se nombra para que se sepa si vale la pena
- * abrirla; lo que no hay no se nombra.
- */
-export function textoSinUrgencias(agenda: Agenda): string {
-  const partes = [
-    agenda.proximos.length > 0
-      ? `${agenda.proximos.length} ${agenda.proximos.length === 1 ? 'próximo' : 'próximos'}`
-      : null,
-    agenda.enCurso.length > 0 ? `${agenda.enCurso.length} en curso` : null,
-    agenda.porRevisar.length > 0 ? `${agenda.porRevisar.length} por revisar` : null,
-  ].filter((parte): parte is string => parte !== null)
-  const enLaAgenda =
-    partes.length === 0
-      ? ''
-      : ` En la Agenda: ${partes.length === 1 ? partes[0] : `${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}`}.`
-  return `Nada atrasado ni para hoy.${enLaAgenda}`
 }
 
 /**

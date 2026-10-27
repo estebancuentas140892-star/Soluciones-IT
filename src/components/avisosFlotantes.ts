@@ -21,7 +21,17 @@ export interface Aviso {
   id: number
   texto: string
   icono: IconoAviso
+  /**
+   * «DESHACER» (tarea 365): marcar hecha una tarea o guardarla se deshace
+   * desde el aviso, sin buscarla. Es la única acción que un aviso lleva: lo
+   * que ya pasó y se puede revertir en un toque. Con ella, el aviso se ve
+   * también desde 768 px.
+   */
+  deshacer?: () => void
 }
+
+/** Lo que dura a la vista un aviso con «Deshacer»: hay que poder leerlo y tocarlo. */
+export const DURACION_AVISO_CON_DESHACER_MS = 5000
 
 /** Lo que dura a la vista, como en el handoff. */
 export const DURACION_AVISO_MS = 2400
@@ -53,6 +63,20 @@ export function avisar(texto: string, icono: IconoAviso = 'hecho', duracionMs: n
     actual = null
     notificar()
   }, duracionMs)
+}
+
+/**
+ * Muestra `texto` con «Deshacer» durante 5 s (tarea 365). Tocarlo llama a
+ * `deshacer` y retira el aviso.
+ */
+export function avisarConDeshacer(texto: string, deshacer: () => void, icono: IconoAviso = 'hecho'): void {
+  clearTimeout(temporizador)
+  actual = { id: siguienteId++, texto, icono, deshacer }
+  notificar()
+  temporizador = setTimeout(() => {
+    actual = null
+    notificar()
+  }, DURACION_AVISO_CON_DESHACER_MS)
 }
 
 /** Para las pruebas: quita el aviso a la vista sin esperar. */

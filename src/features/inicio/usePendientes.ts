@@ -5,6 +5,7 @@ import { estaAbierto } from '../../lib/mantenimientos'
 import { usePerfilVivo } from '../autenticacion/usePerfilVivo'
 import { DIAS_LIBERADO_RECIENTE } from './asuntosDePersonas'
 import { calcularPendientes, type ItemPendiente } from './pendientes'
+import { tareaAbierta } from './tareas'
 
 // Las consultas que alimentan la agenda (antes solo vivían en
 // InicioPage), extraídas para que también las use el chasis (tarea 187,
@@ -81,6 +82,9 @@ export function usePendientes(): EstadoPendientes {
     () => db.autorizaciones_facturacion.filter((a) => !a.eliminadoEn && a.estado === 'confirmada').toArray(),
     [],
   )
+  // Tarea 365: las tareas propias abiertas (ni hechas ni eliminadas), de
+  // todos los técnicos: las ven los cinco.
+  const tareasAbiertas = useLiveQuery(() => db.tareas.filter(tareaAbierta).toArray(), [])
 
   // `perfil` es `undefined` mientras carga y `null` sin sesión: solo lo
   // primero es cargar. Sin perfil no hay agenda (no se sabe de quién son
@@ -96,7 +100,8 @@ export function usePendientes(): EstadoPendientes {
     ejecucionesConSugerencia === undefined ||
     articulosDeSugerencia === undefined ||
     mantenimientosAbiertos === undefined ||
-    autorizacionesConfirmadas === undefined
+    autorizacionesConfirmadas === undefined ||
+    tareasAbiertas === undefined
 
   const items = useMemo(
     () =>
@@ -113,6 +118,7 @@ export function usePendientes(): EstadoPendientes {
             liberaciones: liberaciones ?? [],
             mantenimientos: mantenimientosAbiertos ?? [],
             autorizaciones: autorizacionesConfirmadas ?? [],
+            tareas: tareasAbiertas ?? [],
             usuarioId: perfil.id,
             puedeVerBoveda: perfil.puedeVerBoveda,
             limite: Infinity,
@@ -131,6 +137,7 @@ export function usePendientes(): EstadoPendientes {
       articulosDeSugerencia,
       mantenimientosAbiertos,
       autorizacionesConfirmadas,
+      tareasAbiertas,
     ],
   )
 

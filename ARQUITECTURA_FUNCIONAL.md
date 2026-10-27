@@ -414,6 +414,16 @@ Reglas atómicas que rigen el comportamiento del sistema. Cada una indica su mot
 - Entidades: Mantenimiento, Dispositivo, HistorialEntrada, Adjunto. Dura en el código: `src/lib/mantenimientos.ts`, `src/lib/repositorio.ts` (`cerrarMantenimiento` y la rama `mantenimientos` del historial), `src/features/mantenimientos/` (`mantenimiento.ts`, `antecedentes.ts`, `MantenimientosDelEquipo.tsx`, `MantenimientoPage.tsx`), `src/features/inicio/pendientes.ts`.
 - Impacto: una tabla nueva sincronizada (`mantenimientos`, bloque 1.u de `schema.sql`, que se aplica antes de desplegar, regla 17); ningún dato real cambia.
 
+**RN-077. Una tarea propia es lo mínimo para no olvidar algo: qué, fecha y equipo opcionales, nota y hecha. Con fecha entra en la Agenda por su día; hecha, sale sin dejar historial.**
+- Motivo: tarea 365 (auditoría de Claude Design del 2026-10-27, D5, [DECISIONES.md](DECISIONES.md) AD-100). La Agenda solo leía datos que nacen en otras pantallas y no se podía registrar nada.
+- Campos: `titulo` (obligatorio, nunca en blanco: check en el servidor), `fecha` (`date`, opcional), `dispositivo_id` (referencia blanda, opcional), `nota`, `hecha_en` (cuándo se marcó hecha; null mientras está abierta) y `creada_por` (el perfil que la creó). Sin responsable, prioridad, estados ni subtareas: no es un gestor de tareas ni duplica GLPI.
+- Quién: es de quien la crea y la ven y la cierran los cinco técnicos (pregunta abierta de la auditoría, decidida con su propuesta). RLS de contenido general, como `mantenimientos`.
+- Agenda (vista derivada, `tareasEnAgenda`): las abiertas (sin `hecha_en` ni eliminar). Con fecha caen en Vencidos, Para hoy o Próximos junto a lo demás, sin periodo de aviso; sin fecha, en el grupo «Sin fecha». Cuentan en «Agenda completa» y, vencidas o de hoy, en el número de la pestaña. Su razón: «Era para hace N días», «Era para ayer», «Para hoy», «Para mañana», «Para el viernes 30» (esta semana) o «Para el 8 nov»; su origen, el equipo si sigue vivo.
+- Marcar hecha escribe `hecha_en`; «Deshacer» lo vuelve a null. No deja entrada en el historial del equipo ni de nadie (pregunta abierta, decidida así para esta fase). Deshacer una tarea recién creada la elimina (borrado suave).
+- Con un equipo y «Es un mantenimiento de este equipo», la hoja guarda un `Mantenimiento` programado (RN-073), no una tarea; un mantenimiento necesita fecha.
+- Entidades: Tarea, Dispositivo, Mantenimiento. Dura en el código: `src/features/inicio/tareas.ts`, `contextoHojaTarea.ts`, `HojaTarea.tsx`; `src/lib/repositorio.ts` (sin historial para `tareas`).
+- Impacto: una tabla nueva sincronizada (`tareas`, bloque 1.s de `schema.sql`, que se aplica antes de crear tareas en la app desplegada, regla 17); ningún dato real cambia ni se carga.
+
 **RN-074. Una autorización de facturación separa lo documentado, lo confirmado y el dato actual medido; la Agenda solo avisa de lo confiable, nunca de lo documentado ni de lo estimado.**
 - Motivo: tarea 321 (encargo del 2026-10-10, fase C; [DECISIONES.md](DECISIONES.md) AD-076). La facturación vivía en claves sueltas de `detalles` de los POS (`DIAN - ...`, `Facturación - vencimiento fuente`), sin estado ni avisos fiables. Esas claves se conservan como trazabilidad de la conciliación.
 - Estados: `documentada` (la dice una fuente y nadie la comprobó; se lee "Documentada, por validar"), `confirmada` (comprobada con una fuente ACTUAL: la configuración en ICG/HKA o la consulta en la DIAN; exige el día y la fuente de la verificación, y un PDF por sí solo no la confirma), `conflicto` (las fuentes no coinciden; se explica en las observaciones y no se elige ninguna) y `reemplazada` (ya no se usa). Ciclo en la sección 4.4c. Piden revisión la documentada y la de conflicto.
@@ -607,6 +617,7 @@ erDiagram
 | Dispositivo | reemplaza | Dispositivo | 1 : 0..1 | FK `reemplaza_a` (autorreferencia, fija una vez) |
 | Dispositivo | contiene | Campo protegido | 1 : N | `dispositivo_id` (nullable, sin FK) |
 | Dispositivo | se le programa | Mantenimiento | 1 : N | `mantenimientos.dispositivo_id` (sin FK). Cerrado como realizado, `historial_id` apunta a la intervención del historial del equipo (0..1), de la que cuelga la evidencia (RN-073) |
+| Tarea | con | Dispositivo | N : 0..1 | `tareas.dispositivo_id` (uuid sin FK, opcional) (RN-077) |
 | Autorización de facturación | la usa | Dispositivo (POS) | N : M | lista `autorizaciones_facturacion.dispositivo_ids` (`uuid[]` sin FK); puede estar vacía (una fuente que no identifica el equipo). Su documento, `evidencia_adjunto_id` (un adjunto de uno de sus POS, sin FK) (RN-074) |
 | Dispositivo | conexión | Dispositivo | N : M | tabla puente `conexiones` (dos FK duras) con atributos |
 | Credencial | da acceso | Dispositivo | N : M | JSON `credenciales.dispositivos` `{id,nombre}[]` |
@@ -626,7 +637,7 @@ Notas:
 
 ### 3.3 Referencias sin FK (a propósito)
 
-Por el modelo offline primero, varias referencias son "blandas" (uuid sin FK, para que una fila no se rechace por el estado de otra tabla que quizá aún no sincronizó): `campos_protegidos.dispositivo_id`, `historial.entidad_id` (polimórfico), `ejecuciones_diagnostico.diagnostico_id`, `accesos_boveda.credencial_id` (polimórfico), `articulos.origen_sugerencia_id`, `adjuntos.entidad_id` (polimórfico), `mantenimientos.dispositivo_id` y `mantenimientos.historial_id` (tarea 320), `autorizaciones_facturacion.dispositivo_ids` y `autorizaciones_facturacion.evidencia_adjunto_id` (tarea 321).
+Por el modelo offline primero, varias referencias son "blandas" (uuid sin FK, para que una fila no se rechace por el estado de otra tabla que quizá aún no sincronizó): `campos_protegidos.dispositivo_id`, `historial.entidad_id` (polimórfico), `ejecuciones_diagnostico.diagnostico_id`, `accesos_boveda.credencial_id` (polimórfico), `articulos.origen_sugerencia_id`, `adjuntos.entidad_id` (polimórfico), `mantenimientos.dispositivo_id` y `mantenimientos.historial_id` (tarea 320), `autorizaciones_facturacion.dispositivo_ids` y `autorizaciones_facturacion.evidencia_adjunto_id` (tarea 321), `tareas.dispositivo_id` (tarea 365).
 
 Catálogo de campos entidad por entidad (tipos, nulabilidad, defaults): [ARQUITECTURA.md](ARQUITECTURA.md), sección 5.
 
@@ -958,7 +969,7 @@ Vista funcional; el mecanismo técnico (motor de sync, canal de Realtime, cursor
 
 ### 8.2 Qué es local y qué se sincroniza
 
-- **Sincronizadas (16 tablas, `referencias`, desde la tarea 320 `mantenimientos` y desde la tarea 321 `autorizaciones_facturacion` incluidas)** por el motor genérico, más `perfiles` y `boveda_meta` con un mecanismo propio de un solo sentido.
+- **Sincronizadas (17 tablas, `referencias`, desde la tarea 320 `mantenimientos`, desde la tarea 321 `autorizaciones_facturacion` y desde la tarea 365 `tareas` incluidas)** por el motor genérico, más `perfiles` y `boveda_meta` con un mecanismo propio de un solo sentido.
 - **Locales puras (8):** `syncMeta` (cursores), `cambiosPendientes` (cola), `archivosPendientes` (cola de archivos), `seguridadApp` (bloqueo del dispositivo), `progresoDiagnostico`, `progresoPasos`, `recientes`, `favoritos`.
 
 ---

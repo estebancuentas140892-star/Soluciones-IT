@@ -713,6 +713,33 @@ export interface Mantenimiento {
   eliminadoEn: string | null
 }
 
+// UNA TAREA PROPIA (tarea 365, D5 de la auditoria de Resolver, Equipos y
+// Agenda del 2026-10-27, AD-100). Lo minimo para no olvidar algo que no
+// nace en otra pantalla: que hay que hacer, para cuando (si se sabe), con
+// que equipo (si lo hay), una nota y si ya se hizo. No es un gestor de
+// tareas: sin responsable, prioridad, estados ni subtareas. Es de quien la
+// crea y la ven los cinco en la Agenda. Marcarla hecha no deja constancia
+// en el historial del equipo (pregunta abierta de la auditoria, decidida
+// asi para esta fase). Con un equipo y "Es un mantenimiento", lo que se
+// guarda es un `Mantenimiento`, no una tarea.
+export interface Tarea {
+  id: string
+  /** Que hay que hacer. Nunca vacio. */
+  titulo: string
+  /** "YYYY-MM-DD" o null: una tarea puede no tener fecha. */
+  fecha: string | null
+  /** Referencia blanda al equipo (uuid sin FK, como mantenimientos), o null. */
+  dispositivoId: string | null
+  nota: string
+  /** Cuando se marco hecha (ISO), o null mientras esta abierta. */
+  hechaEn: string | null
+  /** El perfil que la creo. La ven todos; solo dice de quien es. */
+  creadaPor: string | null
+  updatedAt: string
+  updatedBy: string | null
+  eliminadoEn: string | null
+}
+
 // AUTORIZACION DE FACTURACION DE LOS POS (tarea 321, encargo del
 // 2026-10-10, fase C).
 //
@@ -1571,6 +1598,7 @@ class SolucionesItDatabase extends Dexie {
   personas!: EntityTable<Persona, 'id'>
   conexiones!: EntityTable<Conexion, 'id'>
   mantenimientos!: EntityTable<Mantenimiento, 'id'>
+  tareas!: EntityTable<Tarea, 'id'>
   // Mismo nombre local y remoto (snake_case), como campos_protegidos.
   autorizaciones_facturacion!: EntityTable<AutorizacionFacturacion, 'id'>
   credenciales!: EntityTable<Credencial, 'id'>
@@ -1830,6 +1858,13 @@ class SolucionesItDatabase extends Dexie {
     // autorizacion tenga varios.
     this.version(22).stores({
       autorizaciones_facturacion: 'id, *dispositivoIds, updatedAt',
+    })
+
+    // Version 23 (2026-10-27, tarea 365): las tareas propias, tabla
+    // sincronizada nueva. Solo `.stores()` de la tabla nueva, como la 21 y
+    // la 22: ninguna fila guardada se toca.
+    this.version(23).stores({
+      tareas: 'id, fecha, dispositivoId, updatedAt',
     })
   }
 }

@@ -874,6 +874,43 @@ create index if not exists idx_mantenimientos_updated on public.mantenimientos (
 create index if not exists idx_mantenimientos_dispositivo on public.mantenimientos (dispositivo_id);
 
 -- ----------------------------------------------------------------
+-- 1.s Tareas propias (2026-10-27, tarea 365, AD-100 D5).
+--
+--     Lo minimo para no olvidar algo que no nace en otra pantalla: que
+--     hay que hacer, para cuando (opcional), con que equipo (opcional),
+--     una nota y si ya se hizo. No es un gestor de tareas: sin
+--     responsable, prioridad ni estados. Es de quien la crea
+--     (`creada_por`) y la ven todos los tecnicos en la Agenda. Marcarla
+--     hecha (`hecha_en`) no deja constancia en el historial del equipo.
+--     Con un equipo y "Es un mantenimiento", la app guarda un
+--     mantenimiento (bloque 1.u), no una tarea.
+--     Valores por defecto alineados con `porDefecto` de src/lib/tablas.ts;
+--     `fecha`, `dispositivo_id` y `hecha_en` son nullables y no van en
+--     `camposOpcionales` (se pueden vaciar desde la app).
+--     Advertencia de despliegue (regla 17 de REGLAS.md): aplicar este
+--     bloque, con el resto del archivo, ANTES de crear tareas en la app
+--     desplegada; hasta entonces una tarea espera en la cola de
+--     sincronizacion (no se pierde) y el resto de tablas sigue igual. No
+--     carga ningun dato.
+-- ----------------------------------------------------------------
+
+create table if not exists public.tareas (
+  id uuid primary key default gen_random_uuid(),
+  titulo text not null check (btrim(titulo) <> ''),
+  fecha date,
+  dispositivo_id uuid,
+  nota text not null default '',
+  hecha_en timestamptz,
+  creada_por uuid references auth.users (id),
+  updated_at timestamptz not null default now(),
+  updated_by uuid references auth.users (id),
+  eliminado_en timestamptz
+);
+
+create index if not exists idx_tareas_updated on public.tareas (updated_at);
+create index if not exists idx_tareas_dispositivo on public.tareas (dispositivo_id);
+
+-- ----------------------------------------------------------------
 -- 1.t Autorizaciones de facturacion de los POS (2026-10-10, tarea 321).
 --
 --     Un prefijo con su rango autorizado por la DIAN y lo que se sabe de
@@ -1077,6 +1114,11 @@ create trigger trg_autorizaciones_facturacion_modificacion
   before insert or update on public.autorizaciones_facturacion
   for each row execute function public.registrar_modificacion();
 
+drop trigger if exists trg_tareas_modificacion on public.tareas;
+create trigger trg_tareas_modificacion
+  before insert or update on public.tareas
+  for each row execute function public.registrar_modificacion();
+
 -- Crea el perfil automaticamente cuando se da de alta un usuario
 -- en Authentication. Es security definer A PROPOSITO, y es la unica: la
 -- dispara Auth (rol supabase_auth_admin), que no tiene permiso sobre
@@ -1197,6 +1239,7 @@ alter table public.personas enable row level security;
 alter table public.referencias enable row level security;
 alter table public.mantenimientos enable row level security;
 alter table public.autorizaciones_facturacion enable row level security;
+alter table public.tareas enable row level security;
 
 -- Perfiles: todos los tecnicos autenticados pueden ver los nombres
 -- del equipo. Nadie puede editar perfiles desde la app; el permiso
@@ -1328,6 +1371,14 @@ create policy mantenimientos_acceso on public.mantenimientos
 -- ICG/HKA siguen en la Boveda y esta tabla no tiene donde guardarlas.
 drop policy if exists autorizaciones_facturacion_acceso on public.autorizaciones_facturacion;
 create policy autorizaciones_facturacion_acceso on public.autorizaciones_facturacion
+  for all to authenticated using (true) with check (true);
+
+-- Tareas propias (tarea 365): mismo criterio que mantenimientos. Las ven y
+-- las cierran todos los tecnicos (pregunta abierta de la auditoria del
+-- 2026-10-27: de quien la crea, visibles para los cinco). No guardan
+-- secretos.
+drop policy if exists tareas_acceso on public.tareas;
+create policy tareas_acceso on public.tareas
   for all to authenticated using (true) with check (true);
 
 -- Ejecuciones de diagnostico: se pueden leer y agregar, nunca editar
@@ -1868,7 +1919,7 @@ declare
     'historial', 'conexiones', 'diagnosticos', 'ejecuciones_diagnostico',
     'accesos_boveda', 'perfiles', 'boveda_meta', 'ubicaciones',
     'campos_protegidos', 'personas', 'referencias', 'mantenimientos',
-    'autorizaciones_facturacion'
+    'autorizaciones_facturacion', 'tareas'
   ];
 begin
   if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then

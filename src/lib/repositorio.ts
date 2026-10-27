@@ -373,6 +373,11 @@ function construirHistorial(
     )
   }
 
+  // Una tarea propia (tarea 365) no deja historial: no es un dato del
+  // equipo, y marcarla hecha no deja constancia en su ficha (pregunta
+  // abierta de la auditoria del 2026-10-27, decidida asi para esta fase).
+  if (tabla === 'tareas') return []
+
   // Los adjuntos se registran sobre la ficha a la que pertenecen,
   // como una sola entrada (se agregan o se quitan, no se editan). Una
   // foto colgada de una intervencion manual (entidadTipo 'historial')
@@ -451,7 +456,7 @@ function crearEntrada(
 // filtraria el nombre del dato protegido y quien lo cambio en el "Ver
 // historial" normal de la ficha, que es publico para el equipo.
 const TIPO_POR_TABLA: Record<
-  Exclude<TablaEditable, 'adjuntos' | 'conexiones' | 'mantenimientos' | 'autorizaciones_facturacion'>,
+  Exclude<TablaEditable, 'adjuntos' | 'conexiones' | 'mantenimientos' | 'autorizaciones_facturacion' | 'tareas'>,
   TipoEntidadHistorial
 > =
   {
@@ -470,7 +475,7 @@ const TIPO_POR_TABLA: Record<
 // (ver ambas llamadas) porque puede apuntar a 'historial', que no es
 // un TipoEntidadHistorial valido y ahi no genera entrada propia.
 function destinoHistorial(
-  tabla: Exclude<TablaEditable, 'conexiones' | 'adjuntos' | 'mantenimientos' | 'autorizaciones_facturacion'>,
+  tabla: Exclude<TablaEditable, 'conexiones' | 'adjuntos' | 'mantenimientos' | 'autorizaciones_facturacion' | 'tareas'>,
   entidad: EntidadPorTabla[TablaEditable],
 ): { tipo: TipoEntidadHistorial; id: string } {
   return { tipo: TIPO_POR_TABLA[tabla], id: entidad.id }
@@ -555,6 +560,8 @@ function entradasEliminacion(
     const autorizacion = eliminada as unknown as AutorizacionFacturacion
     return entradasDeAutorizacion({ ...autorizacion, eliminadoEn: null }, autorizacion, usuario, ahora, motivo)
   }
+  // Una tarea (tarea 365), tampoco al eliminarse: ver `construirHistorial`.
+  if (tabla === 'tareas') return []
   // Mismo criterio que al crear: una foto colgada de una intervencion
   // (entidadTipo 'historial') no deja su propia entrada al borrarse.
   if (tabla === 'adjuntos') {

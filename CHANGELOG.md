@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-27
 
+### Agregado (tarea 365): tareas propias en «Tu trabajo de hoy» y la Agenda
+
+**Área modificada:** `supabase/schema.sql` (bloque 1.s, tabla `tareas`, con trigger, RLS y tiempo real), `scripts/respaldo-supabase.sh`; `src/lib/db.ts` (`Tarea`, versión 23), `tablas.ts`, `repositorio.ts` (sin historial para `tareas`); `src/features/inicio/tareas.ts`, `contextoHojaTarea.ts` y `HojaTarea.tsx` (nuevos), `pendientes.ts`, `usePendientes.ts`, `agenda.ts`, `resolver.ts`, `SeccionesAgenda.tsx`, `AgendaPage.tsx` y `ResolverPage.tsx`; `src/components/avisosFlotantes.ts` y `AvisoFlotante.tsx` («Deshacer»); `src/pruebas/semillaLocal.ts` (tres tareas de ejemplo del banco local).
+**Tipo:** Agregado.
+**Motivo:** auditoría de Claude Design del 2026-10-27 (D5 a D7, AD-100): «Tu trabajo de hoy» abría la guía de ayer y los borradores, lo urgente quedaba abajo con aspecto de secundario y no se podía registrar nada.
+**Qué cambia:** «Nueva» (teléfono) y «Nueva tarea» (Agenda y escritorio) abren la hoja: qué, cuándo (Hoy, Mañana, el viernes, otra fecha o sin fecha), equipo opcional con «Es un mantenimiento de este equipo» y nota. Una tarea con fecha entra en Vencidos, Para hoy o Próximos; sin fecha, en «Sin fecha». El círculo de su fila la marca hecha y el aviso ofrece «Deshacer». En el teléfono, «Tu trabajo de hoy» sube sobre las categorías, con lo urgente y «Después: …»; desde 768 px, «Necesita atención» se llama así. La guía a medias sale de la Agenda y los borradores pasan a «Guías en preparación», plegados y fuera del conteo.
+**Impacto esperado:** lo que no nace en otra pantalla se registra en dos toques y no se olvida; al abrir Resolver, lo urgente está a la vista.
+**Estructura de datos:** tabla nueva `tareas` (id, titulo, fecha, dispositivo_id, nota, hecha_en, creada_por, updated_at, updated_by, eliminado_en), sincronizada; Dexie versión 23. **Hay que ejecutar `supabase/schema.sql` completo en el SQL Editor de Supabase** (es idempotente) antes de crear tareas en la app desplegada: hasta entonces una tarea espera en la cola de sincronización y no se pierde.
+
 ### Cambiado (tarea 364): en Equipos, la persona primero
 
 **Área modificada:** `src/components/FilaDispositivo.tsx` (`persona`), `src/features/dispositivos/GrupoDePersona.tsx` y `listaPorPersona.ts` (nuevos), `busquedaEquipos.ts` (`porPersona`) y `DispositivosPage.tsx`.

@@ -1,12 +1,12 @@
 import { useId, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { BarraReanudar } from '../../components/BarraReanudar'
 import {
   CaretDown,
   CaretRight,
   Check,
   type IconoProps,
   Lightbulb,
+  ListChecks,
   LockSimple,
   Monitor,
   PencilSimple,
@@ -15,11 +15,10 @@ import {
   Wrench,
 } from '../../components/iconos'
 import { FILAS_EN_TARJETA, RELIEVE_EN_TELEFONO, TITULO_GRUPO_EN_TELEFONO } from '../../components/ventana/estilos'
-import { tarjetaReanudarVisible, useReanudar } from '../soluciones/useReanudar'
+import { marcarTareaHecha, useHojaTarea } from './contextoHojaTarea'
 import type { ItemPendiente } from './pendientes'
 import {
   accionDeItem,
-  agendaSinGuiaEnCurso,
   asuntosUrgentes,
   ETIQUETA_ESTADO,
   textoVerOtros,
@@ -122,12 +121,15 @@ const COLOR_CONTADOR = {
 
 /**
  * Los grupos, en el orden en que se decide el día: vencidos, para hoy y
- * próximos, y al final la fila plegada "Sin fecha" con lo que no vence
- * (en curso y lo que el equipo dejó por revisar).
+ * próximos (lo que tiene fecha, tareas propias incluidas), las tareas sin
+ * fecha y, al final y plegados, lo que no es un pendiente propio: lo que el
+ * equipo deja por revisar y las guías en preparación.
  *
- * La guía a medias (`useReanudar`) entra dentro de "En curso" y NO se
- * repite: si ese artículo también es un borrador propio, `agendaSinGuiaEnCurso`
- * lo saca de la lista, porque la tarjeta ya lleva el paso donde iba.
+ * DESDE LA TAREA 365 (D7 de la auditoría del 2026-10-27, AD-100): la guía a
+ * medias ya no está aquí (se queda en «Sigue donde ibas» de Resolver) y los
+ * borradores pasan a «Guías en preparación», fuera del conteo. Antes, sin
+ * nada con fecha, la Agenda abría «Sin fecha» con la guía de ayer y los
+ * borradores delante: lo primero que se veía no era trabajo pendiente.
  */
 export function SeccionesAgenda({
   agenda,
@@ -147,40 +149,27 @@ export function SeccionesAgenda({
   conEnlaceCompleta?: boolean
   /**
    * CÓMO SE REPARTEN LOS GRUPOS POR ANCHO (tarea 339, T7; handoff de tableta
-   * y escritorio). `columna`, la de siempre: uno debajo del otro y "Sin
-   * fecha" plegado al final. `dos` (desde 1024): lo que tiene fecha a la
-   * izquierda y, en su columna de 360, "Sin fecha" ABIERTO (sin botón: tiene
-   * sitio propio) y el `complemento`. `tres` (desde 1680, T10): vencidos y
-   * para hoy | próximos, todos, sin "Ver los otros N" | sin fecha y el
-   * `complemento`. Los grupos, su orden y qué cae en cada uno no cambian:
-   * solo dónde se pintan.
+   * y escritorio). `columna`, la de siempre: uno debajo del otro y lo que no
+   * es pendiente propio plegado al final. `dos` (desde 1024): lo que tiene
+   * fecha y las tareas sin fecha a la izquierda y, en su columna de 360, lo
+   * del equipo y las guías en preparación ABIERTOS (sin botón: tienen sitio
+   * propio) y el `complemento`. `tres` (desde 1680, T10): vencidos y para
+   * hoy | próximos y sin fecha, todos, sin "Ver los otros N" | lo del equipo,
+   * las guías en preparación y el `complemento`. Los grupos, su orden y qué
+   * cae en cada uno no cambian: solo dónde se pintan.
    */
   disposicion?: 'columna' | 'dos' | 'tres'
-  /** Lo que va al final de la columna de "Sin fecha" (la actividad del equipo). */
+  /** Lo que va al final de la columna de lo que no vence (la actividad del equipo). */
   complemento?: ReactNode
 }) {
-  const reanudar = useReanudar()
-  const hayQueReanudar = tarjetaReanudarVisible(reanudar)
-  const idEnCurso = hayQueReanudar ? (reanudar.actual?.articulo.id ?? null) : null
-  const vista = agendaSinGuiaEnCurso(agenda, idEnCurso)
-  const urgentes = asuntosUrgentes(vista)
-  // "Sin fecha" desplegado es estado de la pantalla, no se guarda. Empieza
-  // plegado, salvo que no haya nada con fecha: entonces sería lo único de
-  // la Agenda, y plegarlo la dejaría en "Todo al día" y una fila cerrada.
-  const [sinFechaElegido, setSinFechaElegido] = useState<boolean | null>(null)
-  const idSinFecha = useId()
+  const urgentes = asuntosUrgentes(agenda)
+  const enColumnas = disposicion !== 'columna'
 
   if (cargando) {
     return (
       <p className="px-0.5 text-[13px] leading-relaxed text-noct-neutral-400">Cargando la agenda…</p>
     )
   }
-
-  const enCurso = vista.enCurso.length + (hayQueReanudar ? 1 : 0)
-  const totalSinFecha = enCurso + vista.porRevisar.length
-  const conFecha = vista.vencidos.length + vista.hoy.length + vista.proximos.length
-  const sinFechaAbierto = sinFechaElegido ?? conFecha === 0
-  const enColumnas = disposicion !== 'columna'
 
   // ESTADO TRANQUILO: sin vencidos ni asuntos de hoy se dice con
   // todas sus letras, en vez de dejar el hueco en blanco. Con algo
@@ -195,93 +184,87 @@ export function SeccionesAgenda({
     </div>
   )
 
-  const vencidos = vista.vencidos.length > 0 && (
+  const vencidos = agenda.vencidos.length > 0 && (
     <section>
-      <CabeceraAgenda titulo="Vencidos" total={vista.vencidos.length} estado="vencido" />
+      <CabeceraAgenda titulo="Vencidos" total={agenda.vencidos.length} estado="vencido" />
       <div className={FILAS_AGENDA}>
-        {vista.vencidos.map((item) => (
+        {agenda.vencidos.map((item) => (
           <FilaAgenda key={item.clave} item={item} estado="vencido" />
         ))}
       </div>
     </section>
   )
 
-  const hoy = vista.hoy.length > 0 && (
+  const hoy = agenda.hoy.length > 0 && (
     <section>
-      <CabeceraAgenda titulo="Para hoy" total={vista.hoy.length} estado="hoy" />
+      <CabeceraAgenda titulo="Para hoy" total={agenda.hoy.length} estado="hoy" />
       <div className={FILAS_AGENDA}>
-        {vista.hoy.map((item) => (
+        {agenda.hoy.map((item) => (
           <FilaAgenda key={item.clave} item={item} estado="hoy" />
         ))}
       </div>
     </section>
   )
 
-  const proximos = vista.proximos.length > 0 && (
+  const proximos = agenda.proximos.length > 0 && (
     <BloqueLista
       titulo="Próximos"
-      total={vista.proximos.length}
+      total={agenda.proximos.length}
       estado="proximo"
       etiquetaVerMas="próximos"
       // Con su propia columna (1680) se ven todos: "Ver los otros N" no
       // ahorra nada donde hay sitio.
-      visiblesIniciales={disposicion === 'tres' ? vista.proximos.length : PROXIMOS_VISIBLES}
+      visiblesIniciales={disposicion === 'tres' ? agenda.proximos.length : PROXIMOS_VISIBLES}
     >
       {(visibles) =>
-        vista.proximos
+        agenda.proximos
           .slice(0, visibles)
           .map((item) => <FilaAgenda key={item.clave} item={item} estado="proximo" />)
       }
     </BloqueLista>
   )
 
-  // Dentro de "Sin fecha", los dos grupos de siempre: "En curso" (la guía
-  // a medias y los borradores, trabajo propio empezado) y "Por revisar del
-  // equipo" (sugerencias de diagnóstico sin convertir en guía, que siguen
-  // el permiso con el que ya se listan en Guías con preguntas, y desde la
-  // tarea 270 los equipos liberados que esperan dueño y las personas
-  // retiradas que aún tienen equipos). `agruparAgenda` no cambia: solo
-  // dónde se pintan.
-  const gruposSinFecha = (
-    <div id={idSinFecha} className={`flex flex-col gap-[18px] ${enColumnas ? '' : 'pt-3.5'}`}>
-      {enCurso > 0 && (
-        <section>
-          <CabeceraAgenda titulo="En curso" total={enCurso} estado="enCurso" />
-          <div className="flex flex-col gap-2">
-            {hayQueReanudar && reanudar.actual && (
-              <BarraReanudar
-                variante="tarjeta"
-                articulo={reanudar.actual.articulo}
-                hechos={reanudar.actual.hechos}
-                total={reanudar.actual.total}
-                totalAbierto={reanudar.actual.totalAbierto}
-                minutosRestantes={reanudar.actual.minutosRestantes}
-                onDescartar={reanudar.descartar}
-              />
-            )}
-            {vista.enCurso.length > 0 && (
-              <div className={FILAS_AGENDA}>
-                {vista.enCurso.map((item) => (
-                  <FilaAgenda key={item.clave} item={item} estado="enCurso" />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-      {/* Ya desplegado a propósito: se ven todos, sin un segundo
-          "Ver los otros N" dentro del pliegue. */}
-      {vista.porRevisar.length > 0 && (
-        <section>
-          <CabeceraAgenda titulo="Por revisar del equipo" total={vista.porRevisar.length} estado="porRevisar" />
-          <div className={FILAS_AGENDA}>
-            {vista.porRevisar.map((item) => (
-              <FilaAgenda key={item.clave} item={item} estado="porRevisar" />
-            ))}
-          </div>
-        </section>
-      )}
-    </div>
+  // LAS TAREAS SIN FECHA (tarea 365): trabajo propio que no vence, a la
+  // vista y después de lo que tiene fecha.
+  const sinFecha = agenda.sinFecha.length > 0 && (
+    <section>
+      <CabeceraAgenda titulo="Sin fecha" total={agenda.sinFecha.length} estado="sinFecha" />
+      <div className={FILAS_AGENDA}>
+        {agenda.sinFecha.map((item) => (
+          <FilaAgenda key={item.clave} item={item} estado="sinFecha" />
+        ))}
+      </div>
+    </section>
+  )
+
+  // LO QUE NO ES UN PENDIENTE PROPIO (tarea 365, D7), cada uno en su pliegue:
+  // lo que el equipo deja por revisar (sugerencias de diagnóstico sin
+  // convertir en guía, equipos liberados que esperan dueño, personas
+  // retiradas con equipos) y las guías en preparación (los borradores
+  // propios). No cuentan en «Agenda completa» ni en los contadores.
+  const delEquipo = agenda.porRevisar.length > 0 && (
+    <BloquePlegado
+      titulo="Del equipo, por revisar"
+      nota="Equipos liberados y sugerencias. No vencen."
+      total={agenda.porRevisar.length}
+      abierto={enColumnas}
+    >
+      {agenda.porRevisar.map((item) => (
+        <FilaAgenda key={item.clave} item={item} estado="porRevisar" />
+      ))}
+    </BloquePlegado>
+  )
+  const enPreparacion = agenda.enCurso.length > 0 && (
+    <BloquePlegado
+      titulo="Guías en preparación"
+      nota="Tus borradores. No cuentan como pendientes."
+      total={agenda.enCurso.length}
+      abierto={enColumnas}
+    >
+      {agenda.enCurso.map((item) => (
+        <FilaAgenda key={item.clave} item={item} estado="enCurso" />
+      ))}
+    </BloquePlegado>
   )
 
   const enlace = conEnlaceCompleta && (
@@ -301,70 +284,29 @@ export function SeccionesAgenda({
         {vencidos}
         {hoy}
         {proximos}
-
-        {/* SIN FECHA (rediseño móvil "1b Pulgar", tarea 332): lo que no
-            vence va al final y plegado, en una fila que dice qué guarda y
-            cuántos. */}
-        {totalSinFecha > 0 && (
-          <section>
-            <button
-              type="button"
-              onClick={() => setSinFechaElegido(!sinFechaAbierto)}
-              aria-expanded={sinFechaAbierto}
-              aria-controls={idSinFecha}
-              className={`flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04] max-md:min-h-16 max-md:border-[1.5px] max-md:bg-noct-surface max-md:px-4 max-md:active:bg-noct-presionado ${RELIEVE_EN_TELEFONO}`}
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block text-[15px] font-semibold leading-[1.3] max-md:text-[16px] max-md:font-extrabold">Sin fecha</span>
-                <span className="block text-[13px] leading-[1.35] text-noct-neutral-400 max-md:text-[14px] max-md:text-noct-neutral-300">
-                  Por revisar y en curso. No vencen.
-                </span>
-              </span>
-              <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500">{totalSinFecha}</span>
-              <CaretDown
-                size={15}
-                className={`shrink-0 text-noct-neutral-400 transition-transform duration-150 motion-reduce:transition-none ${
-                  sinFechaAbierto ? 'rotate-180' : ''
-                }`}
-                aria-hidden
-              />
-            </button>
-            {sinFechaAbierto && gruposSinFecha}
-          </section>
-        )}
-
+        {sinFecha}
+        {delEquipo}
+        {enPreparacion}
         {enlace}
       </>
     )
   }
 
-  // EN COLUMNAS (tarea 339, T7 y T10): "Sin fecha" tiene su columna y va
-  // abierto, con la misma cabecera que la fila plegada (qué guarda y
-  // cuántos), sin botón. Al final de esa columna, el complemento.
-  const columnaSinFecha = (
+  // EN COLUMNAS (tarea 339, T7 y T10): lo que no es pendiente propio tiene
+  // su columna y va abierto, con su cabecera (qué guarda y cuántos), sin
+  // botón. Al final de esa columna, el complemento.
+  const columnaSinVencer = (
     <aside className="flex min-w-0 flex-col gap-5">
-      {totalSinFecha > 0 && (
-        <section aria-labelledby={`${idSinFecha}-titulo`} className="flex flex-col gap-3.5">
-          <div className="flex flex-col gap-0.5 border-b border-noct-divider pb-3">
-            <div className="flex items-center justify-between gap-2">
-              <h2 id={`${idSinFecha}-titulo`} className="text-[15px] font-semibold leading-[1.3]">
-                Sin fecha
-              </h2>
-              <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500">{totalSinFecha}</span>
-            </div>
-            <p className="text-[13px] leading-[1.35] text-noct-neutral-400">Por revisar y en curso. No vencen.</p>
-          </div>
-          {gruposSinFecha}
-        </section>
-      )}
+      {delEquipo}
+      {enPreparacion}
       {complemento}
     </aside>
   )
 
   if (disposicion === 'tres') {
     // Tres columnas de lectura (1680): lo que urge, lo que viene y lo que no
-    // vence. Si no hay próximos, su columna no queda vacía en medio: los
-    // otros dos grupos se reparten el ancho.
+    // es pendiente propio. Si no hay próximos ni tareas sin fecha, su
+    // columna no queda vacía en medio: las otras dos se reparten el ancho.
     return (
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_340px] items-start gap-x-11">
         <div className="flex min-w-0 flex-col gap-[22px]">
@@ -373,8 +315,11 @@ export function SeccionesAgenda({
           {hoy}
           {enlace}
         </div>
-        <div className="flex min-w-0 flex-col gap-[22px]">{proximos}</div>
-        {columnaSinFecha}
+        <div className="flex min-w-0 flex-col gap-[22px]">
+          {proximos}
+          {sinFecha}
+        </div>
+        {columnaSinVencer}
       </div>
     )
   }
@@ -386,10 +331,73 @@ export function SeccionesAgenda({
         {vencidos}
         {hoy}
         {proximos}
+        {sinFecha}
         {enlace}
       </div>
-      {columnaSinFecha}
+      {columnaSinVencer}
     </div>
+  )
+}
+
+// UN PLIEGUE DE LO QUE NO ES PENDIENTE PROPIO (tarea 365, D7; la fila
+// plegada de la tarea 332): una tarjeta que dice qué guarda, por qué no
+// vence y cuántos, y al abrirla sus filas. Con columna propia (desde 1024)
+// va abierto y su cabecera no es un botón.
+function BloquePlegado({
+  titulo,
+  nota,
+  total,
+  abierto: siempreAbierto,
+  children,
+}: {
+  titulo: string
+  nota: string
+  total: number
+  abierto: boolean
+  children: ReactNode
+}) {
+  const [elegido, setElegido] = useState(false)
+  const id = useId()
+  const abierto = siempreAbierto || elegido
+  const cabecera = (
+    <>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-semibold leading-[1.3] max-md:text-[16px] max-md:font-extrabold">{titulo}</span>
+        <span className="block text-[13px] leading-[1.35] text-noct-neutral-400 max-md:text-[14px] max-md:text-noct-neutral-300">
+          {nota}
+        </span>
+      </span>
+      <span className="shrink-0 font-mono text-[13px] tabular-nums text-noct-neutral-500">{total}</span>
+    </>
+  )
+  return (
+    <section className="flex flex-col">
+      {siempreAbierto ? (
+        <div className="flex items-start gap-2.5 border-b border-noct-divider pb-3">{cabecera}</div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setElegido(!elegido)}
+          aria-expanded={abierto}
+          aria-controls={id}
+          className={`flex min-h-14 w-full items-center gap-2.5 border-y border-noct-divider py-2 text-left text-noct-text hover:bg-noct-text/[.04] max-md:min-h-16 max-md:border-[1.5px] max-md:bg-noct-surface max-md:px-4 max-md:active:bg-noct-presionado ${RELIEVE_EN_TELEFONO}`}
+        >
+          {cabecera}
+          <CaretDown
+            size={15}
+            className={`shrink-0 text-noct-neutral-400 transition-transform duration-150 motion-reduce:transition-none ${
+              abierto ? 'rotate-180' : ''
+            }`}
+            aria-hidden
+          />
+        </button>
+      )}
+      {abierto && (
+        <div id={id} className={`${FILAS_AGENDA} ${siempreAbierto ? 'pt-1' : 'mt-2'}`}>
+          {children}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -457,6 +465,7 @@ function CabeceraAgenda({ titulo, total, estado }: { titulo: string; total: numb
 // solo aparece cuando el ítem tiene fecha. A la derecha, la acción en un
 // verbo: abrir, continuar o revisar.
 export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: EstadoAgenda }) {
+  if (item.categoria === 'tarea' && item.tareaId) return <FilaTarea item={item} tareaId={item.tareaId} estado={estado} />
   const Icono = ICONO_PENDIENTE[item.categoria]
   const accion = accionDeItem(item)
   // LA FILA DEL REDISEÑO MÓVIL "1b PULGAR" (tarea 330): el estado en una
@@ -500,6 +509,62 @@ export function FilaAgenda({ item, estado }: { item: ItemPendiente; estado: Esta
   )
 }
 
+// UNA TAREA PROPIA EN SU FILA (tarea 365, D5, prototipo de Claude Design). La
+// misma barra de estado y la misma razón en su color que las demás, pero en
+// vez del icono, un círculo que la marca hecha (44 de toque): sale de la lista
+// y el aviso ofrece «Deshacer». El resto de la fila abre la tarea para
+// editarla, en la hoja de la pantalla. Sin verbo a la derecha: la fila no
+// lleva a otro sitio.
+function FilaTarea({ item, tareaId, estado }: { item: ItemPendiente; tareaId: string; estado: EstadoAgenda }) {
+  const hoja = useHojaTarea()
+  const cuerpo = (
+    <span className="min-w-0 flex-1">
+      {/* El nombre entero (regla 23): es lo que hay que hacer. */}
+      <span
+        data-nombre-principal
+        className="block min-w-0 text-[15.5px] font-semibold leading-[1.3] [overflow-wrap:anywhere] [text-wrap:pretty] max-md:text-[16px] max-md:font-bold xl:text-[14.5px]"
+      >
+        {item.titulo}
+      </span>
+      <span className="mt-0.5 block text-[13px] leading-[1.35] max-md:text-[14px] max-md:[text-wrap:pretty]">
+        <span className={`font-[550] max-md:font-bold ${COLOR_RAZON[item.tono]}`}>{item.detalle}</span>
+        {item.origen && <span className="text-noct-neutral-400 max-md:text-noct-neutral-300"> · {item.origen}</span>}
+      </span>
+    </span>
+  )
+  return (
+    <div
+      data-fila-tarea={tareaId}
+      className="flex min-h-[62px] items-center gap-1.5 border-b border-noct-divider text-noct-text max-md:min-h-[68px] max-md:last:border-b-0 md:min-h-14 xl:min-h-[52px]"
+    >
+      <span aria-hidden data-barra-estado className={`my-2.5 w-1 shrink-0 self-stretch rounded-sm ${BARRA_PENDIENTE[item.tono]}`} />
+      <button
+        type="button"
+        aria-label={`Marcar como hecha: ${item.titulo}`}
+        onClick={() => void marcarTareaHecha(tareaId)}
+        className="group flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-noct-text/[.06] active:bg-noct-presionado"
+      >
+        <span
+          aria-hidden
+          className="h-6 w-6 rounded-full border-2 border-noct-neutral-300 group-hover:border-noct-exito xl:h-5 xl:w-5"
+        />
+      </button>
+      {hoja ? (
+        <button
+          type="button"
+          onClick={() => hoja.editar(tareaId)}
+          aria-label={`${accionDeItem(item)} ${item.titulo} · ${ETIQUETA_ESTADO[estado]}`}
+          className="flex min-h-14 min-w-0 flex-1 items-center py-2 text-left hover:bg-noct-text/[.04] max-md:active:bg-noct-presionado"
+        >
+          {cuerpo}
+        </button>
+      ) : (
+        <div className="flex min-h-14 min-w-0 flex-1 items-center py-2">{cuerpo}</div>
+      )}
+    </div>
+  )
+}
+
 // Icono y tono de una fila según su categoría: una credencial vencida
 // pesa distinto que un borrador propio, aunque ambos sean "algo por
 // resolver".
@@ -516,6 +581,8 @@ const ICONO_PENDIENTE: Record<ItemPendiente['categoria'], (props: IconoProps) =>
   mantenimiento: Wrench,
   // Tarea 321: el aviso de una autorización de facturación de un POS.
   facturacion: Storefront,
+  // Tarea 365: una tarea propia (su fila lleva el círculo, no el icono).
+  tarea: ListChecks,
 }
 // La barra lateral de la fila, en el color de su estado (tarea 330).
 const BARRA_PENDIENTE: Record<ItemPendiente['tono'], string> = {
@@ -535,6 +602,7 @@ const COLOR_ESTADO: Record<EstadoAgenda, string> = {
   vencido: 'bg-noct-error',
   hoy: 'bg-noct-precaucion',
   proximo: 'bg-noct-neutral-500',
+  sinFecha: 'bg-noct-neutral-300',
   enCurso: 'bg-noct-accent',
   porRevisar: 'bg-noct-neutral-500',
 }

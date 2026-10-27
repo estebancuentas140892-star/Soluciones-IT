@@ -19,6 +19,7 @@ import type {
   Mantenimiento,
   Persona,
   Referencia,
+  Tarea,
   Ubicacion,
 } from './db'
 
@@ -43,6 +44,7 @@ export const TABLAS_SINCRONIZADAS = [
   'referencias',
   'mantenimientos',
   'autorizaciones_facturacion',
+  'tareas',
 ] as const
 
 export type TablaSincronizada = (typeof TABLAS_SINCRONIZADAS)[number]
@@ -72,6 +74,7 @@ export interface EntidadPorTabla {
   referencias: Referencia
   mantenimientos: Mantenimiento
   autorizaciones_facturacion: AutorizacionFacturacion
+  tareas: Tarea
 }
 
 interface ConfigTabla {
@@ -568,6 +571,28 @@ export const configTablas: Record<TablaSincronizada, ConfigTabla> = {
       fuente: '',
       verificacionFuente: '',
       observaciones: '',
+    },
+  },
+  // Tareas propias (tarea 365), al final por el mismo criterio: si el bloque
+  // 1.s de schema.sql aun no se aplico, su fallo no impide descargar las
+  // demas. La fecha, el equipo y `hechaEn` son nullables y NO van en
+  // `camposOpcionales`: quitar la fecha, soltar el equipo o deshacer
+  // "hecha" los vacia, asi que el null tiene que poder viajar. `titulo` es
+  // NOT NULL sin default: si falta es un error de verdad.
+  tareas: {
+    columnaCursor: 'updated_at',
+    soloInsercion: false,
+    campos: {
+      ...camposComunes,
+      titulo: 'titulo',
+      fecha: 'fecha',
+      dispositivoId: 'dispositivo_id',
+      nota: 'nota',
+      hechaEn: 'hecha_en',
+      creadaPor: 'creada_por',
+    },
+    porDefecto: {
+      nota: '',
     },
   },
 }
