@@ -82,18 +82,19 @@ describe('las guías se distinguen una de otra en el teléfono (tarea 347)', () 
     expect(titulo?.className).toContain('font-bold')
   })
 
-  it('los resultados de la búsqueda: cada guía en su propia tarjeta (tareas 347 y 350)', async () => {
+  it('los resultados de la búsqueda: una tarjeta por grupo y un divisor entre guía y guía (tareas 347 y 362)', async () => {
     await montar(RUTAS, '/')
     await escribir(await esperar(campoBuscador, 'el buscador'), 'impresora de prueba')
-    const tarjetas = await esperar(() => {
-      const encontradas = Array.from(document.body.querySelectorAll('[data-tarjeta-resultado="articulo"]'))
+    const filas = await esperar(() => {
+      const encontradas = Array.from(document.body.querySelectorAll('[data-fila-resultado="articulo"]'))
       return encontradas.length >= 2 ? encontradas : null
-    }, 'las tarjetas de resultados')
-    for (const tarjeta of tarjetas) {
-      expect(tarjeta.className).toContain('border-[1.5px]')
-      expect(tarjeta.className).toContain('bg-noct-surface')
-    }
-    // Hermanas en su grupo, separadas por aire.
-    expect(tarjetas[0].parentElement?.className).toContain('gap-2')
+    }, 'las filas de resultados')
+    // Hermanas en la tarjeta de su grupo, con su borde y su fondo.
+    const tarjeta = filas[0].parentElement as HTMLElement
+    expect(filas.every((fila) => fila.parentElement === tarjeta)).toBe(true)
+    expect(tarjeta.className).toContain('border-[1.5px]')
+    expect(tarjeta.className).toContain('bg-noct-surface')
+    // Dos títulos largos no se leen como uno: el divisor fuerte entre filas.
+    for (const fila of filas.slice(1)) expect(fila.className).toContain('border-t-[1.5px]')
   })
 })

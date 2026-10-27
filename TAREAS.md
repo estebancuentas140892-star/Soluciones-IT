@@ -147,6 +147,18 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **ENCARGO DEL 2026-10-26: RESOLVER Y CATÁLOGO DE GUÍAS EN EL TELÉFONO** (paquete de Claude Design en `Diseños/`: `README.md`, `AUDITORIA.md` y `ESPECIFICACION.md`, fuente de verdad, preparada sobre `7b7492d`). El usuario pidió «aplicar los cambios propuestos»: se toman D1 a D13 y, en las preguntas abiertas de la sección 13, las opciones recomendadas (situación en una línea, orden por tipo de `TIPOS_ARTICULO`, catálogo A2 sin rótulos por tipo, G7 en tableta como tarea aparte). Solo por debajo de 768 px; tableta y escritorio, idénticos a `main`.
 
+**ENCARGO DEL 2026-10-27: RESOLVER, EQUIPOS Y AGENDA, ENCONTRAR Y RECORDAR EN MENOS TIEMPO** (auditoría de Claude Design `Diseños/Auditoría Resolver, Equipos y Agenda.html`, revisada sobre `ba5a31a`, [DECISIONES.md](DECISIONES.md) AD-100). El usuario pidió «realizar los cambios propuestos»: se toman D1 a D7 y, en las dos preguntas abiertas, las propuestas de la auditoría (las tareas son de quien las crea y las ven los cinco; marcar hecha no deja constancia en el historial del equipo en esta fase). Cuatro tareas, una a la vez, en el worktree `C:/Users/ecardona/dev/sit-resolver-equipos-agenda` (rama `feat/resolver-equipos-agenda`): 362 (D1 y D2), 363 (D3), 364 (D4) y 365 (D5 a D7).
+
+### 362. Resolver: tres por grupo con «Ver las N», la fila de categorías y lo que solo menciona, plegado (D1 y D2)
+
+- **Título:** en la búsqueda de Resolver (y en la capa del buscador global), que los caminos posibles se vean juntos y se pueda acotar por categoría.
+- **Descripción:** (1) En «Todo», tres por grupo en el teléfono y cuatro desde 768, con «Ver las N» (el número del chip; tocarlo elige el chip). (2) Elegido «Guías» o «Equipos» con dos o más categorías, la fila de categorías («Todas N» y cada una con su cuenta), combinada con el tipo. (3) Las guías que solo mencionan lo buscado en su contenido, plegadas al final; las categorías que coinciden, como «Todas las guías de X». (4) En el teléfono, una tarjeta por grupo con filas de dos líneas. (5) Los equipos de red, en su grupo.
+- **Motivo:** auditoría del 2026-10-27, hallazgo 1: «impresora» daba 18 tarjetas, tres pantallas de teléfono.
+- **Impacto:** alto en la búsqueda de Resolver y de la capa, en todos los anchos. Sin cambios de datos.
+- **Prioridad:** Alta. **Estado:** Implementada en la rama; falta integrarla en `main`, CI y Vercel. Verificación: `tsc -b`, `oxlint`, la suite de búsqueda y Resolver en verde (con `categoriasDeAlcance.test.ts` y `filasDelGrupo.test.ts` nuevas, `busquedaGuiasTelefono.test.tsx` reescrita y `busquedaPulgar`, `separadoresGuias`, `resultadosIntencion` y `flujoBovedaBuscador` ajustadas); en el banco local, «ejemplo» a 375 px (tres por grupo, «Ver los 22» igual que el chip, la fila de categorías y el pliegue) y a 1280 px (cuatro por grupo con «Mejores resultados» y la fila «Categoría»).
+- **Área afectada:** `src/features/busqueda/ResultadosBusqueda.tsx`, `alcanceBusqueda.ts`, `presentacionResultados.ts`, `resultados.ts`, `categoriasDeAlcance.ts`, `useCategoriaDeAlcance.ts`, `ChipsDeCategoria.tsx`, `useDatosDeEquipos.ts`, `contextoResultados.ts`, `BuscadorGlobal.tsx`; `src/features/inicio/ResolverPage.tsx`.
+- **Dependencias:** las 330 (chips de tipo) y 358 (lectura del teléfono).
+
 ### 358. Resolver y catálogo de Guías en el teléfono: mosaico, grupos por categoría y cada guía con su identidad
 
 - **Título:** implementar la «Propuesta recomendada» de Claude Design: Resolver A (mosaico apilado, sin «Prueba con»), catálogo A2 y la misma tarjeta de guía en la búsqueda de Resolver.
@@ -693,6 +705,36 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
+
+### 363. Equipos: con texto escrito, solo las categorías con coincidencias (D3)
+
+- **Título:** que la fila de categorías de Equipos, buscando, enseñe solo lo que sirve.
+- **Descripción:** sin texto, como hoy. Con texto: «Todos», las categorías con resultados, la elegida aunque quede en 0 (con borde punteado) y «Red» si coinciden equipos de red. Si la elegida queda en 0, un vacío con «Ver los N en Todos» que no borra lo escrito. Igual en todos los anchos.
+- **Motivo:** auditoría del 2026-10-27, hallazgo 2: con «Daniel», ocho chips en 0 y Computadores, el único útil, fuera de la pantalla; «Todos» contaba los equipos de red sin chip.
+- **Impacto:** medio, en la lista de Equipos. Sin cambios de datos.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/dispositivos/DispositivosPage.tsx`, `ZonaListaEquipos.tsx`, `busquedaEquipos.ts` (`conteosDeChips`).
+- **Dependencias:** ninguna.
+
+### 364. Equipos: la persona primero (D4)
+
+- **Título:** con responsable vinculado, la persona es el título de la tarjeta del equipo.
+- **Descripción:** la persona arriba; debajo, el equipo con su IP; luego solo lo que falta decir (área y ubicación, sin repetir). Al buscar, los equipos de una misma persona van juntos en una tarjeta con su cabecera. Sin responsable, anotado, de baja o de red: como hoy.
+- **Motivo:** auditoría del 2026-10-27, hallazgo 3: lo que se recuerda, la persona, era lo menos visible.
+- **Impacto:** medio, en la lista de Equipos. Sin cambios de datos.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `src/features/dispositivos/DispositivosPage.tsx`, `ZonaListaEquipos.tsx`, `responsableEnLista.ts`, `FilaDispositivo`.
+- **Dependencias:** la 363.
+
+### 365. Tu trabajo de hoy: tareas propias con «Nueva», arriba en Resolver (D5 a D7)
+
+- **Título:** una entidad mínima «tarea» y «Tu trabajo de hoy» con lo urgente a la vista.
+- **Descripción:** tareas con qué, fecha opcional, equipo opcional, nota y hecha, sincronizadas y sin conexión. «Nueva» en la cabecera de «Tu trabajo de hoy» y en la Agenda, en la hoja de siempre; con un equipo y «Es un mantenimiento», se programa como mantenimiento. «Tu trabajo de hoy» sube sobre «Guías por categoría» en el teléfono y se llama igual en tableta y escritorio. La guía a medias sale de la Agenda; los borradores pasan a «Guías en preparación», fuera del conteo.
+- **Motivo:** auditoría del 2026-10-27, hallazgo 4: «Tu trabajo de hoy» abría la guía de ayer y los borradores, y no se podía registrar nada.
+- **Impacto:** alto: tabla nueva en Supabase (`tareas`), que el usuario aplica con `supabase/schema.sql`.
+- **Prioridad:** Alta. **Estado:** Pendiente.
+- **Área afectada:** `supabase/schema.sql`, `src/lib/db.ts`, `src/lib/tablas.ts`, `src/features/inicio/` (Agenda, Resolver).
+- **Dependencias:** ninguna.
 
 ### 359. En la tableta, elegir una categoría con texto buscado tampoco acota la búsqueda (G7)
 

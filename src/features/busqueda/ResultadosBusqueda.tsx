@@ -7,13 +7,21 @@ import { avisar } from '../../components/avisosFlotantes'
 import { IconoCategoria } from '../../components/IconoCategoria'
 import { useEsAncho } from '../../components/useEsAncho'
 import { IconoVentana } from '../../components/ventana/IconoVentana'
-import { BOTON_COPIAR, RELLENO_ACCION, TARJETA, TITULO_GRUPO } from '../../components/ventana/estilos'
+import {
+  BOTON_COPIAR,
+  RELLENO_ACCION,
+  TITULO_GRUPO,
+} from '../../components/ventana/estilos'
 import { copiarAlPortapapeles } from '../../lib/portapapeles'
-import { db } from '../../lib/db'
+import { db, type Articulo } from '../../lib/db'
+import { inicialesDe } from '../../lib/iniciales'
 import { conOrigen } from '../../lib/origenNavegacion'
 import { normalizarProcedimiento } from '../../lib/procedimiento'
+import { lineaAvanceGuia } from '../soluciones/accionGuia'
+import { capacidadDeGuia, lineaDeCapacidad } from '../soluciones/capacidadGuia'
 import { useAccionesDeGuia } from '../soluciones/useAccionesDeGuia'
 import { AccionesDeResultado } from './AccionesResultado'
+import { alcanceDelGrupo, conteoPorAlcance, textoVerAlcance, TOPE_EN_TODO, type Alcance } from './alcanceBusqueda'
 import { useAnotarBusqueda } from './busquedaEnHistorial'
 import { ContextoResultados, idDeEntidad, useContextoResultados } from './contextoResultados'
 import { equipoDeLaConsulta, hayQueSepararMejores, leerResultados, sinLosMejores } from './mejores'
@@ -23,26 +31,24 @@ import { eventoDeResolucion, registrarResolucion } from './medicion'
 import { filaNavega, vistaRapidaDe, type ModoBuscador } from './modoConsulta'
 import { PuenteBoveda } from './PuenteBoveda'
 import {
-  categoriaComun,
   cuentaDeTipo,
-  filasConPalabraComun,
   filasConPrefijoComun,
+  filasDelGrupo,
   lecturaParaTelefono,
   partesSubtituloConTipo,
   partirPorPrefijo,
+  soloLaMenciona,
+  textoMencionan,
   tipoComun,
-  tramosDeTitulo,
-  type TramoTitulo,
 } from './presentacionResultados'
 import { prominenciaPuenteBoveda } from './reglasPuenteBoveda'
 import { agruparResultados, partirTitulo, VISUAL_POR_TIPO } from './resultados'
 import type { ResultadoBusqueda } from './useIndiceBusqueda'
 import { VistaRapidaResultado } from './VistaRapida'
 import { useRanuraVistaRapida } from './ranuraVistaRapida'
-import { useDatosDeEquipos } from './useDatosDeEquipos'
+import { useDatosDeEquipos, useDatosDePersonas, type DatosDePersona } from './useDatosDeEquipos'
+import { useIdsDeRed } from './useIdsDeRed'
 import { useArticulosDeGuias, useCategoriasDeGuias } from './useCategoriasDeGuias'
-import { TarjetaGuiaTelefono } from '../soluciones/TarjetaGuiaTelefono'
-import type { Articulo } from '../../lib/db'
 
 // Presentacion compartida de los resultados del buscador global. El
 // catalogo y el agrupado viven en resultados.ts; el ranking global, en
@@ -151,6 +157,7 @@ export function FilaResultado({
   prefijoAtenuado = false,
   conAcciones = false,
   desdeMejores = false,
+  detalle,
 }: {
   resultado: ResultadoBusqueda
   consulta: string
@@ -181,6 +188,11 @@ export function FilaResultado({
   conAcciones?: boolean
   /** Para la medicion del recorrido (seccion 17). */
   desdeMejores?: boolean
+  /**
+   * Lo que dice la segunda línea en vez del subtítulo: una guía que solo
+   * menciona lo buscado lo dice ahí (tarea 362).
+   */
+  detalle?: string
 }) {
   const { modo, vistaAbierta, alternarVista, equipos } = useContextoResultados()
   const abrir = useAbrirResultado(resultado, desdeMejores)
@@ -274,8 +286,10 @@ export function FilaResultado({
             {conSuTipo.detalle}
           </span>
         ) : (
-          resultado.subtitulo && (
-            <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-400 max-md:text-[13px]">{resultado.subtitulo}</span>
+          (detalle ?? resultado.subtitulo) && (
+            <span className="truncate text-[12.5px] leading-[1.4] text-noct-neutral-400 max-md:text-[13px]">
+              {detalle ?? resultado.subtitulo}
+            </span>
           )
         )}
       </span>
@@ -392,9 +406,9 @@ export function FilaResultado({
 // LA GUÍA QUE MEJOR COINCIDE, EN EL TELÉFONO (rediseño móvil, fase 1, tarea
 // 344; DESPUÉS de Claude Design). Cuando lo primero del orden global (el de
 // `mejores.ts`, que no cambia) es una guía, se destaca sola. Es una
-// COINCIDENCIA, no un diagnóstico: si otras están cerca (confianza
-// "cercana") se dice que hay otras parecidas debajo. Abre exactamente lo que
-// abriría su fila (`useAbrirResultado`).
+// COINCIDENCIA, no un diagnóstico. Abre exactamente lo que abriría su fila
+// (`useAbrirResultado`). Desde la tarea 362 ya no dice «Hay otras guías
+// parecidas debajo»: el grupo de debajo dice cuántas hay («Ver las N»).
 //
 // LA TARJETA DEL PROTOTIPO DE CLAUDE DESIGN (tarea 350): borde de 2 px y
 // relieve en el acento; el icono de su categoría con qué es («Problema
@@ -404,11 +418,9 @@ export function FilaResultado({
 // abre la guía; el botón es su nombre para el lector y el teclado.
 function GuiaQueMejorCoincide({
   resultado,
-  cercana,
   categoriaNombre,
 }: {
   resultado: ResultadoBusqueda
-  cercana: boolean
   categoriaNombre: string
 }) {
   const { accionesGuia } = useContextoResultados()
@@ -495,87 +507,66 @@ function GuiaQueMejorCoincide({
           </Link>
         </div>
       </div>
-      {cercana && <p className="text-[14px] leading-snug text-noct-neutral-300">Hay otras guías parecidas debajo.</p>}
     </section>
   )
 }
 
-// UNA GUÍA EN LOS RESULTADOS DEL TELÉFONO (tarea 358, D13): la tarjeta del
-// catálogo (`TarjetaGuiaTelefono`), que abre con la forma de su tipo en vez de
-// con el icono de su categoría (ocho impresoras rosas no distinguían nada). La
-// categoría va en la línea pequeña, o en el encabezado si la comparten todas.
-// Abre lo mismo y cuenta lo mismo que la tarjeta de siempre
-// (`useAbrirResultado`); una guía no tiene acciones directas ni vista rápida.
-function TarjetaGuiaResultado({
+// UN RESULTADO EN EL TELÉFONO (tarea 362, auditoría de Resolver, Equipos y
+// Agenda del 2026-10-27; antes, una tarjeta por resultado de las tareas 350 y
+// 358). «impresora» daba 18 tarjetas de 80 a 100 px seguidas: tres pantallas.
+// Ahora cada grupo es UNA tarjeta y cada resultado una fila de dos líneas con
+// su divisor, como el prototipo: el icono de su categoría o de su clase (la
+// persona, con sus iniciales), el título entero y, debajo, lo que lo sitúa sin
+// repetir lo que el grupo ya dice: de una guía, su categoría y cuánto toma; de
+// un equipo, su IP en mono y su contexto; de una persona, su área y sus
+// equipos. Un equipo copia su IP desde la fila, sin abrir la ficha.
+//
+// Abre lo mismo y cuenta lo mismo que la fila de siempre (`useAbrirResultado`),
+// con las mismas acciones directas debajo y la misma vista rápida (una
+// credencial se ve, se copia y se tapa sin salir de aquí).
+function FilaTelefono({
   resultado,
-  articulo,
-  tramos,
-  desdeMejores,
-  conCategoria,
-  categoriaNombre,
-}: {
-  resultado: ResultadoBusqueda
-  articulo: Articulo
-  tramos: TramoTitulo[]
-  desdeMejores: boolean
-  conCategoria: boolean
-  categoriaNombre: string
-}) {
-  const { accionesGuia } = useContextoResultados()
-  const abrir = useAbrirResultado(resultado, desdeMejores)
-  return (
-    <TarjetaGuiaTelefono
-      articulo={articulo}
-      to={abrir.to}
-      state={abrir.state}
-      onClick={abrir.onClick}
-      tramos={tramos}
-      accion={accionesGuia.get(articulo.id) ?? null}
-      conCategoria={conCategoria}
-      categoriaNombre={categoriaNombre}
-      posibleCoincidencia={resultado.aproximado}
-      datos={{ 'data-tarjeta-resultado': 'articulo' }}
-    />
-  )
-}
-
-// UN RESULTADO EN EL TELÉFONO (tarea 350, prototipo de Claude Design): su
-// propia tarjeta, con el icono de su categoría (una guía) o de su clase (un
-// equipo), el título entero a 16 y lo que lo sitúa debajo. Un equipo dice su
-// IP en mono y la copia desde la fila, sin abrir la ficha: es lo que más se
-// busca de pie frente a un puesto. Abre lo mismo que la fila de siempre
-// (`useAbrirResultado`), con las mismas acciones directas debajo y la misma
-// vista rápida (una credencial se ve, se copia y se tapa sin salir de aquí).
-function TarjetaResultado({
-  resultado,
-  consulta,
-  prefijoAtenuado,
   conAcciones,
   desdeMejores,
   categoriaNombre,
+  articulo,
+  menciona = false,
+  tituloCatalogo,
 }: {
   resultado: ResultadoBusqueda
-  consulta: string
-  prefijoAtenuado: boolean
   conAcciones: boolean
   desdeMejores: boolean
+  /** La categoría de la guía (`useCategoriasDeGuias`), o ''. */
   categoriaNombre: string
+  /** La guía con pasos, para decir cuánto toma; undefined mientras se lee. */
+  articulo?: Articulo
+  /** Solo menciona lo buscado en su contenido (`soloLaMenciona`): se dice así. */
+  menciona?: boolean
+  /** Una categoría que coincide se nombra como su catálogo. */
+  tituloCatalogo?: string
 }) {
-  const { equipos, modo, vistaAbierta, alternarVista } = useContextoResultados()
+  const { equipos, personas, modo, vistaAbierta, alternarVista, accionesGuia } = useContextoResultados()
   const abrir = useAbrirResultado(resultado, desdeMejores)
-  const equipo = resultado.tipo === 'dispositivo' ? equipos.get(idDeEntidad(resultado.id)) : undefined
-  const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
-  const { pre, match, post } = partirTitulo(resultado.titulo, consulta)
-  const conPrefijo = prefijoAtenuado ? partirPorPrefijo(resultado.titulo, consulta) : null
-  const conClase = resultado.tipo === 'articulo' || resultado.tipo === 'diagnostico' || resultado.tipo === 'dispositivo'
+  const id = idDeEntidad(resultado.id)
+  const equipo = resultado.tipo === 'dispositivo' ? equipos.get(id) : undefined
   const ip = equipo?.ip ?? ''
   const idPanel = useId()
   const vista = vistaRapidaDe(resultado, modo)
   const abierta = vista !== null && vistaAbierta === resultado.id
+  const avance =
+    !menciona && articulo && capacidadDeGuia(articulo).ejecutable ? lineaAvanceGuia(accionesGuia.get(id) ?? null) : null
+  const meta = metaDeFilaTelefono(resultado, { categoriaNombre, articulo, menciona, persona: personas.get(id) })
+  const { Icono, tono } = VISUAL_POR_TIPO[resultado.tipo]
+  const titulo = tituloCatalogo ?? resultado.titulo
+  const conCategoria =
+    resultado.tipo === 'articulo' ||
+    resultado.tipo === 'diagnostico' ||
+    resultado.tipo === 'categoria' ||
+    resultado.tipo === 'dispositivo'
   return (
     <div
-      data-tarjeta-resultado={resultado.tipo}
-      className={`${TARJETA} flex min-w-0 flex-col`}
+      data-fila-resultado={resultado.tipo}
+      className="flex min-w-0 flex-col border-t-[1.5px] border-noct-divider first:border-t-0"
       // Esc recoge la vista abierta y nada más (como en la fila de siempre).
       onKeyDown={(evento) => {
         if (!abierta || evento.key !== 'Escape') return
@@ -583,85 +574,97 @@ function TarjetaResultado({
         alternarVista(resultado.id)
       }}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 items-center gap-1.5">
         <Link
           to={abrir.to}
           state={abrir.state}
           onClick={abrir.onClick}
-          className={`flex min-h-16 min-w-0 flex-1 items-center gap-3 rounded-2xl py-3 text-noct-text active:bg-noct-presionado ${
-            ip ? 'pl-3' : 'px-3'
-          }`}
+          className="flex min-h-[60px] min-w-0 flex-1 items-center gap-3 rounded-lg py-2.5 text-noct-text active:bg-noct-presionado"
         >
-          {conClase ? (
-            <IconoCategoria nombre={resultado.tipo === 'dispositivo' ? equipo?.categoriaNombre : categoriaNombre} tam={40} />
+          {resultado.tipo === 'persona' ? (
+            <span
+              aria-hidden
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-extrabold ${tono}`}
+            >
+              {inicialesDe(resultado.titulo)}
+            </span>
+          ) : conCategoria ? (
+            <IconoCategoria
+              nombre={
+                resultado.tipo === 'dispositivo'
+                  ? equipo?.categoriaNombre
+                  : resultado.tipo === 'categoria'
+                    ? resultado.titulo
+                    : categoriaNombre
+              }
+              tam={36}
+            />
           ) : (
-            <span aria-hidden className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tono}`}>
-              <Icono size={21} />
+            <span aria-hidden className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] ${tono}`}>
+              <Icono size={20} />
             </span>
           )}
-          <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
             {/* EL TÍTULO NUNCA SE RECORTA (regla 23): ocupa las líneas que
-                necesite y la tarjeta crece. */}
-            {conPrefijo ? (
-              <span data-nombre-principal className="min-w-0 text-[16px] leading-[21px] [overflow-wrap:anywhere] [text-wrap:pretty]">
-                <span className="text-noct-neutral-300 underline decoration-noct-accent-600 decoration-dotted underline-offset-4">
-                  {conPrefijo.prefijo}
-                </span>
-                <span className="font-bold text-noct-text">{conPrefijo.resto}</span>
-              </span>
-            ) : (
-              <span
-                data-nombre-principal
-                className="min-w-0 text-[16px] font-bold leading-[21px] [overflow-wrap:anywhere] [text-wrap:pretty]"
-              >
-                {pre}
-                {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
-                {post}
-              </span>
-            )}
+                necesite y la fila crece. */}
+            <span
+              data-nombre-principal
+              className={`min-w-0 text-[15.5px] leading-5 [overflow-wrap:anywhere] [text-wrap:pretty] ${
+                menciona ? 'font-semibold text-noct-neutral-200' : 'font-bold'
+              }`}
+            >
+              {titulo}
+            </span>
             {resultado.aproximado && (
-              <span data-posible-coincidencia className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-noct-precaucion">
+              <span
+                data-posible-coincidencia
+                className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-noct-precaucion"
+              >
                 <Question size={13} className="shrink-0" aria-hidden />
                 Posible coincidencia
               </span>
             )}
-            {ip && (
-              <span data-ip-resultado className="font-mono text-[15px] font-semibold leading-snug text-noct-text">
-                {ip}
-              </span>
-            )}
-            {resultado.subtitulo && (
-              // Lo que sitúa al resultado parte línea si no cabe: en el
-              // teléfono un subtítulo cortado escondía justo el lugar.
-              <span
-                className={`font-semibold leading-snug text-noct-neutral-300 [overflow-wrap:anywhere] ${ip ? 'text-[13.5px]' : 'text-[14px]'}`}
-              >
-                {resultado.subtitulo}
+            {(ip || meta || avance) && (
+              // Lo que sitúa al resultado parte línea si no cabe: la IP baja
+              // de línea antes que cortar el nombre.
+              <span className="flex flex-wrap items-baseline gap-x-1.5 text-[13.5px] font-semibold leading-[1.35] text-noct-neutral-300 [overflow-wrap:anywhere]">
+                {ip && (
+                  <span data-ip-resultado className="font-mono text-[14px] font-semibold text-noct-text">
+                    {ip}
+                  </span>
+                )}
+                {avance ? (
+                  <span className="text-noct-accent-300">{[categoriaNombre, avance].filter(Boolean).join(' · ')}</span>
+                ) : (
+                  meta && <span data-meta-resultado>{meta}</span>
+                )}
               </span>
             )}
           </span>
-          {!ip && <IconoVentana nombre="adelante" tam={18} className="shrink-0 text-noct-neutral-400" />}
+          {!ip && <IconoVentana nombre="adelante" tam={16} className="mr-1.5 shrink-0 text-noct-neutral-400" />}
         </Link>
         {ip && (
           <button
             type="button"
             aria-label={`Copiar IP de ${resultado.titulo}`}
             onClick={() => {
-              void copiarAlPortapapeles(ip).then((ok) => avisar(ok ? `IP copiada: ${ip}` : 'No se pudo copiar la IP', 'copiado'))
+              void copiarAlPortapapeles(ip).then((ok) =>
+                avisar(ok ? `IP copiada: ${ip}` : 'No se pudo copiar la IP', 'copiado'),
+              )
             }}
-            className={`${BOTON_COPIAR} mr-2`}
+            className={BOTON_COPIAR}
           >
-            <IconoVentana nombre="copiar" tam={20} />
+            <IconoVentana nombre="copiar" tam={19} />
           </button>
         )}
       </div>
       {conAcciones && !abierta && (
-        <div className="flex flex-wrap items-center gap-2 px-3 pb-3 empty:hidden">
+        <div className="flex flex-wrap items-center gap-2 pb-3 empty:hidden">
           <AccionesDeResultado resultado={resultado} desdeMejores={desdeMejores} />
         </div>
       )}
       {abierta && (
-        <div className="px-3 pb-3">
+        <div className="pb-3">
           <VistaRapidaResultado
             resultado={resultado}
             idPanel={idPanel}
@@ -671,6 +674,88 @@ function TarjetaResultado({
         </div>
       )}
     </div>
+  )
+}
+
+/**
+ * La segunda línea de una fila del teléfono (tarea 362): lo que sitúa al
+ * resultado sin repetir lo que su grupo ya dice («Guías», «Personas»).
+ */
+function metaDeFilaTelefono(
+  resultado: ResultadoBusqueda,
+  {
+    categoriaNombre,
+    articulo,
+    menciona,
+    persona,
+  }: { categoriaNombre: string; articulo?: Articulo; menciona: boolean; persona?: DatosDePersona },
+): string {
+  if (menciona) return [categoriaNombre, 'la menciona en su contenido'].filter(Boolean).join(' · ')
+  if (resultado.tipo === 'articulo' && articulo) {
+    const linea = lineaDeCapacidad(capacidadDeGuia(articulo))
+    return [categoriaNombre, linea.aviso ?? [linea.pasos, linea.minutos].filter(Boolean).join(' · ')]
+      .filter(Boolean)
+      .join(' · ')
+  }
+  if (resultado.tipo === 'persona' && persona) {
+    const retirada = resultado.subtitulo.endsWith('Retirada')
+    return [
+      persona.area,
+      persona.equipos > 0 ? `${persona.equipos} ${persona.equipos === 1 ? 'equipo' : 'equipos'}` : '',
+      retirada ? 'Retirada' : '',
+    ]
+      .filter(Boolean)
+      .join(' · ')
+  }
+  return resultado.subtitulo
+}
+
+// LO QUE SOLO MENCIONA LO BUSCADO, PLEGADO (tarea 362). Elegido «Guías», las
+// guías que solo lo mencionan en su contenido van al final de su tarjeta,
+// recogidas tras una línea que dice cuántas son; abiertas, con su fila de
+// siempre y la mención dicha en su segunda línea.
+function PliegueMencionan({
+  mencionan,
+  consultaCruda,
+  abierto,
+  onAlternar,
+  categoriasDeGuias,
+}: {
+  mencionan: ResultadoBusqueda[]
+  consultaCruda: string
+  abierto: boolean
+  onAlternar: () => void
+  categoriasDeGuias: ReadonlyMap<string, string>
+}) {
+  if (mencionan.length === 0) return null
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={abierto}
+        data-pliegue-mencionan
+        onClick={onAlternar}
+        className="flex min-h-[52px] items-center gap-2.5 border-t-[1.5px] border-noct-divider py-2 pr-2 text-left text-[14px] font-semibold leading-[1.35] text-noct-neutral-300 first:border-t-0 active:bg-noct-presionado"
+      >
+        <span className="min-w-0 flex-1">{textoMencionan(mencionan.length, consultaCruda)}</span>
+        {abierto ? (
+          <CaretUp size={16} className="shrink-0" aria-hidden />
+        ) : (
+          <CaretDown size={16} className="shrink-0" aria-hidden />
+        )}
+      </button>
+      {abierto &&
+        mencionan.map((item) => (
+          <FilaTelefono
+            key={item.id}
+            resultado={item}
+            conAcciones={false}
+            desdeMejores={false}
+            categoriaNombre={categoriasDeGuias.get(idDeEntidad(item.id)) ?? ''}
+            menciona
+          />
+        ))}
+    </>
   )
 }
 
@@ -699,6 +784,41 @@ function QuizasBuscabas({ sugerencia, onUsar }: { sugerencia: string; onUsar?: (
   )
 }
 
+// LA TARJETA DE UN GRUPO EN EL TELÉFONO (tarea 362): la de las filas con
+// divisor (`FILAS_EN_TARJETA_TELEFONO`) sin recortar lo que contiene: un
+// título nunca queda bajo una regla que lo pueda cortar (regla 23).
+const TARJETA_DE_GRUPO =
+  'flex flex-col rounded-[18px] border-[1.5px] border-noct-divider bg-noct-surface pl-3.5 pr-1.5'
+
+// «VER LAS N» (tarea 362, D1): elige el chip de tipo de ese grupo, lo mismo que
+// tocarlo. En el teléfono, a la derecha del título del grupo, con 44 de toque;
+// desde 768, al final de la cabecera de la sección.
+function BotonVerAlcance({
+  ver,
+  onElegir,
+  ancho = false,
+}: {
+  ver: { alcance: Alcance; texto: string }
+  onElegir: (alcance: Alcance) => void
+  ancho?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      data-ver-alcance={ver.alcance}
+      onClick={() => onElegir(ver.alcance)}
+      className={
+        ancho
+          ? 'ml-auto inline-flex min-h-11 shrink-0 items-center gap-0.5 px-1 text-[13.5px] font-semibold text-noct-accent-300 hover:underline xl:min-h-8'
+          : 'inline-flex min-h-11 shrink-0 items-center gap-0.5 pl-2 text-[14px] font-bold text-noct-accent-300'
+      }
+    >
+      {ver.texto}
+      {ancho ? <CaretRight size={13} aria-hidden /> : <IconoVentana nombre="adelante" tam={15} grosor={2.4} />}
+    </button>
+  )
+}
+
 // En el teléfono, 62 de alto y sin el margen interior: el divisor y la
 // respuesta al tocar van a todo el ancho del contenido (tarea 342). Con 12 px
 // arriba y abajo (tarea 347; antes 8): un título de dos o tres líneas no queda
@@ -717,6 +837,8 @@ export function ResultadosBusqueda({
   enCapa = false,
   sugerencia = null,
   onUsarSugerencia,
+  alcance = 'todo',
+  onElegirAlcance,
 }: {
   /** Lo que devolvio `buscar`, en su orden. */
   resultados: ResultadoBusqueda[]
@@ -745,9 +867,18 @@ export function ResultadosBusqueda({
   sugerencia?: string | null
   /** Buscar la sugerencia. Sin esto, se dice pero no se toca. */
   onUsarSugerencia?: (texto: string) => void
+  /**
+   * El chip de tipo elegido (tarea 330). En «Todo» cada grupo enseña sus
+   * primeras filas con «Ver las N» (tarea 362, D1); elegido un tipo, entero.
+   */
+  alcance?: Alcance
+  /** «Ver las N» elige el chip de ese grupo. Sin esto, cada grupo va entero. */
+  onElegirAlcance?: (alcance: Alcance) => void
 }) {
   const accionesGuia = useAccionesDeGuia()
   const equipos = useDatosDeEquipos()
+  const personas = useDatosDePersonas()
+  const idsDeRed = useIdsDeRed()
   const lectura = useMemo(() => leerResultados(resultados, consulta), [resultados, consulta])
   // Lo que Resolver ya sabe del equipo de la consulta, leído sin tocar el
   // orden (tarea 290): solo cambia a dónde lleva una guía.
@@ -756,8 +887,8 @@ export function ResultadosBusqueda({
   const separar = hayQueSepararMejores(resultados, mejores)
   const mejorCoincidencia = separar && lectura.confianza === 'alta'
   const grupos = useMemo(
-    () => agruparResultados(separar ? sinLosMejores(resultados, mejores) : resultados),
-    [resultados, mejores, separar],
+    () => agruparResultados(separar ? sinLosMejores(resultados, mejores) : resultados, idsDeRed),
+    [resultados, mejores, separar, idsDeRed],
   )
   // EN EL TELÉFONO, LA MISMA RESPUESTA LEÍDA DE OTRA FORMA (tarea 344,
   // `lecturaParaTelefono`): la guía que mejor coincide destacada y lo demás
@@ -765,7 +896,7 @@ export function ResultadosBusqueda({
   // tarea, la lista de siempre. Desde 768, la de siempre.
   const ancho = useEsAncho()
   const enTelefono = !ancho && filaNavega(modo)
-  const telefono = useMemo(() => lecturaParaTelefono(resultados, mejores), [resultados, mejores])
+  const telefono = useMemo(() => lecturaParaTelefono(resultados, mejores, idsDeRed), [resultados, mejores, idsDeRed])
   const categoriasDeGuias = useCategoriasDeGuias()
   const articulosDeGuias = useArticulosDeGuias(enTelefono)
 
@@ -779,6 +910,19 @@ export function ResultadosBusqueda({
     (id: string) => setVista((actual) => (actual?.id === id ? null : { id, consulta: consultaCruda })),
     [consultaCruda],
   )
+
+  // LO QUE SOLO MENCIONA LO BUSCADO, PLEGADO (tarea 362): como la vista
+  // rápida, atado a la consulta y al alcance que lo abrieron.
+  const [pliegue, setPliegue] = useState<string | null>(null)
+  const clavePliegue = `${alcance}\u0000${consultaCruda}`
+  const pliegueAbierto = pliegue === clavePliegue
+  const alternarPliegue = useCallback(
+    () => setPliegue((actual) => (actual === clavePliegue ? null : clavePliegue)),
+    [clavePliegue],
+  )
+  // «Ver las N» dice el número del chip: en «Todo», lo que hay de cada tipo.
+  const conteo = useMemo(() => conteoPorAlcance(resultados, idsDeRed), [resultados, idsDeRed])
+  const enTodo = alcance === 'todo' && onElegirAlcance !== undefined
 
   // El salto a una ficha lleva la búsqueda para reponerla al volver, y
   // la deja anotada en la entrada actual para el botón atrás del teléfono.
@@ -810,6 +954,7 @@ export function ResultadosBusqueda({
       alSaltar,
       equipoDeLaConsulta: equipoConsultado,
       equipos,
+      personas,
     }),
     [
       accionesGuia,
@@ -823,6 +968,7 @@ export function ResultadosBusqueda({
       alSaltar,
       equipoConsultado,
       equipos,
+      personas,
     ],
   )
 
@@ -839,85 +985,76 @@ export function ResultadosBusqueda({
     )
     return (
       <ContextoResultados.Provider value={contexto}>
-        {/* LOS RESULTADOS DEL PROTOTIPO (tarea 350): 18 px entre grupos, cada
-            grupo con su título a 15 · 800 en tinta 2 y sus resultados en
-            tarjetas a 8 px. Cuántos hay de cada clase ya lo dicen los chips. */}
+        {/* LOS RESULTADOS DEL PROTOTIPO (tarea 350; tarea 362): 18 px entre
+            grupos, cada grupo con su título a 15 · 800 en tinta 2 y sus
+            resultados en UNA tarjeta, una fila de dos líneas por resultado. */}
         <div className="flex flex-col gap-[18px]">
           {sugerencia && <QuizasBuscabas sugerencia={sugerencia} onUsar={onUsarSugerencia} />}
           {telefono.destacada && (
             <GuiaQueMejorCoincide
               resultado={telefono.destacada}
-              // "Hay otras guías parecidas debajo" solo si las hay (tarea 346):
-              // una posible coincidencia nunca es "alta" y puede ser la única.
-              cercana={lectura.confianza !== 'alta' && telefono.grupos.some((grupo) => grupo.id === 'soluciones' && grupo.items.length > 0)}
               categoriaNombre={categoriasDeGuias.get(idDeEntidad(telefono.destacada.id)) ?? ''}
             />
           )}
           {telefono.grupos.map((grupo, indice) => {
-            const conPrefijo = filasConPrefijoComun(grupo.items, consulta)
-            // CADA GUÍA CON SU IDENTIDAD (tarea 358, D12 y D13): la palabra que
-            // comparten 3 o más guías se atenúa, y la categoría que comparten
-            // todas sube al encabezado («Guías de Impresoras»), como el tipo
-            // común sube en «Mejores resultados · 5 equipos».
-            const guias = grupo.items.filter((item) => item.tipo === 'articulo')
-            const conPalabra = filasConPalabraComun(guias, consulta)
-            const comun =
-              grupo.id === 'soluciones'
-                ? categoriaComun(
-                    grupo.items
-                      .filter((item) => item.tipo === 'articulo' || item.tipo === 'diagnostico')
-                      .map((item) => categoriasDeGuias.get(idDeEntidad(item.id)) ?? ''),
-                  )
-                : null
-            // Solo si nada del grupo es de otra parte: un adjunto (no se sabe
-            // de qué categoría) u otra categoría quedarían bajo un rótulo ajeno.
-            const categoriaDelGrupo =
-              comun &&
-              !grupo.items.some((item) => item.tipo === 'adjunto' || (item.tipo === 'categoria' && item.titulo !== comun))
-                ? comun
-                : null
+            // TRES POR GRUPO EN «TODO» (tarea 362, D1): las primeras filas y
+            // «Ver las N», el número del chip de ese tipo. Elegido el tipo,
+            // entero: las guías que solo mencionan lo buscado, plegadas al
+            // final; las categorías que coinciden, como su catálogo.
+            const alcanceGrupo = alcanceDelGrupo(grupo.id)
+            const { filas, mencionan, categorias, hayMas } = filasDelGrupo(
+              grupo.id,
+              grupo.items,
+              enTodo && alcanceGrupo !== null,
+              TOPE_EN_TODO.telefono,
+            )
             const nombreGrupo = grupo.id === 'soluciones' && telefono.destacada ? 'Otras guías' : grupo.nombre
+            const ver =
+              hayMas && alcanceGrupo !== null
+                ? { alcance: alcanceGrupo, texto: textoVerAlcance(alcanceGrupo, conteo[alcanceGrupo]) }
+                : null
             return (
               <Fragment key={grupo.id}>
-                <section className="flex flex-col gap-2" data-grupo-resultados={grupo.id}>
-                  {categoriaDelGrupo ? (
-                    <h2 className={`${TITULO_GRUPO} flex items-center gap-2`}>
-                      <IconoCategoria nombre={categoriaDelGrupo} tam={22} />
-                      <span className="min-w-0">
-                        {nombreGrupo} de {categoriaDelGrupo}
-                      </span>
-                    </h2>
-                  ) : (
+                <section className="flex flex-col gap-1.5" data-grupo-resultados={grupo.id}>
+                  <div className="flex min-h-11 items-center justify-between gap-2">
                     <h2 className={TITULO_GRUPO}>{nombreGrupo}</h2>
-                  )}
-                  {grupo.items.map((item) => {
-                    const articulo = item.tipo === 'articulo' ? articulosDeGuias.get(idDeEntidad(item.id)) : undefined
-                    return articulo ? (
-                      <TarjetaGuiaResultado
+                    {ver && onElegirAlcance && <BotonVerAlcance ver={ver} onElegir={onElegirAlcance} />}
+                  </div>
+                  <div className={TARJETA_DE_GRUPO}>
+                    {filas.map((item) => {
+                      const id = idDeEntidad(item.id)
+                      return (
+                        <FilaTelefono
+                          key={item.id}
+                          resultado={item}
+                          conAcciones={!separar || entreLosMejores.has(item.id)}
+                          desdeMejores={separar && entreLosMejores.has(item.id)}
+                          categoriaNombre={categoriasDeGuias.get(id) ?? ''}
+                          articulo={item.tipo === 'articulo' ? articulosDeGuias.get(id) : undefined}
+                          // En «Todo», si ninguna guía coincide por lo que es,
+                          // se ven las que la mencionan: dicho como lo que son.
+                          menciona={enTodo && soloLaMenciona(item)}
+                        />
+                      )
+                    })}
+                    <PliegueMencionan
+                      mencionan={mencionan}
+                      consultaCruda={consultaCruda}
+                      abierto={pliegueAbierto}
+                      onAlternar={alternarPliegue}
+                      categoriasDeGuias={categoriasDeGuias}
+                    />
+                    {categorias.map((item) => (
+                      <FilaTelefono
                         key={item.id}
                         resultado={item}
-                        articulo={articulo}
-                        tramos={tramosDeTitulo(item.titulo, consulta, {
-                          palabraComun: conPalabra,
-                          prefijoComun: conPrefijo,
-                          id: item.id,
-                        })}
+                        conAcciones={false}
                         desdeMejores={separar && entreLosMejores.has(item.id)}
-                        conCategoria={categoriaDelGrupo === null}
-                        categoriaNombre={categoriasDeGuias.get(articulo.id) ?? ''}
+                        categoriaNombre={item.titulo}
+                        tituloCatalogo={`Todas las guías de ${item.titulo}`}
                       />
-                    ) : (
-                      <TarjetaResultado
-                        key={item.id}
-                        resultado={item}
-                        consulta={consulta}
-                        prefijoAtenuado={conPrefijo.has(item.id)}
-                        conAcciones={!separar || entreLosMejores.has(item.id)}
-                        desdeMejores={separar && entreLosMejores.has(item.id)}
-                        categoriaNombre={categoriasDeGuias.get(idDeEntidad(item.id)) ?? ''}
-                      />
-                    )
-                  })}
+                    ))}
+                  </div>
                 </section>
                 {/* El puente, detrás del primer bloque de lo encontrado: ni
                     encima de lo que ya responde ni enterrado al final. */}
@@ -990,20 +1127,40 @@ export function ResultadosBusqueda({
             },
           ]
         : []),
-    ...grupos.map((grupo) => ({
-      clave: grupo.id,
-      nombre: grupo.nombre,
-      Icono: grupo.Icono,
-      tonoIcono: 'text-noct-neutral-400',
-      items: grupo.items,
-      conTipo: false,
-      cuenta: null,
-      sinCuenta: false,
-      // Un resultado unico no tiene seccion de mejores encima: su fila
-      // es la que lleva la accion.
-      conAcciones: !separar,
-      desdeMejores: false,
-    })),
+    ...grupos.map((grupo) => {
+      // CUATRO POR GRUPO EN «TODO» (tarea 362, D1): «Mejores resultados»
+      // se queda como está; debajo, cada grupo enseña cuatro y «Ver las N».
+      // Elegido un tipo, entero, con las categorías que coinciden al final y
+      // lo que solo menciona lo buscado plegado.
+      const alcanceGrupo = alcanceDelGrupo(grupo.id)
+      const { filas, mencionan, categorias, hayMas } = filasDelGrupo(
+        grupo.id,
+        grupo.items,
+        enTodo && alcanceGrupo !== null,
+        TOPE_EN_TODO.ancho,
+      )
+      return {
+        clave: grupo.id,
+        nombre: grupo.nombre,
+        Icono: grupo.Icono,
+        tonoIcono: 'text-noct-neutral-400',
+        items: [...filas, ...categorias],
+        // El número del grupo es lo que tiene, no lo que se ve.
+        cantidad: grupo.items.length,
+        conTipo: false,
+        cuenta: null,
+        sinCuenta: false,
+        // Un resultado unico no tiene seccion de mejores encima: su fila
+        // es la que lleva la accion.
+        conAcciones: !separar,
+        desdeMejores: false,
+        mencionan,
+        ver:
+          hayMas && alcanceGrupo !== null
+            ? { alcance: alcanceGrupo, texto: textoVerAlcance(alcanceGrupo, conteo[alcanceGrupo]) }
+            : null,
+      }
+    }),
   ]
   // El puente va detrás del bloque de arriba ENTERO: con "Mejor
   // coincidencia" y "Otras coincidencias", detrás de las dos, para no
@@ -1033,8 +1190,11 @@ export function ResultadosBusqueda({
                   <span className="text-[11px] text-noct-neutral-500 max-md:text-[12px]">{seccion.cuenta}</span>
                 ) : (
                   <span className="text-[11px] text-noct-neutral-600 max-md:font-mono max-md:text-[12px] max-md:text-noct-neutral-500">
-                    {seccion.items.length}
+                    {'cantidad' in seccion ? seccion.cantidad : seccion.items.length}
                   </span>
+                )}
+                {'ver' in seccion && seccion.ver && onElegirAlcance && (
+                  <BotonVerAlcance ver={seccion.ver} onElegir={onElegirAlcance} ancho />
                 )}
               </div>
               <div className="-mx-2 grid grid-cols-1 @2xl:grid-cols-2">
@@ -1050,6 +1210,34 @@ export function ResultadosBusqueda({
                   />
                 ))}
               </div>
+              {'mencionan' in seccion && seccion.mencionan.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    aria-expanded={pliegueAbierto}
+                    data-pliegue-mencionan
+                    onClick={alternarPliegue}
+                    className="mt-1 inline-flex min-h-11 items-center gap-1.5 px-0.5 text-left text-[13.5px] font-medium text-noct-neutral-300 hover:text-noct-text xl:min-h-10"
+                  >
+                    {textoMencionan(seccion.mencionan.length, consultaCruda)}
+                    {pliegueAbierto ? <CaretUp size={14} aria-hidden /> : <CaretDown size={14} aria-hidden />}
+                  </button>
+                  {pliegueAbierto && (
+                    <div className="-mx-2 grid grid-cols-1 @2xl:grid-cols-2">
+                      {seccion.mencionan.map((item) => (
+                        <FilaResultado
+                          key={item.id}
+                          resultado={item}
+                          consulta={consulta}
+                          detalle={[partesSubtituloConTipo(item).detalle.split(' · ')[0], 'la menciona en su contenido']
+                            .filter(Boolean)
+                            .join(' · ')}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
             </section>
 
             {/* EL PUENTE VA DETRÁS DE LA PRIMERA SECCIÓN, no delante de

@@ -6,6 +6,7 @@ import {
   LockSimple,
   MapPin,
   Monitor,
+  ShareNetwork,
   TerminalWindow,
   TreeStructure,
   User,
@@ -145,14 +146,35 @@ export function partirTitulo(titulo: string, consulta: string) {
 export type GrupoResultados = (typeof GRUPOS_BUSQUEDA)[number] & { items: ResultadoBusqueda[] }
 
 /**
+ * LOS EQUIPOS DE RED, EN SU GRUPO (tarea 362): tienen su propio chip («Red»,
+ * tarea 330), así que también su grupo, justo detrás de Equipos. Si no, el
+ * «Ver los N» de Equipos contaría equipos que su chip no enseña.
+ */
+const GRUPO_RED = { id: 'red', nombre: 'Equipos de red', Icono: ShareNetwork, tipos: ['dispositivo'] as TipoResultado[] }
+
+/** El id del equipo de un resultado de equipo, por su ruta (`/dispositivos/:id`). */
+function idDeEquipoDe(resultado: ResultadoBusqueda): string {
+  return resultado.ruta.split('?')[0].split('/')[2] ?? ''
+}
+
+/**
  * Grupos con al menos un resultado, en el orden fijo de GRUPOS_BUSQUEDA.
  * Se calcula aparte de la presentacion para que quien busque pueda saber
  * si hubo coincidencias ANTES de pintar y decidir su propio estado vacio
  * (Inicio ofrece crear un equipo con el texto buscado; la capa, otra cosa).
+ * Con `idsDeRed`, los equipos de red van en su propio grupo (tarea 362).
  */
-export function agruparResultados(resultados: ResultadoBusqueda[]): GrupoResultados[] {
-  return GRUPOS_BUSQUEDA.map((grupo) => {
-    const items = resultados.filter((r) => grupo.tipos.includes(r.tipo))
-    return items.length ? { ...grupo, items } : null
-  }).filter((g): g is GrupoResultados => g !== null)
+export function agruparResultados(
+  resultados: ResultadoBusqueda[],
+  idsDeRed: ReadonlySet<string> = new Set(),
+): GrupoResultados[] {
+  const esDeRed = (r: ResultadoBusqueda) => r.tipo === 'dispositivo' && idsDeRed.has(idDeEquipoDe(r))
+  return [...GRUPOS_BUSQUEDA.slice(0, 2), GRUPO_RED, ...GRUPOS_BUSQUEDA.slice(2)]
+    .map((grupo) => {
+      const items = resultados.filter(
+        (r) => grupo.tipos.includes(r.tipo) && (grupo.id === 'red' ? esDeRed(r) : grupo.id !== 'dispositivos' || !esDeRed(r)),
+      )
+      return items.length ? { ...grupo, items } : null
+    })
+    .filter((g): g is GrupoResultados => g !== null)
 }

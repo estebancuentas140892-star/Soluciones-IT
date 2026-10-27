@@ -81,3 +81,40 @@ export function filtrarPorAlcance(
 export function alcanceEfectivo(alcance: Alcance, conteo: Record<Alcance, number>): Alcance {
   return alcance !== 'todo' && conteo[alcance] === 0 ? 'todo' : alcance
 }
+
+// TRES POR GRUPO EN «TODO» (auditoría de Resolver, Equipos y Agenda del
+// 2026-10-27, D1, tarea 362). «impresora» daba 18 tarjetas seguidas y los
+// equipos empezaban en la segunda pantalla y media. En «Todo» cada grupo
+// enseña sus primeras filas y «Ver las N», que es lo mismo que tocar su chip:
+// el mismo número y el mismo resultado. Desde 768 la lista ya es densa y caben
+// cuatro. Elegido un alcance, se ve entero, como siempre.
+export const TOPE_EN_TODO = { telefono: 3, ancho: 4 } as const
+
+/**
+ * El alcance de un grupo de resultados (`GRUPOS_BUSQUEDA`, más «red»), o null
+ * si no tiene chip (el Centro de consulta, que solo se ve en «Todo»).
+ */
+export function alcanceDelGrupo(idGrupo: string): Exclude<Alcance, 'todo'> | null {
+  switch (idGrupo) {
+    case 'soluciones':
+      return 'guias'
+    case 'dispositivos':
+      return 'equipos'
+    case 'red':
+      return 'red'
+    case 'boveda':
+      return 'claves'
+    case 'ubicaciones':
+      return 'lugares'
+    case 'personas':
+      return 'personas'
+    default:
+      return null
+  }
+}
+
+/** «Ver las 11», «Ver los 7»: el número es el del chip de ese alcance. */
+export function textoVerAlcance(alcance: Exclude<Alcance, 'todo'>, cantidad: number): string {
+  const masculino = alcance === 'equipos' || alcance === 'red'
+  return `Ver ${masculino ? 'los' : 'las'} ${cantidad}`
+}

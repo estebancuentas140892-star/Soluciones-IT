@@ -164,7 +164,7 @@ describe('la confianza en pantalla, en el teléfono', () => {
     expect(seccion('Equipos')?.querySelector('a[href^="/dispositivos/"]')?.textContent).toContain('Impresora Mercadeo')
   })
 
-  it('una guía primera se destaca con "Abrir la guía", y si otras están cerca se dice', async () => {
+  it('una guía primera se destaca con "Abrir la guía", y las otras van debajo en su grupo', async () => {
     await sembrarImpresoras()
     await sembrarGuia({
       id: 'guia-otra',
@@ -186,8 +186,10 @@ describe('la confianza en pantalla, en el teléfono', () => {
     expect(pie?.contains(abrir as Node)).toBe(true)
     expect(pie?.textContent).toContain('ventana')
     expect(abrir?.className).not.toContain('w-full')
-    // No es un diagnóstico: si hay otras parecidas, lo dice.
-    expect(destacada.textContent).toContain('Hay otras guías parecidas debajo.')
+    // No es un diagnóstico: las otras parecidas van debajo, en «Otras guías».
+    // Desde la tarea 362 la tarjeta ya no lo dice con una frase: el grupo
+    // dice cuántas hay.
+    expect(destacada.textContent).not.toContain('Hay otras guías parecidas debajo.')
     expect(secciones()).toContain('Otras guías')
   })
 })

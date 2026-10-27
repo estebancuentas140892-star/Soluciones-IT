@@ -222,12 +222,13 @@ export function partesSubtituloConTipo(resultado: ResultadoBusqueda): { tipo: st
 export function lecturaParaTelefono(
   resultados: ResultadoBusqueda[],
   mejores: ResultadoBusqueda[],
+  idsDeRed: ReadonlySet<string> = new Set(),
 ): { destacada: ResultadoBusqueda | null; grupos: GrupoResultados[] } {
   const primera = mejores[0]
   const destacada = primera && (primera.tipo === 'articulo' || primera.tipo === 'diagnostico') ? primera : null
   const rango = new Map(mejores.map((resultado, indice) => [resultado.id, indice]))
   const posicion = (resultado: ResultadoBusqueda) => rango.get(resultado.id) ?? Number.MAX_SAFE_INTEGER
-  const grupos = agruparResultados(destacada ? resultados.filter((r) => r.id !== destacada.id) : resultados)
+  const grupos = agruparResultados(destacada ? resultados.filter((r) => r.id !== destacada.id) : resultados, idsDeRed)
     .map((grupo, orden) => ({
       grupo: { ...grupo, items: [...grupo.items].sort((a, b) => posicion(a) - posicion(b)) },
       orden,
@@ -236,4 +237,73 @@ export function lecturaParaTelefono(
     .sort((a, b) => a.mejor - b.mejor || a.orden - b.orden)
     .map(({ grupo }) => grupo)
   return { destacada, grupos }
+}
+
+/**
+ * UNA GUÍA QUE SOLO MENCIONA LO BUSCADO (tarea 362, auditoría del
+ * 2026-10-27). Coincidió únicamente en su contenido (el texto de los pasos,
+ * las etiquetas o las causas: el campo `texto` del índice), nunca en su
+ * título, sus formas de búsqueda, sus síntomas o su «cuándo usarla». Pesaba
+ * igual que la que lo tiene en el título; ahora va plegada al final de su
+ * grupo. Se mira lo escrito y sus sinónimos. Sin metadatos de la coincidencia
+ * (un resultado armado a mano) no se decide nada: cuenta como principal.
+ */
+export function soloLaMenciona(resultado: ResultadoBusqueda): boolean {
+  if (resultado.tipo !== 'articulo' && resultado.tipo !== 'diagnostico') return false
+  const campos = new Set([
+    ...(resultado.camposCoincidentes ?? []),
+    ...(resultado.camposPorPalabra ?? []).flat(),
+    ...(resultado.camposPorSinonimo ?? []).flat(),
+  ])
+  return campos.size > 0 && [...campos].every((campo) => campo === 'texto')
+}
+
+/** Las filas del grupo Guías, repartidas para la lectura de la tarea 362. */
+export interface GuiasRepartidas {
+  /** Las guías, guías con preguntas y adjuntos que coinciden por lo que son. */
+  principales: ResultadoBusqueda[]
+  /** Las que solo lo mencionan en su contenido (`soloLaMenciona`). */
+  mencionan: ResultadoBusqueda[]
+  /** Las categorías que coinciden: llevan a su catálogo. */
+  categorias: ResultadoBusqueda[]
+}
+
+/** Reparte las filas del grupo Guías sin cambiar su orden dentro de cada parte. */
+export function repartirGuias(items: ResultadoBusqueda[]): GuiasRepartidas {
+  const repartidas: GuiasRepartidas = { principales: [], mencionan: [], categorias: [] }
+  for (const item of items) {
+    if (item.tipo === 'categoria') repartidas.categorias.push(item)
+    else if (soloLaMenciona(item)) repartidas.mencionan.push(item)
+    else repartidas.principales.push(item)
+  }
+  return repartidas
+}
+
+/**
+ * LAS FILAS DE UN GRUPO A LA VISTA (tarea 362, D1). En «Todo» cada grupo
+ * enseña sus primeras `tope` filas; en Guías, las principales (si no hay
+ * ninguna, las que la mencionan, y si tampoco, las categorías). Elegido el
+ * alcance, todo: las que solo la mencionan se pliegan aparte y las categorías
+ * van al final. `hayMas` dice si queda algo detrás de «Ver las N».
+ */
+export function filasDelGrupo(
+  idGrupo: string,
+  items: ResultadoBusqueda[],
+  enTodo: boolean,
+  tope: number,
+): { filas: ResultadoBusqueda[]; mencionan: ResultadoBusqueda[]; categorias: ResultadoBusqueda[]; hayMas: boolean } {
+  if (idGrupo !== 'soluciones') {
+    const filas = enTodo ? items.slice(0, tope) : items
+    return { filas, mencionan: [], categorias: [], hayMas: filas.length < items.length }
+  }
+  const { principales, mencionan, categorias } = repartirGuias(items)
+  if (!enTodo) return { filas: principales, mencionan, categorias, hayMas: false }
+  const primeras = principales.length > 0 ? principales : mencionan.length > 0 ? mencionan : categorias
+  const filas = primeras.slice(0, tope)
+  return { filas, mencionan: [], categorias: [], hayMas: filas.length < items.length }
+}
+
+/** «2 guías más mencionan «impresora» en su contenido» (tarea 362). */
+export function textoMencionan(cantidad: number, consultaCruda: string): string {
+  return `${cantidad} ${cantidad === 1 ? 'guía más menciona' : 'guías más mencionan'} «${consultaCruda}» en su contenido`
 }

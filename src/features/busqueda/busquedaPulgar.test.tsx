@@ -73,7 +73,7 @@ describe('el estado vacío', () => {
 })
 
 describe('los resultados en el teléfono', () => {
-  it('rótulos de grupo a 15/800, chip activo relleno, cada resultado en su tarjeta y la IP que se copia (tarea 350)', async () => {
+  it('rótulos de grupo a 15/800, chip activo relleno, cada grupo en su tarjeta y la IP que se copia (tareas 350 y 362)', async () => {
     await escribir(await abrir(), 'caja de prueba')
     await esperar(() => textoPantalla().includes('Caja de prueba norte'), 'los resultados')
 
@@ -86,16 +86,17 @@ describe('los resultados en el teléfono', () => {
     expect(equipos.className).not.toContain('bg-noct-text')
 
     // LOS RÓTULOS DE GRUPO: 15/800 en tinta 2, sin mayúsculas, uno por tipo.
-    const rotulos = Array.from(document.body.querySelectorAll<HTMLElement>('section[data-grupo-resultados] > h2'))
+    const rotulos = Array.from(document.body.querySelectorAll<HTMLElement>('section[data-grupo-resultados] h2'))
     expect(rotulos.map((rotulo) => rotulo.textContent)).toContain('Equipos')
     for (const rotulo of rotulos) {
       for (const clase of ['text-[15px]', 'font-extrabold', 'text-noct-neutral-300']) expect(rotulo.className).toContain(clase)
       expect(rotulo.className).not.toContain('uppercase')
     }
 
-    // LA TARJETA: su borde, la IP en mono bajo el nombre y copiar en la fila.
+    // LA TARJETA DEL GRUPO (tarea 362): una para todo el grupo, una fila por
+    // equipo, la IP en mono bajo el nombre y copiar en la fila.
     const norte = control(/^Caja de prueba norte/) as HTMLElement
-    expect(norte.closest('[data-tarjeta-resultado="dispositivo"]')?.className).toContain('border-[1.5px]')
+    expect(norte.closest('[data-fila-resultado="dispositivo"]')?.parentElement?.className).toContain('border-[1.5px]')
     const ip = norte.querySelector<HTMLElement>('[data-ip-resultado]')
     expect(ip?.textContent).toBe('10.9.9.40')
     expect(ip?.className).toContain('font-mono')
@@ -118,11 +119,11 @@ describe('los resultados en el teléfono', () => {
   it('un POS sigue siendo un equipo, en el grupo Equipos', async () => {
     await escribir(await abrir(), 'caja de prueba')
     const norte = await esperar(() => control(/^Caja de prueba norte/), 'el POS')
-    expect(norte.closest('[data-tarjeta-resultado]')?.getAttribute('data-tarjeta-resultado')).toBe('dispositivo')
+    expect(norte.closest('[data-fila-resultado]')?.getAttribute('data-fila-resultado')).toBe('dispositivo')
     expect(norte.closest('[data-grupo-resultados]')?.querySelector('h2')?.textContent).toBe('Equipos')
     expect(norte.querySelector('svg path')?.getAttribute('d')).not.toBe(trazoDe(Storefront))
     const sur = control(/^Caja de prueba sur/) as HTMLElement
-    expect(sur.closest('[data-tarjeta-resultado]')?.getAttribute('data-tarjeta-resultado')).toBe('dispositivo')
+    expect(sur.closest('[data-fila-resultado]')?.getAttribute('data-fila-resultado')).toBe('dispositivo')
   })
 })
 

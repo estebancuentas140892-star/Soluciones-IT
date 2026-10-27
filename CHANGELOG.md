@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-27
 
+### Cambiado (tarea 362): en la búsqueda de Resolver, tres por grupo con «Ver las N», la fila de categorías y lo que solo menciona, plegado
+
+**Área modificada:** `src/features/busqueda/ResultadosBusqueda.tsx` (la lectura del teléfono en filas dentro de la tarjeta del grupo, `FilaTelefono`, `PliegueMencionan`, `BotonVerAlcance`; el tope y el pliegue desde 768), `alcanceBusqueda.ts` (`TOPE_EN_TODO`, `alcanceDelGrupo`, `textoVerAlcance`), `presentacionResultados.ts` (`soloLaMenciona`, `repartirGuias`, `filasDelGrupo`, `textoMencionan`), `resultados.ts` (el grupo «Equipos de red»), `categoriasDeAlcance.ts`, `useCategoriaDeAlcance.ts` y `ChipsDeCategoria.tsx` (nuevos), `useDatosDeEquipos.ts` (`useDatosDePersonas`), `contextoResultados.ts`; `src/features/inicio/ResolverPage.tsx` y `BuscadorGlobal.tsx` (la fila de categorías).
+**Tipo:** Cambiado.
+**Motivo:** auditoría de Claude Design del 2026-10-27 (D1 y D2, AD-100): buscar «impresora» daba 18 tarjetas seguidas, tres pantallas de teléfono, con los equipos a partir de la segunda y media; no se podía acotar por categoría y una guía que solo menciona la palabra pesaba igual que la que la tiene en el título.
+**Qué cambia:** en «Todo», cada grupo enseña tres resultados en el teléfono (cuatro desde 768) y «Ver las N», el número de su chip; tocarlo elige ese chip. Elegido «Guías» o «Equipos» con dos o más categorías, una segunda fila acota por categoría. Las guías que solo mencionan lo buscado en su contenido van plegadas al final («N guías más mencionan «…» en su contenido») y las categorías que coinciden, como «Todas las guías de X». Los equipos de red, en su grupo. En el teléfono, cada grupo es una tarjeta con filas de dos líneas: el icono de su categoría, el título entero y lo que lo sitúa (categoría y medida de la guía; IP y contexto del equipo, con copiar; área y equipos de la persona). «La guía que mejor coincide» ya no dice «Hay otras guías parecidas debajo».
+**Impacto esperado:** con «impresora», guía, guías y equipos en la primera pantalla del teléfono; una búsqueda amplia se acota en dos toques sin escribir más.
+**Estructura de datos:** sin cambios (ni Supabase, ni RLS, ni Dexie, ni el índice).
+
 ### Corregido (tarea 359): en la tableta, elegir una categoría en la hoja con texto buscado acota la búsqueda
 
 **Área modificada:** `src/features/soluciones/SolucionesPage.tsx` (el `onElegir` de la hoja «Categorías») y `catalogoTelefono.test.tsx` (prueba a 768 px).

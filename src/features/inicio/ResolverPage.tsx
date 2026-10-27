@@ -25,6 +25,8 @@ import { useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { PuenteBoveda } from '../busqueda/PuenteBoveda'
 import { alcanceEfectivo, conteoPorAlcance, filtrarPorAlcance, type Alcance } from '../busqueda/alcanceBusqueda'
 import { ChipsDeAlcance } from '../busqueda/ChipsDeAlcance'
+import { ChipsDeCategoria } from '../busqueda/ChipsDeCategoria'
+import { useCategoriaDeAlcance } from '../busqueda/useCategoriaDeAlcance'
 import { useIdsDeRed } from '../busqueda/useIdsDeRed'
 import { ResultadosBusqueda } from '../busqueda/ResultadosBusqueda'
 import { BorradoresCoincidentes, GuiasEnBorrador } from '../busqueda/BorradoresCoincidentes'
@@ -183,7 +185,16 @@ export function ResolverPage() {
   const idsDeRed = useIdsDeRed()
   const conteo = useMemo(() => conteoPorAlcance(resultados, idsDeRed), [resultados, idsDeRed])
   const alcance = alcanceEfectivo(alcanceElegido, conteo)
-  const visibles = useMemo(() => filtrarPorAlcance(resultados, alcance, idsDeRed), [resultados, alcance, idsDeRed])
+  const delAlcance = useMemo(() => filtrarPorAlcance(resultados, alcance, idsDeRed), [resultados, alcance, idsDeRed])
+  // Y DENTRO DEL ALCANCE, LA CATEGORÍA (tarea 362, D2): elegido «Guías» o
+  // «Equipos», una segunda fila acota por la categoría técnica.
+  const {
+    categorias: categoriasDelAlcance,
+    total: totalDelAlcance,
+    categoria,
+    elegir: elegirCategoria,
+    filtrados: visibles,
+  } = useCategoriaDeAlcance(delAlcance, alcance)
   // Los borradores son guías: se ven en "Todo" y en "Guías".
   const conBorradores = alcance === 'todo' || alcance === 'guias'
 
@@ -293,7 +304,17 @@ export function ResolverPage() {
   // teléfono, cómo se dice que nada coincide.
   const encontrado = (
     <div className="flex flex-col gap-4">
-      {resultados.length > 0 && <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />}
+      {resultados.length > 0 && (
+        <div className="flex flex-col gap-1.5 empty:hidden">
+          <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />
+          <ChipsDeCategoria
+            categorias={categoriasDelAlcance}
+            total={totalDelAlcance}
+            categoria={categoria}
+            onElegir={elegirCategoria}
+          />
+        </div>
+      )}
       {/* La guía en borrador que coincide en el título, DELANTE de
           todo lo demás, salvo que ya haya una publicada que también
           coincida en el título: esa conserva la prioridad. */}
@@ -308,6 +329,8 @@ export function ResolverPage() {
           huboDesbloqueo={huboDesbloqueo}
           sugerencia={sugerencia}
           onUsarSugerencia={setQuery}
+          alcance={alcance}
+          onElegirAlcance={setAlcance}
         />
       ) : (
         <>

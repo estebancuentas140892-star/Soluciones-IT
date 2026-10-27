@@ -13,6 +13,8 @@ import { normalizarTexto } from '../soluciones/iconosSoluciones'
 import type { ModoBuscador } from './modoConsulta'
 import { alcanceEfectivo, conteoPorAlcance, filtrarPorAlcance, type Alcance } from './alcanceBusqueda'
 import { ChipsDeAlcance } from './ChipsDeAlcance'
+import { ChipsDeCategoria } from './ChipsDeCategoria'
+import { useCategoriaDeAlcance } from './useCategoriaDeAlcance'
 import { useIdsDeRed } from './useIdsDeRed'
 import { PuenteBoveda } from './PuenteBoveda'
 import { ProveedorRanuraVistaRapida } from './ranuraVistaRapida'
@@ -105,7 +107,15 @@ export function BuscadorGlobal({
   const idsDeRed = useIdsDeRed()
   const conteo = useMemo(() => conteoPorAlcance(resultados, idsDeRed), [resultados, idsDeRed])
   const alcance = alcanceEfectivo(alcanceElegido, conteo)
-  const visibles = useMemo(() => filtrarPorAlcance(resultados, alcance, idsDeRed), [resultados, alcance, idsDeRed])
+  const delAlcance = useMemo(() => filtrarPorAlcance(resultados, alcance, idsDeRed), [resultados, alcance, idsDeRed])
+  // Y dentro del alcance, la categoría (tarea 362, D2), como en Resolver.
+  const {
+    categorias: categoriasDelAlcance,
+    total: totalDelAlcance,
+    categoria,
+    elegir: elegirCategoria,
+    filtrados: visibles,
+  } = useCategoriaDeAlcance(delAlcance, alcance)
   const teclado = useAltoDelTeclado()
   // Desde 768 el campo va arriba; desde 1280 la capa es una paleta con la
   // vista rápida al lado (tarea 339, T6). Son puntos de montaje distintos.
@@ -253,7 +263,15 @@ export function BuscadorGlobal({
       {/* LOS CHIPS DE ALCANCE (tarea 330): solo filtran la vista. */}
       {copiaLeida && buscando && resultados.length > 0 && (
         <div className="flex-none px-3.5 pb-2.5 md:border-b md:border-noct-divider md:px-6 md:py-3 xl:px-5">
-          <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />
+          <div className="flex flex-col gap-1.5">
+            <ChipsDeAlcance conteo={conteo} alcance={alcance} onCambiar={setAlcance} />
+            <ChipsDeCategoria
+              categorias={categoriasDelAlcance}
+              total={totalDelAlcance}
+              categoria={categoria}
+              onElegir={elegirCategoria}
+            />
+          </div>
         </div>
       )}
 
@@ -296,6 +314,8 @@ export function BuscadorGlobal({
                 enCapa
                 sugerencia={sugerencia}
                 onUsarSugerencia={setQuery}
+                alcance={alcance}
+                onElegirAlcance={setAlcance}
               />
             ) : (
               <div className="flex flex-col gap-4">

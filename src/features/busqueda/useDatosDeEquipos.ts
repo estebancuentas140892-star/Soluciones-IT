@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo } from 'react'
 import { db } from '../../lib/db'
+import { esDeBaja } from '../personas/cicloPersona'
 
 /** Lo que la fila de un equipo enseña además de su nombre y su contexto. */
 export interface DatosDeEquipo {
@@ -33,4 +34,30 @@ export function useDatosDeEquipos(): ReadonlyMap<string, DatosDeEquipo> {
       ),
     )
   }, [dispositivos, categorias])
+}
+
+/** Lo que la fila de una persona enseña además de su nombre (tarea 362). */
+export interface DatosDePersona {
+  /** Su área ("Compras"), o '' si no se sabe. */
+  area: string
+  /** Cuántos equipos vigentes tiene a su nombre (sin los dados de baja). */
+  equipos: number
+}
+
+/**
+ * El área y los equipos de cada persona, por su id (tarea 362, prototipo de
+ * Claude Design: «Compras · 2 equipos»). Antes la fila decía solo «Persona»,
+ * que su grupo ya dice. Se lee de la copia local, sin tocar el índice.
+ */
+export function useDatosDePersonas(): ReadonlyMap<string, DatosDePersona> {
+  const personas = useLiveQuery(() => db.personas.toArray(), [], [])
+  const dispositivos = useLiveQuery(() => db.dispositivos.toArray(), [], [])
+  return useMemo(() => {
+    const equipos = new Map<string, number>()
+    for (const d of dispositivos) {
+      if (!d.responsableId || d.eliminadoEn || esDeBaja(d)) continue
+      equipos.set(d.responsableId, (equipos.get(d.responsableId) ?? 0) + 1)
+    }
+    return new Map(personas.map((p) => [p.id, { area: (p.area ?? '').trim(), equipos: equipos.get(p.id) ?? 0 }] as const))
+  }, [personas, dispositivos])
 }

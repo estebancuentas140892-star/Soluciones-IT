@@ -3,7 +3,7 @@ import type { EstadoConOrigen } from '../../lib/origenNavegacion'
 import type { AccionGuia } from '../soluciones/accionGuia'
 import { registrarResolucion, type EventoResolucion } from './medicion'
 import type { ModoBuscador } from './modoConsulta'
-import type { DatosDeEquipo } from './useDatosDeEquipos'
+import type { DatosDeEquipo, DatosDePersona } from './useDatosDeEquipos'
 
 // Lo que toda fila de resultados necesita saber y NINGUNA deberia
 // recalcular por su cuenta (tarea 241): que ofrece cada guia, que se
@@ -61,6 +61,11 @@ export interface ValorContextoResultados {
    * enseña en el teléfono. Una sola lectura para toda la lista.
    */
   equipos: ReadonlyMap<string, DatosDeEquipo>
+  /**
+   * El área y los equipos de cada persona, por su id (tarea 362): la fila de
+   * una persona los dice en el teléfono («Compras · 2 equipos»).
+   */
+  personas: ReadonlyMap<string, DatosDePersona>
 }
 
 const VALOR_POR_DEFECTO: ValorContextoResultados = {
@@ -75,6 +80,7 @@ const VALOR_POR_DEFECTO: ValorContextoResultados = {
   alSaltar: () => undefined,
   equipoDeLaConsulta: null,
   equipos: new Map(),
+  personas: new Map(),
 }
 
 export const ContextoResultados = createContext<ValorContextoResultados>(VALOR_POR_DEFECTO)

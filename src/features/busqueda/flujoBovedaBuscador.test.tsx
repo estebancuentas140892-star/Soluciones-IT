@@ -216,6 +216,8 @@ describe('tipos de acceso en la vista rápida', () => {
     await sembrarCredencial({ id: 'cred-archivo', titulo: 'Archivo de prueba', tipo: 'archivo' })
 
     await buscarEnInicio('prueba')
+    // En «Todo», tres por grupo (tarea 362): «Ver las N» las enseña todas.
+    await tocar(await esperarControl(/^Ver las \d+$/))
 
     await tocar(await esperarControl('Ver "Wifi de prueba"'))
     await esperar(() => textoPantalla().includes('Clave o PIN'), 'el rótulo de la clave')
