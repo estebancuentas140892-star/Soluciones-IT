@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-27
 
+### Cambiado (tarea 363): en Equipos, buscando, solo las categorías con coincidencias y el chip «Red»
+
+**Área modificada:** `src/features/dispositivos/busquedaEquipos.ts` (`CHIP_RED`, `chipsDeEquipos`, `conteosDeChips` con `red`, `buscarEquipos` con el chip «Red») y `DispositivosPage.tsx` (la fila de chips y los vacíos).
+**Tipo:** Cambiado.
+**Motivo:** auditoría de Claude Design del 2026-10-27 (D3, AD-100): con «Daniel», la fila decía «POS 0 · Software 0 · Impresoras 0…» y Computadores, el único con resultados, quedaba fuera de la pantalla; «Todos» contaba equipos de red sin chip que los representara, y «Quitar filtros» borraba también lo escrito.
+**Qué cambia:** con texto, la fila enseña «Todos», las categorías con resultados, la elegida aunque quede en 0 (punteada) y «Red» si coinciden equipos de red; los números suman «Todos». Con la elegida en 0, «Ver los N en Todos» la suelta sin borrar la búsqueda; sin ninguna coincidencia, «Borrar búsqueda». Sin texto, como siempre.
+**Impacto esperado:** el chip útil queda a la vista sin deslizar, y salir de una categoría vacía cuesta un toque y no la búsqueda.
+**Estructura de datos:** sin cambios.
+
 ### Cambiado (tarea 362): en la búsqueda de Resolver, tres por grupo con «Ver las N», la fila de categorías y lo que solo menciona, plegado
 
 **Área modificada:** `src/features/busqueda/ResultadosBusqueda.tsx` (la lectura del teléfono en filas dentro de la tarjeta del grupo, `FilaTelefono`, `PliegueMencionan`, `BotonVerAlcance`; el tope y el pliegue desde 768), `alcanceBusqueda.ts` (`TOPE_EN_TODO`, `alcanceDelGrupo`, `textoVerAlcance`), `presentacionResultados.ts` (`soloLaMenciona`, `repartirGuias`, `filasDelGrupo`, `textoMencionan`), `resultados.ts` (el grupo «Equipos de red»), `categoriasDeAlcance.ts`, `useCategoriaDeAlcance.ts` y `ChipsDeCategoria.tsx` (nuevos), `useDatosDeEquipos.ts` (`useDatosDePersonas`), `contextoResultados.ts`; `src/features/inicio/ResolverPage.tsx` y `BuscadorGlobal.tsx` (la fila de categorías).

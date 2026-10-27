@@ -667,6 +667,12 @@ Hallazgos **M-004**, **M-005** y **M-009**, regla **M-R8**. Había **nueve copia
 <a id="53-equipos"></a>
 ### 5.3 Equipos
 
+**BUSCANDO, SOLO LAS CATEGORÍAS CON COINCIDENCIAS (desde el 2026-10-27, tarea 363, [DECISIONES.md](DECISIONES.md) AD-100, D3; en todos los anchos).** Manda sobre los chips de abajo donde choque.
+- **Sin texto, como siempre:** «Todos» y cada categoría general con su número, también las que están en 0.
+- **Con texto:** «Todos», las categorías con resultados en su orden de siempre, la elegida aunque quede en 0 y, si coinciden equipos de red, el chip **«Red»** al final, separado por una línea. Los números suman «Todos» (antes, «Todos» contaba los de red sin chip que los representara). Las posibles coincidencias también cuentan, porque se ven. Elegir «Red» deja solo los equipos de red; al borrar lo escrito vuelven todas las categorías y «Red» vale como «Todos».
+- **La elegida que queda en 0** se ve con el borde punteado, y la lista dice «Ningún equipo de POS coincide con «Daniel»», «Hay 3 en otras categorías.» y **«Ver los 3 en Todos»** («Verlo en Todos» con uno), que suelta la categoría y conserva lo escrito. Antes, «Quitar filtros» borraba también la búsqueda.
+- **Sin ninguna coincidencia:** solo «Todos 0», «Ningún equipo coincide con «zzz»», «Prueba con el nombre de la persona, la IP, el lugar o el serial.» y **«Borrar búsqueda»**.
+
 **BUSCAR CON ERRORES (desde el 2026-10-20, tarea 346, en todos los anchos).** El buscador de Equipos encuentra sin distinguir tildes ni mayúsculas ("jose" encuentra a José) y tolera los errores habituales ("impresra", "daniel garcia" por Daniel Gracia). Lo exacto va arriba, con primero el equipo cuya IP, serial o placa es exactamente lo escrito; lo que solo se parece va debajo, en **"Posibles coincidencias"** (si no hay nada exacto: "Nada coincide tal cual con «…». Estos se parecen:"). Se enseñan todas; nada se elige ni se abre solo. La IP, el serial y la placa solo coinciden tal cual. Se busca por el nombre vigente de la persona que tiene el equipo; un nombre escrito sin ficha de persona también se encuentra y la fila lo sigue diciendo "Anotado: «…» · por validar". Los chips de categoría, los equipos de red y el regreso con la búsqueda escrita funcionan como siempre; los chips cuentan también las posibles coincidencias.
 
 **REDISEÑO MÓVIL "1b PULGAR" (desde el 2026-10-13, tarea 330, [DECISIONES.md](DECISIONES.md) AD-080).** Cabecera de raíz de una fila ("Equipos" a 25 px, sincronización y cuenta). Manda sobre lo que sigue donde choque.

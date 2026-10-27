@@ -155,9 +155,19 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Descripción:** (1) En «Todo», tres por grupo en el teléfono y cuatro desde 768, con «Ver las N» (el número del chip; tocarlo elige el chip). (2) Elegido «Guías» o «Equipos» con dos o más categorías, la fila de categorías («Todas N» y cada una con su cuenta), combinada con el tipo. (3) Las guías que solo mencionan lo buscado en su contenido, plegadas al final; las categorías que coinciden, como «Todas las guías de X». (4) En el teléfono, una tarjeta por grupo con filas de dos líneas. (5) Los equipos de red, en su grupo.
 - **Motivo:** auditoría del 2026-10-27, hallazgo 1: «impresora» daba 18 tarjetas, tres pantallas de teléfono.
 - **Impacto:** alto en la búsqueda de Resolver y de la capa, en todos los anchos. Sin cambios de datos.
-- **Prioridad:** Alta. **Estado:** Implementada en la rama; falta integrarla en `main`, CI y Vercel. Verificación: `tsc -b`, `oxlint`, la suite de búsqueda y Resolver en verde (con `categoriasDeAlcance.test.ts` y `filasDelGrupo.test.ts` nuevas, `busquedaGuiasTelefono.test.tsx` reescrita y `busquedaPulgar`, `separadoresGuias`, `resultadosIntencion` y `flujoBovedaBuscador` ajustadas); en el banco local, «ejemplo» a 375 px (tres por grupo, «Ver los 22» igual que el chip, la fila de categorías y el pliegue) y a 1280 px (cuatro por grupo con «Mejores resultados» y la fila «Categoría»).
+- **Prioridad:** Alta. **Estado:** Integrada en `main` (`9d00465`); falta comprobar CI y Vercel. Verificación: `tsc -b`, `oxlint`, la suite de búsqueda y Resolver en verde (con `categoriasDeAlcance.test.ts` y `filasDelGrupo.test.ts` nuevas, `busquedaGuiasTelefono.test.tsx` reescrita y `busquedaPulgar`, `separadoresGuias`, `resultadosIntencion` y `flujoBovedaBuscador` ajustadas); en el banco local, «ejemplo» a 375 px (tres por grupo, «Ver los 22» igual que el chip, la fila de categorías y el pliegue) y a 1280 px (cuatro por grupo con «Mejores resultados» y la fila «Categoría»).
 - **Área afectada:** `src/features/busqueda/ResultadosBusqueda.tsx`, `alcanceBusqueda.ts`, `presentacionResultados.ts`, `resultados.ts`, `categoriasDeAlcance.ts`, `useCategoriaDeAlcance.ts`, `ChipsDeCategoria.tsx`, `useDatosDeEquipos.ts`, `contextoResultados.ts`, `BuscadorGlobal.tsx`; `src/features/inicio/ResolverPage.tsx`.
 - **Dependencias:** las 330 (chips de tipo) y 358 (lectura del teléfono).
+
+### 363. Equipos: con texto escrito, solo las categorías con coincidencias (D3)
+
+- **Título:** que la fila de categorías de Equipos, buscando, enseñe solo lo que sirve.
+- **Descripción:** sin texto, como hoy. Con texto: «Todos», las categorías con resultados, la elegida aunque quede en 0 (con borde punteado) y «Red» si coinciden equipos de red. Si la elegida queda en 0, un vacío con «Ver los N en Todos» que no borra lo escrito. Igual en todos los anchos.
+- **Motivo:** auditoría del 2026-10-27, hallazgo 2: con «Daniel», ocho chips en 0 y Computadores, el único útil, fuera de la pantalla; «Todos» contaba los equipos de red sin chip.
+- **Impacto:** medio, en la lista de Equipos. Sin cambios de datos.
+- **Prioridad:** Alta. **Estado:** Implementada en la rama; falta integrarla en `main`, CI y Vercel. Verificación: `chipsDeEquipos.test.ts` (8) y `equiposBuscandoCategorias.test.tsx` (4) nuevas, la suite de Equipos en verde; en el banco local, «compras» con POS elegido a 375 px: «Todos 3 · POS 0 (punteado) · Impresoras 1 · Computadores 2» y «Ver los 3 en Todos».
+- **Área afectada:** `src/features/dispositivos/DispositivosPage.tsx` (la fila de chips y los vacíos), `busquedaEquipos.ts` (`CHIP_RED`, `chipsDeEquipos`, `conteosDeChips`). La lista lateral de la ficha (`ZonaListaEquipos.tsx`) no tiene chips: sin cambios.
+- **Dependencias:** ninguna.
 
 ### 358. Resolver y catálogo de Guías en el teléfono: mosaico, grupos por categoría y cada guía con su identidad
 
@@ -705,16 +715,6 @@ Antes, la tarea 98 (auditoría técnica de limpieza, Fase 4: endurecimiento del 
 Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) quedó terminada y archivada el 2026-07-19. El historial completo de tareas ya archivadas vive únicamente en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md); esta sección ya no repite esos párrafos (ver la tarea 96 en el archivo para el detalle de la poda y dos huecos de archivado que corrigió).
 
 ## Por hacer
-
-### 363. Equipos: con texto escrito, solo las categorías con coincidencias (D3)
-
-- **Título:** que la fila de categorías de Equipos, buscando, enseñe solo lo que sirve.
-- **Descripción:** sin texto, como hoy. Con texto: «Todos», las categorías con resultados, la elegida aunque quede en 0 (con borde punteado) y «Red» si coinciden equipos de red. Si la elegida queda en 0, un vacío con «Ver los N en Todos» que no borra lo escrito. Igual en todos los anchos.
-- **Motivo:** auditoría del 2026-10-27, hallazgo 2: con «Daniel», ocho chips en 0 y Computadores, el único útil, fuera de la pantalla; «Todos» contaba los equipos de red sin chip.
-- **Impacto:** medio, en la lista de Equipos. Sin cambios de datos.
-- **Prioridad:** Alta. **Estado:** Pendiente.
-- **Área afectada:** `src/features/dispositivos/DispositivosPage.tsx`, `ZonaListaEquipos.tsx`, `busquedaEquipos.ts` (`conteosDeChips`).
-- **Dependencias:** ninguna.
 
 ### 364. Equipos: la persona primero (D4)
 

@@ -130,17 +130,29 @@ function porNombre(a: Dispositivo, b: Dispositivo): number {
   return compararNatural(a.nombre, b.nombre)
 }
 
+/**
+ * EL CHIP «RED» (tarea 363, D3 de la auditoría del 2026-10-27): buscando,
+ * los equipos de red que coinciden tienen su propio chip, separado de las
+ * categorías generales por una línea. Su valor viaja en `?categoria=` como
+ * el de una categoría (los ids de categoría son UUID: no chocan).
+ */
+export const CHIP_RED = 'red'
+
 export function buscarEquipos(
   dispositivos: Dispositivo[],
   idsRed: ReadonlySet<string>,
   { texto, categoriaId }: { texto: string; categoriaId: string },
   personas: PersonasPorId = SIN_PERSONAS,
 ): EquiposEncontrados {
-  const conRed = texto.trim() !== '' && !categoriaId
+  // Con el chip «Red», solo los de red; sin texto no hay chip «Red», así
+  // que vale como «Todos» (borrar lo escrito devuelve el inventario).
+  const soloRed = categoriaId === CHIP_RED && texto.trim() !== ''
+  const categoria = categoriaId === CHIP_RED && !soloRed ? '' : categoriaId
+  const conRed = texto.trim() !== '' && (!categoria || soloRed)
   const encontrados = dispositivos.flatMap((dispositivo) => {
     if (dispositivo.eliminadoEn) return []
     const deRed = idsRed.has(dispositivo.categoriaId)
-    if (deRed ? !conRed : categoriaId !== '' && dispositivo.categoriaId !== categoriaId) return []
+    if (deRed ? !conRed : soloRed || (categoria !== '' && dispositivo.categoriaId !== categoria)) return []
     const coincidencia = coincidenciaDeEquipo(camposDeBusqueda(dispositivo, personas), texto)
     return coincidencia ? [{ dispositivo, deRed, coincidencia }] : []
   })
@@ -164,20 +176,64 @@ export function buscarEquipos(
 /**
  * Lo que promete cada chip (tarea 207, hallazgo M-022: el chip cuenta lo
  * que va a dar). "Todos" cuenta también los de red que salen al
- * escribir; cada categoría, solo los suyos. Las posibles coincidencias
- * también se ven, así que también cuentan.
+ * escribir; cada categoría, solo los suyos, y «Red», los de red (tarea
+ * 363): los números suman «Todos». Las posibles coincidencias también se
+ * ven, así que también cuentan.
  */
 export function conteosDeChips(
   dispositivos: Dispositivo[],
   idsRed: ReadonlySet<string>,
   texto: string,
   personas: PersonasPorId = SIN_PERSONAS,
-): { todos: number; porCategoria: Map<string, number> } {
+): { todos: number; porCategoria: Map<string, number>; red: number } {
   const { generales, deRed, posibles } = buscarEquipos(dispositivos, idsRed, { texto, categoriaId: '' }, personas)
   const porCategoria = new Map<string, number>()
+  let red = deRed.length
   for (const d of [...generales, ...posibles]) {
-    if (idsRed.has(d.categoriaId)) continue
+    if (idsRed.has(d.categoriaId)) {
+      red += 1
+      continue
+    }
     porCategoria.set(d.categoriaId, (porCategoria.get(d.categoriaId) ?? 0) + 1)
   }
-  return { todos: generales.length + deRed.length + posibles.length, porCategoria }
+  return { todos: generales.length + deRed.length + posibles.length, porCategoria, red }
+}
+
+/** Un chip de la fila de categorías de Equipos. */
+export interface ChipDeEquipos {
+  /** '' es «Todos»; `CHIP_RED`, los de red; si no, el id de la categoría. */
+  id: string
+  nombre: string
+  cantidad: number
+  /** El chip «Red» va separado de las categorías generales por una línea. */
+  separado: boolean
+}
+
+/**
+ * LA FILA DE CATEGORÍAS DE EQUIPOS (tarea 363, D3 de la auditoría del
+ * 2026-10-27). Sin texto, como siempre: «Todos» y cada categoría general,
+ * también las vacías. Buscando, solo lo que sirve: «Todos», las categorías
+ * con resultados en su orden de siempre, la elegida aunque se quede en 0
+ * (para poder salir de ella) y «Red» si coinciden equipos de red. Con
+ * «Daniel» se leía «POS 0 · Software 0 · Impresoras 0…» y Computadores, el
+ * único útil, quedaba fuera de la pantalla.
+ */
+export function chipsDeEquipos(
+  categorias: ReadonlyArray<{ id: string; nombre: string }>,
+  conteos: { todos: number; porCategoria: ReadonlyMap<string, number>; red: number },
+  { conTexto, categoriaId }: { conTexto: boolean; categoriaId: string },
+): ChipDeEquipos[] {
+  const todos: ChipDeEquipos = { id: '', nombre: 'Todos', cantidad: conteos.todos, separado: false }
+  const deCategoria = categorias.map((c) => ({
+    id: c.id,
+    nombre: c.nombre,
+    cantidad: conteos.porCategoria.get(c.id) ?? 0,
+    separado: false,
+  }))
+  if (!conTexto) return [todos, ...deCategoria]
+  const red: ChipDeEquipos[] =
+    conteos.red > 0 || categoriaId === CHIP_RED
+      ? [{ id: CHIP_RED, nombre: 'Red', cantidad: conteos.red, separado: true }]
+      : []
+  return [todos, ...deCategoria.filter((c) => c.cantidad > 0 || c.id === categoriaId), ...red]
 }

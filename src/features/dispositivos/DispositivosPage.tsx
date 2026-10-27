@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { db, type Dispositivo } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
@@ -10,12 +10,12 @@ import { FilaDispositivo } from '../../components/FilaDispositivo'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { FilaDeslizable } from '../../components/FilaDeslizable'
 import { Monitor, Plus } from '../../components/iconos'
-import { BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
+import { BTN_PRIMARIO, BTN_SECUNDARIO, TituloSeccion } from '../../components/nocturne'
 import { useEsAncho } from '../../components/useEsAncho'
 import { IconoVentana } from '../../components/ventana/IconoVentana'
 import { CHIP, CHIP_ACTIVO, CHIP_REPOSO, TITULO_GRUPO } from '../../components/ventana/estilos'
 import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
-import { buscarEquipos, conteosDeChips } from './busquedaEquipos'
+import { buscarEquipos, chipsDeEquipos, CHIP_RED, conteosDeChips, type ChipDeEquipos } from './busquedaEquipos'
 import { anotadoEnLista, partesDelSubtitulo, personaQueLoTiene, type PersonasPorId } from './responsableEnLista'
 
 // Pantalla Dispositivos re-autorizada en el sistema Nocturne (handoff
@@ -180,6 +180,10 @@ export function DispositivosPage() {
     elegirCategoria('')
     setTexto('')
   }
+  // LA CATEGORÍA ELEGIDA, VACÍA (tarea 363, D3): «Ver los N en Todos» la suelta
+  // y conserva lo escrito; antes, «Quitar filtros» borraba también la búsqueda.
+  const vacioDeCategoria = Boolean(consulta && categoriaId && conteos.todos > 0)
+  const nombreElegida = categoriaId === CHIP_RED ? 'red' : (nombreCategoria.get(categoriaId) ?? '')
 
   // EQUIPOS EN EL TELÉFONO, COMO EL PROTOTIPO DE CLAUDE DESIGN (tarea 350): el
   // título con cuántos hay en el inventario, el escáner y «Crear equipo» en su
@@ -201,11 +205,16 @@ export function DispositivosPage() {
       variante={ancho ? 'dock' : 'ventana'}
     />
   )
-  const chips = [
-    { id: '', nombre: 'Todos', count: conteos.todos },
-    ...categoriasGenerales.map((c) => ({ id: c.id, nombre: c.nombre, count: conteos.porCategoria.get(c.id) ?? 0 })),
-  ]
+  // BUSCANDO, SOLO LO QUE SIRVE (tarea 363, D3): «Todos», las categorías con
+  // resultados, la elegida aunque quede en 0 y «Red». Sin texto, como siempre.
+  const chips = chipsDeEquipos(categoriasGenerales, conteos, { conTexto: consulta !== '', categoriaId })
   const tituloGrupo = ancho ? undefined : TITULO_GRUPO
+  // La elegida que se quedó en 0 se ve con el borde punteado: sigue elegida,
+  // pero ya no da nada.
+  const enCero = (chip: ChipDeEquipos) => consulta !== '' && chip.id === categoriaId && chip.cantidad === 0
+  const separador = (
+    <span aria-hidden data-separador-red className="h-6 w-px shrink-0 self-center bg-noct-divider-fuerte" />
+  )
 
   return (
     // Nivel 1 del chasis (tarea 185): raíz de su pila. El título, el
@@ -258,16 +267,27 @@ export function DispositivosPage() {
               {chips.map((chip) => {
                 const activo = chip.id === categoriaId
                 return (
-                  <button
-                    key={chip.id || '__todos'}
-                    type="button"
-                    aria-pressed={activo}
-                    onClick={() => elegirCategoria(activo ? '' : chip.id)}
-                    className={`${CHIP} gap-1.5 ${activo ? CHIP_ACTIVO : CHIP_REPOSO}`}
-                  >
-                    {chip.nombre}
-                    <span className={activo ? 'font-semibold' : 'font-semibold text-noct-neutral-300'}>{chip.count}</span>
-                  </button>
+                  <Fragment key={chip.id || '__todos'}>
+                    {chip.separado && separador}
+                    <button
+                      type="button"
+                      aria-pressed={activo}
+                      data-chip-equipos={chip.id || 'todos'}
+                      onClick={() => elegirCategoria(activo ? '' : chip.id)}
+                      className={`${CHIP} gap-1.5 ${
+                        enCero(chip)
+                          ? 'border-dashed border-noct-text bg-transparent text-noct-text'
+                          : activo
+                            ? CHIP_ACTIVO
+                            : CHIP_REPOSO
+                      }`}
+                    >
+                      {chip.nombre}
+                      <span className={activo && !enCero(chip) ? 'font-semibold' : 'font-semibold text-noct-neutral-300'}>
+                        {chip.cantidad}
+                      </span>
+                    </button>
+                  </Fragment>
                 )
               })}
             </FilaDeslizable>
@@ -295,31 +315,32 @@ export function DispositivosPage() {
           // con más chips detrás se desvanece (`FilaDeslizable`) en vez de
           // dejar un chip cortado en seco ("Co"), y al final se lee entero.
           <FilaDeslizable etiqueta="Filtrar por categoría" className="gap-2 px-4 pb-3">
-            {[{ id: '', nombre: 'Todos', count: conteos.todos }, ...categoriasGenerales.map((c) => ({
-              id: c.id,
-              nombre: c.nombre,
-              count: conteos.porCategoria.get(c.id) ?? 0,
-            }))].map((chip) => {
+            {chips.map((chip) => {
               const activo = chip.id === categoriaId
               return (
-                <button
-                  key={chip.id || '__todos'}
-                  type="button"
-                  aria-pressed={activo}
-                  onClick={() => elegirCategoria(activo ? '' : chip.id)}
-                  className={`inline-flex h-11 shrink-0 items-center gap-[7px] whitespace-nowrap rounded-full border px-[14px] text-[13px] font-medium transition-colors ${
-                    activo
-                      ? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300'
-                      : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
-                  }`}
-                >
-                  {chip.nombre}
-                  <span
-                    className={`text-[11.5px] max-md:text-[12px] ${activo ? 'text-noct-accent-400 max-md:text-noct-accent-300' : 'text-noct-neutral-600'}`}
+                <Fragment key={chip.id || '__todos'}>
+                  {chip.separado && separador}
+                  <button
+                    type="button"
+                    aria-pressed={activo}
+                    data-chip-equipos={chip.id || 'todos'}
+                    onClick={() => elegirCategoria(activo ? '' : chip.id)}
+                    className={`inline-flex h-11 shrink-0 items-center gap-[7px] whitespace-nowrap rounded-full border px-[14px] text-[13px] font-medium transition-colors ${
+                      enCero(chip) ? 'border-dashed ' : ''
+                    }${
+                      activo
+                        ? 'border-noct-accent bg-noct-accent/[.14] text-noct-accent-300'
+                        : 'border-noct-divider text-noct-neutral-300 hover:bg-noct-text/[.05]'
+                    }`}
                   >
-                    {chip.count}
-                  </span>
-                </button>
+                    {chip.nombre}
+                    <span
+                      className={`text-[11.5px] max-md:text-[12px] ${activo ? 'text-noct-accent-400 max-md:text-noct-accent-300' : 'text-noct-neutral-600'}`}
+                    >
+                      {chip.cantidad}
+                    </span>
+                  </button>
+                </Fragment>
               )
             })}
           </FilaDeslizable>
@@ -411,20 +432,43 @@ export function DispositivosPage() {
         ) : (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-noct-neutral-700 px-6 py-11 text-center">
             <Monitor size={30} className="text-noct-neutral-600" aria-hidden />
+            {/* LOS VACÍOS DE UNA BÚSQUEDA (tarea 363, D3). Con la categoría
+                elegida vacía y equipos en otras, la salida conserva lo escrito.
+                Sin nada que coincida, «Borrar búsqueda». */}
             <div>
               <p className="text-[14.5px] font-medium">
-                {hayFiltrosActivos ? 'Ningún equipo coincide' : 'Aún no hay equipos registrados'}
+                {vacioDeCategoria
+                  ? `Ningún equipo de ${nombreElegida} coincide con «${consulta}»`
+                  : consulta
+                    ? `Ningún equipo coincide con «${consulta}»`
+                    : hayFiltrosActivos
+                      ? 'Ningún equipo coincide'
+                      : 'Aún no hay equipos registrados'}
               </p>
               <p className="mt-1 text-[13px] leading-relaxed text-noct-neutral-400">
-                {hayFiltrosActivos
-                  ? 'Probar con otra palabra o quitar el filtro de categoría.'
-                  : 'Agregarlos desde "Crear equipo".'}
+                {vacioDeCategoria
+                  ? `Hay ${conteos.todos} en ${conteos.todos === 1 ? 'otra categoría' : 'otras categorías'}.`
+                  : consulta
+                    ? 'Prueba con el nombre de la persona, la IP, el lugar o el serial.'
+                    : hayFiltrosActivos
+                      ? 'Probar con otra palabra o quitar el filtro de categoría.'
+                      : 'Agregarlos desde "Crear equipo".'}
               </p>
             </div>
-            {hayFiltrosActivos && (
-              <button type="button" onClick={quitarFiltros} className={`mt-0.5 min-h-11 ${BTN_SECUNDARIO}`}>
-                Quitar filtros
+            {vacioDeCategoria ? (
+              <button type="button" onClick={() => elegirCategoria('')} className={`mt-0.5 min-h-11 ${BTN_PRIMARIO}`}>
+                {conteos.todos === 1 ? 'Verlo en Todos' : `Ver los ${conteos.todos} en Todos`}
               </button>
+            ) : consulta ? (
+              <button type="button" onClick={quitarFiltros} className={`mt-0.5 min-h-11 ${BTN_SECUNDARIO}`}>
+                Borrar búsqueda
+              </button>
+            ) : (
+              hayFiltrosActivos && (
+                <button type="button" onClick={quitarFiltros} className={`mt-0.5 min-h-11 ${BTN_SECUNDARIO}`}>
+                  Quitar filtros
+                </button>
+              )
             )}
           </div>
         )}
