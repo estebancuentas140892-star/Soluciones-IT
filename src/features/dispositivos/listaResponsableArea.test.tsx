@@ -104,9 +104,21 @@ async function sembrar() {
   await sembrarEquipo({ id: 'metro-archivo-lugar', nombre: 'metro-archivo-lugar', ...enUso, ubicacion: 'Bodega de prueba', responsable: 'Archivo' })
 }
 
-/** La línea bajo el nombre de un equipo: el segundo párrafo de su fila. */
+/** La línea bajo el equipo: el segundo párrafo de su fila (el primero es el título). */
 function subtituloDe(id: string): HTMLElement | null {
   return document.body.querySelectorAll<HTMLElement>(`a[href="/dispositivos/${id}"] p`)[1] ?? null
+}
+
+/**
+ * LA PERSONA PRIMERO (tarea 364, D4): con responsable vinculado, el título de
+ * la fila es quien tiene el equipo, y el nombre del equipo va debajo.
+ */
+function tituloDe(id: string): string | null {
+  return document.body.querySelector(`a[href="/dispositivos/${id}"] [data-nombre-principal]`)?.textContent ?? null
+}
+
+function equipoDe(id: string): string | null {
+  return document.body.querySelector(`a[href="/dispositivos/${id}"] [data-equipo-de-persona]`)?.textContent ?? null
 }
 
 function campoEquipos(): HTMLInputElement | null {
@@ -124,24 +136,28 @@ afterEach(async () => {
   await desmontarTodo()
 })
 
-describe('la lista de Equipos con persona y área (tarea 317)', () => {
-  it('dice quién tiene cada equipo y su área en lugar de la categoría', async () => {
+describe('la lista de Equipos con persona y área (tarea 317; la persona primero desde la 364)', () => {
+  it('la persona es el título, el equipo va debajo y la línea dice su área en lugar de la categoría', async () => {
     await montar(RUTAS, '/dispositivos')
-    await esperar(() => subtituloDe('metrojp19')?.textContent === 'Esteban Cardona Rendón · Control Interno', 'persona y área')
+    await esperar(() => subtituloDe('metrojp19')?.textContent === 'Control Interno', 'el área')
 
-    expect(subtituloDe('metro-ana')?.textContent).toBe('Ana Gil · TI')
-    expect(subtituloDe('metro-maria')?.textContent).toBe(
-      'María Fernanda Restrepo Echeverri · Gestión Administrativa y Financiera',
-    )
+    expect(tituloDe('metrojp19')).toBe('Esteban Cardona Rendón')
+    expect(equipoDe('metrojp19')).toBe('metrojp19')
+    expect(tituloDe('metro-ana')).toBe('Ana Gil')
+    expect(subtituloDe('metro-ana')?.textContent).toBe('TI')
+    expect(tituloDe('metro-maria')).toBe('María Fernanda Restrepo Echeverri')
+    expect(subtituloDe('metro-maria')?.textContent).toBe('Gestión Administrativa y Financiera')
     // La categoría no se repite cuando alguien tiene el equipo.
     expect(subtituloDe('metrojp19')?.textContent).not.toContain('Computadores')
   })
 
-  it('sin área dice solo el nombre, también con una persona guardada antes del área', async () => {
+  it('sin área no hay línea de contexto, también con una persona guardada antes del área', async () => {
     await montar(RUTAS, '/dispositivos')
-    await esperar(() => subtituloDe('metro-luis')?.textContent === 'Luis Pérez de Prueba', 'persona sin área')
+    await esperar(() => tituloDe('metro-luis') === 'Luis Pérez de Prueba', 'persona sin área')
 
-    expect(subtituloDe('metro-vieja')?.textContent).toBe('Nora Antigua de Prueba')
+    expect(subtituloDe('metro-luis')).toBeNull()
+    expect(tituloDe('metro-vieja')).toBe('Nora Antigua de Prueba')
+    expect(subtituloDe('metro-vieja')).toBeNull()
     expect(textoPantalla()).not.toMatch(/sin área/i)
   })
 
@@ -149,22 +165,22 @@ describe('la lista de Equipos con persona y área (tarea 317)', () => {
     await montar(RUTAS, '/dispositivos')
     await esperar(() => subtituloDe('metro-libre')?.textContent === 'Computadores · Administración de prueba', 'el contexto')
 
+    // Lo anotado nunca se presenta como una persona: el equipo sigue de título.
+    expect(tituloDe('metro-archivo')).toBe('metro-archivo')
     expect(subtituloDe('metro-archivo')?.textContent).toBe('Anotado: «Archivo» · por validar')
     // Una persona eliminada no se presenta como quien lo tiene.
+    expect(tituloDe('metro-eliminada')).toBe('metro-eliminada')
     expect(subtituloDe('metro-eliminada')?.textContent).toBe('Computadores · Bodega de prueba')
   })
 
-  it('la persona y el área son partes aparte, de hasta dos líneas cada una: ninguna se recorta a una', async () => {
+  it('el área y el sitio son partes aparte, de hasta dos líneas cada una: ninguna se recorta a una', async () => {
     await montar(RUTAS, '/dispositivos')
-    const linea = await esperar(() => subtituloDe('metro-maria'), 'la línea larga')
+    const linea = await esperar(() => subtituloDe('metro-ubicada'), 'la línea con dos partes')
 
-    // Así el área no se parte por la mitad ni desaparece en un teléfono:
-    // si no cabe junto al nombre, baja entera a su línea.
+    // Así el sitio no se parte por la mitad ni desaparece en un teléfono: si
+    // no cabe junto al área, baja entero a su línea.
     const partes = Array.from(linea.children) as HTMLElement[]
-    expect(partes.map((p) => p.textContent)).toEqual([
-      'María Fernanda Restrepo Echeverri ·',
-      'Gestión Administrativa y Financiera',
-    ])
+    expect(partes.map((p) => p.textContent)).toEqual(['Control Interno ·', 'Caja Parque de Prueba'])
     for (const parte of [linea, ...partes]) expect(parte.classList.contains('truncate')).toBe(false)
     for (const parte of partes) {
       expect(parte.classList.contains('line-clamp-2')).toBe(true)
@@ -178,7 +194,7 @@ describe('la lista de Equipos con persona y área (tarea 317)', () => {
     expect(subtituloDe('metro-libre')?.classList.contains('line-clamp-2')).toBe(true)
   })
 
-  it('el estado y la IP no le quitan ancho a la persona: el estado va arriba y la IP al final de su línea', async () => {
+  it('el estado y la IP no le quitan ancho a la persona: cada cosa en su línea', async () => {
     await sembrarEquipo({
       id: 'metro-mant',
       nombre: 'metro-mant',
@@ -192,88 +208,96 @@ describe('la lista de Equipos con persona y área (tarea 317)', () => {
     const linea = await esperar(() => subtituloDe('metro-mant'), 'la fila en mantenimiento')
     const fila = document.body.querySelector<HTMLElement>('a[href="/dispositivos/metro-mant"]')!
     const nombre = fila.querySelector('p')!
+    const equipo = fila.querySelector<HTMLElement>('[data-equipo-de-persona]')!
     const estado = Array.from(fila.querySelectorAll('span')).find((s) => s.textContent === 'En mantenimiento')!
     const ip = Array.from(fila.querySelectorAll('span')).find((s) => s.textContent === '10.31.7.29')!
 
-    // EN LA TARJETA DEL TELÉFONO (tarea 350) cada cosa tiene su línea, con
-    // todo el ancho: el nombre, la IP bajo él, la persona y su área, y la
+    // EN LA TARJETA DEL TELÉFONO (tareas 350 y 364): la persona, debajo el
+    // equipo con su IP en la misma línea (la IP baja si no cabe), el área y la
     // pastilla del estado al final. Ninguna le quita ancho a otra.
-    expect(nombre.nextElementSibling).toBe(ip)
-    expect(ip.nextElementSibling).toBe(linea)
+    expect(nombre.textContent).toBe('María Fernanda Restrepo Echeverri')
+    expect(nombre.nextElementSibling).toBe(equipo.parentElement)
+    expect(equipo.parentElement?.contains(ip)).toBe(true)
+    expect(equipo.parentElement?.nextElementSibling).toBe(linea)
     expect(linea.nextElementSibling).toBe(estado)
     expect(linea.contains(ip)).toBe(false)
     expect(linea.contains(estado)).toBe(false)
-    expect(linea.textContent).toBe('María Fernanda Restrepo Echeverri · Gestión Administrativa y Financiera')
+    expect(linea.textContent).toBe('Gestión Administrativa y Financiera')
   })
 
   it('el área se lee de la persona: si cambia, la lista lo dice sin reescribir el equipo', async () => {
     const antes = await db.dispositivos.get('metrojp19')
     await montar(RUTAS, '/dispositivos')
-    await esperar(() => subtituloDe('metrojp19')?.textContent === 'Esteban Cardona Rendón · Control Interno', 'el área de antes')
+    await esperar(() => subtituloDe('metrojp19')?.textContent === 'Control Interno', 'el área de antes')
 
     await db.personas.update('esteban', { area: 'Tesorería' })
-    await esperar(() => subtituloDe('metrojp19')?.textContent === 'Esteban Cardona Rendón · Tesorería', 'el área nueva')
+    await esperar(() => subtituloDe('metrojp19')?.textContent === 'Tesorería', 'el área nueva')
 
     const despues = await db.dispositivos.get('metrojp19')
     expect(despues).toEqual(antes)
     expect(Object.keys(despues ?? {})).not.toContain('area')
   })
 
-  it('buscar un área encuentra los equipos de esa área; el de red sale aparte con su categoría', async () => {
+  it('buscar un área encuentra los equipos de esa área, juntos bajo su persona; el de red sale aparte con su categoría', async () => {
     await montar(RUTAS, '/dispositivos')
     await esperar(() => subtituloDe('metrojp19'), 'la lista')
     await escribir(campoEquipos()!, 'control interno')
-    await esperar(() => !subtituloDe('metro-ana'), 'la lista filtrada')
+    await esperar(() => document.body.querySelector('[data-grupo-persona="esteban"]'), 'la persona con sus dos equipos')
 
-    expect(subtituloDe('metrojp19')?.textContent).toBe('Esteban Cardona Rendón · Control Interno')
+    // Esteban tiene dos equipos de Control Interno: una tarjeta, su área una vez.
+    const grupo = document.body.querySelector<HTMLElement>('[data-grupo-persona="esteban"]')!
+    expect(grupo.textContent).toContain('Esteban Cardona Rendón')
+    expect(grupo.textContent).toContain('Control Interno')
+    expect(grupo.textContent).toContain('2 equipos')
+    expect(grupo.querySelector('a[href="/dispositivos/metrojp19"]')).not.toBeNull()
+    expect(grupo.querySelector('a[href="/dispositivos/metro-ubicada"]')).not.toBeNull()
+    expect(grupo.querySelector('a[href="/personas/esteban"]')).not.toBeNull()
+    expect(document.body.querySelector('a[href="/dispositivos/metro-ana"]')).toBeNull()
     // El equipo de red conserva su categoría y su lugar en su bloque, aunque
     // alguien lo tenga: ahí no cambia nada.
     expect(textoPantalla()).toContain('Equipos de red')
+    expect(tituloDe('sw-piso')).toBe('SW-PISO-4')
     expect(subtituloDe('sw-piso')?.textContent).toBe('Switches · Rack de prueba')
     expect(subtituloDe('sw-piso')?.children).toHaveLength(0)
     // La persona eliminada no aporta su área.
-    expect(subtituloDe('metro-eliminada')).toBeNull()
+    expect(document.body.querySelector('a[href="/dispositivos/metro-eliminada"]')).toBeNull()
   })
 
   it('la búsqueda por persona de la 314 sigue igual', async () => {
     await montar(RUTAS, '/dispositivos')
     await esperar(() => subtituloDe('metrojp19'), 'la lista')
     await escribir(campoEquipos()!, 'cardona')
-    await esperar(() => !subtituloDe('metro-ana'), 'la lista filtrada')
+    await esperar(() => !document.body.querySelector('a[href="/dispositivos/metro-ana"]'), 'la lista filtrada')
 
-    expect(subtituloDe('metrojp19')).not.toBeNull()
+    expect(document.body.querySelector('a[href="/dispositivos/metrojp19"]')).not.toBeNull()
   })
 })
 
 describe('la lista de Equipos dice también dónde está el equipo (ampliación de la 317)', () => {
-  it('persona, área y ubicación, con la ficha de Ubicación vinculada como fuente de verdad', async () => {
+  it('el área y la ubicación, con la ficha de Ubicación vinculada como fuente de verdad', async () => {
     await montar(RUTAS, '/dispositivos')
     const linea = await esperar(() => subtituloDe('metro-ubicada'), 'la fila con ubicación')
 
-    expect(linea.textContent).toBe('Esteban Cardona Rendón · Control Interno · Caja Parque de Prueba')
+    expect(tituloDe('metro-ubicada')).toBe('Esteban Cardona Rendón')
+    expect(linea.textContent).toBe('Control Interno · Caja Parque de Prueba')
     expect(linea.textContent).not.toContain('Texto viejo de prueba')
-    // Tres partes: cada una entera en su línea si cabe, en el teléfono.
-    expect(Array.from(linea.children).map((p) => p.textContent)).toEqual([
-      'Esteban Cardona Rendón ·',
-      'Control Interno ·',
-      'Caja Parque de Prueba',
-    ])
   })
 
   it('si el área y la ubicación son la misma, se dice una vez', async () => {
     await montar(RUTAS, '/dispositivos')
     await esperar(() => subtituloDe('metro-sistemas'), 'la fila de Sistemas')
 
-    expect(subtituloDe('metro-sistemas')?.textContent).toBe('Esteban Cardona Rendón · Sistemas')
+    expect(subtituloDe('metro-sistemas')?.textContent).toBe('Sistemas')
   })
 
-  it('una persona sin área dice su nombre y la ubicación; sin ubicación, nombre y área como antes', async () => {
+  it('una persona sin área dice la ubicación; sin ubicación, el área como antes', async () => {
     await montar(RUTAS, '/dispositivos')
     await esperar(() => subtituloDe('metro-luis-lugar'), 'la fila sin área')
 
-    expect(subtituloDe('metro-luis-lugar')?.textContent).toBe('Luis Pérez de Prueba · Bodega de prueba')
-    expect(subtituloDe('metrojp19')?.textContent).toBe('Esteban Cardona Rendón · Control Interno')
-    expect(subtituloDe('metro-luis')?.textContent).toBe('Luis Pérez de Prueba')
+    expect(tituloDe('metro-luis-lugar')).toBe('Luis Pérez de Prueba')
+    expect(subtituloDe('metro-luis-lugar')?.textContent).toBe('Bodega de prueba')
+    expect(subtituloDe('metrojp19')?.textContent).toBe('Control Interno')
+    expect(subtituloDe('metro-luis')).toBeNull()
   })
 
   it('un responsable por validar conserva su aviso y suma la ubicación, en partes', async () => {
@@ -293,5 +317,20 @@ describe('la lista de Equipos dice también dónde está el equipo (ampliación 
 
     expect(linea.textContent).toBe('Computadores · Administración de prueba')
     expect(linea.children).toHaveLength(0)
+  })
+})
+
+describe('la lista va por lo que se lee primero (tarea 364)', () => {
+  it('sin buscar, los equipos de una misma persona quedan seguidos, por el nombre de la persona', async () => {
+    await montar(RUTAS, '/dispositivos')
+    await esperar(() => subtituloDe('metrojp19'), 'la lista')
+    const titulos = Array.from(document.body.querySelectorAll('[data-nombre-principal]')).map((t) => t.textContent)
+    const deEsteban = titulos.flatMap((t, i) => (t === 'Esteban Cardona Rendón' ? [i] : []))
+    // metrojp19 y metro-ubicada (Esteban) y metro-62 (otra ficha con el mismo
+    // nombre): seguidos.
+    expect(deEsteban.length).toBeGreaterThanOrEqual(2)
+    expect(deEsteban.at(-1)! - deEsteban[0]).toBe(deEsteban.length - 1)
+    // Ana va antes que Esteban, y los equipos sin nadie se leen por su nombre.
+    expect(titulos.indexOf('Ana Gil')).toBeLessThan(deEsteban[0])
   })
 })

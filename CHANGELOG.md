@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-10-27
 
+### Cambiado (tarea 364): en Equipos, la persona primero
+
+**Área modificada:** `src/components/FilaDispositivo.tsx` (`persona`), `src/features/dispositivos/GrupoDePersona.tsx` y `listaPorPersona.ts` (nuevos), `busquedaEquipos.ts` (`porPersona`) y `DispositivosPage.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** auditoría de Claude Design del 2026-10-27 (D4, AD-100): la tarjeta de un equipo empezaba por su nombre técnico y la persona, lo que se recuerda, era lo menos visible; los equipos de una misma persona no quedaban juntos.
+**Qué cambia:** con responsable vinculado, la persona es el título; debajo, el equipo con su IP; luego el área y el sitio. La lista va por lo que se lee primero. Al buscar, una persona con varios equipos es una tarjeta con su cabecera (que abre su ficha) y sus equipos debajo, cada uno con su IP para copiar. Sin responsable, anotado, de baja o de red, como antes.
+**Impacto esperado:** una persona se reconoce de un vistazo, y sus equipos se encuentran juntos.
+**Estructura de datos:** sin cambios.
+
 ### Cambiado (tarea 363): en Equipos, buscando, solo las categorías con coincidencias y el chip «Red»
 
 **Área modificada:** `src/features/dispositivos/busquedaEquipos.ts` (`CHIP_RED`, `chipsDeEquipos`, `conteosDeChips` con `red`, `buscarEquipos` con el chip «Red») y `DispositivosPage.tsx` (la fila de chips y los vacíos).

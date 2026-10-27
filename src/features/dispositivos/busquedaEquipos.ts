@@ -3,6 +3,7 @@ import { compararNatural } from '../../lib/conexiones'
 import { normalizarTexto } from '../../lib/texto'
 import { coincidenciaDePalabra, esAproximable, palabrasLiterales, terminosDe } from '../../lib/coincidenciaAproximada'
 import { palabrasDeContenido } from '../busqueda/consultaNatural'
+import { tituloEnLista } from './listaPorPersona'
 import { areaDeQuienLoTiene, personaQueLoTiene, SIN_PERSONAS, type PersonasPorId } from './responsableEnLista'
 
 // LO QUE ENCUENTRA EL BUSCADOR DE EQUIPOS (encargo del 2026-09-22,
@@ -143,7 +144,15 @@ export function buscarEquipos(
   idsRed: ReadonlySet<string>,
   { texto, categoriaId }: { texto: string; categoriaId: string },
   personas: PersonasPorId = SIN_PERSONAS,
+  { porPersona = false }: { porPersona?: boolean } = {},
 ): EquiposEncontrados {
+  // LA PERSONA PRIMERO (tarea 364, D4): la lista de Equipos se ordena por lo
+  // que se lee primero (quien tiene el equipo o, si nadie, su nombre) y, dentro
+  // de una misma persona, por el nombre del equipo. Los de red, por su nombre.
+  const orden = (a: Dispositivo, b: Dispositivo) =>
+    porPersona
+      ? compararNatural(tituloEnLista(a, personas), tituloEnLista(b, personas)) || porNombre(a, b)
+      : porNombre(a, b)
   // Con el chip «Red», solo los de red; sin texto no hay chip «Red», así
   // que vale como «Todos» (borrar lo escrito devuelve el inventario).
   const soloRed = categoriaId === CHIP_RED && texto.trim() !== ''
@@ -159,7 +168,11 @@ export function buscarEquipos(
   const exactos = (deRed: boolean) =>
     encontrados
       .filter((e) => e.deRed === deRed && e.coincidencia.tipo === 'exacta')
-      .sort((a, b) => Number(b.coincidencia.valorExacto) - Number(a.coincidencia.valorExacto) || porNombre(a.dispositivo, b.dispositivo))
+      .sort(
+        (a, b) =>
+          Number(b.coincidencia.valorExacto) - Number(a.coincidencia.valorExacto) ||
+          (deRed ? porNombre(a.dispositivo, b.dispositivo) : orden(a.dispositivo, b.dispositivo)),
+      )
       .map((e) => e.dispositivo)
   const posibles = encontrados
     .filter((e) => e.coincidencia.tipo === 'aproximada')

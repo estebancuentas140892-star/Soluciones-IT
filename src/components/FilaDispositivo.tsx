@@ -62,6 +62,7 @@ export function FilaDispositivo({
   alAbrir,
   resaltar = '',
   enTarjeta = false,
+  persona,
 }: {
   dispositivo: Dispositivo
   // Nombre de la categoria del equipo: decide el icono del avatar.
@@ -96,6 +97,12 @@ export function FilaDispositivo({
   // LA TARJETA DEL TELÉFONO (tarea 350, Equipos del prototipo de Claude
   // Design): la pantalla la pide por debajo de 768 px. Ver `TarjetaEquipo`.
   enTarjeta?: boolean
+  // LA PERSONA PRIMERO (tarea 364, D4 de la auditoría del 2026-10-27): el
+  // nombre de quien tiene el equipo, si está vinculado. Pasa a ser el título,
+  // y el nombre del equipo baja a la línea de debajo, delante de su contexto
+  // (que entonces dice solo lo que falta: el área y el sitio). Lo decide la
+  // pantalla: sin responsable, anotado, de baja o de red, no llega.
+  persona?: string
 }) {
   const estadoVisible = estadoEnLista(dispositivo.estado)
   const atenuada = estadoVisible?.excepcion ?? false
@@ -109,6 +116,7 @@ export function FilaDispositivo({
         estado={estado}
         alAbrir={alAbrir}
         resaltar={resaltar}
+        persona={persona}
       />
     )
   }
@@ -118,9 +126,13 @@ export function FilaDispositivo({
   // (oscuro). En el teléfono no se atenúa (tarea 349); el nombre y el icono
   // atenuados y el estado con su palabra siguen diciendo que es una excepción.
   const atenuacionContexto = atenuada ? 'opacity-[.66] max-md:opacity-100' : ''
-  const { pre, match, post } = partirTitulo(dispositivo.nombre, normalizarTexto(resaltar.trim()))
-  const enPartes = typeof subtitulo !== 'string'
-  const conSubtitulo = enPartes ? subtitulo.length > 0 : subtitulo !== ''
+  const { pre, match, post } = partirTitulo(persona ?? dispositivo.nombre, normalizarTexto(resaltar.trim()))
+  // Con la persona de título, el equipo abre la línea de debajo (tarea 364).
+  const partes = persona
+    ? [dispositivo.nombre, ...(typeof subtitulo === 'string' ? (subtitulo ? [subtitulo] : []) : subtitulo)]
+    : subtitulo
+  const enPartes = typeof partes !== 'string'
+  const conSubtitulo = enPartes ? partes.length > 0 : partes !== ''
   // La IP va abajo, al final de la línea de contexto, si hay línea o si
   // arriba ya está el estado; si no, en la línea del nombre.
   const ipAbajo = Boolean(dispositivo.ip) && (conSubtitulo || Boolean(estadoVisible))
@@ -181,7 +193,8 @@ export function FilaDispositivo({
             80 % (tarea 349): al 66, lo buscado resaltado dentro del nombre
             quedaba en 3.6:1 en el claro. */}
         <p
-          className={`line-clamp-2 break-words text-[15px] font-medium leading-[1.3] text-pretty ${
+          data-titulo-equipo={persona ? 'persona' : 'equipo'}
+          className={`line-clamp-2 break-words text-[15px] leading-[1.3] text-pretty ${persona ? 'font-semibold' : 'font-medium'} ${
             derecha ? '' : 'col-span-2'
           } ${atenuada ? 'opacity-[.66] max-md:opacity-[.8]' : ''}`}
         >
@@ -197,17 +210,17 @@ export function FilaDispositivo({
                 párrafo no dibuja caja (`contents`) y sus partes fluyen con
                 la IP detrás. La línea de contexto no se recorta a una:
                 solo dice lo que el nombre no dice. */}
-            {typeof subtitulo === 'string'
-              ? conSubtitulo && <p className={`min-w-0 flex-1 line-clamp-2 break-words ${TEXTO_CONTEXTO} ${atenuacionContexto}`}>{subtitulo}</p>
+            {typeof partes === 'string'
+              ? conSubtitulo && <p className={`min-w-0 flex-1 line-clamp-2 break-words ${TEXTO_CONTEXTO} ${atenuacionContexto}`}>{partes}</p>
               : conSubtitulo && (
                   <p className={`contents ${TEXTO_CONTEXTO}`}>
-                    {subtitulo.map((parte, i) => (
+                    {partes.map((parte, i) => (
                       <Fragment key={i}>
                         {/* El espacio no se dibuja (lo pone el hueco), pero
                             deja el texto leíble entero: "A · B". */}
                         {i > 0 && ' '}
                         <span className={`line-clamp-2 min-w-0 break-words ${atenuacionContexto}`}>
-                          {i < subtitulo.length - 1 ? `${parte} ·` : parte}
+                          {i < partes.length - 1 ? `${parte} ·` : parte}
                         </span>
                       </Fragment>
                     ))}
@@ -239,6 +252,7 @@ function TarjetaEquipo({
   estado,
   alAbrir,
   resaltar,
+  persona,
 }: {
   dispositivo: Dispositivo
   categoriaNombre: string
@@ -247,9 +261,11 @@ function TarjetaEquipo({
   estado?: unknown
   alAbrir?: () => void
   resaltar: string
+  persona?: string
 }) {
   const estadoVisible = estadoEnLista(dispositivo.estado)
-  const { pre, match, post } = partirTitulo(dispositivo.nombre, normalizarTexto(resaltar.trim()))
+  const { pre, match, post } = partirTitulo(persona ?? dispositivo.nombre, normalizarTexto(resaltar.trim()))
+  const equipo = partirTitulo(dispositivo.nombre, normalizarTexto(resaltar.trim()))
   const enPartes = typeof subtitulo !== 'string'
   const conSubtitulo = enPartes ? subtitulo.length > 0 : subtitulo !== ''
   const ip = dispositivo.ip?.trim() ?? ''
@@ -278,12 +294,29 @@ function TarjetaEquipo({
         <div className="flex min-w-0 flex-1 flex-col gap-px">
           {/* El nombre parte línea, hasta dos, como en la fila de siempre: con
               todo el ancho de la tarjeta casi nunca llega a cortarse. */}
-          <p data-nombre-principal className="line-clamp-2 min-w-0 break-words text-[16px] font-bold leading-[21px] text-pretty">
+          <p
+            data-nombre-principal
+            data-titulo-equipo={persona ? 'persona' : 'equipo'}
+            className="line-clamp-2 min-w-0 break-words text-[16px] font-bold leading-[21px] text-pretty"
+          >
             {pre}
             {match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{match}</span>}
             {post}
           </p>
-          {ip && <span className="font-mono text-[14.5px] font-semibold leading-snug text-noct-text">{ip}</span>}
+          {persona ? (
+            // LA PERSONA PRIMERO (tarea 364): debajo, el equipo con su IP en la
+            // misma línea; la IP baja de línea antes que cortar el nombre.
+            <span className="flex flex-wrap items-baseline gap-x-2 leading-[1.35]">
+              <span data-equipo-de-persona className="min-w-0 text-[14.5px] font-bold text-noct-text [overflow-wrap:anywhere]">
+                {equipo.pre}
+                {equipo.match && <span className="rounded-[3px] bg-noct-accent/[.16] text-noct-accent-200">{equipo.match}</span>}
+                {equipo.post}
+              </span>
+              {ip && <span className="font-mono text-[14.5px] font-semibold text-noct-neutral-300">{ip}</span>}
+            </span>
+          ) : (
+            ip && <span className="font-mono text-[14.5px] font-semibold leading-snug text-noct-text">{ip}</span>
+          )}
           {/* La línea de contexto, con las reglas de la tarea 317: un texto de
               hasta dos líneas o, en partes (quién lo tiene, su área, dónde
               está), cada parte entera en su línea si cabe y de hasta dos. */}

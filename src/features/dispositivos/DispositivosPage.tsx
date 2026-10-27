@@ -16,6 +16,8 @@ import { IconoVentana } from '../../components/ventana/IconoVentana'
 import { CHIP, CHIP_ACTIVO, CHIP_REPOSO, TITULO_GRUPO } from '../../components/ventana/estilos'
 import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { buscarEquipos, chipsDeEquipos, CHIP_RED, conteosDeChips, type ChipDeEquipos } from './busquedaEquipos'
+import { GrupoDePersona } from './GrupoDePersona'
+import { agruparPorPersona, contextoDePersona } from './listaPorPersona'
 import { anotadoEnLista, partesDelSubtitulo, personaQueLoTiene, type PersonasPorId } from './responsableEnLista'
 
 // Pantalla Dispositivos re-autorizada en el sistema Nocturne (handoff
@@ -99,9 +101,21 @@ export function DispositivosPage() {
   // equipo, leída de su ficha de persona.
   // Desde la tarea 346, con errores de tecleo: lo que solo coincide con una
   // errata llega aparte (`posibles`) y se dice como "Posibles coincidencias".
+  // LA PERSONA PRIMERO (tarea 364, D4): la lista se ordena por lo que se lee
+  // primero, quien tiene el equipo o, si nadie, su nombre.
   const { generales, deRed, posibles } = useMemo(
-    () => buscarEquipos(dispositivos ?? [], idsRed, { texto, categoriaId }, personaPorId),
+    () => buscarEquipos(dispositivos ?? [], idsRed, { texto, categoriaId }, personaPorId, { porPersona: true }),
     [dispositivos, idsRed, texto, categoriaId, personaPorId],
+  )
+  const ubicacionDe = useCallback(
+    (d: Dispositivo) => ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? '')),
+    [ubicacionPorId],
+  )
+  // El nombre de quien tiene el equipo, si es el título de su fila (tarea 364):
+  // sin responsable vinculado, anotado, de baja o de red, no hay.
+  const personaDe = useCallback(
+    (d: Dispositivo) => (idsRed.has(d.categoriaId) ? undefined : personaQueLoTiene(d, personaPorId)?.nombre),
+    [idsRed, personaPorId],
   )
   // Bajo el nombre, solo lo que el nombre no dice ya (tarea 277):
   // "Impresora Taquilla" no repite "Impresoras · Taquilla". La ubicación,
@@ -114,29 +128,32 @@ export function DispositivosPage() {
   // partes separadas, también con un nombre anotado, para que la fila no
   // las parta por la mitad en un teléfono. Los equipos de red conservan
   // su categoría: en ese bloque es lo que los distingue.
+  //
+  // Desde la tarea 364 (D4), con la persona de título, la línea dice solo lo
+  // que falta: su área y dónde está el equipo, sin repetir lo que el nombre
+  // del equipo ya dice.
   const subtitulos = useMemo(() => {
     const lineas = new Map<string, string | string[]>()
-    const ubicacion = (d: Dispositivo) => ubicacionDeEquipo(d, ubicacionPorId.get(d.ubicacionId ?? ''))
+    const ubicacion = ubicacionDe
     const contexto = (d: Dispositivo) => [nombreCategoria.get(d.categoriaId), ubicacion(d)]
+    const delInventario = (d: Dispositivo) => {
+      const persona = personaQueLoTiene(d, personaPorId)
+      return persona
+        ? [persona.area?.trim(), ubicacion(d)]
+        : partesDelSubtitulo(d, { categoria: nombreCategoria.get(d.categoriaId), ubicacion: ubicacion(d) }, personaPorId)
+    }
     const listas: [
       Dispositivo[],
       (d: Dispositivo) => ReadonlyArray<string | null | undefined>,
       (d: Dispositivo) => boolean,
     ][] = [
-      [
-        generales,
-        (d) => partesDelSubtitulo(d, { categoria: nombreCategoria.get(d.categoriaId), ubicacion: ubicacion(d) }, personaPorId),
-        (d) => personaQueLoTiene(d, personaPorId) !== null || anotadoEnLista(d) !== '',
-      ],
+      [generales, delInventario, (d) => personaQueLoTiene(d, personaPorId) !== null || anotadoEnLista(d) !== ''],
       [deRed, contexto, () => false],
       // Las posibles coincidencias se leen como su lista de origen: la de
       // red con su categoría, la general con quién lo tiene.
       [
         posibles,
-        (d) =>
-          idsRed.has(d.categoriaId)
-            ? contexto(d)
-            : partesDelSubtitulo(d, { categoria: nombreCategoria.get(d.categoriaId), ubicacion: ubicacion(d) }, personaPorId),
+        (d) => (idsRed.has(d.categoriaId) ? contexto(d) : delInventario(d)),
         (d) => !idsRed.has(d.categoriaId) && (personaQueLoTiene(d, personaPorId) !== null || anotadoEnLista(d) !== ''),
       ],
     ]
@@ -145,7 +162,16 @@ export function DispositivosPage() {
       lista.forEach((d, i) => lineas.set(d.id, porPartes(d) ? visibles[i] : visibles[i].join(' · ')))
     }
     return lineas
-  }, [generales, deRed, posibles, idsRed, nombreCategoria, ubicacionPorId, personaPorId])
+  }, [generales, deRed, posibles, idsRed, nombreCategoria, ubicacionDe, personaPorId])
+  // AL BUSCAR, LOS EQUIPOS DE UNA MISMA PERSONA, JUNTOS (tarea 364, D4): una
+  // tarjeta con su cabecera. Sin texto, cada equipo en su fila, por persona.
+  const elementos = useMemo(
+    () =>
+      texto.trim()
+        ? agruparPorPersona(generales, personaPorId)
+        : generales.map((dispositivo) => ({ tipo: 'equipo' as const, dispositivo })),
+    [texto, generales, personaPorId],
+  )
   // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022): sobre lo
   // que deja la búsqueda, sin aplicar el propio eje de categoría.
   const conteos = useMemo(
@@ -353,19 +379,46 @@ export function DispositivosPage() {
           <>
             {generales.length > 0 && (
               <div className="flex flex-col max-md:gap-2">
-                {generales.map((d) => (
-                  <FilaDispositivo
-                    key={d.id}
-                    dispositivo={d}
-                    categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
-                    subtitulo={subtitulos.get(d.id) ?? ''}
-                    conFoto
-                    estado={hayFiltrosActivos ? estadoDeSalto : undefined}
-                    alAbrir={alAbrir}
-                    resaltar={consulta}
-                    enTarjeta={!ancho}
-                  />
-                ))}
+                {elementos.map((elemento) => {
+                  if (elemento.tipo === 'persona') {
+                    const { cabecera, ubicacionEnFila } = contextoDePersona(
+                      elemento.area,
+                      elemento.equipos.map(ubicacionDe),
+                    )
+                    return (
+                      <GrupoDePersona
+                        key={`persona:${elemento.personaId}`}
+                        personaId={elemento.personaId}
+                        nombre={elemento.nombre}
+                        contexto={cabecera}
+                        equipos={elemento.equipos.map((d) => ({
+                          dispositivo: d,
+                          categoriaNombre: nombreCategoria.get(d.categoriaId) ?? '',
+                          extra: ubicacionEnFila ? ubicacionDe(d) : '',
+                        }))}
+                        estado={estadoDeSalto}
+                        alAbrir={alAbrir}
+                        resaltar={consulta}
+                        enTarjeta={!ancho}
+                      />
+                    )
+                  }
+                  const d = elemento.dispositivo
+                  return (
+                    <FilaDispositivo
+                      key={d.id}
+                      dispositivo={d}
+                      categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
+                      subtitulo={subtitulos.get(d.id) ?? ''}
+                      conFoto
+                      estado={hayFiltrosActivos ? estadoDeSalto : undefined}
+                      alAbrir={alAbrir}
+                      resaltar={consulta}
+                      enTarjeta={!ancho}
+                      persona={personaDe(d)}
+                    />
+                  )
+                })}
               </div>
             )}
 
@@ -423,6 +476,7 @@ export function DispositivosPage() {
                       alAbrir={alAbrir}
                       resaltar={consulta}
                       enTarjeta={!ancho}
+                      persona={personaDe(d)}
                     />
                   ))}
                 </div>

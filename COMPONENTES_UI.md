@@ -1009,6 +1009,11 @@ Convención: "Props" muestra la firma real; los opcionales llevan su default. "D
 - **`busqueda/useDatosDeEquipos.ts`** suma `useDatosDePersonas()` (el área y los equipos vigentes de cada persona) y el contexto de resultados, `personas`.
 - **Dónde:** `ResolverPage` y `BuscadorGlobal`. `TarjetaGuiaTelefono` (3.8zn) queda solo en el catálogo de Guías. Las pruebas: `busquedaGuiasTelefono.test.tsx` (reescrita), `categoriasDeAlcance.test.ts` y `filasDelGrupo.test.ts` (nuevas), y `busquedaPulgar`, `separadoresGuias`, `resultadosIntencion` y `flujoBovedaBuscador` ajustadas.
 
+### 3.8zp Equipos: la persona primero (2026-10-27, tarea 364, AD-100)
+- **`FilaDispositivo`** suma `persona?: string`: con él, el título es la persona (`data-titulo-equipo="persona"`) y el equipo baja a la línea de debajo (en la tarjeta del teléfono, con su IP al lado, `data-equipo-de-persona`; desde 768, como primera parte del contexto). La pantalla lo pasa solo con responsable vinculado y sin ser de red.
+- **`dispositivos/GrupoDePersona({ personaId, nombre, contexto, equipos, estado?, alAbrir?, resaltar, enTarjeta })`:** una persona con varios equipos al buscar (`data-grupo-persona`). En el teléfono, una tarjeta (`TARJETA`, radio 18): la cabecera enlaza a `/personas/:id` (iniciales de 42 en el tinte de persona, el nombre a 16/800 entero, el contexto y «N equipos»); cada equipo, una fila con divisor (`IconoCategoria` de 36, el nombre a 15/700, la IP en mono y su sitio si no es común, la pastilla de estado y `BOTON_COPIAR`). Desde 768, una fila de cabecera y los equipos sangrados 58 px, con la IP a la derecha (`VALOR_TECNICO_COMPACTO`).
+- **Lógica pura:** `dispositivos/listaPorPersona.ts` (`tituloEnLista`, `agruparPorPersona`, `contextoDePersona`). Pruebas: `listaPorPersona.test.ts` (nueva) y `listaResponsableArea.test.tsx` (ajustada).
+
 ### 3.8f `soluciones/DialogoProbarPaso`
 - **Propósito:** confirmación de "Probar" en el editor de pasos (tarea 209). Dice qué paso se va a ver y que no se sale del editor ni se guarda nada, antes de que la vista previa tape la pantalla completa.
 - **Props:** `{ abierto, numeroPaso, onCerrar, onVerComoTecnico }`.

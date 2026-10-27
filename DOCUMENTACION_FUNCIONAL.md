@@ -667,6 +667,12 @@ Hallazgos **M-004**, **M-005** y **M-009**, regla **M-R8**. Había **nueve copia
 <a id="53-equipos"></a>
 ### 5.3 Equipos
 
+**LA PERSONA PRIMERO (desde el 2026-10-27, tarea 364, [DECISIONES.md](DECISIONES.md) AD-100, D4; en todos los anchos).** Manda sobre la línea de contexto de abajo (tarea 317) donde choque.
+- **Con responsable vinculado** (la ficha de una persona, vigente, y el equipo no de baja), la persona es el título de la fila; debajo, el nombre del equipo con su IP en la misma línea (en el teléfono; la IP baja de línea antes que cortar el nombre); y luego solo lo que falta: el área y el sitio, sin repetir lo que el nombre del equipo ya dice. Ocupa lo mismo que antes. Desde 768 px, el título es la persona y la línea de debajo dice «equipo · área · sitio», con la IP a la derecha.
+- **Sin responsable, anotado por validar, de baja o de red:** como antes, el equipo es el título. Lo anotado nunca se presenta como una persona.
+- **El orden es el de lo que se lee primero:** el nombre de la persona o, si nadie lo tiene, el del equipo; los equipos de una misma persona quedan seguidos.
+- **Al buscar, una persona con dos o más equipos es UNA tarjeta:** la cabecera con sus iniciales, su nombre, su área y su sitio una sola vez (si todos están en el mismo; si no, cada fila dice el suyo; sin nada, «Sin área registrada») y «2 equipos»; debajo, cada equipo con su IP y «Copiar IP». La cabecera abre la ficha de la persona; cada fila, la de su equipo, con la búsqueda para volver. Desde 768 px, la persona es una fila de cabecera y sus equipos van sangrados debajo, con la IP a la derecha.
+
 **BUSCANDO, SOLO LAS CATEGORÍAS CON COINCIDENCIAS (desde el 2026-10-27, tarea 363, [DECISIONES.md](DECISIONES.md) AD-100, D3; en todos los anchos).** Manda sobre los chips de abajo donde choque.
 - **Sin texto, como siempre:** «Todos» y cada categoría general con su número, también las que están en 0.
 - **Con texto:** «Todos», las categorías con resultados en su orden de siempre, la elegida aunque quede en 0 y, si coinciden equipos de red, el chip **«Red»** al final, separado por una línea. Los números suman «Todos» (antes, «Todos» contaba los de red sin chip que los representara). Las posibles coincidencias también cuentan, porque se ven. Elegir «Red» deja solo los equipos de red; al borrar lo escrito vuelven todas las categorías y «Red» vale como «Todos».
