@@ -700,8 +700,8 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Descripción:** de 768 a 1279 px el catálogo de Guías usa la misma hoja de categorías que el teléfono (los controles son `xl:hidden`), y al elegir una categoría con texto escrito sigue llamando a `setSoloEnCategoria(false)`: la búsqueda sigue en todas y la cinta dice «El filtro X queda en pausa». En escritorio (`xl`) el rail sí acota (`setCategoria`).
 - **Motivo:** hallazgo G7 de la auditoría de Claude Design del 2026-10-26 (`Diseños/AUDITORIA.md`); la especificación lo dejó como tarea aparte para no tocar la tableta en la 358.
 - **Impacto:** medio en tableta: el control parece roto.
-- **Prioridad:** Media. **Estado:** Pendiente.
-- **Área afectada:** `src/features/soluciones/SolucionesPage.tsx`, el `onElegir` de la hoja «Categorías» (`setSoloEnCategoria(!ancho && …)`, línea ~1147).
+- **Prioridad:** Media. **Estado:** Implementada e integrada en `main` (2026-10-27): la hoja acota con `setSoloEnCategoria(buscando && id !== null)` en todos los anchos; falta que el usuario la vea en una tableta. Verificación: prueba nueva en `catalogoTelefono.test.tsx` («la hoja de categorías en la tableta», a 768 px), que falla con el código anterior; suite completa, `tsc -b`, `oxlint` y build.
+- **Área afectada:** `src/features/soluciones/SolucionesPage.tsx`, el `onElegir` de la hoja «Categorías» (línea ~1147).
 - **Dependencias:** la 358.
 
 ### 360. `CategoriaPage` recorta los títulos de sus filas

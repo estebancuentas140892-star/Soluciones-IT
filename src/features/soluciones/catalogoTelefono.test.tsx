@@ -10,6 +10,7 @@ import {
   montar,
   pasoPrueba,
   pausa,
+  ponerAncho,
   sembrarGuia,
   sembrarPerfil,
   textoPantalla,
@@ -236,5 +237,46 @@ describe('«Para empezar» y «Guías con preguntas» (D6)', () => {
     const ultima = tarjetas()[tarjetas().length - 1]
     expect(ultima.compareDocumentPosition(puerta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(puerta.getAttribute('href')).toBe('/diagnostico?categoria=cat-imp')
+  })
+})
+
+// LA TABLETA (tarea 359, hallazgo G7): de 768 a `xl` el catálogo es el de
+// siempre, pero elegir una categoría en su hoja con texto buscado también
+// acota, como el rail de escritorio y el teléfono.
+describe('la hoja de categorías en la tableta (tarea 359)', () => {
+  afterEach(() => {
+    ponerAncho('telefono')
+  })
+
+  it('elegir una categoría con texto buscado acota la búsqueda, y «En todas» vuelve a abrirla', async () => {
+    ponerAncho('tableta')
+    await montar(RUTAS, '/soluciones')
+    await escribir(await esperar(campo, 'el campo'), 'configurar')
+    await esperar(() => textoPantalla().includes('Configurar la caja'), 'las dos categorías')
+
+    const abrirHoja = await esperar(
+      () =>
+        Array.from(document.body.querySelectorAll<HTMLButtonElement>('button[aria-haspopup="dialog"]')).find((b) =>
+          b.textContent?.startsWith('Categorías'),
+        ),
+      'el control de categorías',
+    )
+    await tocar(abrirHoja)
+    const impresoras = await esperar(
+      () =>
+        Array.from(document.body.querySelectorAll<HTMLButtonElement>('[role="dialog"] button[aria-pressed]')).find((b) =>
+          b.textContent?.startsWith('Impresoras'),
+        ),
+      'Impresoras en la hoja',
+    )
+    await tocar(impresoras)
+
+    await esperar(() => textoPantalla().includes('Busco solo en Impresoras'), 'la búsqueda acotada')
+    expect(textoPantalla()).not.toContain('queda en pausa')
+    expect(textoPantalla()).not.toContain('Configurar la caja')
+
+    await tocar(await esperar(() => control('En todas'), '«En todas»'))
+    await esperar(() => textoPantalla().includes('Configurar la caja'), 'de nuevo en todas')
+    expect(textoPantalla()).toContain('queda en pausa')
   })
 })

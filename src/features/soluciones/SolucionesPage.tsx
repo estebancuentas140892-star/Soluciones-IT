@@ -1140,11 +1140,13 @@ export function SolucionesPage() {
           setCategoriaSel(id)
           setTipoSel(null)
           setEtiquetaSel(null)
-          // EN EL TELÉFONO, ELEGIR CON TEXTO BUSCADO ACOTA (D8, hallazgo G7),
-          // como el rail de escritorio (`setCategoria`): antes la búsqueda
-          // seguía en todas y el control parecía roto. En la tableta, que
-          // usa la misma hoja, queda como estaba (tarea aparte).
-          setSoloEnCategoria(!ancho && buscando && id !== null)
+          // ELEGIR CON TEXTO BUSCADO ACOTA (hallazgo G7), como el rail de
+          // escritorio (`setCategoria`): antes la búsqueda seguía en todas,
+          // la cinta decía «El filtro X queda en pausa» y el control parecía
+          // roto. En el teléfono desde la tarea 358 (D8); en la tableta, que
+          // usa la misma hoja hasta `xl`, desde la 359. «En todas» (o
+          // «Buscar en todas») sigue a un toque para volver a abrir.
+          setSoloEnCategoria(buscando && id !== null)
           setHojaCategoriaAbierta(false)
         }}
       />

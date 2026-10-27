@@ -6,6 +6,16 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-10-27
+
+### Corregido (tarea 359): en la tableta, elegir una categoría en la hoja con texto buscado acota la búsqueda
+
+**Área modificada:** `src/features/soluciones/SolucionesPage.tsx` (el `onElegir` de la hoja «Categorías») y `catalogoTelefono.test.tsx` (prueba a 768 px).
+**Tipo:** Corregido.
+**Motivo:** hallazgo G7 de la auditoría de Claude Design del 2026-10-26: de 768 px a `xl` la hoja dejaba la búsqueda en todas las categorías y la cinta decía «El filtro X queda en pausa», mientras el rail de escritorio sí acotaba. La tarea 358 lo corrigió solo en el teléfono.
+**Qué cambia:** en la tableta, elegir una categoría en la hoja con algo escrito busca solo en ella («Busco solo en X»), como el rail y el teléfono; «En todas» vuelve a abrirla. Escritorio (`xl`) y teléfono, sin cambios.
+**Estructura de datos:** sin cambios.
+
 ## 2026-10-26
 
 ### Cambiado (tarea 358): en el teléfono, Resolver y el catálogo de Guías reconocen cada guía sin abrirla
