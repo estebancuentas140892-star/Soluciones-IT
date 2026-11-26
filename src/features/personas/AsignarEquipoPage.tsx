@@ -170,7 +170,7 @@ export function AsignarEquipoPage() {
                       >
                         <Monitor size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate text-[14px] font-medium text-noct-text">{d.nombre}</span>
+                          <span className="line-clamp-2 block break-words text-[14px] font-medium text-noct-text">{d.nombre}</span>
                           {detalle && <span className="block text-[12px] leading-[1.4] text-noct-neutral-500">{detalle}</span>}
                           {pertenencia && (
                             <span className="block text-[12px] leading-[1.4] text-noct-neutral-400">{pertenencia}</span>

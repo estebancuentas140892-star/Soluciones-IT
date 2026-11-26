@@ -55,7 +55,7 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 **Área modificada:** `src/features/personas/PersonasPage.tsx`, `busquedaPersonas.ts` (nuevo) y `PersonaPage.tsx`.
 **Tipo:** Cambiado.
 **Motivo:** encargo del usuario del 2026-11-26 (optimización integral, sección 6): «daniel garcia» no encontraba a «Daniel Esteban García», no se podía buscar por el área, el nombre largo se cortaba y abrir una ficha y volver dejaba el buscador vacío.
-**Qué cambia:** cada palabra escrita se busca en el nombre o el área, en cualquier orden y sin tildes; primero quien empieza por lo escrito. La fila enseña el nombre entero y, debajo, el área. Lo escrito vuelve con «Volver» y con el atrás del teléfono, y la vista «Retiradas» se conserva. En la ficha, el nombre de cada equipo ocupa hasta dos líneas.
+**Qué cambia:** cada palabra escrita se busca en el nombre o el área, en cualquier orden y sin tildes; primero quien empieza por lo escrito. La fila enseña el nombre entero y, debajo, el área. Lo escrito vuelve con «Volver» y con el atrás del teléfono, y la vista «Retiradas» se conserva. En la ficha, el nombre de cada equipo ocupa hasta dos líneas, y también en «Asignar equipo» y «Retirar persona»; en la hoja que asigna una persona a un equipo, el nombre se lee entero.
 **Impacto esperado:** dos personas con el nombre parecido se distinguen sin abrirlas y una búsqueda no se reescribe al comparar fichas.
 **Estructura de datos:** sin cambios.
 

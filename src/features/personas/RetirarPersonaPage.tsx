@@ -113,7 +113,7 @@ export function RetirarPersonaPage() {
                 className="flex min-h-12 items-center gap-2.5 rounded-md border border-noct-divider bg-noct-surface px-3 text-[13.5px] text-noct-text hover:bg-noct-text/[.04]"
               >
                 <Monitor size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
-                <span className="min-w-0 flex-1 truncate">{d.nombre}</span>
+                <span className="line-clamp-2 min-w-0 flex-1 break-words">{d.nombre}</span>
                 <span className="shrink-0 text-[12.5px] font-medium text-noct-accent-300">Dar de baja</span>
                 <CaretRight size={13} className="shrink-0 text-noct-neutral-500" aria-hidden />
               </Link>
@@ -195,7 +195,7 @@ export function RetirarPersonaPage() {
                 <div className="flex items-center gap-2.5">
                   <Monitor size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-medium">{d.nombre}</span>
+                    <span className="line-clamp-2 block break-words text-[14px] font-medium">{d.nombre}</span>
                     {d.placaInventario && (
                       <span className="block text-[12px] text-noct-neutral-500">Placa {d.placaInventario}</span>
                     )}

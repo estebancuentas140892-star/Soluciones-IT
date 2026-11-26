@@ -99,7 +99,7 @@ export function HojaAsignarPersona({
                 }`}
               >
                 <User size={16} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                <span className="min-w-0 flex-1 truncate">{p.nombre}</span>
+                <span className="min-w-0 flex-1 py-2 leading-snug [overflow-wrap:anywhere]">{p.nombre}</span>
                 {activa && <Check size={15} className="shrink-0 text-noct-accent" aria-hidden />}
               </button>
             )
