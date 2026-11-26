@@ -63,6 +63,14 @@ export function PersonaForm() {
   const ingresoInvalido = fechaIngreso !== '' && !esFechaValida(fechaIngreso)
   const retiroInvalido = retirada && fechaRetiro !== '' && !esFechaValida(fechaRetiro)
   const valido = nombre.trim() !== '' && !ingresoInvalido && !retiroInvalido
+  const porQueNoGuarda =
+    nombre.trim() === ''
+      ? 'Escribe el nombre para poder guardar.'
+      : ingresoInvalido
+        ? 'La fecha de ingreso no es válida.'
+        : retiroInvalido
+          ? 'La fecha de retiro no es válida.'
+          : ''
 
   async function manejarEnvio(evento: FormEvent) {
     evento.preventDefault()
@@ -192,6 +200,11 @@ export function PersonaForm() {
             </label>
           )}
 
+          {/* Un «Guardar» apagado dice por qué (encargo del 2026-11-26,
+              sección 10; regla 31 b). */}
+          {porQueNoGuarda && !guardando && (
+            <p className="text-[12px] leading-snug text-noct-neutral-500">{porQueNoGuarda}</p>
+          )}
           <button
             type="submit"
             disabled={guardando || !valido}

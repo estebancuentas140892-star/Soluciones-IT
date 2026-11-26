@@ -312,7 +312,18 @@ export function DispositivoForm() {
     )
   }
 
-  const aviso = intentoGuardar && !valido ? 'Falta el nombre o la categoría' : ''
+  // Lo que falta, por su nombre (encargo del 2026-11-26, sección 10): antes
+  // decía «Falta el nombre o la categoría» y había que adivinar cuál.
+  const faltaNombre = nombre.trim() === ''
+  const faltaCategoria = categoriaId === ''
+  const aviso =
+    intentoGuardar && !valido
+      ? faltaNombre && faltaCategoria
+        ? 'Faltan el nombre y la categoría'
+        : faltaNombre
+          ? 'Falta el nombre'
+          : 'Falta elegir la categoría'
+      : ''
 
   return (
     // Nivel 3 del chasis (tarea 185): tarea con salida. Sin pestañas, y
@@ -600,7 +611,9 @@ export function DispositivoForm() {
       {/* Barra inferior fija: aviso de validación + Guardar. */}
       <div className="fixed bottom-0 left-1/2 z-30 w-full max-w-md -translate-x-1/2 border-t border-noct-divider bg-noct-bg/90 px-4 pb-[calc(12px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-[12px]">
         <div className="flex items-center gap-2.5">
-          <span className="min-w-0 flex-1 truncate text-[12px] text-noct-precaucion">{aviso}</span>
+          <span aria-live="polite" className="min-w-0 flex-1 text-[12px] leading-snug text-noct-precaucion">
+            {aviso}
+          </span>
           <button
             type="button"
             disabled={guardando}

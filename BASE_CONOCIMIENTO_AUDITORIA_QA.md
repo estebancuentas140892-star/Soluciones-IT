@@ -1093,7 +1093,7 @@ El `id` del registro se decide al montar el formulario y permanece estable duran
 
 **Validación general y guardado**
 - El formulario se considera válido cuando el nombre no está vacío y hay una categoría seleccionada.
-- Botón "Guardar equipo" (o "Guardando..." mientras procesa): si se pulsa sin ser válido, muestra el aviso "Falta el nombre o la categoría" en la barra inferior fija, sin guardar. El botón se atenúa visualmente cuando no es válido, aunque el atributo `disabled` real solo depende de si está guardando.
+- Botón "Guardar equipo" (o "Guardando..." mientras procesa): si se pulsa sin ser válido, muestra en la barra inferior fija lo que falta ("Falta el nombre", "Falta elegir la categoría" o "Faltan el nombre y la categoría"; hasta la tarea 369, "Falta el nombre o la categoría"), sin guardar. El botón se atenúa visualmente cuando no es válido, aunque el atributo `disabled` real solo depende de si está guardando.
 - Al guardar exitosamente:
   - Recorta todos los strings con `.trim()`.
   - El id de ubicación solo se conserva si el texto de ubicación no quedó vacío tras el trim (si quedó vacío, se fuerza `null` aunque hubiera un id seleccionado); mismo invariante para el id de responsable.
@@ -2275,7 +2275,7 @@ Esta sección documenta, paso a paso, los recorridos completos que un técnico r
 5. **Acción**: escribe el nombre de la ubicación y, si corresponde, elige un padre; toca "Crear y usar". **Sistema**: genera un id, ejecuta `guardarRegistro('ubicaciones', ...)` (queda persistida en Dexie y encolada para sincronizar de inmediato) y llama `onChange(id, nombre)` directamente sobre el estado del `DispositivoForm` padre: el `<select>` de Ubicación queda mostrando la entidad recién creada como seleccionada, sin remount ni pérdida de foco. El mini formulario se colapsa.
 6. **Acción**: repite el mismo mecanismo en el campo Responsable (`SelectorPersona`): elige "+ Crear persona nueva", escribe el Nombre (único campo, sin jerarquía) y toca "Crear y usar". **Sistema**: crea la persona y la selecciona en el `<select>` de Responsable, con el mismo comportamiento sin salir del formulario.
 7. **Acción**: opcionalmente abre el bloque plegable "Más información" y añade Observaciones o Propiedades personalizadas (`CamposClaveValor`). **Acción final**: toca "Guardar equipo".
-8. **Sistema**: valida que Nombre y Categoría no estén vacíos (si falta alguno, muestra "Falta el nombre o la categoría" en la barra inferior y no guarda). Si es válido, recorta todos los textos, fuerza `ubicacionId`/`responsableId` a `null` si el texto correspondiente quedó vacío tras el recorte, y guarda con `guardarRegistro('dispositivos', ...)`.
+8. **Sistema**: valida que Nombre y Categoría no estén vacíos (si falta alguno, dice cuál en la barra inferior, por ejemplo "Falta el nombre", y no guarda). Si es válido, recorta todos los textos, fuerza `ubicacionId`/`responsableId` a `null` si el texto correspondiente quedó vacío tras el recorte, y guarda con `guardarRegistro('dispositivos', ...)`.
 9. **Sistema**: navega a la ficha nueva `/dispositivos/{id}`, pasando `state:{recienCreado:true}`. **Pantalla siguiente**: `DispositivoPage` muestra el bloque "¿Qué sigue?" con los pasos pendientes recalculados en vivo (agregar foto, guardar datos de acceso si hay permiso de Bóveda, registrar conexiones, vincular un procedimiento o reportar una incidencia).
 
 **Si se cancela**: la "×"/"Cancelar y volver" de la barra de tarea navega de inmediato sin guardar el equipo, sin ningún diálogo de "¿descartar cambios?". Importante: si ya se creó una Ubicación o Persona nueva de forma inline en los pasos 5 o 6, esa entidad queda persistida igual, porque `guardarRegistro` se ejecutó en el momento de crearla, no al guardar el formulario completo del equipo.
@@ -2658,7 +2658,7 @@ Esta sección consolida en tablas de referencia rápida el comportamiento exacto
 | `SelectorPersona`: mismos controles | `DispositivoForm` | Igual que Ubicación, sin jerarquía | — | — |
 | Bloque plegable "Más información" | `DispositivoForm` | Alterna visibilidad | — | Resumen dinámico ("N con contenido") |
 | Botón "+ Campo" / "×" por fila (`CamposClaveValor`) | `DispositivoForm` | Agrega/quita propiedad clave-valor | — | Filas con clave vacía se descartan al guardar |
-| Botón "Guardar equipo" | `DispositivoForm` (pie) | Valida nombre+categoría; guarda | Navega a la ficha (o a `/dispositivos/:id/reemplazo` en modo reemplazo) | Si inválido: aviso "Falta el nombre o la categoría", sin guardar |
+| Botón "Guardar equipo" | `DispositivoForm` (pie) | Valida nombre+categoría; guarda | Navega a la ficha (o a `/dispositivos/:id/reemplazo` en modo reemplazo) | Si inválido: aviso de lo que falta ("Falta el nombre", "Falta elegir la categoría" o "Faltan el nombre y la categoría"), sin guardar |
 | X "Cancelar y volver" | `DispositivoForm` | Sale sin guardar | — | Sin confirmación de descarte documentada |
 | Botón favorito | `DispositivoPage` | Alterna favorito | — | — |
 | Botón "Compartir" | `DispositivoPage` | `navigator.share` o copia enlace | Ícono cambia a check 1.5s si copia | — |

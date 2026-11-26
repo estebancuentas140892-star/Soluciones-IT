@@ -135,6 +135,11 @@ export function UbicacionForm() {
             </label>
           )}
 
+          {/* Un «Guardar» apagado dice por qué (encargo del 2026-11-26,
+              sección 10; regla 31 b). */}
+          {nombre.trim() === '' && !guardando && (
+            <p className="text-[12px] leading-snug text-noct-neutral-500">Escribe el nombre para poder guardar.</p>
+          )}
           <button
             type="submit"
             disabled={guardando || nombre.trim() === ''}

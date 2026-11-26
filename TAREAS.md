@@ -158,7 +158,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 4 | Ubicaciones y equipos de Red: lo escrito al volver, la ruta de los padres al buscar; Red y conexiones sin tildes (cierra la 315) | 368 | Integrada en `main`; falta que el usuario la vea en su teléfono |
 | 3 | Nombres que se recortaban: la ficha de categoría (la 360) y los títulos de la ficha del equipo y de la persona | 360 | Integrada en `main`; falta que el usuario la vea en su teléfono |
 | 3 | La migración de ubicaciones no deja aplicar nada hasta conocer las existentes (la 313) | 313 | Integrada en `main`; falta que el usuario la vea en su teléfono |
-| 3 | Formularios: «Guardar» apagado dice por qué, y el de equipos dice qué falta | 369 | Pendiente |
+| 3 | Formularios: «Guardar» apagado dice por qué, y el de equipos dice qué falta | 369 | Integrada en `main`; falta que el usuario la vea en su teléfono |
 
 ### 366. Personas: buscar por palabras y por área, el nombre entero con su área, y lo escrito y la vista al volver
 
@@ -189,6 +189,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Prioridad:** Media. **Estado:** Integrada en `main`; falta que el usuario la vea en su teléfono. Verificación: `listaUbicaciones.test.tsx` (7) nueva y dos casos nuevos en `texto.test.ts`; en el banco local a 360 px, «caja» con dos «Caja 3» en taquillas distintas, abrir una y volver con lo escrito.
 - **Área afectada:** `src/features/ubicaciones/UbicacionesPage.tsx`, `busquedaUbicaciones.ts` (nuevo); `src/features/red/EquiposRedPage.tsx`; `src/lib/texto.ts` (`incluyeTexto`).
 - **Dependencias:** cierra la 315.
+
+### 369. Formularios: «Guardar» apagado dice por qué, y el de equipos dice qué falta
+
+- **Título:** que ningún formulario deje al técnico adivinando por qué no guarda.
+- **Descripción:** el formulario de equipos decía «Falta el nombre o la categoría»: ahora dice «Falta el nombre», «Falta elegir la categoría» o «Faltan el nombre y la categoría», sin recortarse junto al botón y anunciado a los lectores de pantalla. Persona, Ubicación y la ficha del Centro de consulta apagaban «Guardar» sin decir nada: ahora una línea dice qué falta («Escribe el nombre para poder guardar.», o la fecha que no es válida en Persona). Regla 31 b.
+- **Motivo:** encargo del 2026-11-26, sección 10 (mensajes de validación claros).
+- **Impacto:** bajo, en cuatro formularios. Sin cambios de datos ni de qué se valida.
+- **Prioridad:** Media. **Estado:** Integrada en `main`; falta que el usuario la vea en su teléfono. Verificación: suite completa, `tsc -b`, `oxlint` y build.
+- **Área afectada:** `src/features/dispositivos/DispositivoForm.tsx`, `src/features/personas/PersonaForm.tsx`, `src/features/ubicaciones/UbicacionForm.tsx`, `src/features/referencia/ReferenciaForm.tsx`.
+- **Dependencias:** ninguna.
 
 ### 362. Resolver: tres por grupo con «Ver las N», la fila de categorías y lo que solo menciona, plegado (D1 y D2)
 

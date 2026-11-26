@@ -698,6 +698,13 @@ export function ReferenciaForm() {
               coste. Nunca impide guardar. */}
           <AvisosConsistencia avisos={avisos} />
 
+          {/* Un «Guardar» apagado dice por qué (encargo del 2026-11-26,
+              sección 10; regla 31 b). */}
+          {titulo.trim() === '' && !guardando && (
+            <p className="text-[12px] leading-snug text-noct-neutral-500">
+              Escribe «{ETIQUETA_NOMBRE[tipo]}» para poder guardar.
+            </p>
+          )}
           <button
             type="submit"
             disabled={guardando || titulo.trim() === ''}

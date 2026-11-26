@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-11-26
 
+### Cambiado (tarea 369): los formularios dicen por qué no guardan
+
+**Área modificada:** `src/features/dispositivos/DispositivoForm.tsx`, `src/features/personas/PersonaForm.tsx`, `src/features/ubicaciones/UbicacionForm.tsx` y `src/features/referencia/ReferenciaForm.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** encargo del usuario del 2026-11-26 (sección 10, mensajes de validación claros; regla 31 b): el de equipos decía «Falta el nombre o la categoría» sin decir cuál, y los de persona, ubicación y Centro de consulta apagaban «Guardar» sin ninguna explicación.
+**Qué cambia:** el de equipos dice exactamente lo que falta, sin recortarse junto al botón; los otros tres, una línea sobre «Guardar» mientras no se pueda («Escribe el nombre para poder guardar.» o la fecha que no es válida). Lo que se valida no cambia.
+**Estructura de datos:** sin cambios.
+
 ### Corregido (tarea 313): la migración de ubicaciones no deja aplicar nada hasta conocer las ubicaciones existentes
 
 **Área modificada:** `src/features/ubicaciones/MigracionUbicaciones.tsx`.
