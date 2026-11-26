@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
@@ -12,12 +12,8 @@ import { guardarRegistro, nuevoId } from '../../lib/repositorio'
 import { candidatosPersona } from './migracion'
 import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
 import { equiposPorValidar, esDeBaja, esFechaValida, estadoDePersona } from './cicloPersona'
-
-// Minusculas sin acentos, para que la busqueda encuentre "Perez" al
-// escribir "perez".
-function normalizar(texto: string): string {
-  return texto.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
-}
+import { buscarPersonas } from './busquedaPersonas'
+import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 
 // Buscador dibujado sobre una tarjeta: variante de fondo de app.
 const CLASE_CAMPO = CLASE_CAMPO_SOBRE_SUPERFICIE
@@ -45,16 +41,41 @@ export function PersonasPage() {
   const personas = useLiveQuery(() => db.personas.filter((p) => !p.eliminadoEn).toArray(), [], [])
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
 
-  const [filtro, setFiltro] = useState('')
-  const [vista, setVista] = useState<Filtro>('activas')
+  // LO ESCRITO VUELVE AL VOLVER DE UNA FICHA (encargo del 2026-11-26,
+  // sección 6): el mismo mecanismo que Equipos y Resolver, por el estado de
+  // la entrada del historial (sin URL ni localStorage). Antes, abrir a una
+  // persona y volver dejaba el buscador vacío.
+  const { restaurada, descartar } = useBusquedaRestaurada()
+  const repuesta = restaurada && !restaurada.capa ? restaurada.consulta : ''
+  const [filtro, setFiltro] = useState(repuesta)
+  // Vaciar el campo repuesto es dar la búsqueda por terminada.
+  useEffect(() => {
+    if (repuesta !== '' && filtro === '') descartar()
+  }, [repuesta, filtro, descartar])
   const [creando, setCreando] = useState(false)
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoIngreso, setNuevoIngreso] = useState('')
   const [guardando, setGuardando] = useState(false)
   // "?porValidar=1" (la puerta de Herramientas de inventario, tarea 268)
   // la abre ya desplegada.
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [porValidarAbierto, setPorValidarAbierto] = useState(() => searchParams.get('porValidar') === '1')
+  // Activas o retiradas, en la URL (regla 13): volver de la ficha de una
+  // persona retirada repone «Retiradas» en vez de caer en «Activas».
+  const vista: Filtro = searchParams.get('vista') === 'retiradas' ? 'retiradas' : 'activas'
+  const setVista = useCallback(
+    (valor: Filtro) =>
+      setSearchParams(
+        (actuales) => {
+          const siguientes = new URLSearchParams(actuales)
+          if (valor === 'retiradas') siguientes.set('vista', 'retiradas')
+          else siguientes.delete('vista')
+          return siguientes
+        },
+        { replace: true },
+      ),
+    [setSearchParams],
+  )
 
   const conteoPorPersona = useMemo(() => {
     const conteo = new Map<string, number>()
@@ -80,12 +101,25 @@ export function PersonasPage() {
     [dispositivos],
   )
 
-  const f = normalizar(filtro.trim())
-  const hayFiltro = f.length > 0
+  const consulta = filtro.trim()
+  const hayFiltro = consulta.length > 0
   // Con una búsqueda escrita se busca en las dos listas: quien busca un
-  // nombre no tiene por qué saber si esa persona sigue o se retiró.
+  // nombre no tiene por qué saber si esa persona sigue o se retiró. Cada
+  // palabra, en el nombre o en el área y en cualquier orden; primero quien
+  // coincide por el principio de su nombre (`busquedaPersonas.ts`).
   const base = hayFiltro ? ordenadas : vista === 'activas' ? activas : retiradas
-  const visibles = hayFiltro ? base.filter((p) => normalizar(p.nombre).includes(f)) : base
+  const visibles = useMemo(() => (hayFiltro ? buscarPersonas(base, consulta) : base), [hayFiltro, base, consulta])
+
+  // El salto a la ficha anota lo escrito en esta entrada del historial
+  // (para el botón atrás del teléfono) y lo lleva en su origen, junto con
+  // la vista, para el «Volver» de la app, como en Equipos.
+  const anotar = useAnotarBusqueda()
+  function abrirPersona(id: string) {
+    const busqueda = hayFiltro ? { consulta, capa: false } : undefined
+    if (busqueda) anotar(busqueda)
+    const volverA = vista === 'retiradas' ? '/personas?vista=retiradas' : '/personas'
+    navigate(`/personas/${id}`, { state: conOrigen(volverA, 'Personas', busqueda) })
+  }
 
   const ingresoInvalido = nuevoIngreso !== '' && !esFechaValida(nuevoIngreso)
 
@@ -229,15 +263,30 @@ export function PersonasPage() {
             {visibles.map((p) => {
               const conteo = conteoPorPersona.get(p.id) ?? 0
               const retirada = estadoDePersona(p) === 'retirada'
+              const area = p.area?.trim()
+              // EL NOMBRE ENTERO Y SU ÁREA (encargo del 2026-11-26, sección 6;
+              // regla 23): el nombre es la identidad de la fila y ocupa las
+              // líneas que necesite, sin recortarse; debajo, el área, que es
+              // lo que distingue a dos personas con el nombre parecido. Sin
+              // área no se dibuja nada (regla 22).
               return (
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => navigate(`/personas/${p.id}`)}
+                  onClick={() => abrirPersona(p.id)}
                   className="flex min-h-[52px] items-center gap-[11px] rounded-md py-2.5 pr-2 text-left text-noct-text transition-colors hover:bg-noct-text/[.05]"
                 >
                   <User size={18} className="shrink-0 text-noct-neutral-500" aria-hidden />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium leading-[1.3]">{p.nombre}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+                      {p.nombre}
+                    </span>
+                    {area && (
+                      <span className="mt-0.5 block text-[12px] leading-[1.35] text-noct-neutral-500 [overflow-wrap:anywhere]">
+                        {area}
+                      </span>
+                    )}
+                  </span>
                   {retirada && <PastillaEstado tono="neutro">Retirada</PastillaEstado>}
                   <span className="shrink-0 text-[12px] text-noct-neutral-500">
                     {conteo === 0 && !retirada ? 'Sin equipo' : `${conteo} ${conteo === 1 ? 'equipo' : 'equipos'}`}
@@ -297,7 +346,7 @@ export function PersonasPage() {
                   >
                     <Monitor size={16} className="shrink-0 text-noct-neutral-500" aria-hidden />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13.5px] font-medium">{d.nombre}</span>
+                      <span className="line-clamp-2 block break-words text-[13.5px] font-medium">{d.nombre}</span>
                       <span className="block text-[12px] leading-[1.4] text-noct-neutral-500">Anotado: {d.responsable}</span>
                     </span>
                     <CaretRight size={13} className="shrink-0 text-noct-neutral-600" aria-hidden />

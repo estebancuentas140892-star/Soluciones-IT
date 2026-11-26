@@ -4,10 +4,13 @@ import { db, type Persona } from '../../lib/db'
 import {
   control,
   desmontarTodo,
+  escribir,
   esperar,
+  esperarControl,
   esperarQue,
   limpiarBase,
   montar,
+  navegarAtras,
   pasoPrueba,
   sembrarEquipo,
   sembrarGuia,
@@ -66,6 +69,11 @@ const RUTAS = [
   { ruta: '/dispositivos/:dispositivoId', elemento: <p>FICHA DEL EQUIPO</p> },
   { ruta: '/soluciones/:categoriaId/:articuloId', elemento: <p>GUÍA EN EJECUCIÓN</p> },
 ]
+
+/** El buscador de la lista de Personas. */
+function campoPersonas(): HTMLInputElement | null {
+  return document.body.querySelector<HTMLInputElement>('input[aria-label="Buscar en Personas"]')
+}
 
 async function sembrar() {
   await db.categorias.put({
@@ -233,6 +241,62 @@ describe('la lista de personas', () => {
 
     await tocar(await esperar(() => control('Retiradas · 1'), 'el filtro de retiradas'))
     await esperar(() => textoPantalla().includes('Rita de Prueba'), 'la retirada')
+  })
+
+  // ENCARGO DEL 2026-11-26 (sección 6): el nombre entero con su área, y lo
+  // escrito y la vista vuelven al volver de una ficha.
+  it('muestra el área bajo el nombre y busca por ella', async () => {
+    await sembrar()
+    await db.personas.put(persona('dani', 'Daniel Esteban García de Prueba', { area: 'Control Interno' }))
+    await montar(RUTAS, '/personas')
+    await esperar(() => textoPantalla().includes('Control Interno'), 'el área bajo el nombre')
+
+    await escribir(await esperar(campoPersonas, 'el buscador'), 'garcia control')
+    await esperar(() => !textoPantalla().includes('Ana de Prueba'), 'solo la que coincide')
+    expect(textoPantalla()).toContain('Daniel Esteban García de Prueba')
+  })
+
+  it('volver de la ficha con el regreso de la app repone lo escrito', async () => {
+    await sembrar()
+    await montar(RUTAS, '/personas')
+    await escribir(await esperar(campoPersonas, 'el buscador'), 'luis')
+    await tocar(await esperar(() => control(/^Luis de Prueba/), 'el resultado'))
+    await esperar(() => ubicacionActual().pathname === '/personas/luis', 'la ficha')
+    // Nunca en la URL ni en localStorage.
+    expect(window.localStorage.length).toBe(0)
+
+    await tocar(await esperarControl('Volver a Personas'))
+
+    await esperar(() => ubicacionActual().pathname === '/personas', 'la lista')
+    expect((await esperar(campoPersonas, 'el buscador')).value).toBe('luis')
+    expect(ubicacionActual().search).toBe('')
+  })
+
+  it('volver con el botón atrás del teléfono también la repone', async () => {
+    await sembrar()
+    await montar(RUTAS, '/personas')
+    await escribir(await esperar(campoPersonas, 'el buscador'), 'ana')
+    await tocar(await esperar(() => control(/^Ana de Prueba/), 'el resultado'))
+    await esperar(() => ubicacionActual().pathname === '/personas/ana', 'la ficha')
+
+    await navegarAtras()
+
+    expect((await esperar(campoPersonas, 'el buscador')).value).toBe('ana')
+  })
+
+  it('volver de una persona retirada repone «Retiradas»', async () => {
+    await sembrar()
+    await db.personas.put(persona('rita', 'Rita de Prueba', { estado: 'retirada' }))
+    await montar(RUTAS, '/personas')
+    await tocar(await esperar(() => control('Retiradas · 1'), 'el filtro de retiradas'))
+    await tocar(await esperar(() => control(/^Rita de Prueba/), 'la retirada'))
+    await esperar(() => ubicacionActual().pathname === '/personas/rita', 'la ficha')
+
+    await tocar(await esperarControl('Volver a Personas'))
+
+    await esperar(() => ubicacionActual().search === '?vista=retiradas', 'la vista en la URL')
+    await esperar(() => textoPantalla().includes('Rita de Prueba'), 'la lista de retiradas')
+    expect(control('Retiradas · 1')?.getAttribute('aria-pressed')).toBe('true')
   })
 
   it('deja a la vista lo que está por validar, sin convertirlo en persona', async () => {

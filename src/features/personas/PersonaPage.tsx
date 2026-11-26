@@ -244,7 +244,7 @@ export function PersonaPage() {
                     >
                       <Monitor size={16} className="shrink-0 text-noct-neutral-400" aria-hidden />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[14px] font-medium">{d.nombre}</span>
+                        <span className="line-clamp-2 block break-words text-[14px] font-medium">{d.nombre}</span>
                         {detalle && <span className="block text-[12px] leading-[1.4] text-noct-neutral-500">{detalle}</span>}
                       </span>
                       {d.estado && <PastillaEstadoDispositivo estado={d.estado} />}
@@ -361,7 +361,7 @@ function FilaEquipoAnterior({
     <>
       <Monitor size={16} className="shrink-0 text-noct-neutral-500" aria-hidden />
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] font-medium">{nombre}</span>
+        <span className="line-clamp-2 block break-words text-[13.5px] font-medium">{nombre}</span>
         <span className="block text-[12px] leading-[1.4] text-noct-neutral-500">{fechas}</span>
         {periodo.motivoFin && (
           <span className="block text-[12px] leading-[1.4] text-noct-neutral-500">{periodo.motivoFin}</span>

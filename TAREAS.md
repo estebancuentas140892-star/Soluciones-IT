@@ -149,6 +149,27 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 
 **ENCARGO DEL 2026-10-27: RESOLVER, EQUIPOS Y AGENDA, ENCONTRAR Y RECORDAR EN MENOS TIEMPO** (auditoría de Claude Design `Diseños/Auditoría Resolver, Equipos y Agenda.html`, revisada sobre `ba5a31a`, [DECISIONES.md](DECISIONES.md) AD-100). El usuario pidió «realizar los cambios propuestos»: se toman D1 a D7 y, en las dos preguntas abiertas, las propuestas de la auditoría (las tareas son de quien las crea y las ven los cinco; marcar hecha no deja constancia en el historial del equipo en esta fase). Cuatro tareas, una a la vez, en el worktree `C:/Users/ecardona/dev/sit-resolver-equipos-agenda` (rama `feat/resolver-equipos-agenda`): 362 (D1 y D2), 363 (D3), 364 (D4) y 365 (D5 a D7).
 
+**ENCARGO DEL 2026-11-26: OPTIMIZACIÓN INTEGRAL, EXPERIENCIA DE USO Y EFICIENCIA OPERATIVA.** «Soluciones IT como cuaderno digital inteligente del personal de TI de Metroparques»: encontrar rápido equipos, personas, credenciales y procedimientos, con la menor cantidad de acciones. No es un rediseño ni suma funciones: se revisó el código de `main` (`6a9e565`) sección por sección y se corrige solo lo que estorba el uso diario. Restricciones: ni Supabase, ni la persistencia local, ni la sincronización, ni la arquitectura, ni la navegación de cuatro destinos; los controles de la Bóveda intactos; ningún dato real cambia. Worktree `C:/Users/ecardona/dev/sit-optimizacion-integral`, rama `feat/optimizacion-integral`, un commit por lote. **Hallazgo de la revisión:** Resolver y Equipos ya tenían lo que el encargo pide (las tareas 344, 346 y 362 a 365: el buscador protagonista, tres por grupo, la búsqueda conservada al volver, la persona primero, las categorías vacías fuera y los nombres sin recorte), así que no se tocan. Lo que faltaba estaba en el resto de listas: Personas, la Bóveda, Ubicaciones y los equipos de Red perdían lo escrito al abrir una ficha y volver, buscaban la frase entera tal cual y recortaban los nombres largos. **El contenido de las guías no se toca aquí** (regla 26: lo reescribe ChatGPT, y vive en Supabase con RLS); queda la pregunta al usuario en el informe.
+
+| Prioridad | Lote | Tarea del tablero | Estado |
+|---|---|---|---|
+| 1 | Personas: buscar por palabras y por área, el nombre entero con su área, y lo escrito y la vista al volver | 366 | Integrada en `main`; falta que el usuario la vea en su teléfono |
+| 1 | Bóveda: lo escrito y la categoría al volver, cada palabra y la IP del equipo, el título entero y el equipo en la fila | 367 | Pendiente |
+| 4 | Ubicaciones y equipos de Red: lo escrito al volver, la ruta de los padres al buscar; Red y conexiones sin tildes (cierra la 315) | 368 | Pendiente |
+| 3 | Nombres que se recortaban: la ficha de categoría (la 360) y los títulos de la ficha del equipo y de la persona | 360 | Pendiente |
+| 3 | La migración de ubicaciones no deja aplicar nada hasta conocer las existentes (la 313) | 313 | Pendiente |
+| 3 | Formularios: «Guardar» apagado dice por qué, y el de equipos dice qué falta | 369 | Pendiente |
+
+### 366. Personas: buscar por palabras y por área, el nombre entero con su área, y lo escrito y la vista al volver
+
+- **Título:** que el directorio se consulte rápido y distinga a dos personas parecidas.
+- **Descripción:** (1) Buscar cada palabra escrita en el nombre o el área, en cualquier orden y sin tildes (`busquedaPersonas.ts`); primero quien empieza por lo escrito, después el resto del nombre y al final lo que solo coincide por el área. (2) El nombre entero, en las líneas que necesite (regla 23), y su área debajo; sin área, nada. (3) Lo escrito vuelve al volver de la ficha, por el regreso de la app y por el botón atrás del teléfono (el mecanismo de Equipos), y «Activas» o «Retiradas» viaja en la URL (`?vista=retiradas`). (4) En la ficha de la persona, el nombre de cada equipo actual y anterior en hasta dos líneas (regla 23, ficha).
+- **Motivo:** encargo del 2026-11-26, sección 6: «daniel garcia» no encontraba a «Daniel Esteban García», no se podía buscar por el área, el nombre largo se cortaba en una línea y volver de una ficha borraba la búsqueda.
+- **Impacto:** medio, en la lista de Personas y su ficha. Sin cambios de datos.
+- **Prioridad:** Alta. **Estado:** Integrada en `main`; falta que el usuario la vea en su teléfono. Verificación: `busquedaPersonas.test.ts` (7) nueva y cuatro casos nuevos en `cicloDeVida.test.tsx` (el área y la búsqueda por ella, volver con la app, con el atrás del teléfono y desde una retirada); en el banco local a 360 px, sin desbordamiento, el nombre largo en dos líneas con su área y «ana norte» distinguiendo a dos «Ana de Ejemplo».
+- **Área afectada:** `src/features/personas/PersonasPage.tsx`, `busquedaPersonas.ts` (nuevo), `PersonaPage.tsx`.
+- **Dependencias:** ninguna.
+
 ### 362. Resolver: tres por grupo con «Ver las N», la fila de categorías y lo que solo menciona, plegado (D1 y D2)
 
 - **Título:** en la búsqueda de Resolver (y en la capa del buscador global), que los caminos posibles se vean juntos y se pueda acotar por categoría.

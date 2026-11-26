@@ -6,6 +6,18 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 > Alcance histórico: este archivo se inaugura el 2026-07-24. El historial detallado tarea por tarea anterior a esa fecha vive en [TAREAS_ARCHIVO.md](TAREAS_ARCHIVO.md) (no se reescribe aquí para no duplicarlo). Las decisiones de arquitectura, con su motivo, están en [DECISIONES.md](DECISIONES.md).
 
+## 2026-11-26
+
+### Cambiado (tarea 366): Personas se busca por palabras y por área, y lo escrito vuelve al volver de la ficha
+
+**Área modificada:** `src/features/personas/PersonasPage.tsx`, `busquedaPersonas.ts` (nuevo) y `PersonaPage.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** encargo del usuario del 2026-11-26 (optimización integral, sección 6): «daniel garcia» no encontraba a «Daniel Esteban García», no se podía buscar por el área, el nombre largo se cortaba y abrir una ficha y volver dejaba el buscador vacío.
+**Qué cambia:** cada palabra escrita se busca en el nombre o el área, en cualquier orden y sin tildes; primero quien empieza por lo escrito. La fila enseña el nombre entero y, debajo, el área. Lo escrito vuelve con «Volver» y con el atrás del teléfono, y la vista «Retiradas» se conserva. En la ficha, el nombre de cada equipo ocupa hasta dos líneas.
+**Impacto esperado:** dos personas con el nombre parecido se distinguen sin abrirlas y una búsqueda no se reescribe al comparar fichas.
+**Estructura de datos:** sin cambios.
+
+
 ## 2026-10-27
 
 ### Agregado (tarea 365): tareas propias en «Tu trabajo de hoy» y la Agenda
