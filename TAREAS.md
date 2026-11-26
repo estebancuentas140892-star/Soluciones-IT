@@ -154,7 +154,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | Prioridad | Lote | Tarea del tablero | Estado |
 |---|---|---|---|
 | 1 | Personas: buscar por palabras y por área, el nombre entero con su área, y lo escrito y la vista al volver | 366 | Integrada en `main`; falta que el usuario la vea en su teléfono |
-| 1 | Bóveda: lo escrito y la categoría al volver, cada palabra y la IP del equipo, el título entero y el equipo en la fila | 367 | Pendiente |
+| 1 | Bóveda: lo escrito y la categoría al volver, cada palabra y la IP del equipo, el título entero y el equipo en la fila | 367 | Integrada en `main`; falta que el usuario la vea en su teléfono |
 | 4 | Ubicaciones y equipos de Red: lo escrito al volver, la ruta de los padres al buscar; Red y conexiones sin tildes (cierra la 315) | 368 | Pendiente |
 | 3 | Nombres que se recortaban: la ficha de categoría (la 360) y los títulos de la ficha del equipo y de la persona | 360 | Pendiente |
 | 3 | La migración de ubicaciones no deja aplicar nada hasta conocer las existentes (la 313) | 313 | Pendiente |
@@ -168,6 +168,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Impacto:** medio, en la lista de Personas y su ficha. Sin cambios de datos.
 - **Prioridad:** Alta. **Estado:** Integrada en `main`; falta que el usuario la vea en su teléfono. Verificación: `busquedaPersonas.test.ts` (7) nueva y cuatro casos nuevos en `cicloDeVida.test.tsx` (el área y la búsqueda por ella, volver con la app, con el atrás del teléfono y desde una retirada); en el banco local a 360 px, sin desbordamiento, el nombre largo en dos líneas con su área y «ana norte» distinguiendo a dos «Ana de Ejemplo».
 - **Área afectada:** `src/features/personas/PersonasPage.tsx`, `busquedaPersonas.ts` (nuevo), `PersonaPage.tsx`.
+- **Dependencias:** ninguna.
+
+### 367. Bóveda: lo escrito y la categoría al volver, cada palabra y la IP del equipo, el título entero y el equipo en la fila
+
+- **Título:** encontrar la credencial rápido sin tocar ningún control de seguridad.
+- **Descripción:** (1) Lo escrito vuelve al volver de una credencial (estado de la entrada del historial, nunca la URL) y la categoría viaja en la URL (`?categoria=`), como en Equipos. (2) Cada palabra, en cualquier orden, en el título, la categoría o un equipo vinculado, incluida su IP: escribir la IP del switch encuentra su credencial. (3) El título entero, en la fila y en la hoja de acciones (regla 23). (4) Con un solo equipo vinculado, la fila dice cuál en vez de «1 equipo con acceso», salvo que el título ya lo nombre (regla 22). El cifrado, la contraseña maestra, el autobloqueo, el copiado con auditoría y los permisos no cambian.
+- **Motivo:** encargo del 2026-11-26, sección 7.
+- **Impacto:** medio, en la lista de la Bóveda. Sin cambios de datos.
+- **Prioridad:** Alta. **Estado:** Integrada en `main`; falta que el usuario la vea en su teléfono. Verificación: `listaBoveda.test.tsx` (6) nueva; en el banco local a 360 px (con una maestra inventada solo para esa prueba), la IP de un equipo encuentra su credencial y dos títulos largos iguales se distinguen por su categoría y su equipo.
+- **Área afectada:** `src/features/boveda/BovedaPage.tsx`.
 - **Dependencias:** ninguna.
 
 ### 362. Resolver: tres por grupo con «Ver las N», la fila de categorías y lo que solo menciona, plegado (D1 y D2)

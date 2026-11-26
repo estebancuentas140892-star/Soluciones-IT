@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { db, type TipoSecreto } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
@@ -41,6 +41,8 @@ import { iconoPorPalabraClave } from '../../lib/iconoPorPalabraClave'
 import { eliminarRegistro, registrarAccesoBoveda } from '../../lib/repositorio'
 import { descripcionVencida, estadoVencimiento, type EstadoVencimiento } from '../../lib/vencimiento'
 import { detectarCandidatos } from './migracionSecretos'
+import { conOrigen } from '../../lib/origenNavegacion'
+import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { copiarCampoCredencial, ETIQUETA_COPIA, tipoDe, type CampoCopiable } from './accionesCredencial'
 import {
   bloquear,
@@ -266,8 +268,34 @@ export function BovedaPage() {
     [credenciales, dispositivos],
   )
 
-  const [categoria, setCategoria] = useState('')
-  const [texto, setTexto] = useState('')
+  // LO ESCRITO Y LA CATEGORÍA VUELVEN AL VOLVER DE UNA CREDENCIAL (encargo
+  // del 2026-11-26, sección 7). Lo escrito, por el estado de la entrada del
+  // historial, como en Equipos y Resolver (nunca en la URL ni en
+  // localStorage); la categoría, en la URL, como el chip de Equipos. Nada de
+  // esto es un secreto: es lo que el técnico tecleó o eligió, y lo
+  // descifrado no pasa nunca por aquí.
+  const [parametros, setParametros] = useSearchParams()
+  const categoria = parametros.get('categoria') ?? ''
+  const elegirCategoria = useCallback(
+    (valor: string) =>
+      setParametros(
+        (actuales) => {
+          const siguientes = new URLSearchParams(actuales)
+          if (valor) siguientes.set('categoria', valor)
+          else siguientes.delete('categoria')
+          return siguientes
+        },
+        { replace: true },
+      ),
+    [setParametros],
+  )
+  const { restaurada, descartar } = useBusquedaRestaurada()
+  const repuesta = restaurada && !restaurada.capa ? restaurada.consulta : ''
+  const [texto, setTexto] = useState(repuesta)
+  // Vaciar el campo repuesto es dar la búsqueda por terminada.
+  useEffect(() => {
+    if (repuesta !== '' && texto === '') descartar()
+  }, [repuesta, texto, descartar])
   const [minutos, setMinutos] = useState(obtenerMinutosAutobloqueo)
 
   // Hojas inferiores del rediseño: la de "Crear" (con presets) y el
@@ -302,6 +330,11 @@ export function BovedaPage() {
   const grafo = useGrafo()
 
   const buscado = normalizar(texto.trim())
+  // La IP de cada equipo, para encontrar su credencial escribiendo la IP
+  // (encargo del 2026-11-26, sección 7): el técnico conoce la del switch
+  // antes que el título que le puso quien guardó la clave. La IP no es el
+  // secreto: está en la ficha del equipo.
+  const ipPorEquipo = useMemo(() => new Map(dispositivos.map((d) => [d.id, d.ip ?? ''])), [dispositivos])
 
   // EL CHIP CUENTA LO QUE VA A DAR (tarea 207, hallazgo M-022). El
   // conteo iba sobre la bóveda completa, así que con el buscador escrito
@@ -309,12 +342,17 @@ export function BovedaPage() {
   // sobre el ALCANCE VISIBLE: lo que deja la búsqueda, sin aplicar el
   // propio eje de categoría, que es lo que el chip decide.
   const alcanceChips = useMemo(() => {
+    // Cada palabra escrita, en cualquier orden, en el título, la categoría o
+    // un equipo vinculado (su nombre o su IP): "switch admin" encuentra
+    // "Admin del switch central" (encargo del 2026-11-26, sección 7).
+    const palabras = buscado.split(/\s+/).filter(Boolean)
     return (credenciales ?? []).filter((c) => {
-      if (!buscado) return true
-      const equipos = (c.dispositivos ?? []).map((d) => d.nombre).join(' ')
-      return normalizar(`${c.titulo} ${c.categoria ?? ''} ${equipos}`).includes(buscado)
+      if (palabras.length === 0) return true
+      const equipos = (c.dispositivos ?? []).map((d) => `${d.nombre} ${ipPorEquipo.get(d.id) ?? ''}`).join(' ')
+      const todo = normalizar(`${c.titulo} ${c.categoria ?? ''} ${equipos}`)
+      return palabras.every((palabra) => todo.includes(palabra))
     })
-  }, [credenciales, buscado])
+  }, [credenciales, buscado, ipPorEquipo])
 
   // Categorías presentes, con su conteo, para los chips.
   const categorias = useMemo(() => {
@@ -361,9 +399,23 @@ export function BovedaPage() {
   }
 
   function quitarFiltros() {
-    setCategoria('')
+    elegirCategoria('')
     setTexto('')
   }
+
+  // El salto a una credencial anota lo escrito en esta entrada del
+  // historial (para el botón atrás del teléfono) y lo lleva en su origen,
+  // con la categoría, para el «Volver» de la ficha, como en Equipos.
+  const anotar = useAnotarBusqueda()
+  const consulta = texto.trim()
+  const busqueda = useMemo(() => (consulta ? { consulta, capa: false } : undefined), [consulta])
+  const estadoDeSalto = useMemo(
+    () => conOrigen(categoria ? `/boveda?categoria=${encodeURIComponent(categoria)}` : '/boveda', 'Bóveda', busqueda),
+    [categoria, busqueda],
+  )
+  const alAbrir = useCallback(() => {
+    if (busqueda) anotar(busqueda)
+  }, [busqueda, anotar])
 
   function cerrarMenu() {
     setMenuId(null)
@@ -503,7 +555,7 @@ export function BovedaPage() {
                   key={chip.valor || '__todas'}
                   type="button"
                   aria-pressed={activa}
-                  onClick={() => setCategoria((v) => (v === chip.valor ? '' : chip.valor))}
+                  onClick={() => elegirCategoria(categoria === chip.valor ? '' : chip.valor)}
                   className={`inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-[13px] text-[13px] font-medium transition-colors max-md:h-11 ${
                     activa
                       ? 'border-noct-accent bg-noct-accent/[.12] text-noct-accent-300'
@@ -565,15 +617,20 @@ export function BovedaPage() {
               // la derecha desaparece para esa fila; la duración toma su
               // sitio en la segunda línea, que es donde ya se leía la
               // categoría.
+              // Con UN equipo, su nombre en vez de "1 equipo con acceso"
+              // (encargo del 2026-11-26, sección 7): dos credenciales que se
+              // llaman igual ("Administrador web") se distinguen por el
+              // equipo, y quien la buscó por el equipo lo ve. Si el título ya
+              // lo nombra, no se repite (regla 22).
+              const unEquipo = equipos === 1 ? (c.dispositivos[0]?.nombre ?? '').trim() : ''
+              const equipoEnLinea =
+                unEquipo && !normalizar(c.titulo).includes(normalizar(unEquipo))
+                  ? unEquipo
+                  : equipos > 0 && `${equipos} ${equipos === 1 ? 'equipo' : 'equipos'} con acceso`
               const detalle =
                 estado === 'vencida' && c.venceEn
                   ? [descripcionVencida(c.venceEn), c.categoria || 'Sin categoría'].join(' · ')
-                  : [
-                      c.categoria || 'Sin categoría',
-                      equipos > 0 && `${equipos} ${equipos === 1 ? 'equipo' : 'equipos'} con acceso`,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')
+                  : [c.categoria || 'Sin categoría', equipoEnLinea].filter(Boolean).join(' · ')
               const accionFila = filaAccion?.id === c.id ? filaAccion : null
               // Qué ofrece la fila: copiar la clave con el nombre que
               // usa este tipo, o abrir la ficha cuando no hay clave que
@@ -589,13 +646,17 @@ export function BovedaPage() {
                 >
                   <Link
                     to={`/boveda/${c.id}`}
+                    state={estadoDeSalto}
+                    onClick={alAbrir}
                     className="flex min-w-0 flex-1 items-center gap-[13px] py-[11px] pl-2 text-noct-text"
                   >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-noct-text/[.06] text-noct-neutral-400">
                       <Icono size={18} aria-hidden />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium leading-[1.3]">{c.titulo}</p>
+                      {/* El título es la identidad de la fila: entero, en las
+                          líneas que necesite (regla 23). */}
+                      <p className="text-sm font-medium leading-[1.3] text-pretty [overflow-wrap:anywhere]">{c.titulo}</p>
                       <p
                         className={`truncate text-[12px] ${estado === 'vencida' ? 'text-noct-error' : 'text-noct-neutral-500'}`}
                       >
@@ -638,6 +699,8 @@ export function BovedaPage() {
                   ) : (
                     <Link
                       to={`/boveda/${c.id}`}
+                      state={estadoDeSalto}
+                      onClick={alAbrir}
                       aria-label={`${ETIQUETA_ABRIR[tipoFila]}: ${c.titulo}`}
                       title={ETIQUETA_ABRIR[tipoFila]}
                       className="flex min-h-[56px] w-11 shrink-0 items-center justify-center rounded text-noct-neutral-500 hover:text-noct-accent-300"
@@ -762,7 +825,7 @@ export function BovedaPage() {
         >
           <div className="flex items-center justify-between gap-2.5 px-1.5 pb-1.5">
             <div className="min-w-0">
-              <p className="truncate text-[15px] font-medium leading-[1.3]">
+              <p className="text-[15px] font-medium leading-[1.3] text-pretty [overflow-wrap:anywhere]">
                 {credencialMenu.titulo}
               </p>
               <p
@@ -819,6 +882,8 @@ export function BovedaPage() {
 
           <Link
             to={`/boveda/${credencialMenu.id}`}
+            state={estadoDeSalto}
+            onClick={alAbrir}
             className="flex min-h-[50px] items-center gap-[13px] rounded-md p-1.5 text-noct-text hover:bg-noct-text/[.05]"
           >
             <ArrowSquareOut size={18} className="w-[26px] shrink-0 text-center text-noct-neutral-400" aria-hidden />
@@ -827,6 +892,7 @@ export function BovedaPage() {
 
           <Link
             to={`/boveda/${credencialMenu.id}/editar`}
+            onClick={alAbrir}
             className="flex min-h-[50px] items-center gap-[13px] rounded-md p-1.5 text-noct-text hover:bg-noct-text/[.05]"
           >
             <PencilSimple size={18} className="w-[26px] shrink-0 text-center text-noct-neutral-400" aria-hidden />

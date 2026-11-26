@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-11-26
 
+### Cambiado (tarea 367): la Bóveda conserva lo escrito y la categoría, y encuentra la credencial por la IP de su equipo
+
+**Área modificada:** `src/features/boveda/BovedaPage.tsx`.
+**Tipo:** Cambiado.
+**Motivo:** encargo del usuario del 2026-11-26 (sección 7): abrir una credencial y volver borraba la búsqueda y la categoría; «switch admin» no encontraba «Admin del switch»; la IP del equipo no servía para buscar; los títulos largos se cortaban y dos credenciales con el mismo título solo se distinguían abriéndolas.
+**Qué cambia:** lo escrito vuelve con «Volver» y con el atrás del teléfono (nunca en la URL); la categoría elegida viaja en la URL. Cada palabra se busca en el título, la categoría y los equipos vinculados, también por su IP. El título se lee entero. Con un solo equipo, la fila dice cuál («Redes · SW-CENTRAL»), salvo que el título ya lo nombre. Sin cambios en el cifrado, la contraseña maestra, el autobloqueo, el copiado con auditoría ni los permisos.
+**Impacto esperado:** copiar la clave de un equipo conocido por su IP cuesta escribirla y un toque.
+**Estructura de datos:** sin cambios.
+
 ### Cambiado (tarea 366): Personas se busca por palabras y por área, y lo escrito vuelve al volver de la ficha
 
 **Área modificada:** `src/features/personas/PersonasPage.tsx`, `busquedaPersonas.ts` (nuevo) y `PersonaPage.tsx`.
