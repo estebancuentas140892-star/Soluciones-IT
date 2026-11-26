@@ -8,6 +8,15 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-11-26
 
+### Cambiado (tarea 368, cierra la 315): Ubicaciones y los equipos de Red conservan lo escrito; Red y las conexiones ignoran las tildes
+
+**Área modificada:** `src/features/ubicaciones/UbicacionesPage.tsx` y `busquedaUbicaciones.ts` (nuevo), `src/features/red/EquiposRedPage.tsx`, `src/lib/texto.ts` (`incluyeTexto`).
+**Tipo:** Cambiado.
+**Motivo:** encargo del usuario del 2026-11-26 (sección 8) y la tarea 315: volver de una ficha borraba la búsqueda; buscando, dos «Caja 3» de taquillas distintas se leían iguales; la ficha de un equipo de red abierta desde su lista volvía a Red, no a la lista; y Red y el alta de conexión distinguían tildes («camara» no encontraba «Cámara»).
+**Qué cambia:** en Ubicaciones, lo escrito vuelve y cada resultado lleva la ruta de sus padres; «norte caja» encuentra la «Caja 3» de la Taquilla Norte. La ficha de un equipo de red abierta desde `/red/equipos` vuelve allí con lo escrito. `incluyeTexto` compara sin tildes y cada palabra en cualquier orden, sin dejar fuera nada que antes encontrara.
+**Impacto esperado:** las listas de Más se consultan como Equipos, sin reescribir la búsqueda.
+**Estructura de datos:** sin cambios.
+
 ### Cambiado (tarea 367): la Bóveda conserva lo escrito y la categoría, y encuentra la credencial por la IP de su equipo
 
 **Área modificada:** `src/features/boveda/BovedaPage.tsx`.

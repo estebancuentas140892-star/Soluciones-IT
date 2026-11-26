@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Chasis } from '../../app/Chasis'
 import { CampoBusqueda } from '../../components/CampoBusqueda'
@@ -13,16 +13,13 @@ import {
 import { BTN_GHOST, BTN_PRIMARIO, BTN_SECUNDARIO } from '../../components/nocturne'
 import { db, type Ubicacion } from '../../lib/db'
 import { guardarRegistro, nuevoId } from '../../lib/repositorio'
-import { hijosDirectos } from './arbol'
+import { hijosDirectos, mapaPorId } from './arbol'
+import { buscarUbicaciones } from './busquedaUbicaciones'
+import { conOrigen } from '../../lib/origenNavegacion'
+import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { totalConSububicaciones } from './contenido'
 import { textosSinUbicacion } from './migracion'
 import { CLASE_CAMPO_SOBRE_SUPERFICIE } from '../../components/campos'
-
-// Minusculas sin acentos, para que la busqueda encuentre "Area" al
-// escribir "area".
-function normalizar(texto: string): string {
-  return texto.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
-}
 
 // Recorre el arbol en orden (raices y luego sus hijos) devolviendo cada
 // ubicacion con su nivel, para pintarla con sangria segun la jerarquia.
@@ -53,7 +50,15 @@ export function UbicacionesPage() {
   const ubicaciones = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [], [])
 
-  const [filtro, setFiltro] = useState('')
+  // LO ESCRITO VUELVE AL VOLVER DE UNA FICHA (encargo del 2026-11-26,
+  // sección 8), con el mismo mecanismo que Equipos y Resolver.
+  const { restaurada, descartar } = useBusquedaRestaurada()
+  const repuesta = restaurada && !restaurada.capa ? restaurada.consulta : ''
+  const [filtro, setFiltro] = useState(repuesta)
+  // Vaciar el campo repuesto es dar la búsqueda por terminada.
+  useEffect(() => {
+    if (repuesta !== '' && filtro === '') descartar()
+  }, [repuesta, filtro, descartar])
   const [creando, setCreando] = useState(false)
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoPadre, setNuevoPadre] = useState('')
@@ -73,9 +78,28 @@ export function UbicacionesPage() {
   const textosPorMigrar = useMemo(() => textosSinUbicacion(dispositivos), [dispositivos])
   const porMigrar = textosPorMigrar.reduce((suma, t) => suma + t.cantidad, 0)
 
-  const f = normalizar(filtro.trim())
-  const hayFiltro = f.length > 0
-  const visibles = hayFiltro ? arbol.filter(({ u }) => normalizar(u.nombre).includes(f)) : arbol
+  const consulta = filtro.trim()
+  const hayFiltro = consulta.length > 0
+  // Buscando, la lista deja el árbol: cada resultado sin sangría y con la
+  // ruta de sus padres debajo, para distinguir dos lugares con el mismo
+  // nombre (`busquedaUbicaciones.ts`).
+  const porId = useMemo(() => mapaPorId(ubicaciones), [ubicaciones])
+  const visibles = useMemo(
+    () =>
+      hayFiltro
+        ? buscarUbicaciones(arbol.map(({ u }) => u), porId, consulta).map(({ u, padres }) => ({ u, nivel: 0, padres }))
+        : arbol.map(({ u, nivel }) => ({ u, nivel, padres: '' })),
+    [hayFiltro, arbol, porId, consulta],
+  )
+
+  // El salto a la ficha anota lo escrito en esta entrada del historial (el
+  // botón atrás del teléfono) y lo lleva en su origen (el «Volver» de la app).
+  const anotar = useAnotarBusqueda()
+  function abrirUbicacion(id: string) {
+    const busqueda = hayFiltro ? { consulta, capa: false } : undefined
+    if (busqueda) anotar(busqueda)
+    navigate(`/ubicaciones/${id}`, busqueda ? { state: conOrigen('/ubicaciones', 'Ubicaciones', busqueda) } : undefined)
+  }
 
   function alternarCrear() {
     setCreando((v) => !v)
@@ -192,15 +216,15 @@ export function UbicacionesPage() {
 
         {visibles.length > 0 ? (
           <div className="flex flex-col">
-            {visibles.map(({ u, nivel }) => {
+            {visibles.map(({ u, nivel, padres }) => {
               const conteo = conteoPorUbicacion.get(u.id) ?? 0
-              const esRaiz = nivel === 0
+              const esRaiz = u.padreId === null
               const Icono = esRaiz ? House : MapPin
               return (
                 <button
                   key={u.id}
                   type="button"
-                  onClick={() => navigate(`/ubicaciones/${u.id}`)}
+                  onClick={() => abrirUbicacion(u.id)}
                   style={{ paddingLeft: `${8 + nivel * 22}px` }}
                   className="flex min-h-[52px] items-center gap-[11px] rounded-md py-2.5 pr-2 text-left text-noct-text transition-colors hover:bg-noct-text/[.05]"
                 >
@@ -209,7 +233,18 @@ export function UbicacionesPage() {
                     className={`shrink-0 ${esRaiz ? 'text-noct-accent-300' : 'text-noct-neutral-500'}`}
                     aria-hidden
                   />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium leading-[1.3]">{u.nombre}</span>
+                  {/* El nombre entero (regla 23) y, buscando, la ruta de sus
+                      padres, que el árbol ya no dice. */}
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+                      {u.nombre}
+                    </span>
+                    {padres && (
+                      <span className="mt-0.5 block text-[12px] leading-[1.35] text-noct-neutral-500 [overflow-wrap:anywhere]">
+                        {padres}
+                      </span>
+                    )}
+                  </span>
                   <span className="shrink-0 text-[12px] text-noct-neutral-500">
                     {conteo} {conteo === 1 ? 'equipo' : 'equipos'}
                   </span>

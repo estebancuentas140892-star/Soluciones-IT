@@ -46,6 +46,20 @@ describe('incluyeTexto', () => {
     expect(incluyeTexto(['Impresora Zebra'], '  zebra  ')).toBe(true)
   })
 
+  // Tarea 315 (encargo del 2026-11-26): Red y el alta de conexiones
+  // ignoran las tildes como Resolver y Equipos.
+  it('no distingue tildes, ni en la ficha ni en lo escrito', () => {
+    expect(incluyeTexto(['Cámara bodega'], 'camara')).toBe(true)
+    expect(incluyeTexto(['Camara bodega'], 'cámara')).toBe(true)
+    expect(incluyeTexto(['Switch núcleo'], 'NUCLEO')).toBe(true)
+  })
+
+  it('encuentra cada palabra en cualquier orden y en campos distintos', () => {
+    expect(incluyeTexto(['Switch del rack', 'Cuarto de prueba'], 'rack switch')).toBe(true)
+    expect(incluyeTexto(['Switch del rack', 'Cuarto de prueba'], 'switch cuarto')).toBe(true)
+    expect(incluyeTexto(['Switch del rack'], 'switch bodega')).toBe(false)
+  })
+
   // Los campos se unen con un espacio, así que un término no puede
   // atravesar el límite entre dos campos distintos.
   it('no cruza el límite entre dos campos', () => {

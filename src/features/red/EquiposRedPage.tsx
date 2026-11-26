@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { db } from '../../lib/db'
 import { Chasis } from '../../app/Chasis'
@@ -10,6 +10,8 @@ import { CampoBusqueda } from '../../components/CampoBusqueda'
 import { MapPin, Plus, TreeStructure } from '../../components/iconos'
 import { BTN_SECUNDARIO } from '../../components/nocturne'
 import { lineasDeContexto } from '../../lib/contextoEquipo'
+import { conOrigen } from '../../lib/origenNavegacion'
+import { useAnotarBusqueda, useBusquedaRestaurada } from '../busqueda/busquedaEnHistorial'
 import { agruparPorUbicacion } from './grupoUbicacion'
 
 // Todos los equipos de red, agrupados por ubicación.
@@ -33,7 +35,15 @@ export function EquiposRedPage() {
   const categorias = useLiveQuery(() => db.categorias.filter((c) => !c.eliminadoEn).sortBy('orden'), [], [])
   const ubicaciones = useLiveQuery(() => db.ubicaciones.filter((u) => !u.eliminadoEn).toArray(), [], [])
 
-  const [texto, setTexto] = useState('')
+  // LO ESCRITO VUELVE AL VOLVER DE UNA FICHA (encargo del 2026-11-26,
+  // sección 8), con el mismo mecanismo que Equipos.
+  const { restaurada, descartar } = useBusquedaRestaurada()
+  const repuesta = restaurada && !restaurada.capa ? restaurada.consulta : ''
+  const [texto, setTexto] = useState(repuesta)
+  // Vaciar el campo repuesto es dar la búsqueda por terminada.
+  useEffect(() => {
+    if (repuesta !== '' && texto === '') descartar()
+  }, [repuesta, texto, descartar])
 
   // Llegar por el buscador de la pestaña Red abre el teclado; llegar por
   // la fila "Todos los equipos" no, porque ahí se viene a mirar.
@@ -91,6 +101,17 @@ export function EquiposRedPage() {
   const buscando = texto.trim().length > 0
   const hayResultados = filtrados.length > 0
 
+  // La ficha de un equipo de red sube a Red, no a esta lista: el salto
+  // lleva su origen para que «Volver» regrese aquí, con lo escrito
+  // (encargo del 2026-11-26, sección 8: sin recorridos de más).
+  const anotar = useAnotarBusqueda()
+  const consulta = texto.trim()
+  const busqueda = useMemo(() => (consulta ? { consulta, capa: false } : undefined), [consulta])
+  const estadoDeSalto = useMemo(() => conOrigen('/red/equipos', 'Equipos de red', busqueda), [busqueda])
+  const alAbrir = useCallback(() => {
+    if (busqueda) anotar(busqueda)
+  }, [busqueda, anotar])
+
   return (
     // Nivel 2 del chasis: documento. Cuelga de la pestaña Red, así que
     // el chasis pone el retorno; aquí quedan la acción Crear y el
@@ -137,6 +158,8 @@ export function EquiposRedPage() {
                       dispositivo={d}
                       categoriaNombre={nombreCategoria.get(d.categoriaId) ?? ''}
                       subtitulo={subtitulos.get(d.id) ?? ''}
+                      estado={estadoDeSalto}
+                      alAbrir={alAbrir}
                     />
                   ))}
                 </div>

@@ -27,8 +27,12 @@ export function normalizarTexto(texto: string): string {
 // Busqueda local por subcadena sobre varios campos de una ficha, la
 // regla que repetian calcada los buscadores de Soluciones, Dispositivos
 // y Red (Fase 1 de PROPUESTA_REVISION_ARQUITECTURA.md). Une los campos
-// con un espacio y compara en minusculas; una consulta vacia acepta
-// todo (el buscador en blanco no filtra nada).
+// con un espacio y compara sin mayusculas NI TILDES (`normalizarTexto`,
+// tarea 315: "camara" encuentra "Cámara", como en Resolver y Equipos);
+// cada palabra escrita tiene que estar, en cualquier orden ("rack switch"
+// encuentra "Switch del rack"), lo que nunca deja fuera algo que la
+// consulta entera ya encontraba. Una consulta vacia acepta todo (el
+// buscador en blanco no filtra nada).
 //
 // NO sustituye al indice global (`features/busqueda`), que es otra cosa:
 // aquel puntua, tolera errores de tecleo y expande sinonimos, pero solo
@@ -38,9 +42,10 @@ export function normalizarTexto(texto: string): string {
 // cargada, incluidos los borradores, y por eso siguen siendo de
 // subcadena. Lo que se unifica aqui es la regla, no el motor.
 export function incluyeTexto(campos: (string | null | undefined)[], consulta: string): boolean {
-  const buscado = consulta.trim().toLowerCase()
-  if (!buscado) return true
+  const palabras = normalizarTexto(consulta).split(/\s+/).filter(Boolean)
+  if (palabras.length === 0) return true
   // `join` ya convierte null/undefined en '', igual que hacian las tres
   // pantallas antes de esta extraccion.
-  return campos.join(' ').toLowerCase().includes(buscado)
+  const todo = normalizarTexto(campos.join(' '))
+  return palabras.every((palabra) => todo.includes(palabra))
 }

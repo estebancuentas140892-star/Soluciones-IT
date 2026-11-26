@@ -93,7 +93,7 @@ Todo se fija una vez al construir el índice (`crearIndiceDesdeDocumentos`), no 
 
 Hay tres funciones de normalización independientes y **ninguna compartida** entre sí. Es deuda de mantenibilidad conocida (ver [TAREAS.md](TAREAS.md)):
 
-1. `incluyeTexto` / `texto` (`src/lib/texto.ts`): baja a minúsculas, **no quita acentos**. La usan los buscadores locales de Red y del alta de conexión. Equipos la usó hasta la tarea 346; desde entonces usa `normalizarTexto` y la coincidencia aproximada común (sección 10).
+1. `incluyeTexto` / `texto` (`src/lib/texto.ts`): desde el 2026-11-26 (tarea 368, cierra la 315) compara con `normalizarTexto` (sin tildes) y cada palabra en cualquier orden; hasta entonces bajaba a minúsculas y **no quitaba acentos**. La usan los buscadores locales de Red y del alta de conexión. Equipos la usó hasta la tarea 346; desde entonces usa `normalizarTexto` y la coincidencia aproximada común (sección 10).
 2. `normalizar` (`src/features/busqueda/sinonimos.ts`): minúsculas + NFD + quita diacríticos. Solo para resolver claves de sinónimos.
 3. `normalizarTexto` (`src/lib/texto.ts` desde la tarea 346; antes en `src/features/soluciones/iconosSoluciones.ts`, que la sigue exportando): minúsculas + NFD + quita diacríticos. Duplica a la anterior con otra implementación. La usan Soluciones, Resolver y el Centro de consulta para el filtro propio y el resaltado y, desde la tarea 288, el índice global (al indexar y al buscar) y la lectura de la consulta (`consultaNatural.ts`, `mejores.ts`).
 
@@ -274,7 +274,7 @@ Qué tipo la tiene lo decide `vistaRapidaDe`: la credencial en los dos modos (co
 
 - **Qué se guarda:** la consulta y si estaba en la capa global o en el buscador de Inicio (`BusquedaEnCurso`). Nada más: ni resultados, ni secretos, ni el scroll exacto (la memoria de scroll por ruta ya repone lo que puede).
 - **Dónde:** solo en `location.state`. Viaja en el origen del salto (`conOrigen(..., busqueda)`) y el regreso de la app la entrega a la pantalla de destino (`estadoDeRegreso`, que usan `BotonVolver` y la X de `BarraTarea` en el chasis). Además, en el mismo toque que salta, se anota en la entrada actual del historial (`useAnotarBusqueda`), así que **el botón atrás del teléfono** también la encuentra. Nunca en la URL ni en localStorage, y se pierde con la pestaña.
-- **Quién la repone:** Inicio (hoy Resolver), en su campo en línea; Equipos, en el suyo (desde el 2026-09-22, tarea 256); Personas, en el suyo (desde el 2026-11-26, tarea 366); la Bóveda, en el suyo (tarea 367); y la capa global, desde `CapaAtajos`, que vive en el chasis de todas las pantallas y por eso sirve venga de la lupa de la barra o de "/". Se relee en cada **llegada** a la entrada (ir o volver), no solo al montar: de un equipo a otro equipo React reutiliza la pantalla y volver al primero tiene que reponer igual.
+- **Quién la repone:** Inicio (hoy Resolver), en su campo en línea; Equipos, en el suyo (desde el 2026-09-22, tarea 256); Personas, en el suyo (desde el 2026-11-26, tarea 366); la Bóveda, en el suyo (tarea 367); Ubicaciones y la lista de equipos de Red, en los suyos (tarea 368); y la capa global, desde `CapaAtajos`, que vive en el chasis de todas las pantallas y por eso sirve venga de la lupa de la barra o de "/". Se relee en cada **llegada** a la entrada (ir o volver), no solo al montar: de un equipo a otro equipo React reutiliza la pantalla y volver al primero tiene que reponer igual.
 - **Cuándo se olvida:** al cerrar la capa repuesta o al vaciar el campo de Inicio, que es dar la búsqueda por terminada (`descartar`). Abrir la capa con la lupa sigue empezando limpio, como siempre.
 
 ### 7.9 Confianza: "Mejor coincidencia" solo cuando lo es (2026-10-02, tarea 288)
@@ -391,7 +391,7 @@ El **selector de "vincular procedimiento existente"** de un paso (`VinculoDelPas
 
 Filtran en el sitio la lista que la pantalla ya cargó. No usan MiniSearch.
 
-**Usan `incluyeTexto`** (subcadena, sensible a acentos, sin resaltado):
+**Usan `incluyeTexto`** (cada palabra como subcadena, sin tildes desde la tarea 368, sin resaltado):
 
 - **Alta de conexión** (`candidatosConexion` en `src/lib/conexiones.ts`): filtra por subcadena en `[nombre, ubicacion, ip]`. Sin texto, en vez de mostrar todo, pre-sugiere candidatos por puntaje (+2 si comparte ubicación con el equipo actual, +1 si su categoría es de red) y ordena por ese puntaje.
 - **Equipos**: desde la tarea 346 ya no usa `incluyeTexto`; ver "Equipos, con la coincidencia aproximada común", debajo. Desde la tarea 363 (2026-10-27), buscando, los chips solo enseñan las categorías con resultados, la elegida y «Red» (`chipsDeEquipos`, `CHIP_RED` en `busquedaEquipos.ts`; ver [ARQUITECTURA_FUNCIONAL.md](ARQUITECTURA_FUNCIONAL.md) RN-044).
@@ -457,7 +457,7 @@ Todas registradas en [TAREAS.md](TAREAS.md):
 - Medicion del recorrido: `registrarResolucion` esta preparada y probada, pero todavia no guarda en ningun sitio (seccion 7.6).
 - Vista rápida de un **dato protegido de un equipo** en modo consulta: hoy queda como referencia (sección 7.5). Tarea 243.
 - Chips de filtro por tipo: descritos en la documentación previa pero inexistentes en el código. (El agrupado era inline en `InicioPage.tsx`; la tarea 181 lo extrajo a `busqueda/resultados.ts` y `busqueda/ResultadosBusqueda.tsx`, pero sigue sin haber chips de tipo.)
-- Dos normalizaciones de acentos sin unificar: `normalizarTexto` (en `lib/texto.ts` desde la tarea 346; la reexporta `iconosSoluciones.ts`) y la de `sinonimos.ts`. `incluyeTexto`, que no quita tildes, sigue en Red y en el alta de conexión, que tampoco tienen coincidencia aproximada.
+- Dos normalizaciones de acentos sin unificar: `normalizarTexto` (en `lib/texto.ts` desde la tarea 346; la reexporta `iconosSoluciones.ts`) y la de `sinonimos.ts`. `incluyeTexto` ya usa `normalizarTexto` (tarea 368); Red y el alta de conexión siguen sin coincidencia aproximada.
 - Sin tope de resultados en el buscador global.
 - **Formas de búsqueda de las guías reales**: el campo existe desde la tarea 288, pero ninguna guía real las tiene todavía. Se rellenan después de actualizar los teléfonos (regla 24 de [REGLAS.md](REGLAS.md)) y como trabajo editorial basado en la auditoría de contenido, sin generarlas en masa. Sin tarea abierta todavía, por decisión del usuario (2026-10-02).
 - ~~Acentos en el índice global dependen del `fuzzy`~~: resuelto el 2026-10-02 (tarea 288), el índice normaliza sin tildes al indexar y al buscar (sección 5).

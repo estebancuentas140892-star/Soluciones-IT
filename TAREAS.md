@@ -155,7 +155,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 |---|---|---|---|
 | 1 | Personas: buscar por palabras y por área, el nombre entero con su área, y lo escrito y la vista al volver | 366 | Integrada en `main`; falta que el usuario la vea en su teléfono |
 | 1 | Bóveda: lo escrito y la categoría al volver, cada palabra y la IP del equipo, el título entero y el equipo en la fila | 367 | Integrada en `main`; falta que el usuario la vea en su teléfono |
-| 4 | Ubicaciones y equipos de Red: lo escrito al volver, la ruta de los padres al buscar; Red y conexiones sin tildes (cierra la 315) | 368 | Pendiente |
+| 4 | Ubicaciones y equipos de Red: lo escrito al volver, la ruta de los padres al buscar; Red y conexiones sin tildes (cierra la 315) | 368 | Integrada en `main`; falta que el usuario la vea en su teléfono |
 | 3 | Nombres que se recortaban: la ficha de categoría (la 360) y los títulos de la ficha del equipo y de la persona | 360 | Pendiente |
 | 3 | La migración de ubicaciones no deja aplicar nada hasta conocer las existentes (la 313) | 313 | Pendiente |
 | 3 | Formularios: «Guardar» apagado dice por qué, y el de equipos dice qué falta | 369 | Pendiente |
@@ -179,6 +179,16 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 - **Prioridad:** Alta. **Estado:** Integrada en `main`; falta que el usuario la vea en su teléfono. Verificación: `listaBoveda.test.tsx` (6) nueva; en el banco local a 360 px (con una maestra inventada solo para esa prueba), la IP de un equipo encuentra su credencial y dos títulos largos iguales se distinguen por su categoría y su equipo.
 - **Área afectada:** `src/features/boveda/BovedaPage.tsx`.
 - **Dependencias:** ninguna.
+
+### 368. Ubicaciones y equipos de Red: lo escrito al volver y la ruta de los padres; Red y conexiones sin tildes
+
+- **Título:** que las listas de Más se consulten como Equipos.
+- **Descripción:** (1) Ubicaciones: lo escrito vuelve al volver de la ficha; buscando, la lista deja el árbol y cada lugar lleva la ruta de sus padres («Sede > Taquilla Norte»), y cada palabra se busca también en los padres con al menos una en el propio nombre (`busquedaUbicaciones.ts`); el nombre entero (regla 23). (2) Equipos de red: la ficha de un equipo abierta desde `/red/equipos` vuelve a esa lista, con lo escrito (antes subía a Red y había que volver a entrar y escribir). (3) `incluyeTexto` ignora las tildes y busca cada palabra en cualquier orden: lo que queda de la tarea 315 (Red y el alta de conexión), sin una cuarta normalización (usa `normalizarTexto`).
+- **Motivo:** encargo del 2026-11-26, sección 8, y la tarea 315.
+- **Impacto:** medio, en Ubicaciones, la lista de equipos de Red y el alta de conexión. Sin cambios de datos.
+- **Prioridad:** Media. **Estado:** Integrada en `main`; falta que el usuario la vea en su teléfono. Verificación: `listaUbicaciones.test.tsx` (7) nueva y dos casos nuevos en `texto.test.ts`; en el banco local a 360 px, «caja» con dos «Caja 3» en taquillas distintas, abrir una y volver con lo escrito.
+- **Área afectada:** `src/features/ubicaciones/UbicacionesPage.tsx`, `busquedaUbicaciones.ts` (nuevo); `src/features/red/EquiposRedPage.tsx`; `src/lib/texto.ts` (`incluyeTexto`).
+- **Dependencias:** cierra la 315.
 
 ### 362. Resolver: tres por grupo con «Ver las N», la fila de categorías y lo que solo menciona, plegado (D1 y D2)
 
@@ -902,7 +912,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Descripción:** `incluyeTexto()` solo baja a minúsculas y no quita tildes: en los buscadores que la usan, "perez" no encuentra "Pérez" ni "pérez" encuentra "Perez". Resolver, Soluciones y el Centro de consulta sí las ignoran (`normalizarTexto`, [BUSCADOR.md](BUSCADOR.md) sección 5), así que la misma persona se encuentra sin tilde en Resolver y no en Equipos. Además, en la lista de Equipos el resaltado de lo buscado ya ignora tildes (`FilaDispositivo`, `normalizarTexto`) y el filtro no: hoy tienen reglas distintas. Se hizo visible con la 314, porque los nombres de persona suelen llevar tilde, pero afecta a todo lo que usa `incluyeTexto`, no solo al responsable. **No implementado:** el usuario pidió expresamente no meterlo dentro de la 314.
 - **Motivo:** observación de la tarea 314 (encargo del usuario del 2026-10-09).
 - **Impacto:** medio. En el teléfono se escribe a menudo sin tilde, y entonces Equipos, Red y el alta de conexión no encuentran nombres, lugares o modelos que la llevan. Cambiar `incluyeTexto` cambia a la vez todos sus buscadores, y sus pruebas tienen que cubrirlos.
-- **Prioridad:** Media. **Estado:** Pendiente.
+- **Prioridad:** Media. **Estado:** Resuelta por la 368 (2026-11-26), integrada en `main`: `incluyeTexto` usa `normalizarTexto`; se archiva con ella.
 - **Área afectada:** `src/lib/texto.ts` (`incluyeTexto`, ~línea 26) y sus usos: `src/features/dispositivos/busquedaEquipos.ts` (Equipos, ~56), `src/features/red/EquiposRedPage.tsx` (Red, ~63) y `src/lib/conexiones.ts` (`candidatosConexion`, ~193); el resaltado en `src/components/FilaDispositivo.tsx` (~74).
 - **Dependencias:** relacionada con la 170 (b) (unificar las tres funciones de normalización): conviene decidirlas juntas para no crear una cuarta.
 
