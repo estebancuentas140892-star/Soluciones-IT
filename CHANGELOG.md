@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-11-26
 
+### Corregido (tarea 313): la migración de ubicaciones no deja aplicar nada hasta conocer las ubicaciones existentes
+
+**Área modificada:** `src/features/ubicaciones/MigracionUbicaciones.tsx`.
+**Tipo:** Corregido.
+**Motivo:** riesgo de datos registrado el 2026-10-08 y encargo del usuario del 2026-11-26 (sección 10): mientras cargaban las ubicaciones existentes, la pantalla las suponía vacías; el resumen contaba como nueva una que ya existía y «Crear ubicaciones y vincular equipos» podía pulsarse, creando un duplicado sincronizado al equipo y vinculando los equipos a la copia.
+**Qué cambia:** la pantalla dice «Cargando...» hasta tener los equipos y las ubicaciones existentes, y aplicar se niega sin ellas. Con datos ya cargados, igual que antes.
+**Estructura de datos:** sin cambios (evita filas duplicadas en `ubicaciones`).
+
 ### Corregido (tarea 360): la ficha de una categoría y las fichas de equipo y persona ya no recortan los nombres
 
 **Área modificada:** `src/features/soluciones/CategoriaPage.tsx`, `src/features/dispositivos/CredencialesDelEquipo.tsx` y `ProblemasDelEquipo.tsx`.

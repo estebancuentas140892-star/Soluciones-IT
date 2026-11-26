@@ -51,7 +51,15 @@ export function MigracionUbicaciones() {
   const origen = useOrigen()
   const salida = origen?.to ?? '/ubicaciones'
   const dispositivos = useLiveQuery(() => db.dispositivos.filter((d) => !d.eliminadoEn).toArray(), [])
-  const existentes = useLiveQuery(() => db.ubicaciones.toArray(), [], [])
+  // Las ubicaciones que ya existen, SIN valor por defecto mientras cargan
+  // (tarea 313): con `[]` provisional, el resumen contaba como nueva una
+  // ubicación que ya existía y «Crear ubicaciones y vincular equipos» podía
+  // pulsarse antes de conocerlas, creando un duplicado (que además se
+  // sincroniza al equipo) y vinculando los equipos a la copia. Undefined es
+  // «todavía cargando», distinto de «no hay ninguna»: la pantalla no se
+  // dibuja, ni se puede aplicar nada, hasta tener las dos consultas.
+  const existentesCargadas = useLiveQuery(() => db.ubicaciones.toArray(), [])
+  const existentes = useMemo(() => existentesCargadas ?? [], [existentesCargadas])
   const textos = useMemo(() => textosSinUbicacion(dispositivos ?? []), [dispositivos])
   const porIdUbicacion = useMemo(() => mapaPorId(existentes), [existentes])
 
@@ -112,7 +120,7 @@ export function MigracionUbicaciones() {
     [dispositivos, grupos, existentes],
   )
 
-  if (!dispositivos) {
+  if (!dispositivos || !existentesCargadas) {
     return (
       <div className="nocturne min-h-svh bg-noct-bg font-inter text-noct-text">
         <p className="px-4 pt-6 text-sm text-noct-neutral-400">Cargando...</p>
@@ -126,6 +134,8 @@ export function MigracionUbicaciones() {
   const cuantosPendientes = pendientesPorClave.size
 
   async function aplicar() {
+    // Nunca con las existentes sin cargar (tarea 313): el plan las reutiliza.
+    if (!existentesCargadas || aplicando) return
     const plan = resultado
     setAplicando({ hechos: 0, total: plan.asignaciones.length })
     // Primero las ubicaciones, luego los vinculos: asi el dispositivo

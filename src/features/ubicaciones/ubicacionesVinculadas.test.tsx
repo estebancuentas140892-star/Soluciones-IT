@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db, type Ubicacion } from '../../lib/db'
 import {
   control,
@@ -8,6 +8,7 @@ import {
   esperarQue,
   limpiarBase,
   montar,
+  pausa,
   sembrarEquipo,
   sembrarPerfil,
   textoPantalla,
@@ -107,6 +108,32 @@ describe('migración asistida de ubicaciones', () => {
     // El texto anterior queda en el historial del equipo.
     const historial = await db.historial.where('[entidadTipo+entidadId]').equals(['dispositivo', 'pc-4']).toArray()
     expect(historial.some((h) => h.campo === 'ubicacion' && h.valorAnterior === 'ADMINISTRACION PP')).toBe(true)
+  })
+
+  // TAREA 313 (encargo del 2026-11-26): con la consulta de las ubicaciones
+  // existentes retrasada, antes la pantalla ya ofrecía aplicar y contaba
+  // "Sistemas de prueba" como nueva; aplicar la duplicaba.
+  it('no deja aplicar nada hasta conocer las ubicaciones que ya existen', async () => {
+    await sembrar()
+    const leer = db.ubicaciones.toArray.bind(db.ubicaciones)
+    const retraso = vi.spyOn(db.ubicaciones, 'toArray').mockImplementation(
+      () => leer().then((filas) => new Promise((listo) => setTimeout(() => listo(filas), 300))) as ReturnType<typeof leer>,
+    )
+    try {
+      await montar(RUTAS, '/ubicaciones/migrar')
+      await pausa(120)
+      expect(control('Crear ubicaciones y vincular equipos')).toBeNull()
+      expect(textoPantalla()).not.toContain('Se crearán 3 ubicaciones')
+
+      await tocar(await esperar(() => control('Crear ubicaciones y vincular equipos'), 'aplicar, ya con las existentes'))
+      expect(textoPantalla()).not.toContain('Se crearán 3 ubicaciones')
+    } finally {
+      retraso.mockRestore()
+    }
+
+    await esperarQue(async () => (await db.dispositivos.filter((d) => !d.ubicacionId).count()) <= 1, 'vinculados')
+    const sistemas = (await db.ubicaciones.toArray()).filter((u) => u.nombre.toLowerCase() === 'sistemas de prueba')
+    expect(sistemas.map((u) => u.id)).toEqual(['u-sistemas'])
   })
 
   it('"Son distintos" deja cada texto como su propio lugar', async () => {
