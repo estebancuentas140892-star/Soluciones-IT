@@ -40,7 +40,7 @@ export function CredencialesDelEquipo({
             <LockSimple size={16} aria-hidden />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13.5px] font-medium leading-tight">{credencial.titulo}</span>
+            <span className="line-clamp-2 block break-words text-[13.5px] font-medium leading-tight">{credencial.titulo}</span>
             <span className="mt-px block truncate text-[11.5px] max-md:text-[12px] text-noct-neutral-500">
               Bóveda · requiere desbloqueo
             </span>

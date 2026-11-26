@@ -156,7 +156,7 @@ Reglas del tablero: solo puede haber una tarea "En proceso" a la vez. Las tareas
 | 1 | Personas: buscar por palabras y por área, el nombre entero con su área, y lo escrito y la vista al volver | 366 | Integrada en `main`; falta que el usuario la vea en su teléfono |
 | 1 | Bóveda: lo escrito y la categoría al volver, cada palabra y la IP del equipo, el título entero y el equipo en la fila | 367 | Integrada en `main`; falta que el usuario la vea en su teléfono |
 | 4 | Ubicaciones y equipos de Red: lo escrito al volver, la ruta de los padres al buscar; Red y conexiones sin tildes (cierra la 315) | 368 | Integrada en `main`; falta que el usuario la vea en su teléfono |
-| 3 | Nombres que se recortaban: la ficha de categoría (la 360) y los títulos de la ficha del equipo y de la persona | 360 | Pendiente |
+| 3 | Nombres que se recortaban: la ficha de categoría (la 360) y los títulos de la ficha del equipo y de la persona | 360 | Integrada en `main`; falta que el usuario la vea en su teléfono |
 | 3 | La migración de ubicaciones no deja aplicar nada hasta conocer las existentes (la 313) | 313 | Pendiente |
 | 3 | Formularios: «Guardar» apagado dice por qué, y el de equipos dice qué falta | 369 | Pendiente |
 
@@ -793,7 +793,7 @@ Antes, la tarea 96 (auditoría técnica de limpieza, Fase 3: poda de TAREAS.md) 
 - **Descripción:** `CategoriaPage` no usa `FilaArticulo`: tiene sus propias filas, con `truncate` en el título de la guía (línea ~139 y ~206) y en el nombre y la ubicación del equipo (líneas ~178 y ~180).
 - **Motivo:** hallazgo G12 de la auditoría del 2026-10-26; corrige además lo que decía AD-020.
 - **Impacto:** bajo a medio: un título largo se lee cortado.
-- **Prioridad:** Media. **Estado:** Pendiente.
+- **Prioridad:** Media. **Estado:** Integrada en `main`; falta que el usuario la vea en su teléfono (2026-11-26, encargo de optimización integral). Las filas usan `min-w-0`, `overflow-wrap:anywhere` y `text-pretty`, sin `truncate`; el mismo lote deja en dos líneas el título de cada credencial y de cada problema en la ficha del equipo (`CredencialesDelEquipo.tsx`, `ProblemasDelEquipo.tsx`), como sus procedimientos. Verificación: caso nuevo en `nombresSinRecorte.test.tsx` (guía y equipo largos en la ficha de categoría).
 - **Área afectada:** `src/features/soluciones/CategoriaPage.tsx`.
 - **Dependencias:** ninguna.
 

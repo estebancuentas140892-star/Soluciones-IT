@@ -8,6 +8,14 @@ Formato: cada entrada lleva fecha, y agrupa los cambios por tipo (Agregado, Camb
 
 ## 2026-11-26
 
+### Corregido (tarea 360): la ficha de una categoría y las fichas de equipo y persona ya no recortan los nombres
+
+**Área modificada:** `src/features/soluciones/CategoriaPage.tsx`, `src/features/dispositivos/CredencialesDelEquipo.tsx` y `ProblemasDelEquipo.tsx`.
+**Tipo:** Corregido.
+**Motivo:** regla 23 y encargo del usuario del 2026-11-26 (secciones 5 y 9): la ficha de una categoría cortaba en una línea el título de cada guía, el de cada guía con preguntas y el nombre de cada equipo; en la ficha del equipo, las credenciales y los problemas conocidos también.
+**Qué cambia:** en la ficha de una categoría, los títulos y nombres se leen enteros (la ubicación del equipo, debajo, también); en la ficha del equipo, el título de cada credencial y de cada problema ocupa hasta dos líneas, como sus procedimientos.
+**Estructura de datos:** sin cambios.
+
 ### Cambiado (tarea 368, cierra la 315): Ubicaciones y los equipos de Red conservan lo escrito; Red y las conexiones ignoran las tildes
 
 **Área modificada:** `src/features/ubicaciones/UbicacionesPage.tsx` y `busquedaUbicaciones.ts` (nuevo), `src/features/red/EquiposRedPage.tsx`, `src/lib/texto.ts` (`incluyeTexto`).

@@ -87,7 +87,7 @@ function FilaProblema({ articulo, dispositivoId }: { articulo: Articulo; disposi
         <WarningCircle size={16} aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] font-medium leading-tight">{articulo.titulo}</span>
+        <span className="line-clamp-2 block break-words text-[13.5px] font-medium leading-tight">{articulo.titulo}</span>
         {articulo.sintomas.length > 0 && (
           <span className="mt-px block truncate text-[11.5px] max-md:text-[12px] text-noct-neutral-500">{articulo.sintomas[0]}</span>
         )}

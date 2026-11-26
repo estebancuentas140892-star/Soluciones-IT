@@ -1097,7 +1097,7 @@ Al pie, el resumen ("Se crearán 7 ubicaciones, se usará 1 que ya existe y se v
 
 **Ruta:** `/soluciones/:categoriaId` · **Nivel:** Documento (bajo Guías)
 
-Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con el icono en su color de identidad, nombre y resumen (N artículos · N equipos · N diagnósticos), **botón "Artículo"** para crear. Cuerpo: artículos agrupados por tipo (con chip de avance X/Y en los que están a medias), "Equipos de esta categoría" (con estado), "Diagnósticos de esta categoría", e historial. Se alcanza desde el buscador global y desde la ficha de un equipo.
+Reúne todo lo que pertenece a una categoría en una vista 360°: cabecera con el icono en su color de identidad, nombre y resumen (N artículos · N equipos · N diagnósticos), **botón "Artículo"** para crear. Cuerpo: artículos agrupados por tipo (con chip de avance X/Y en los que están a medias), "Equipos de esta categoría" (con estado), "Diagnósticos de esta categoría", e historial. Desde la tarea 360 (2026-11-26), el título de cada guía y guía con preguntas y el nombre de cada equipo (con su ubicación debajo) se leen enteros, sin recortarse (regla 23). Se alcanza desde el buscador global y desde la ficha de un equipo.
 
 <a id="66-mi-cuenta-y-seguridad"></a>
 ### 6.6 Ajustes y Seguridad de la aplicación

@@ -18,6 +18,7 @@ import {
 } from '../../pruebas/montaje'
 import { bloquear } from '../boveda/sesionBoveda'
 import { ResolverPage } from '../inicio/ResolverPage'
+import { CategoriaPage } from '../soluciones/CategoriaPage'
 import { SolucionesPage } from '../soluciones/SolucionesPage'
 import { BuscadorGlobal } from './BuscadorGlobal'
 
@@ -349,5 +350,20 @@ describe('el catálogo de Guías en el teléfono: el título de una guía se lee
       'la guía en la ruta',
     )
     esperarEntero(enLaRuta)
+  })
+})
+
+// LA FICHA DE UNA CATEGORÍA (tarea 360, encargo del 2026-11-26): sus filas
+// tenían `truncate` en el título de la guía y en el nombre del equipo.
+describe('la ficha de una categoría: guías y equipos se leen enteros', () => {
+  const RUTAS_CATEGORIA = [{ ruta: '/soluciones/:categoriaId', elemento: <CategoriaPage /> }]
+
+  it('ni el título de la guía ni el nombre del equipo se recortan', async () => {
+    const equipoLargo = 'IMPRESORA-DE-PRUEBA-TAQUILLA-PRINCIPAL-DEL-PARQUE-NORTE-02'
+    await sembrarGuiaLarga()
+    await sembrarEquipo({ id: 'eq-largo', nombre: equipoLargo, categoriaId: 'cat-pruebas' })
+    await montar(RUTAS_CATEGORIA, '/soluciones/cat-pruebas')
+    esperarEntero(await esperar(() => nombre(LARGO), 'la guía con su título completo'))
+    esperarEntero(await esperar(() => nombre(equipoLargo), 'el equipo con su nombre completo'))
   })
 })

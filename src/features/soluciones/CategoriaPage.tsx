@@ -136,7 +136,9 @@ export function CategoriaPage() {
                           <Icono size={18} aria-hidden />
                         )}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium leading-[1.3]">
+                      {/* El título entero, en las líneas que necesite (regla 23,
+                          tarea 360): como en Resolver y en el catálogo. */}
+                      <span data-nombre-principal className="min-w-0 flex-1 text-sm font-medium leading-[1.3] text-pretty [overflow-wrap:anywhere]">
                         {articulo.titulo}
                       </span>
                       <AvanceArticulo articulo={articulo} />
@@ -175,9 +177,13 @@ export function CategoriaPage() {
                       )}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium leading-[1.3]">{dispositivo.nombre}</p>
+                      <p data-nombre-principal className="min-w-0 text-sm font-medium leading-[1.3] text-pretty [overflow-wrap:anywhere]">
+                        {dispositivo.nombre}
+                      </p>
                       {dispositivo.ubicacion && (
-                        <p className="truncate text-[12px] text-noct-neutral-500">{dispositivo.ubicacion}</p>
+                        <p className="text-[12px] leading-[1.35] text-noct-neutral-500 [overflow-wrap:anywhere]">
+                          {dispositivo.ubicacion}
+                        </p>
                       )}
                     </div>
                     <PastillaEstadoDispositivo estado={dispositivo.estado} />
@@ -203,7 +209,7 @@ export function CategoriaPage() {
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-noct-precaucion/[.12] text-noct-precaucion">
                     <WarningCircle size={17} aria-hidden />
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium leading-[1.3]">
+                  <span data-nombre-principal className="min-w-0 flex-1 text-sm font-medium leading-[1.3] text-pretty [overflow-wrap:anywhere]">
                     {diagnostico.titulo}
                   </span>
                   <CaretRight size={15} className="shrink-0 text-noct-neutral-600" aria-hidden />
